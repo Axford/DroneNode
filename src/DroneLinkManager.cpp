@@ -18,7 +18,7 @@ uint8_t DroneLinkManager::node() {
 }
 
 uint32_t DroneLinkManager::getChokes() {
-  uint32_t res;
+  uint32_t res = 0;
   DroneLinkChannel* c;
   for(int i = 0; i < _channels.size(); i++){
     c = _channels.get(i);
