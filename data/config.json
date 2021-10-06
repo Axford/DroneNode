@@ -1,0 +1,20 @@
+{
+  "hostname":"newbie",
+  "node":100,
+  "modules":[
+    {
+      "type":"Management",
+      "name":"Management",
+      "id":1,
+      "publish":["hostname","reset","uptime","heap", "IP"]
+    },
+    {
+      "type":"UDPTelemetry",
+      "name":"UDPT",
+      "id":2,
+      "port":8007,
+      "broadcast":[255,255,255,255],
+      "subs": [ "100>0.0" ]
+    }
+  ]
+}
