@@ -8,6 +8,9 @@ MotorModule::MotorModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* 
  {
    setTypeName(FPSTR(MOTOR_STR_MOTOR));
 
+   _deadband = 0.3; // +- 0.2
+   // TODO: make deadband a configurable value
+
    _pins[0] = 0;
    _pins[1] = 0;
    _pins[2] = 0;
@@ -30,6 +33,8 @@ void MotorModule::loadConfiguration(JsonObject &obj) {
   DroneModule::loadConfiguration(obj);
 
   DroneModule::parsePins(obj, _pins, (uint8_t)sizeof(_pins));
+
+  _deadband = obj[DRONE_STR_DEADBAND] | _deadband;
 
   _PWMChannel = obj[DRONE_STR_PWM_CHANNEL] | _PWMChannel;
 }
@@ -71,6 +76,9 @@ void MotorModule::update() {
   // limit range
   if (v > 1) v = 1;
   if (v< -1) v = -1;
+
+  // check for deadband
+  if (abs(v) < abs(_deadband)) v = 0;
 
   ledcWrite(_PWMChannel, abs(v)*255);
 

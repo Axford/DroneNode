@@ -63,6 +63,7 @@ static const char DRONE_STR_CALIB_Y[] PROGMEM = "calibY";
 static const char DRONE_STR_CENTRE[] PROGMEM = "centre";
 static const char DRONE_STR_CHOKED[] PROGMEM = "choked";
 static const char DRONE_STR_CURRENT[] PROGMEM = "current";
+static const char DRONE_STR_DEADBAND[] PROGMEM = "deadband";
 static const char DRONE_STR_DECLINATION[] PROGMEM = "declination";
 static const char DRONE_STR_DISTANCE[] PROGMEM = "distance";
 static const char DRONE_STR_DRONE[] PROGMEM = "Drone";

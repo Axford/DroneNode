@@ -26,7 +26,7 @@ static const char MOTOR_STR_MOTOR[] PROGMEM = "Motor";
 
 class MotorModule:  public DroneModule {
 protected:
-  //DRONE_LINK_ADDR _input; // address of speed input
+  float _deadband;  // width of deadband (measured from zero, do actually double this value)
   uint8_t _PWMChannel;
   uint8_t _pins[3];
 
