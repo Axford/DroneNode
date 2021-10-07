@@ -1,11 +1,15 @@
 #include "DroneWire.h"
 
+uint8_t _lastChan;
+
 void DroneWire::setup() {
   // configure reset pin and set high to enable the chip
   reset();
 
+  _lastChan = 10;
+
   Wire.begin(PIN_I2C_SDA, PIN_I2C_SCL);
-  Wire.setClock(400000);
+  Wire.setClock(100000);
 }
 
 void DroneWire::reset() {
@@ -19,11 +23,13 @@ void DroneWire::reset() {
 }
 
 void DroneWire::selectChannel(uint8_t chan) {
-  if (chan> 7) return;
+  if (chan> 7 || chan == _lastChan) return;
 
   Wire.beginTransmission(TCAADDR);
   Wire.write(1 << chan);
   Wire.endTransmission();
+
+  _lastChan = chan;
 }
 
 // scan current channel for devices

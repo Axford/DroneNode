@@ -2,12 +2,12 @@
 #include "../DroneLinkMsg.h"
 #include "../DroneLinkManager.h"
 
-
 JoystickModule::JoystickModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm):
-  DroneModule ( id, dmm, dlm )
+  I2CBaseModule ( id, dmm, dlm )
  {
    setTypeName(FPSTR(JOYSTICK_STR_JOYSTICK));
-   _pins[0] = 0;
+   //_pins[0] = 0;
+   _addr = JOYSTICK_I2C_ADDRESS;
 
    // pubs
    initParams(JOYSTICK_PARAM_ENTRIES);
@@ -26,35 +26,46 @@ JoystickModule::JoystickModule(uint8_t id, DroneModuleManager* dmm, DroneLinkMan
 
 }
 
+void JoystickModule::doReset() {
+  I2CBaseModule::doReset();
 
-void JoystickModule::loadConfiguration(JsonObject &obj) {
-  DroneModule::loadConfiguration(obj);
+  DroneWire::selectChannel(_bus);
 
-  DroneModule::parsePins(obj, _pins, (uint8_t)sizeof(_pins));
+  setError(0);
 }
 
 
-void JoystickModule::setup() {
-  DroneModule::setup();
 
-  if (_pins[0] > 0) {
-    for (uint8_t i=0; i<JOYSTICK_AXES; i++) {
-      pinMode(_pins[i], INPUT);
-    }
+void JoystickModule::loadConfiguration(JsonObject &obj) {
+  I2CBaseModule::loadConfiguration(obj);
 
-  } else {
-    Log.errorln(F("Undefined pin %d"), _pins[0]);
-    disable();
-  }
+  //DroneModule::parsePins(obj, _pins, (uint8_t)sizeof(_pins));
 }
 
 
 void JoystickModule::loop() {
-  DroneModule::loop();
+  I2CBaseModule::loop();
 
-  // get sensor values
-  _params[JOYSTICK_PARAM_X_E].data.f[0] = 2.0 * (analogRead(_pins[0]) / 4096.0) - 1;
-  _params[JOYSTICK_PARAM_Y_E].data.f[0] = 2.0 * (analogRead(_pins[1]) / 4096.0) - 1;
+  DroneWire::selectChannel(_bus);
+
+  uint8_t bytes = Wire.requestFrom((uint16_t)_addr, (uint8_t)4, true);
+
+  Serial.print("!");
+
+  uint8_t c;
+
+  if (bytes > 0) {
+    for (uint8_t i=0; i<bytes; i++) {
+      c = Wire.read();
+      Serial.print(c);
+      Serial.print(" ");
+      if (i < 2) {
+        _params[JOYSTICK_PARAM_X_E + i].data.f[0] = (c - 128) / 128.0f;
+      }
+    }
+
+    Serial.println("");
+  }
 
   // publish param entries
   publishParamEntries();
