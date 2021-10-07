@@ -83,11 +83,11 @@ void INA219Module::loop() {
   DroneWire::selectChannel(_bus);
 
   // get sensor values
-  _params[INA219_PARAM_SHUNTV_E].data.f[0] = _sensor->getShuntVoltage_mV();
+  _params[INA219_PARAM_SHUNTV_E].data.f[0] = _sensor->getShuntVoltage_mV() / 1000.0f;
   _params[INA219_PARAM_BUSV_E].data.f[0] = _sensor->getBusVoltage_V();
-  _params[INA219_PARAM_CURRENT_E].data.f[0] = _sensor->getCurrent_mA();
-  _params[INA219_PARAM_POWER_E].data.f[0] = _sensor->getPower_mW();
-  _params[INA219_PARAM_LOADV_E].data.f[0] = _params[INA219_PARAM_BUSV_E].data.f[0] + (_params[INA219_PARAM_SHUNTV_E].data.f[0] * 1000);
+  _params[INA219_PARAM_CURRENT_E].data.f[0] = _sensor->getCurrent_mA() / 1000.0f;
+  _params[INA219_PARAM_POWER_E].data.f[0] = _sensor->getPower_mW() / 1000.0f;
+  _params[INA219_PARAM_LOADV_E].data.f[0] = _params[INA219_PARAM_BUSV_E].data.f[0] + _params[INA219_PARAM_SHUNTV_E].data.f[0];
 
   // error check
   if (isnan(_params[INA219_PARAM_SHUNTV_E].data.f[0])) {
