@@ -92,12 +92,14 @@ void JoystickModule::loop() {
       if (i < JOYSTICK_AXES) {
         v = (c - 128) / 128.0f;
         if (_invert[i]) v = -v;
-        _params[JOYSTICK_PARAM_X_E + i].data.f[0] = v;
+
+        // if changed, then publish
+        if (_params[i].publish && v != _params[JOYSTICK_PARAM_X_E + i].data.f[0]) {
+          _params[JOYSTICK_PARAM_X_E + i].data.f[0] = v;
+          publishParamEntry(&_params[i]);
+        }
       }
     }
     //Serial.println("");
   }
-
-  // publish param entries
-  publishParamEntries();
 }
