@@ -57,6 +57,7 @@ static const char DRONE_STR_BAUD[] PROGMEM = "baud";
 static const char DRONE_STR_BUILD[] PROGMEM = "build";
 static const char DRONE_STR_BUS[] PROGMEM = "bus";
 static const char DRONE_STR_BUSV[] PROGMEM = "busV";
+static const char DRONE_STR_BUTTON[] PROGMEM = "button";
 static const char DRONE_STR_CALIB_X[] PROGMEM = "calibX";
 static const char DRONE_STR_CALIB_Y[] PROGMEM = "calibY";
 static const char DRONE_STR_CENTRE[] PROGMEM = "centre";
@@ -75,6 +76,7 @@ static const char DRONE_STR_HOSTNAME[] PROGMEM = "hostname";
 static const char DRONE_STR_HUMIDITY[] PROGMEM = "humidity";
 static const char DRONE_STR_INPUT[] PROGMEM = "input";
 static const char DRONE_STR_INTERVAL[] PROGMEM = "interval";
+static const char DRONE_STR_INVERT[] PROGMEM = "invert";
 static const char DRONE_STR_IP[] PROGMEM = "IP";
 static const char DRONE_STR_LEFT[] PROGMEM = "left";
 static const char DRONE_STR_LOADV[] PROGMEM = "loadV";
@@ -111,6 +113,7 @@ static const char DRONE_STR_WAYPOINTS[] PROGMEM = "waypoints";
 static const char DRONE_STR_WAYPOINT[] PROGMEM = "waypoint";
 static const char DRONE_STR_XAXIS[] PROGMEM = "xAxis";
 static const char DRONE_STR_YAXIS[] PROGMEM = "yAxis";
+static const char DRONE_STR_ZAXIS[] PROGMEM = "zAxis";
 
 // other
 #define DRONE_MODULE_RESET_INTERVAL  10000  // ms between reset attempts

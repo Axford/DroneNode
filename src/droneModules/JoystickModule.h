@@ -16,13 +16,17 @@ Manages a JOYSTICK I2c temp, humidty and pressure sensor
 
 #define JOYSTICK_PARAM_X             8
 #define JOYSTICK_PARAM_Y             9
+#define JOYSTICK_PARAM_Z             10
+#define JOYSTICK_PARAM_BUTTON        11
 
 #define JOYSTICK_PARAM_X_E           0
 #define JOYSTICK_PARAM_Y_E           1
+#define JOYSTICK_PARAM_Z_E           2
+#define JOYSTICK_PARAM_BUTTON_E      3
 
-#define JOYSTICK_PARAM_ENTRIES       2
+#define JOYSTICK_PARAM_ENTRIES       4
 
-#define JOYSTICK_AXES                2
+#define JOYSTICK_AXES                4
 
 
 // strings
@@ -31,7 +35,7 @@ static const char JOYSTICK_STR_JOYSTICK[] PROGMEM = "Joystick";
 // class
 class JoystickModule:  public I2CBaseModule {
 protected:
-  //uint8_t _pins[JOYSTICK_AXES];
+  boolean _invert[JOYSTICK_AXES];
 public:
 
   JoystickModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm);

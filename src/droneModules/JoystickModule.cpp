@@ -9,6 +9,10 @@ JoystickModule::JoystickModule(uint8_t id, DroneModuleManager* dmm, DroneLinkMan
    //_pins[0] = 0;
    _addr = JOYSTICK_I2C_ADDRESS;
 
+   for (uint8_t i=0; i<JOYSTICK_AXES; i++) {
+     _invert[i] = false;
+   }
+
    // pubs
    initParams(JOYSTICK_PARAM_ENTRIES);
 
@@ -22,6 +26,16 @@ JoystickModule::JoystickModule(uint8_t id, DroneModuleManager* dmm, DroneLinkMan
    param = &_params[JOYSTICK_PARAM_Y_E];
    param->param = JOYSTICK_PARAM_Y;
    setParamName(FPSTR(DRONE_STR_YAXIS), param);
+   param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 4);
+
+   param = &_params[JOYSTICK_PARAM_Z_E];
+   param->param = JOYSTICK_PARAM_Z;
+   setParamName(FPSTR(DRONE_STR_ZAXIS), param);
+   param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 4);
+
+   param = &_params[JOYSTICK_PARAM_BUTTON_E];
+   param->param = JOYSTICK_PARAM_BUTTON;
+   setParamName(FPSTR(DRONE_STR_BUTTON), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 4);
 
 }
@@ -39,7 +53,22 @@ void JoystickModule::doReset() {
 void JoystickModule::loadConfiguration(JsonObject &obj) {
   I2CBaseModule::loadConfiguration(obj);
 
-  //DroneModule::parsePins(obj, _pins, (uint8_t)sizeof(_pins));
+  // load inversion settings
+  if (obj.containsKey(DRONE_STR_INVERT)) {
+    Log.noticeln(DRONE_STR_INVERT);
+
+    if (obj[DRONE_STR_INVERT].is<JsonArray>()) {
+      JsonArray array = obj[DRONE_STR_INVERT].as<JsonArray>();
+
+      uint8_t i = 0;
+      for(JsonVariant v : array) {
+        if (i<JOYSTICK_AXES) {
+          _invert[i] = v | _invert[i];
+        }
+        i++;
+      }
+    }
+  }
 }
 
 
@@ -50,21 +79,23 @@ void JoystickModule::loop() {
 
   uint8_t bytes = Wire.requestFrom((uint16_t)_addr, (uint8_t)4, true);
 
-  Serial.print("!");
+  //Serial.print("!");
 
   uint8_t c;
+  float v;
 
   if (bytes > 0) {
     for (uint8_t i=0; i<bytes; i++) {
       c = Wire.read();
-      Serial.print(c);
-      Serial.print(" ");
-      if (i < 2) {
-        _params[JOYSTICK_PARAM_X_E + i].data.f[0] = (c - 128) / 128.0f;
+      //Serial.print(c);
+      //Serial.print(" ");
+      if (i < JOYSTICK_AXES) {
+        v = (c - 128) / 128.0f;
+        if (_invert[i]) v = -v;
+        _params[JOYSTICK_PARAM_X_E + i].data.f[0] = v;
       }
     }
-
-    Serial.println("");
+    //Serial.println("");
   }
 
   // publish param entries
