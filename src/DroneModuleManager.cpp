@@ -22,6 +22,7 @@
 #include "droneModules/WaypointNavModule.h"
 #include "droneModules/TurnRateModule.h"
 #include "droneModules/RFM69TelemetryModule.h"
+#include "droneModules/JoystickModule.h"
 
 
 void DroneModuleManager::registerModule(DroneModule *m) {
@@ -139,6 +140,8 @@ void DroneModuleManager::loadModulesFromJSON(const JsonArray &array) {
             newMod = new TurnRateModule(id, this, _dlm);
           } else if (typeName.equals(RFM69_TELEMETRY_STR_RFM69_TELEMETRY)) {
             newMod = new RFM69TelemetryModule(id, this, _dlm);
+          } else if (typeName.equals(JOYSTICK_STR_JOYSTICK)) {
+            newMod = new JoystickModule(id, this, _dlm);
           } else {
             Log.errorln(F("Unknown type"));
           }

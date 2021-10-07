@@ -108,6 +108,8 @@ static const char DRONE_STR_UPTIME[] PROGMEM = "uptime";
 static const char DRONE_STR_VECTOR[] PROGMEM = "vector";
 static const char DRONE_STR_WAYPOINTS[] PROGMEM = "waypoints";
 static const char DRONE_STR_WAYPOINT[] PROGMEM = "waypoint";
+static const char DRONE_STR_XAXIS[] PROGMEM = "xAxis";
+static const char DRONE_STR_YAXIS[] PROGMEM = "yAxis";
 
 // other
 #define DRONE_MODULE_RESET_INTERVAL  10000  // ms between reset attempts
