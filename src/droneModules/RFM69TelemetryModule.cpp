@@ -9,6 +9,18 @@ RFM69TelemetryModule::RFM69TelemetryModule(uint8_t id, DroneModuleManager* dmm, 
  {
    setTypeName(FPSTR(RFM69_TELEMETRY_STR_RFM69_TELEMETRY));
 
+   _packetsReceived = 0;
+
+   // pubs
+   initParams(RFM69_TELEMETRY_PARAM_ENTRIES);
+
+   DRONE_PARAM_ENTRY *param;
+
+   param = &_params[RFM69_TELEMETRY_PARAM_RSSI_E];
+   param->param = RFM69_TELEMETRY_PARAM_RSSI;
+   setParamName(FPSTR(DRONE_STR_RSSI), param);
+   param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 4);
+
 }
 
 void RFM69TelemetryModule::loadConfiguration(JsonObject &obj) {
@@ -25,8 +37,8 @@ void RFM69TelemetryModule::handleLinkMessage(DroneLinkMsg *msg) {
   // if so, we're getting stuck in a loop and the message should be ignored
   if (_receivedMsg.sameSignature(msg)) return;
 
-  Serial.print("RFM69: Sending: ");
-  msg->print();
+  //Serial.print("RFM69: Sending: ");
+  //msg->print();
 
   _radio.send(255, (uint8_t*)&msg->_msg, msg->length()+4);
 }
@@ -52,40 +64,24 @@ void RFM69TelemetryModule::loop() {
   //check if something was received (could be an interrupt from the radio)
   if (_radio.receiveDone())
   {
-    //print message received to serial
-    /*
-    Serial.print('[');Serial.print(_radio.SENDERID);Serial.print("] ");
-    Serial.print((char*)_radio.DATA);
-    Serial.print("   [RX_RSSI:");Serial.print(_radio.RSSI);Serial.print("]");
-    Serial.println();
-    */
-
-    //check if received message is 2 bytes long, and check if the message is specifically "Hi"
-    //if (_radio.DATALEN==2 && _radio.DATA[0]=='H' && _radio.DATA[1]=='i')
-
     if (_radio.DATALEN >= 5 && _radio.DATALEN < sizeof(DRONE_LINK_MSG)) {
+      _packetsReceived++;
+
       memcpy(&_receivedMsg._msg, _radio.DATA, _radio.DATALEN);
-      Serial.print("RFM69 Receveived: ");
-      _receivedMsg.print();
-
-      _dlm->publish(_receivedMsg);
-    }
-  }
-
-  /*
-  int packetSize = _udp.parsePacket();
-  if (packetSize > 0 && packetSize <= sizeof(DRONE_LINK_MSG)) {
-    //Log.noticeln("RFM69 Received: ");
-    int len = _udp.read((uint8_t*)&_receivedMsg._msg, sizeof(DRONE_LINK_MSG));
-    if (len >= 5) {
+      //Serial.print("RFM69 Receveived: ");
       //_receivedMsg.print();
+
       _dlm->publish(_receivedMsg);
-    } else if (packetSize > 0) {
-      // error - packet size mismatch
-      Log.errorln(F("RFM69T: Packet size mismatch"));
+
+      // update RSSI - moving average
+      float v = _params[RFM69_TELEMETRY_PARAM_RSSI_E].data.f[0];
+      v = (9*v + _radio.RSSI)/10;
+      _params[RFM69_TELEMETRY_PARAM_RSSI_E].data.f[0] = v;
+
+      // publish every 10 packets
+      if (_packetsReceived % 10 == 0) {
+        publishParamEntries();
+      }
     }
-  } else if (packetSize > 0) {
-    Log.noticeln("RFM69 Rec bytes: %d", packetSize);
   }
-  */
 }

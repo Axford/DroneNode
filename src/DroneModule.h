@@ -93,6 +93,7 @@ static const char DRONE_STR_PWM_CHANNEL[] PROGMEM = "PWMChannel";
 static const char DRONE_STR_RESET[] PROGMEM = "reset";
 static const char DRONE_STR_RESETCOUNT[] PROGMEM = "resetCount";
 static const char DRONE_STR_RIGHT[] PROGMEM = "right";
+static const char DRONE_STR_RSSI[] PROGMEM = "RSSI";
 static const char DRONE_STR_SAMPLEINTERVAL[] PROGMEM = "sampleInterval";
 static const char DRONE_STR_SATELLITES[] PROGMEM = "satellites";
 static const char DRONE_STR_SHUNTV[] PROGMEM = "shuntV";
