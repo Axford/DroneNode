@@ -204,13 +204,13 @@ void setup() {
   Serial.begin(115200);
   while(!Serial) {  }
 
-  delay(2500); // to allow serial to reconnect after programming
+  //delay(2500); // to allow serial to reconnect after programming
 
   // direct log output to file in SPIFFS
   SPIFFS.begin();
   File logFile = SPIFFS.open("/startup.log", FILE_WRITE);
-  //Log.begin(LOG_LEVEL_VERBOSE, &logFile);
-  Log.begin(LOG_LEVEL_VERBOSE, &Serial);
+  Log.begin(LOG_LEVEL_VERBOSE, &logFile);
+  //Log.begin(LOG_LEVEL_VERBOSE, &Serial);
   Log.noticeln(F("[] Starting..."));
 
   //ESP32PWM::allocateTimer(0);
