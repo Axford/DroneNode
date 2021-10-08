@@ -197,6 +197,15 @@ void loadWiFiConfiguration() {
 }
 
 
+void handleOTAEVent(OTAManagerEvent event, float progress) {
+  if (event == start) {
+    dmm.shutdown();
+  } else if (event == progress) {
+    dmm.onOTAProgress(progress);
+  }
+}
+
+
 void setup() {
   pinMode(PIN_LED, OUTPUT);
   digitalWrite(PIN_LED, HIGH);
@@ -245,6 +254,7 @@ void setup() {
 
 
   OTAMgr.init( dmm.hostname() );
+  OTAMgr.onEvent = handleOTAEVent;
 
   MDNS.addService("http","tcp",80);
 
@@ -279,9 +289,13 @@ void loop() {
 
   digitalWrite(PIN_LED, (WiFi.status() != WL_CONNECTED));
 
-  dmm.loopModules();
+  if (!OTAMgr.isUpdating) {
+    dmm.loopModules();
 
-  dlm.processChannels();
+    dlm.processChannels();
+  } else {
+    digitalWrite(PIN_LED, HIGH);
+  }
 
   OTAMgr.loop();
 }

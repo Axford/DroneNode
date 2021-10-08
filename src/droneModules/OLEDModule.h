@@ -51,6 +51,7 @@ class OLEDModule:  public I2CBaseModule {
 protected:
   char _subLabels[OLED_NUM_LABELS][17];
   uint8_t _labelState[OLED_NUM_LABELS];
+  unsigned long _lastDiscovery;
   SSD1306Wire *_display;
   DroneLinkMsg _queryMsg;
 public:
@@ -59,6 +60,8 @@ public:
   ~OLEDModule();
 
   void doReset();
+
+  void onOTAProgress(float progress);
 
   void doShutdown();
 

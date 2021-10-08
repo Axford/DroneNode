@@ -7,8 +7,14 @@
 #include <WiFiUdp.h>
 #include <ArduinoOTA.h>
 
+enum OTAManagerEvent { start, end, progress };
+
+typedef void (*OTAManagerCallback) (const OTAManagerEvent event, const float progress);
+
 class OTAManager {
   public:
+    OTAManagerCallback onEvent;
+    
     boolean isUpdating;
     OTAManager(AsyncEventSource * events);
 

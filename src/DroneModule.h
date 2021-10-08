@@ -185,6 +185,9 @@ public:
   // notified prior to a restart or shutdown
   virtual void doShutdown();
 
+  // in case modules want to display a progress indicator when an OTA is in progress
+  virtual void onOTAProgress(float progress);
+
   virtual boolean isAlive();  // polled by watchdog, return true if everything ok
 
   virtual void parsePins(JsonObject &obj, uint8_t *pins, uint8_t numPins);

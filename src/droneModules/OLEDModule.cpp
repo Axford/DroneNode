@@ -20,7 +20,7 @@ OLEDModule::OLEDModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dl
    // init query msg
    _queryMsg.type(DRONE_LINK_MSG_TYPE_NAMEQUERY);
    _queryMsg.length(1);
-   _queryMsg._msg.payload.uint8[0] = _id;
+   _queryMsg._msg.payload.uint8[0] = _dlm->node();
 
    // subs
    initSubs(OLED_SUBS);
@@ -64,6 +64,28 @@ void OLEDModule::doReset() {
   _display->flipScreenVertically();
   _display->setFont(ArialMT_Plain_10);
 }
+
+
+void OLEDModule::onOTAProgress(float progress) {
+  // show a progress bar
+  DroneWire::selectChannel(_bus);
+
+  // write shutdown message to screen
+  // clear the display
+  _display->clear();
+
+  _display->setColor(WHITE);
+  _display->setFont(ArialMT_Plain_10);
+
+  _display->setTextAlignment(TEXT_ALIGN_LEFT);
+  _display->drawString(0, 20, F("Updating..."));
+
+  _display->drawProgressBar(0,30,128,10, 100 * progress);
+
+  // write the buffer to the display
+  _display->display();
+}
+
 
 void OLEDModule::doShutdown() {
   DroneModule::doShutdown(); // disables module
@@ -128,6 +150,15 @@ void OLEDModule::loadConfiguration(JsonObject &obj) {
 void OLEDModule::loop() {
   I2CBaseModule::loop();
 
+  unsigned long loopTime = millis();
+
+  if (loopTime > _lastDiscovery + 5000) {
+    // reset any requested, but not received labels
+    for (uint8_t i=0; i<OLED_NUM_LABELS; i++) {
+      if (_labelState[i] == requested) _labelState[i] = needed;
+    }
+  }
+
   DroneWire::selectChannel(_bus);
 
   // clear the display
@@ -169,6 +200,7 @@ void OLEDModule::loop() {
         _queryMsg._msg.channel = _subs[i].addr.channel;
         _queryMsg._msg.param = _subs[i].addr.param;
         _dlm->publish(_queryMsg);
+        _lastDiscovery = loopTime;
       }
 
       // label

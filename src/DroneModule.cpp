@@ -156,6 +156,10 @@ void DroneModule::doReset() {
   // override this
 }
 
+void DroneModule::onOTAProgress(float progress) {
+  // override this
+}
+
 void DroneModule::doShutdown() {
   _enabled = false;
 }

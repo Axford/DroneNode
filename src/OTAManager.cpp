@@ -29,17 +29,21 @@ void OTAManager::init(String hostname) {
     esp_task_wdt_init(60,0);
 
     _events->send("Update Start", "ota");
+    if (onEvent) { onEvent(start, 0); }
   });
   ArduinoOTA.onEnd([&]() {
     Serial.println(F("[OTA] End"));
     _events->send("Update End", "ota");
     esp_task_wdt_init(5,0);
     isUpdating = false;
+    if (onEvent) { onEvent(end, 100); }
   });
 
   ArduinoOTA.onProgress([&](unsigned int prog, unsigned int total) {
     char p[32];
     //float progress = (float) prog / total;
+
+    if (onEvent) { onEvent(progress, (float) prog / total); }
 
     sprintf(p, "Progress: %u%%\n", (prog/(total/100)));
     _events->send(p, "ota");

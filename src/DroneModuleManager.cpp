@@ -166,12 +166,24 @@ uint8_t DroneModuleManager::moduleCount() {
   return _modules.size();
 }
 
-void DroneModuleManager::restart() {
+void DroneModuleManager::onOTAProgress(float progress) {
+  DroneModule* m;
+  for(int i = 0; i < _modules.size(); i++) {
+    m = _modules.get(i);
+    m->onOTAProgress(progress);
+  }
+}
+
+void DroneModuleManager::shutdown() {
   DroneModule* m;
   for(int i = 0; i < _modules.size(); i++) {
     m = _modules.get(i);
     m->doShutdown();
   }
+}
+
+void DroneModuleManager::restart() {
+  shutdown();
   ESP.restart();
 }
 

@@ -54,6 +54,9 @@ public:
 
   uint8_t moduleCount();
 
+  void onOTAProgress(float progress);
+
+  void shutdown();
   void restart();  // will shutdown all modules, then restart
 
   void setupModules();
