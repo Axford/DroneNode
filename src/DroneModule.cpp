@@ -424,16 +424,20 @@ void DroneModule::handleLinkMessage(DroneLinkMsg *msg) {
   // handle subs
   for (uint8_t i=0; i<_numSubs; i++) {
     if (msg->sameAddress(&_subs[i].addr)) {
-      // handle the subscription updating
-      memcpy(_subs[i].param.data.c, msg->_msg.payload.c, msg->length());
 
-      _subs[i].received = true;
+      // check the type matches what's expected
+      if (msg->type() == ((_subs[i].param.paramTypeLength >> 4) & 0x7)) {
+        // handle the subscription updating
+        memcpy(_subs[i].param.data.c, msg->_msg.payload.c, msg->length());
 
-      // publish the change to this param
-      if (_subs[i].param.publish) publishParamEntry(&_subs[i].param);
+        _subs[i].received = true;
 
-      // trigger an update
-      update();
+        // publish the change to this param
+        if (_subs[i].param.publish) publishParamEntry(&_subs[i].param);
+
+        // trigger an update
+        update();
+      }
     }
   }
 
