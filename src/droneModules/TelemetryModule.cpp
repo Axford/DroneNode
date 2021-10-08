@@ -45,12 +45,12 @@ void TelemetryModule::handleLinkMessage(DroneLinkMsg *msg) {
 
   // package up and re-transmit over telemetry link
   // length is payload length + start byte + node + chan + param + paramtypelength + crc
-  uint8_t transmitLength = msg->length() + 6;
+  uint8_t transmitLength = msg->length() + sizeof(DRONE_LINK_ADDR) + 2;
 
   memcpy(_buffer + 1, &msg->_msg, transmitLength);
 
   // CRC excludes start byte and crc, so payload length + 4, or transmitlength - 2
-  _buffer[transmitLength-1] = _CRC8.smbus(_buffer + 1, msg->length() + 4);
+  _buffer[transmitLength-1] = _CRC8.smbus(_buffer + 1, msg->length() + sizeof(DRONE_LINK_ADDR));
 
   _port->write(_buffer, transmitLength);
 
@@ -94,14 +94,16 @@ void TelemetryModule::loop() {
           }
           break;
 
-        case 1: // found start, waiting to confirm payload lenght
-        if (_receivedSize == 0) {
-          _receivedMsg._msg.node = b;
-        } else if (_receivedSize == 1) {
-            _receivedMsg._msg.channel = b;
+        case 1: // found start, waiting to confirm payload length
+          if (_receivedSize == 0) {
+            _receivedMsg._msg.source = b;
+          } else if (_receivedSize == 1) {
+            _receivedMsg._msg.node = b;
           } else if (_receivedSize == 2) {
-            _receivedMsg._msg.param = b;
+            _receivedMsg._msg.channel = b;
           } else if (_receivedSize == 3) {
+            _receivedMsg._msg.param = b;
+          } else if (_receivedSize == 4) {
             _receivedMsg._msg.paramTypeLength = b;
             _decodeState = 2;
           }
@@ -109,15 +111,15 @@ void TelemetryModule::loop() {
           break;
 
         case 2: // reading payload
-          _receivedMsg._msg.payload.uint8[_receivedSize-4] = b;
-          if (_receivedSize == _receivedMsg.length()+3) {
+          _receivedMsg._msg.payload.uint8[_receivedSize - sizeof(DRONE_LINK_ADDR)] = b;
+          if (_receivedSize == _receivedMsg.length() + sizeof(DRONE_LINK_ADDR) - 1) {
             _decodeState =3;
           }
           _receivedSize++;
           break;
 
         case 3: // checking CRC
-          uint8_t crc = _CRC8.smbus((uint8_t*)&_receivedMsg._msg, _receivedMsg.length() + 4);
+          uint8_t crc = _CRC8.smbus((uint8_t*)&_receivedMsg._msg, _receivedMsg.length() + sizeof(DRONE_LINK_ADDR));
           if (crc == b) {
             _dlm->publish(_receivedMsg);
           } else {

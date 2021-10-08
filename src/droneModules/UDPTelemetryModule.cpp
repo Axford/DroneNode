@@ -47,7 +47,7 @@ void UDPTelemetryModule::handleLinkMessage(DroneLinkMsg *msg) {
   //msg->print();
 
   _udp.beginPacket(broadcastIp, _port);
-  _udp.write((uint8_t*)&msg->_msg, msg->length()+4);
+  _udp.write((uint8_t*)&msg->_msg, msg->length() + sizeof(DRONE_LINK_ADDR));
   _udp.endPacket();
 }
 
@@ -62,7 +62,7 @@ void UDPTelemetryModule::loop() {
   if (packetSize > 0 && packetSize <= sizeof(DRONE_LINK_MSG)) {
     //Log.noticeln("UDP Received: ");
     int len = _udp.read((uint8_t*)&_receivedMsg._msg, sizeof(DRONE_LINK_MSG));
-    if (len >= 5) {
+    if (len >= sizeof(DRONE_LINK_ADDR) + 1) {
       //_receivedMsg.print();
       _dlm->publish(_receivedMsg);
     } else if (packetSize > 0) {

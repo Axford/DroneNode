@@ -43,6 +43,7 @@ _id(id) {
   _enabled = true;
   _error = 0;
   _dlm->subscribe(id, this, DRONE_LINK_PARAM_ALL); // subscribe to all params for self
+  _mgmtMsg.source(_dlm->node()); // default to local node
   _mgmtMsg.node(_dlm->node()); // default to local node
   _mgmtMsg.channel(_id); // pre-set mgmtmsg with own id
   _resetCount = 0;
@@ -324,7 +325,7 @@ boolean DroneModule::publishParamEntries() {
 boolean DroneModule::publishSubAddress(DRONE_PARAM_SUB *sub) {
   _mgmtMsg._msg.param = sub->addrParam;
   _mgmtMsg._msg.paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_ADDR, sizeof(DRONE_LINK_ADDR));
-  memcpy(_mgmtMsg._msg.payload.c, (uint8_t*)&sub->addr, 4);
+  memcpy(_mgmtMsg._msg.payload.c, (uint8_t*)&sub->addr, sizeof(DRONE_LINK_ADDR));
   return _dlm->publish(_mgmtMsg);
 }
 
@@ -387,7 +388,7 @@ void DroneModule::handleParamMessage(DroneLinkMsg *msg, DRONE_PARAM_ENTRY *param
 void DroneModule::handleSubAddrMessage(DroneLinkMsg *msg, DRONE_PARAM_SUB *sub) {
   if (msg->type() == DRONE_LINK_MSG_TYPE_ADDR) {
     // write new address
-    uint8_t len = 4;  // should always be 4 //msg->length();
+    uint8_t len = msg->length();  // should always be sizeof(DRONE_LINK_ADDR) //msg->length();
     // compare to see if anything has changed... which may including receiving our own messages after a query!!
     if (memcmp((uint8_t*)&sub->addr, msg->_msg.payload.c, len) != 0) {
       Log.noticeln("Write to address: ");

@@ -196,6 +196,7 @@ void OLEDModule::loop() {
       if (_labelState[i] == needed && labelRequested == false) {
         // send a namequery message
         _labelState[i] = requested;
+        labelRequested = true;
         _queryMsg._msg.node = _subs[i].addr.node;
         _queryMsg._msg.channel = _subs[i].addr.channel;
         _queryMsg._msg.param = _subs[i].addr.param;

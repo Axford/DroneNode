@@ -4,6 +4,8 @@
 #include "Arduino.h"
 #include <ArduinoLog.h>
 
+#define DRONE_LINK_SOURCE_OWNER       0  // indicates this packet originated with the param owner (i.e. the source module)
+
 #define DRONE_LINK_CHANNEL_ALL        0
 
 #define DRONE_LINK_PARAM_ALL          0
@@ -27,23 +29,27 @@ const uint8_t DRONE_LINK_MSG_TYPE_SIZES[16] = {1,4,4,4,1,1,1,1, 1,1,1,1, 1,1,1,1
 #define DRONE_LINK_MSG_ADDRESS_PUB    1  // this value is published to address (output)
 
 struct DRONE_LINK_ADDR {
-  uint8_t node;  // node id
+  uint8_t source; // node id of who originated the packet (e.g. requester for queries, or node if its a published message)
+  uint8_t node;  // destination node id for writes, or origin if its a published change
   uint8_t channel;  // message channel ID, e.g. navigation
   uint8_t param;    // e.g. current location
   uint8_t addrType;   // e.g. DRONE_LINK_MSG_ADDRESS_SUB
 };
 
+static_assert(sizeof(DRONE_LINK_ADDR) == 5, "Incorrect Addr size");
 
 union DRONE_LINK_PAYLOAD {
-  uint8_t uint8[16];
-  DRONE_LINK_ADDR addr[4];
+  uint8_t uint8[DRONE_LINK_MSG_MAX_PAYLOAD];
   uint32_t uint32[4];
   float f[4];
-  char c[16];
+  char c[DRONE_LINK_MSG_MAX_PAYLOAD];
+  DRONE_LINK_ADDR addr[3]; // doesn't pack neatly, so only 3 complete addresses can fit
 };
 
+static_assert(sizeof(DRONE_LINK_PAYLOAD) == 16, "Incorrect Payload size");
 
 struct DRONE_LINK_MSG {
+  uint8_t source; // node id of who originated the packet (e.g. requester for queries, or node if its a published message)
   uint8_t node;  // node id
   uint8_t channel;  // message channel ID, e.g. navigation
   uint8_t param;    // e.g. current location
@@ -60,7 +66,10 @@ Strings of up to 16 characters can be sent as char
   */
   //uint8_t payload[DRONE_LINK_MSG_MAX_PAYLOAD];
   DRONE_LINK_PAYLOAD payload;
-};
+} __packed;
+
+static_assert(sizeof(DRONE_LINK_MSG) == 21, "Incorrect Msg size");
+
 
 class DroneLinkMsg
 {
@@ -89,6 +98,7 @@ public:
     }
 
     // setters
+    void source(uint8_t v) { _msg.source =v; }
     void node(uint8_t v) { _msg.node = v; }
     void channel(uint8_t v) { _msg.channel = v; }
     void param(uint8_t v) { _msg.param = v; }
@@ -122,6 +132,7 @@ public:
     }
 
     // getters
+    uint8_t source() { return _msg.source; }
     uint8_t node() { return _msg.node; }
     uint8_t channel() { return _msg.channel; }
     uint8_t param() { return _msg.param; }
@@ -137,7 +148,9 @@ public:
 
     boolean sameSignature(DroneLinkMsg *msg) {
       // returns true if channel, param and type match
-      return (node() == msg->node()) &&
+      // TODO - accelerate this with a memcmp
+      return (source() == msg->source()) &&
+             (node() == msg->node()) &&
              (channel() == msg->channel()) &&
              (param() == msg->param()) &&
              (type() == msg->type());
@@ -145,8 +158,10 @@ public:
 
     void print() {
       // TODO: convert to use Log.notice xx
+      Serial.print(source());
+      Serial.print(':');
       Serial.print(node());
-      Serial.print('.');
+      Serial.print('>');
       Serial.print(channel());
       Serial.print('.');
       Serial.print(param());
