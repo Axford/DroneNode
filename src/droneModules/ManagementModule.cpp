@@ -76,7 +76,7 @@ void ManagementModule::onParamWrite(DRONE_PARAM_ENTRY *param) {
     // trigger local reset
     if (_params[MANAGEMENT_PARAM_RESET_E].data.uint8[0] > 0) {
       Serial.println("Restart requested");
-      ESP.restart();
+      _dmm->restart();
     }
   }
 }

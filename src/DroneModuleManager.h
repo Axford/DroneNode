@@ -54,6 +54,8 @@ public:
 
   uint8_t moduleCount();
 
+  void restart();  // will shutdown all modules, then restart
+
   void setupModules();
   void loopModules();
 

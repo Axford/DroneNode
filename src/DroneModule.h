@@ -182,6 +182,9 @@ public:
   void reset();
   virtual void doReset();
 
+  // notified prior to a restart or shutdown
+  virtual void doShutdown();
+
   virtual boolean isAlive();  // polled by watchdog, return true if everything ok
 
   virtual void parsePins(JsonObject &obj, uint8_t *pins, uint8_t numPins);

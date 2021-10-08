@@ -166,6 +166,15 @@ uint8_t DroneModuleManager::moduleCount() {
   return _modules.size();
 }
 
+void DroneModuleManager::restart() {
+  DroneModule* m;
+  for(int i = 0; i < _modules.size(); i++) {
+    m = _modules.get(i);
+    m->doShutdown();
+  }
+  ESP.restart();
+}
+
 void DroneModuleManager::setupModules() {
   DroneModule* m;
   for(int i = 0; i < _modules.size(); i++) {

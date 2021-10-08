@@ -20,7 +20,7 @@ OLEDModule::OLEDModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dl
    // init query msg
    _queryMsg.type(DRONE_LINK_MSG_TYPE_NAMEQUERY);
    _queryMsg.length(1);
-   _queryMsg._msg.payload.uint8[0] = 0;
+   _queryMsg._msg.payload.uint8[0] = _id;
 
    // subs
    initSubs(OLED_SUBS);
@@ -63,6 +63,25 @@ void OLEDModule::doReset() {
 
   _display->flipScreenVertically();
   _display->setFont(ArialMT_Plain_10);
+}
+
+void OLEDModule::doShutdown() {
+  DroneModule::doShutdown(); // disables module
+
+  DroneWire::selectChannel(_bus);
+
+  // write shutdown message to screen
+  // clear the display
+  _display->clear();
+
+  _display->setColor(WHITE);
+  _display->setFont(ArialMT_Plain_10);
+
+  _display->setTextAlignment(TEXT_ALIGN_LEFT);
+  _display->drawString(0, 30, F("Restarting..."));
+
+  // write the buffer to the display
+  _display->display();
 }
 
 

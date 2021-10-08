@@ -156,6 +156,10 @@ void DroneModule::doReset() {
   // override this
 }
 
+void DroneModule::doShutdown() {
+  _enabled = false;
+}
+
 
 boolean DroneModule::isAlive() { return true; }
 

@@ -60,6 +60,8 @@ public:
 
   void doReset();
 
+  void doShutdown();
+
   void handleLinkMessage(DroneLinkMsg *msg);
 
   void loadConfiguration(JsonObject &obj);
