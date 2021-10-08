@@ -33,6 +33,8 @@ void UDPTelemetryModule::loadConfiguration(JsonObject &obj) {
 void UDPTelemetryModule::handleLinkMessage(DroneLinkMsg *msg) {
   DroneModule::handleLinkMessage(msg);
 
+  if (!_enabled) return;
+
   // check to see if this is the same as the last message we received!
   // if so, we're getting stuck in a loop and the message should be ignored
   if (_receivedMsg.sameSignature(msg)) return;
@@ -46,9 +48,12 @@ void UDPTelemetryModule::handleLinkMessage(DroneLinkMsg *msg) {
   //Log.noticeln("UDP Broadcast: ");
   //msg->print();
 
-  _udp.beginPacket(broadcastIp, _port);
-  _udp.write((uint8_t*)&msg->_msg, msg->length() + sizeof(DRONE_LINK_ADDR));
-  _udp.endPacket();
+  // only send messages that originate on this node
+  if (msg->source() == _dlm->node()) {
+    _udp.beginPacket(broadcastIp, _port);
+    _udp.write((uint8_t*)&msg->_msg, msg->length() + sizeof(DRONE_LINK_ADDR));
+    _udp.endPacket();
+  }
 }
 
 void UDPTelemetryModule::setup() {

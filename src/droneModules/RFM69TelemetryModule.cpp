@@ -31,6 +31,8 @@ void RFM69TelemetryModule::loadConfiguration(JsonObject &obj) {
 void RFM69TelemetryModule::handleLinkMessage(DroneLinkMsg *msg) {
   DroneModule::handleLinkMessage(msg);
 
+  if (!_enabled) return;
+
   if (_error > 0) return;
 
   // check to see if this is the same as the last message we received!

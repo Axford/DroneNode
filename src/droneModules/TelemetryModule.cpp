@@ -33,6 +33,8 @@ void TelemetryModule::loadConfiguration(JsonObject &obj) {
 void TelemetryModule::handleLinkMessage(DroneLinkMsg *msg) {
   DroneModule::handleLinkMessage(msg);
 
+  if (!_enabled) return;
+
   // check to see if this is the same as the last message we received!
   // if so, we're getting stuck in a loop and the message should be ignored
   if (_receivedMsg.sameSignature(msg)) return;
