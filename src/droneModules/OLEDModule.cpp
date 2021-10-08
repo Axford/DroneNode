@@ -86,8 +86,6 @@ void OLEDModule::doShutdown() {
 
 
 void OLEDModule::handleLinkMessage(DroneLinkMsg *msg) {
-  DroneModule::handleLinkMessage(msg);
-
   // intercept values for our subs
   for (uint8_t i=0; i<_numSubs; i++) {
     if (msg->sameAddress(&_subs[i].addr)) {
@@ -95,6 +93,8 @@ void OLEDModule::handleLinkMessage(DroneLinkMsg *msg) {
         strncpy(_subLabels[i], msg->_msg.payload.c, msg->length());
         _subLabels[i][msg->length()] = '\0';
         _labelState[i] = received;
+
+        return;
       } else if (msg->type() <= DRONE_LINK_MSG_TYPE_CHAR) {
         // match type
         _subs[i].param.paramTypeLength = msg->_msg.paramTypeLength & (~DRONE_LINK_MSG_WRITABLE);
@@ -107,9 +107,13 @@ void OLEDModule::handleLinkMessage(DroneLinkMsg *msg) {
         }
 
         _subs[i].received = true;
+
+        return;
       }
     }
   }
+
+  DroneModule::handleLinkMessage(msg);
 }
 
 
