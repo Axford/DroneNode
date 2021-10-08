@@ -69,7 +69,7 @@ void UDPTelemetryModule::loop() {
     int len = _udp.read((uint8_t*)&_receivedMsg._msg, sizeof(DRONE_LINK_MSG));
     if (len >= sizeof(DRONE_LINK_ADDR) + 1) {
       //_receivedMsg.print();
-      _dlm->publish(_receivedMsg);
+      _dlm->publishPeer(_receivedMsg, 0, _id);
     } else if (packetSize > 0) {
       // error - packet size mismatch
       Log.errorln(F("UDPT: Packet size mismatch"));

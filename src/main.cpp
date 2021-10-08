@@ -149,6 +149,17 @@ void setupWebServer() {
   });
 
 
+  // node info debug
+  server.on("/nodeInfo", HTTP_GET, [](AsyncWebServerRequest *request){
+    dlm.serveNodeInfo(request);
+  });
+
+  // channel info debug
+  server.on("/channelInfo", HTTP_GET, [](AsyncWebServerRequest *request){
+    dlm.serveChannelInfo(request);
+  });
+
+
   #ifdef INC_SPIFFS_EDITOR
   server.addHandler(new SPIFFSEditor(SPIFFS));
   #endif

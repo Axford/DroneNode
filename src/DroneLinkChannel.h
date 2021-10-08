@@ -25,6 +25,7 @@ protected:
   uint32_t _choked;
   IvanLinkedList::LinkedList<DroneLinkChannelSubscription> _subs;
   IvanLinkedList::LinkedList<DroneLinkMsg*> _queue;
+  uint8_t _peakSize;
 
 public:
     DroneLinkChannel(uint8_t node, uint8_t id):
@@ -35,13 +36,18 @@ public:
     {
       Log.noticeln(F("Create channel: %d>%d"),node,id);
       _choked =0;
+      _peakSize = 0;
     }
 
     uint8_t id() { return _id; }
 
     uint8_t node() { return _node; }
 
+    uint8_t size() { return _queue.size(); }
+
     uint32_t choked() { return _choked; }
+
+    uint8_t peakSize() { return _peakSize; }
 
     boolean publish(DroneLinkMsg msg) {
       if (_queue.size() < DRONE_LINK_CHANNEL_QUEUE_LIMIT) {
@@ -53,6 +59,8 @@ public:
         // add to queue
         DroneLinkMsg *tmp = new DroneLinkMsg(msg);
         _queue.add(tmp);
+
+        _peakSize = max(_peakSize, (uint8_t)_queue.size());
 
         return true;
       } else {

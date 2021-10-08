@@ -6,6 +6,9 @@ DroneLinkManager::DroneLinkManager():
   _channels(IvanLinkedList::LinkedList<DroneLinkChannel*>())
 {
   _publishedMessages = 0;
+  for (uint8_t i=0; i<DRONE_LINK_NODE_PAGES; i++) {
+    _nodePages[i] = NULL;
+  }
 }
 
 
@@ -78,6 +81,38 @@ bool DroneLinkManager::publish(DroneLinkMsg msg) {
   return f;
 }
 
+bool DroneLinkManager::publishPeer(DroneLinkMsg msg, uint8_t RSSI, uint8_t interface) {
+
+  // update nodeInfo map
+  if (msg.source() != node()) {
+    // get page
+    uint8_t pageIndex = msg.source() >> 4;  // div by 16
+    uint8_t nodeIndex = msg.source() & 0xF;
+
+    // see if page exists
+    DRONE_LINK_NODE_PAGE* page = _nodePages[pageIndex];
+
+    if (page == NULL) {
+      // create page
+      _nodePages[pageIndex] = (DRONE_LINK_NODE_PAGE*)malloc(sizeof(DRONE_LINK_NODE_PAGE));
+      page = _nodePages[pageIndex];
+
+      // init
+      for (uint8_t i=0; i<DRONE_LINK_NODE_PAGE_SIZE; i++) {
+        page->nodeInfo[i].heard = false;
+      }
+    }
+
+    // update node info
+    page->nodeInfo[nodeIndex].heard = true;
+    page->nodeInfo[nodeIndex].lastHeard = millis();
+    page->nodeInfo[nodeIndex].RSSI = RSSI;
+    page->nodeInfo[nodeIndex].interface = interface;
+  }
+
+  return publish(msg);
+}
+
 void DroneLinkManager::processChannels() {
   DroneLinkChannel* c;
   for(int i = 0; i < _channels.size(); i++){
@@ -105,4 +140,48 @@ unsigned long DroneLinkManager::publishedMessages() {
 
 void DroneLinkManager::resetPublishedMessages() {
   _publishedMessages = 0;
+}
+
+
+void DroneLinkManager::serveNodeInfo(AsyncWebServerRequest *request) {
+  AsyncResponseStream *response = request->beginResponseStream("text/text");
+  response->addHeader("Server","ESP Async Web Server");
+  response->print(F("Source Node Info: \n"));
+
+  unsigned long loopTime = millis();
+
+  DRONE_LINK_NODE_PAGE *page;
+  for (uint8_t i=0; i<DRONE_LINK_NODE_PAGES; i++) {
+    page = _nodePages[i];
+    if (page != NULL) {
+      for (uint8_t j=0; j<DRONE_LINK_NODE_PAGE_SIZE; j++) {
+        if (page->nodeInfo[j].heard) {
+          uint8_t id = (i << 4) + j;
+          unsigned int age = (loopTime - page->nodeInfo[j].lastHeard) / 1000;
+          response->printf("%u > RSSI: %u, Age: %u sec, int: %u\n", id, page->nodeInfo[j].RSSI, age, page->nodeInfo[j].interface);
+        }
+      }
+    }
+  }
+
+  //send the response last
+  request->send(response);
+}
+
+
+void DroneLinkManager::serveChannelInfo(AsyncWebServerRequest *request) {
+
+  AsyncResponseStream *response = request->beginResponseStream("text/text");
+  response->addHeader("Server","ESP Async Web Server");
+  response->print(F("Channels: \n"));
+
+  DroneLinkChannel* c;
+  for(int i = 0; i < _channels.size(); i++){
+    c = _channels.get(i);
+    response->printf("%u > %u = %u (%u)\n", c->node(), c->id(), c->size(), c->peakSize());
+  }
+
+
+  //send the response last
+  request->send(response);
 }

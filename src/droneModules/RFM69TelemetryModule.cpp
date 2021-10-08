@@ -43,8 +43,10 @@ void RFM69TelemetryModule::handleLinkMessage(DroneLinkMsg *msg) {
   //msg->print();
 
   // TODO: fix packet relay between nodes (mesh) and avoiding circular loops of packets jumping between nodes
-
-  _radio.send(255, (uint8_t*)&msg->_msg, msg->length() + sizeof(DRONE_LINK_ADDR));
+  // only send messages that originate on this node
+  if (msg->source() == _dlm->node()) {
+    _radio.send(255, (uint8_t*)&msg->_msg, msg->length() + sizeof(DRONE_LINK_ADDR));
+  }
 }
 
 void RFM69TelemetryModule::setup() {
@@ -74,8 +76,9 @@ void RFM69TelemetryModule::loop() {
       memcpy(&_receivedMsg._msg, _radio.DATA, _radio.DATALEN);
       //Serial.print("RFM69 Receveived: ");
       //_receivedMsg.print();
+      uint8_t RSSI = -_radio.RSSI;
 
-      _dlm->publish(_receivedMsg);
+      _dlm->publishPeer(_receivedMsg, RSSI, _id);
 
       // update RSSI - moving average
       float v = _params[RFM69_TELEMETRY_PARAM_RSSI_E].data.f[0];
