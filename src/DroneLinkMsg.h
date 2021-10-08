@@ -21,7 +21,7 @@
 
 #define DRONE_LINK_MSG_WRITABLE       0b10000000  // top bit indicates if param is writable
 
-const uint8_t DRONE_LINK_MSG_TYPE_SIZES[16] = {1,2,4,4, 4,8,1,1, 1,1,1,1, 1,1,1,1};
+const uint8_t DRONE_LINK_MSG_TYPE_SIZES[16] = {1,4,4,4,1,1,1,1, 1,1,1,1, 1,1,1,1};
 
 #define DRONE_LINK_MSG_ADDRESS_SUB    0  // this address is a subscription (input)
 #define DRONE_LINK_MSG_ADDRESS_PUB    1  // this value is published to address (output)
@@ -36,7 +36,7 @@ struct DRONE_LINK_ADDR {
 
 union DRONE_LINK_PAYLOAD {
   uint8_t uint8[16];
-  DRONE_LINK_ADDR addr[4]; 
+  DRONE_LINK_ADDR addr[4];
   uint32_t uint32[4];
   float f[4];
   char c[16];
