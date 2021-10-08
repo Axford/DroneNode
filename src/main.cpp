@@ -237,8 +237,9 @@ void setup() {
   Log.noticeln(F("  usedBytes %d"), SPIFFS.usedBytes());
 
   File logFile = SPIFFS.open("/startup.log", FILE_WRITE);
-  //Log.begin(LOG_LEVEL_VERBOSE, &logFile);
 
+  // switch to logging to startup.log file on spiffs
+  Log.begin(LOG_LEVEL_VERBOSE, &logFile);
   Log.noticeln(F("[] Starting..."));
 
   //ESP32PWM::allocateTimer(0);
