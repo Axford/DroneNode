@@ -42,9 +42,15 @@ void RFM69TelemetryModule::handleLinkMessage(DroneLinkMsg *msg) {
   //Serial.print("RFM69: Sending: ");
   //msg->print();
 
-  // TODO: fix packet relay between nodes (mesh) and avoiding circular loops of packets jumping between nodes
   // only send messages that originate on this node
-  if (msg->source() == _dlm->node()) {
+  boolean sendPacket = (msg->source() == _dlm->node());
+  if (!sendPacket) {
+    // OR!
+    // on a different interface
+    sendPacket = _dlm->getSourceInterface(msg->source()) != _id;
+  }
+
+  if (sendPacket) {
     _radio.send(255, (uint8_t*)&msg->_msg, msg->length() + sizeof(DRONE_LINK_ADDR));
   }
 }

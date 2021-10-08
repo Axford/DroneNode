@@ -49,7 +49,14 @@ void UDPTelemetryModule::handleLinkMessage(DroneLinkMsg *msg) {
   //msg->print();
 
   // only send messages that originate on this node
-  if (msg->source() == _dlm->node()) {
+  // OR!
+  // on a different interface
+  boolean sendPacket = (msg->source() == _dlm->node());
+  if (!sendPacket) {
+    sendPacket = _dlm->getSourceInterface(msg->source()) != _id;
+  }
+
+  if (sendPacket) {
     _udp.beginPacket(broadcastIp, _port);
     _udp.write((uint8_t*)&msg->_msg, msg->length() + sizeof(DRONE_LINK_ADDR));
     _udp.endPacket();

@@ -143,6 +143,23 @@ void DroneLinkManager::resetPublishedMessages() {
 }
 
 
+uint8_t DroneLinkManager::getSourceInterface(uint8_t source) {
+  // get page
+  uint8_t pageIndex = source >> 4;  // div by 16
+  uint8_t nodeIndex = source & 0xF;
+
+  // see if page exists
+  DRONE_LINK_NODE_PAGE* page = _nodePages[pageIndex];
+  if (page != NULL) {
+    if (page->nodeInfo[nodeIndex].heard) {
+      return page->nodeInfo[nodeIndex].interface;
+    } else
+      return 0;
+  } else
+    return 0;
+}
+
+
 void DroneLinkManager::serveNodeInfo(AsyncWebServerRequest *request) {
   AsyncResponseStream *response = request->beginResponseStream("text/text");
   response->addHeader("Server","ESP Async Web Server");

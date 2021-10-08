@@ -57,6 +57,9 @@ public:
     unsigned long publishedMessages();
     void resetPublishedMessages();
 
+    // get the interface associated with a source id
+    uint8_t getSourceInterface(uint8_t source);
+
     void serveNodeInfo(AsyncWebServerRequest *request);
     void serveChannelInfo(AsyncWebServerRequest *request);
 };
