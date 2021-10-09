@@ -15,6 +15,7 @@ struct DRONE_LINK_NODE_INFO {
   uint8_t RSSI;  // signal strength of last packet, rounded to single digit and invert (e.g. -50dB becomes 50)
   // location?
   uint8_t interface;  // module ID of the network interface that heard this node
+  char * name; // dynamically allocated to match heard name
 };
 
 #define DRONE_LINK_NODE_PAGE_SIZE  16
@@ -33,6 +34,9 @@ protected:
   IvanLinkedList::LinkedList<DroneLinkChannel*> _channels;
 
   // node map - nodes we've heard of and info about them
+  uint8_t _peerNodes;  // how many peer nodes have we heard
+  uint8_t _minPeer;  // min id
+  uint8_t _maxPeer;  // max id
   DRONE_LINK_NODE_PAGE *_nodePages[DRONE_LINK_NODE_PAGES];
 
 public:
@@ -56,6 +60,12 @@ public:
 
     unsigned long publishedMessages();
     void resetPublishedMessages();
+
+    uint8_t numPeers();
+    uint8_t maxPeer();
+    uint8_t minPeer();
+
+    DRONE_LINK_NODE_INFO* getNodeInfo(uint8_t source);
 
     // get the interface associated with a source id
     uint8_t getSourceInterface(uint8_t source);

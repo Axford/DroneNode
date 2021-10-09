@@ -6,6 +6,9 @@ DroneLinkManager::DroneLinkManager():
   _channels(IvanLinkedList::LinkedList<DroneLinkChannel*>())
 {
   _publishedMessages = 0;
+  _peerNodes = 0;
+  _minPeer = 255;
+  _maxPeer = 0;
   for (uint8_t i=0; i<DRONE_LINK_NODE_PAGES; i++) {
     _nodePages[i] = NULL;
   }
@@ -100,14 +103,33 @@ bool DroneLinkManager::publishPeer(DroneLinkMsg msg, uint8_t RSSI, uint8_t inter
       // init
       for (uint8_t i=0; i<DRONE_LINK_NODE_PAGE_SIZE; i++) {
         page->nodeInfo[i].heard = false;
+        page->nodeInfo[i].name = NULL;
       }
     }
 
     // update node info
+    if (!page->nodeInfo[nodeIndex].heard) _peerNodes++;
     page->nodeInfo[nodeIndex].heard = true;
     page->nodeInfo[nodeIndex].lastHeard = millis();
     page->nodeInfo[nodeIndex].RSSI = RSSI;
     page->nodeInfo[nodeIndex].interface = interface;
+
+    _minPeer = min(_minPeer, msg.source());
+    _maxPeer = max(_maxPeer, msg.source());
+
+    // is this a node name message ?
+    if (msg.channel() == 1 &&
+        msg.param() == 8 &&
+        msg.type() == DRONE_LINK_MSG_TYPE_CHAR) {
+          // do we need to allocate memory for the name?
+          if (page->nodeInfo[nodeIndex].name == NULL) {
+            page->nodeInfo[nodeIndex].name = (char*)malloc(17);
+          }
+
+          //copy the new name
+          memcpy(page->nodeInfo[nodeIndex].name, msg._msg.payload.c, msg.length());
+          page->nodeInfo[nodeIndex].name[msg.length()] = '\0';
+        }
   }
 
   return publish(msg);
@@ -143,7 +165,19 @@ void DroneLinkManager::resetPublishedMessages() {
 }
 
 
-uint8_t DroneLinkManager::getSourceInterface(uint8_t source) {
+uint8_t DroneLinkManager::numPeers() {
+  return _peerNodes;
+}
+
+uint8_t DroneLinkManager::maxPeer() {
+  return _maxPeer;
+}
+
+uint8_t DroneLinkManager::minPeer() {
+  return _minPeer;
+}
+
+DRONE_LINK_NODE_INFO* DroneLinkManager::getNodeInfo(uint8_t source) {
   // get page
   uint8_t pageIndex = source >> 4;  // div by 16
   uint8_t nodeIndex = source & 0xF;
@@ -152,11 +186,20 @@ uint8_t DroneLinkManager::getSourceInterface(uint8_t source) {
   DRONE_LINK_NODE_PAGE* page = _nodePages[pageIndex];
   if (page != NULL) {
     if (page->nodeInfo[nodeIndex].heard) {
-      return page->nodeInfo[nodeIndex].interface;
+      return &page->nodeInfo[nodeIndex];
     } else
-      return 0;
+      return NULL;
   } else
+    return NULL;
+}
+
+uint8_t DroneLinkManager::getSourceInterface(uint8_t source) {
+  DRONE_LINK_NODE_INFO* nodeInfo = getNodeInfo(source);
+
+  if (nodeInfo == NULL) {
     return 0;
+  } else
+    return nodeInfo->interface;
 }
 
 
@@ -175,7 +218,12 @@ void DroneLinkManager::serveNodeInfo(AsyncWebServerRequest *request) {
         if (page->nodeInfo[j].heard) {
           uint8_t id = (i << 4) + j;
           unsigned int age = (loopTime - page->nodeInfo[j].lastHeard) / 1000;
-          response->printf("%u > RSSI: %u, Age: %u sec, int: %u\n", id, page->nodeInfo[j].RSSI, age, page->nodeInfo[j].interface);
+          response->printf("%u > ", id);
+          if (page->nodeInfo[j].name == NULL) {
+            response->print("???");
+          } else
+            response->printf("%s", page->nodeInfo[j].name);
+          response->printf(", RSSI: %u, Age: %u sec, int: %u\n", page->nodeInfo[j].RSSI, age, page->nodeInfo[j].interface);
         }
       }
     }
