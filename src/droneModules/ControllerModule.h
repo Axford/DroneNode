@@ -97,8 +97,9 @@ struct CONTROLLER_MENU_STATE {
 #define CONTROLLER_MENU_BINDAXIS2  6  // select parameter
 #define CONTROLLER_MENU_BINDAXIS3  7  // complete binding
 #define CONTROLLER_MENU_CLEAR      8
+#define CONTROLLER_MENU_EDITINFO   9
 
-#define CONTROLLER_MENU_COUNT      9
+#define CONTROLLER_MENU_COUNT      10
 
 //static_assert(CONTROLLER_MENU_COUNT == 5, "Incorrect menu size");
 
@@ -112,16 +113,26 @@ struct CONTROLLER_MENU_STATE {
 #define CONTROLLER_AXIS_RIGHT_Z  6
 #define CONTROLLER_AXIS_RIGHT_B  7
 
+#define CONTROLLER_INFO_COUNT    4
+
 // class
 class ControllerModule:  public I2CBaseModule {
 protected:
   float _axes[8];
+  boolean _neutral[8];  // set true if entered neutral deadband, do provide hysterisis for menus
+
   DRONE_LINK_ADDR _bindings[8];
   String _bindingLabels[8]; // friendly binding labels (i.e. named channel > param)
-  boolean _neutral[8];  // set true if entered neutral deadband, do provide hysterisis for menus
+
+  DroneLinkMsg _info[CONTROLLER_INFO_COUNT];
+  String _infoLabels[CONTROLLER_INFO_COUNT]; // friendly info labels (i.e. named channel > param)
+
+  uint8_t _RSSI;  // last received RSSI from telemetry module
 
   uint8_t _brightness;
   unsigned long _syncMenusTimer;
+
+  boolean _bindingAxis;  // true if we're in the menu for binding an axis, false if we're binding an info item
 
   boolean _isBound;
   String _bindingName;
@@ -183,6 +194,9 @@ public:
 
   void manageBindAxis2(boolean syncMenu);
   void manageBindAxis3(boolean syncMenu);
+
+  void manageEditInfo(boolean syncMenu);
+  void drawEditInfoMenuItem(uint8_t index, uint8_t y);
 
   void drawMenu();
 

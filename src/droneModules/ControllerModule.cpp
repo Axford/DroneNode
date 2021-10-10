@@ -40,6 +40,11 @@ Root = info for active binding OR indicator that is unbound
   Save current binding (only available if a binding is active)
     * Saves current binding (using node name as reference) and sets flag for last used config
 
+
+  Edit info map
+    * Once a binding is completed
+
+
 */
 
 
@@ -64,7 +69,9 @@ ControllerModule::ControllerModule(uint8_t id, DroneModuleManager* dmm, DroneLin
    _sendMsg._msg.payload.f[0] = 0;
 
    _brightness = 0;
+   _spinner = 0;
 
+   _RSSI = 0;
 
    // configure menus
    _menu = CONTROLLER_MENU_ROOT;
@@ -127,6 +134,16 @@ void ControllerModule::clear() {
     _bindingLabels[i] = "";
   }
 
+  for (uint8_t i=0; i<CONTROLLER_INFO_COUNT; i++) {
+    _info[i].node(255);
+    _info[i].channel(255);
+    _info[i].param(255);
+    _info[i].length(1);
+    _info[i].type(DRONE_LINK_MSG_TYPE_CHAR);
+    _info[i].setUint8_t('?');
+    _infoLabels[i] = "";
+  }
+
   // reset channel / param tree
   for (uint8_t i=0; i < _availChannels.size(); i++) {
     CONTROLLER_CHANNEL_INFO* chanInfo = _availChannels.get(i);
@@ -144,6 +161,7 @@ void ControllerModule::clear() {
   _availChannels.clear();
   Log.noticeln(F("done"));
 }
+
 
 void ControllerModule::doReset() {
   I2CBaseModule::doReset();
@@ -224,8 +242,15 @@ void ControllerModule::handleLinkMessage(DroneLinkMsg *msg) {
     }
   }
 
+  // intercept RSSI for telemetry
+  if (msg->channel() == _params[CONTROLLER_PARAM_TELEMETRY_E].data.uint8[0] &&
+      msg->param() == 8 &&
+      msg->type() == DRONE_LINK_MSG_TYPE_FLOAT) {
+    _RSSI = msg->_msg.payload.f[0];
+  }
+
   if (!_isBound) {
-    _spinner += PI / 8.0;
+    _spinner += PI / 16.0;
   }
 
   // listen to channels / params for active binding
@@ -258,6 +283,18 @@ void ControllerModule::handleLinkMessage(DroneLinkMsg *msg) {
             _channelInfoChanged = true;
           }
         }
+
+    // intercept info bindings
+    for (uint8_t i=0; i<CONTROLLER_INFO_COUNT; i++) {
+      if (msg->channel() == _info[i].channel() &&
+          msg->param() == _info[i].param() &&
+          msg->type() <= DRONE_LINK_MSG_TYPE_CHAR) {
+        _info[i]._msg.paramTypeLength = msg->_msg.paramTypeLength;
+        uint8_t len = msg->length();
+        memcpy(_info[i]._msg.payload.c, msg->_msg.payload.c, len);
+      }
+    }
+
 
     // capture all displayable parameters
     if (msg->type() <= DRONE_LINK_MSG_TYPE_CHAR) {
@@ -377,10 +414,11 @@ void ControllerModule::setup() {
  _menus[CONTROLLER_MENU_MAIN].name = (F("Main"));
  _menus[CONTROLLER_MENU_MAIN].backTo = CONTROLLER_MENU_ROOT;
  setMenuItem(CONTROLLER_MENU_MAIN, 0, F("Start"), 0, NULL, CONTROLLER_MENU_START);
- setMenuItem(CONTROLLER_MENU_MAIN, 1, F("Edit"), 1, NULL, CONTROLLER_MENU_EDIT);
- setMenuItem(CONTROLLER_MENU_MAIN, 2, F("Clear"), 2, NULL, CONTROLLER_MENU_CLEAR);
+ setMenuItem(CONTROLLER_MENU_MAIN, 1, F("Edit Bindings"), 1, NULL, CONTROLLER_MENU_EDIT);
+ setMenuItem(CONTROLLER_MENU_MAIN, 2, F("Edit Info"), 2, NULL, CONTROLLER_MENU_EDITINFO);
+ setMenuItem(CONTROLLER_MENU_MAIN, 3, F("Clear"), 3, NULL, CONTROLLER_MENU_CLEAR);
 
- _menus[CONTROLLER_MENU_START].name = (F("Start: Select a node"));
+ _menus[CONTROLLER_MENU_START].name = (F("Select a node"));
  _menus[CONTROLLER_MENU_START].backTo = CONTROLLER_MENU_MAIN;
 
  _menus[CONTROLLER_MENU_CREATE].name = (F("Create binding"));
@@ -388,7 +426,7 @@ void ControllerModule::setup() {
  // dummy menu entry for navigation
  setMenuItem(CONTROLLER_MENU_CREATE, 0, (F("Edit")), 0, NULL, CONTROLLER_MENU_EDIT);
 
- _menus[CONTROLLER_MENU_EDIT].name = (F("Edit: Select axis to bind"));
+ _menus[CONTROLLER_MENU_EDIT].name = (F("Select axis to bind"));
  _menus[CONTROLLER_MENU_EDIT].backTo = CONTROLLER_MENU_MAIN;
  setMenuItem(CONTROLLER_MENU_EDIT, 0, F("LX"), 0, NULL, CONTROLLER_MENU_BINDAXIS);
  setMenuItem(CONTROLLER_MENU_EDIT, 1, (F("LY")), 1, NULL, CONTROLLER_MENU_BINDAXIS);
@@ -397,14 +435,19 @@ void ControllerModule::setup() {
  setMenuItem(CONTROLLER_MENU_EDIT, 4, (F("RY")), 5, NULL, CONTROLLER_MENU_BINDAXIS);
  setMenuItem(CONTROLLER_MENU_EDIT, 5, (F("RZ")), 6, NULL, CONTROLLER_MENU_BINDAXIS);
 
+ _menus[CONTROLLER_MENU_EDITINFO].name = (F("Select item to bind"));
+ _menus[CONTROLLER_MENU_EDITINFO].backTo = CONTROLLER_MENU_MAIN;
+ for (uint8_t i=0; i<CONTROLLER_INFO_COUNT; i++)
+  setMenuItem(CONTROLLER_MENU_EDITINFO, i, "Item "+String(i), i, NULL, CONTROLLER_MENU_BINDAXIS);
 
- _menus[CONTROLLER_MENU_BINDAXIS].name = (F("Bind: Select module"));
+
+ _menus[CONTROLLER_MENU_BINDAXIS].name = (F("Select module"));
  _menus[CONTROLLER_MENU_BINDAXIS].backTo = CONTROLLER_MENU_EDIT;
 
- _menus[CONTROLLER_MENU_BINDAXIS2].name = (F("Bind: Select param"));
+ _menus[CONTROLLER_MENU_BINDAXIS2].name = (F("Select param"));
  _menus[CONTROLLER_MENU_BINDAXIS2].backTo = CONTROLLER_MENU_BINDAXIS;
 
- _menus[CONTROLLER_MENU_BINDAXIS3].name = (F("Bind: Complete"));
+ _menus[CONTROLLER_MENU_BINDAXIS3].name = (F("Bind complete"));
  _menus[CONTROLLER_MENU_BINDAXIS3].backTo = CONTROLLER_MENU_EDIT;
 
  _menus[CONTROLLER_MENU_CLEAR].name = (F("Binding Cleared"));
@@ -453,8 +496,59 @@ void ControllerModule::manageRoot(boolean syncMenu) {
   _display->setColor(WHITE);
 
   if (_isBound) {
-    //_display->drawString(0, 12, "Bound to " + String(_binding));
+    // show any configured info bindings
 
+    _display->setTextAlignment(TEXT_ALIGN_LEFT);
+    uint8_t y;
+    String valueStr = "";
+    for (uint8_t i=0; i< CONTROLLER_INFO_COUNT; i++) {
+      y = 14 + (i) *12;
+
+      if (_info[i].param() < 255) {
+        // draw label
+        _display->setFont(TomThumb4x6);
+        _display->setTextAlignment(TEXT_ALIGN_RIGHT);
+        _display->drawString(58, y+4, _infoLabels[i]);
+
+        // draw value
+        uint8_t byteLen = (_info[i]._msg.paramTypeLength & 0xF)+1;
+        uint8_t msgType = (_info[i]._msg.paramTypeLength >> 4) & 0x07;
+        uint8_t numValues = (msgType == DRONE_LINK_MSG_TYPE_CHAR) ? 1 : (byteLen / DRONE_LINK_MSG_TYPE_SIZES[msgType]);
+
+        _display->setTextAlignment(TEXT_ALIGN_LEFT);
+        if (numValues > 1) {
+          _display->setFont(TomThumb4x6);
+        } else
+          _display->setFont(ArialMT_Plain_10);
+
+
+        valueStr = "";
+        for (uint8_t j=0; j<numValues; j++) {
+          if (j > 0) valueStr += ' ';
+
+          switch(msgType) {
+            case DRONE_LINK_MSG_TYPE_UINT8_T:
+              valueStr += String(_info[i]._msg.payload.uint8[j]);
+              break;
+            case DRONE_LINK_MSG_TYPE_UINT32_T:
+              valueStr += String(_info[i]._msg.payload.uint32[j]);
+              break;
+            case DRONE_LINK_MSG_TYPE_FLOAT:
+              valueStr += String(_info[i]._msg.payload.f[j]);
+              break;
+            case DRONE_LINK_MSG_TYPE_CHAR:
+              valueStr += String(_info[i]._msg.payload.c);
+              break;
+          }
+        }
+
+        _display->drawString(62, y + (numValues > 1 ? 4 : 0), valueStr);
+
+
+      }
+    }
+
+    drawSpinner();
 
   } else {
     _menus[CONTROLLER_MENU_ROOT].name = "No Binding";
@@ -532,15 +626,12 @@ void ControllerModule::manageCreate(boolean syncMenu) {
 void ControllerModule::manageEdit(boolean syncMenu) {
   if (_isBound) {
     // pick an axis to edit binding
+    _bindingAxis = true;
+    _menus[CONTROLLER_MENU_BINDAXIS].backTo = CONTROLLER_MENU_EDIT;
     drawMenu();
   } else {
     // redirect to start
     _menu = CONTROLLER_MENU_START;
-    /*
-    _display->setColor(WHITE);
-    _display->setTextAlignment(TEXT_ALIGN_CENTER);
-    _display->drawString(64, 25, F("No binding to edit"));
-    */
   }
 }
 
@@ -555,7 +646,6 @@ void ControllerModule::drawEditMenuItem(uint8_t index, uint8_t y) {
   if (_bindings[axis].param != 255) {
     _display->setFont(TomThumb4x6);
     _display->drawString(20, y+4, _bindingLabels[axis]);
-    //temp += " = " + String(_bindings[axis].channel) + '.' + String(_bindings[axis].param);
   }
 }
 
@@ -611,7 +701,11 @@ void ControllerModule::drawBindAxisMenuItem(uint8_t index, uint8_t y) {
   // get number of params for this channel
   CONTROLLER_CHANNEL_INFO *chan = getChannelInfo(channel);
 
-  if (chan != NULL) temp += " (" + String(chan->numFloats) +'/' + String(chan->params->size()) + ")";
+  if (chan != NULL) {
+    temp += " (";
+    if (_bindingAxis) temp += String(chan->numFloats) +'/';
+    temp += String(chan->params->size()) + ")";
+  }
   _display->drawString(2, y, temp);
 }
 
@@ -629,7 +723,9 @@ void ControllerModule::manageBindAxis2(boolean syncMenu) {
     uint8_t j = 0;
     for (uint8_t i=0; i<chanInfo->params->size(); i++) {
       CONTROLLER_PARAM_INFO *paramInfo = chanInfo->params->get(i);
-      if (paramInfo->paramTypeLength == (DRONE_LINK_MSG_WRITABLE | (DRONE_LINK_MSG_TYPE_FLOAT << 4) | 0x3)) {
+
+      if ( (paramInfo->paramTypeLength == (DRONE_LINK_MSG_WRITABLE | (DRONE_LINK_MSG_TYPE_FLOAT << 4) | 0x3)) ||
+            !_bindingAxis) {
         if (paramInfo->name[0] == '?') {
           // send a fresh name query
           if (millis() > _lastDiscovery + CONTROLLER_DISCOVERY_INTERVAL) {
@@ -661,23 +757,74 @@ void ControllerModule::manageBindAxis2(boolean syncMenu) {
 void ControllerModule::manageBindAxis3(boolean syncMenu) {
   // complete new binding
 
-  // get axis
-  uint8_t axis = _menus[CONTROLLER_MENU_EDIT].items[ _menus[CONTROLLER_MENU_EDIT].selected ].data;
+  if (_bindingAxis) {
+    // get axis
+    uint8_t axis = _menus[CONTROLLER_MENU_EDIT].items[ _menus[CONTROLLER_MENU_EDIT].selected ].data;
 
-  // get channel reference
-  CONTROLLER_CHANNEL_INFO* chanInfo = (CONTROLLER_CHANNEL_INFO*)_menus[CONTROLLER_MENU_BINDAXIS].items[ _menus[CONTROLLER_MENU_BINDAXIS].selected ].dataPointer;
+    // get channel reference
+    CONTROLLER_CHANNEL_INFO* chanInfo = (CONTROLLER_CHANNEL_INFO*)_menus[CONTROLLER_MENU_BINDAXIS].items[ _menus[CONTROLLER_MENU_BINDAXIS].selected ].dataPointer;
 
-  // get param reference
-  CONTROLLER_PARAM_INFO* paramInfo = (CONTROLLER_PARAM_INFO*)_menus[CONTROLLER_MENU_BINDAXIS2].items[ _menus[CONTROLLER_MENU_BINDAXIS2].selected ].dataPointer;
+    // get param reference
+    CONTROLLER_PARAM_INFO* paramInfo = (CONTROLLER_PARAM_INFO*)_menus[CONTROLLER_MENU_BINDAXIS2].items[ _menus[CONTROLLER_MENU_BINDAXIS2].selected ].dataPointer;
 
-  _bindings[axis].node = _binding;
-  _bindings[axis].channel = chanInfo->channel;
-  _bindings[axis].param = paramInfo->param;
+    _bindings[axis].node = _binding;
+    _bindings[axis].channel = chanInfo->channel;
+    _bindings[axis].param = paramInfo->param;
 
-  _bindingLabels[axis] = String(chanInfo->name) + "." + String(paramInfo->name);
+    _bindingLabels[axis] = String(chanInfo->name) + "." + String(paramInfo->name);
 
-  // immediately redirect to edit menu
-  _menu = CONTROLLER_MENU_EDIT;
+    // immediately redirect to edit menu
+    _menu = CONTROLLER_MENU_EDIT;
+
+  } else {
+    // binding info
+
+    // get info item
+    uint8_t item = _menus[CONTROLLER_MENU_EDITINFO].items[ _menus[CONTROLLER_MENU_EDITINFO].selected ].data;
+
+    // get channel reference
+    CONTROLLER_CHANNEL_INFO* chanInfo = (CONTROLLER_CHANNEL_INFO*)_menus[CONTROLLER_MENU_BINDAXIS].items[ _menus[CONTROLLER_MENU_BINDAXIS].selected ].dataPointer;
+
+    // get param reference
+    CONTROLLER_PARAM_INFO* paramInfo = (CONTROLLER_PARAM_INFO*)_menus[CONTROLLER_MENU_BINDAXIS2].items[ _menus[CONTROLLER_MENU_BINDAXIS2].selected ].dataPointer;
+
+    _info[item].node(_binding);
+    _info[item].channel(chanInfo->channel);
+    _info[item].param(paramInfo->param);
+
+    _infoLabels[item] = String(chanInfo->name) + "." + String(paramInfo->name);
+
+    // immediately redirect to edit menu
+    _menu = CONTROLLER_MENU_EDITINFO;
+  }
+
+
+}
+
+
+
+void ControllerModule::manageEditInfo(boolean syncMenu) {
+  if (_isBound) {
+    // pick an axis to edit binding
+    _bindingAxis = false;
+    _menus[CONTROLLER_MENU_BINDAXIS].backTo = CONTROLLER_MENU_EDITINFO;
+    drawMenu();
+  } else {
+    // redirect to start
+    _menu = CONTROLLER_MENU_START;
+  }
+}
+
+void ControllerModule::drawEditInfoMenuItem(uint8_t index, uint8_t y) {
+
+  _display->setFont(ArialMT_Plain_10);
+  _display->drawString(2, y, String(index));
+
+  uint8_t item = _menus[_menu].items[index].data;
+  if (_info[item].param() != 255) {
+    _display->setFont(TomThumb4x6);
+    _display->drawString(20, y+4, _infoLabels[item]);
+  }
 }
 
 
@@ -702,6 +849,8 @@ void ControllerModule::drawMenu() {
         drawBindAxisMenuItem(i,y);
       } else if (_menu == CONTROLLER_MENU_EDIT) {
         drawEditMenuItem(i,y);
+      } else if (_menu == CONTROLLER_MENU_EDITINFO) {
+        drawEditInfoMenuItem(i,y);
       } else {
         if (_menus[_menu].items[i].name) {
           _display->drawString(2, y, String(_menus[_menu].items[i].data) + "." + _menus[_menu].items[i].name);
@@ -827,12 +976,27 @@ void ControllerModule::loop() {
     _display->drawString(2, 0, _menus[_menu].name);
   }
 
+  // RSSI indicator
+  _display->setTextAlignment(TEXT_ALIGN_RIGHT);
+  _display->setColor(BLACK);
+  _display->setFont(TomThumb4x6);
+
+  char rs[8];
+  dtostrf(_RSSI, 2, 0, rs);
+  _display->drawString(128, 3, rs);
+
+
+  // battery indicator
+  // TODO
+
   // draw menu size for debugging
+  /*
   _display->setTextAlignment(TEXT_ALIGN_RIGHT);
   _display->setColor(BLACK);
   _display->setFont(TomThumb4x6);
   if (_menu < CONTROLLER_MENU_COUNT)
     _display->drawString(128, 1, String(_menus[_menu].items.size()));
+  */
 
   // draw active menu
   _display->setColor(WHITE);
@@ -849,6 +1013,7 @@ void ControllerModule::loop() {
     case CONTROLLER_MENU_BINDAXIS2: manageBindAxis2(syncMenu); break;
     case CONTROLLER_MENU_BINDAXIS3: manageBindAxis3(syncMenu); break;
     case CONTROLLER_MENU_CLEAR: manageClear(syncMenu); break;
+    case CONTROLLER_MENU_EDITINFO: manageEditInfo(syncMenu); break;
   }
 
   // write the buffer to the display
