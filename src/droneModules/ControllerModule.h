@@ -93,13 +93,18 @@ struct CONTROLLER_MENU_STATE {
 #define CONTROLLER_MENU_START      2
 #define CONTROLLER_MENU_CREATE     3
 #define CONTROLLER_MENU_EDIT       4
-#define CONTROLLER_MENU_BINDAXIS   5  // select module
-#define CONTROLLER_MENU_BINDAXIS2  6  // select parameter
-#define CONTROLLER_MENU_BINDAXIS3  7  // complete binding
-#define CONTROLLER_MENU_CLEAR      8
-#define CONTROLLER_MENU_EDITINFO   9
+#define CONTROLLER_MENU_EDITAXIS   5
+#define CONTROLLER_MENU_INVERTAXIS 6
+#define CONTROLLER_MENU_CLEARAXIS  7
+#define CONTROLLER_MENU_BINDAXIS   8  // select module
+#define CONTROLLER_MENU_BINDAXIS2  9  // select parameter
+#define CONTROLLER_MENU_BINDAXIS3  10  // complete binding
+#define CONTROLLER_MENU_CLEAR      11
+#define CONTROLLER_MENU_EDITINFO   12
 
-#define CONTROLLER_MENU_COUNT      10
+#define CONTROLLER_MENU_COUNT      13
+
+#define CONTROLLER_MENU_INCREMENT_DATA_VALUE   255
 
 //static_assert(CONTROLLER_MENU_COUNT == 5, "Incorrect menu size");
 
@@ -119,6 +124,7 @@ struct CONTROLLER_MENU_STATE {
 class ControllerModule:  public I2CBaseModule {
 protected:
   float _axes[8];
+  boolean _invert[8];  // axis inversion
   boolean _neutral[8];  // set true if entered neutral deadband, do provide hysterisis for menus
 
   DRONE_LINK_ADDR _bindings[8];
@@ -180,7 +186,6 @@ public:
   void publishEntry(uint8_t i);
 
   void manageRoot(boolean syncMenu);
-  void manageMain(boolean syncMenu);
   void manageStart(boolean syncMenu);
   void manageClear(boolean syncMenu);
 
@@ -188,6 +193,8 @@ public:
 
   void manageEdit(boolean syncMenu);
   void drawEditMenuItem(uint8_t index, uint8_t y);
+
+  void manageEditAxis(boolean syncMenu);
 
   void manageBindAxis(boolean syncMenu);
   void drawBindAxisMenuItem(uint8_t index, uint8_t y);

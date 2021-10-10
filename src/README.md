@@ -1,7 +1,7 @@
 
 # todo
 
-* Add trim to tanksteer... ideally need a physical trim pot on the controller for this
+* add a physical pot on the controller for trim, etc
 * Axis inversion
 * Speed limiter
 * Add cell voltage output for ina219

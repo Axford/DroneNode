@@ -132,6 +132,7 @@ void ControllerModule::clear() {
     _bindings[i].channel = 255;
     _bindings[i].param = 255;
     _bindingLabels[i] = "";
+    _invert[i] = false;
   }
 
   for (uint8_t i=0; i<CONTROLLER_INFO_COUNT; i++) {
@@ -426,14 +427,20 @@ void ControllerModule::setup() {
  // dummy menu entry for navigation
  setMenuItem(CONTROLLER_MENU_CREATE, 0, (F("Edit")), 0, NULL, CONTROLLER_MENU_EDIT);
 
- _menus[CONTROLLER_MENU_EDIT].name = (F("Select axis to bind"));
+ _menus[CONTROLLER_MENU_EDIT].name = (F("Select axis"));
  _menus[CONTROLLER_MENU_EDIT].backTo = CONTROLLER_MENU_MAIN;
- setMenuItem(CONTROLLER_MENU_EDIT, 0, F("LX"), 0, NULL, CONTROLLER_MENU_BINDAXIS);
- setMenuItem(CONTROLLER_MENU_EDIT, 1, (F("LY")), 1, NULL, CONTROLLER_MENU_BINDAXIS);
- setMenuItem(CONTROLLER_MENU_EDIT, 2, (F("LZ")), 2, NULL, CONTROLLER_MENU_BINDAXIS);
- setMenuItem(CONTROLLER_MENU_EDIT, 3, (F("RX")), 4, NULL, CONTROLLER_MENU_BINDAXIS);
- setMenuItem(CONTROLLER_MENU_EDIT, 4, (F("RY")), 5, NULL, CONTROLLER_MENU_BINDAXIS);
- setMenuItem(CONTROLLER_MENU_EDIT, 5, (F("RZ")), 6, NULL, CONTROLLER_MENU_BINDAXIS);
+ setMenuItem(CONTROLLER_MENU_EDIT, 0, F("LX"), 0, NULL, CONTROLLER_MENU_EDITAXIS);
+ setMenuItem(CONTROLLER_MENU_EDIT, 1, (F("LY")), 1, NULL, CONTROLLER_MENU_EDITAXIS);
+ setMenuItem(CONTROLLER_MENU_EDIT, 2, (F("LZ")), 2, NULL, CONTROLLER_MENU_EDITAXIS);
+ setMenuItem(CONTROLLER_MENU_EDIT, 3, (F("RX")), 4, NULL, CONTROLLER_MENU_EDITAXIS);
+ setMenuItem(CONTROLLER_MENU_EDIT, 4, (F("RY")), 5, NULL, CONTROLLER_MENU_EDITAXIS);
+ setMenuItem(CONTROLLER_MENU_EDIT, 5, (F("RZ")), 6, NULL, CONTROLLER_MENU_EDITAXIS);
+
+ _menus[CONTROLLER_MENU_EDITAXIS].name = (F("Edit axis")); // to be replaced by dynamic menu title
+ _menus[CONTROLLER_MENU_EDITAXIS].backTo = CONTROLLER_MENU_EDIT;
+ setMenuItem(CONTROLLER_MENU_EDITAXIS, 0, F("Bind"), 0, NULL, CONTROLLER_MENU_BINDAXIS);
+ setMenuItem(CONTROLLER_MENU_EDITAXIS, 1, F("Invert"), 0, NULL, CONTROLLER_MENU_INCREMENT_DATA_VALUE);
+ setMenuItem(CONTROLLER_MENU_EDITAXIS, 2, F("Clear"), 0, NULL, CONTROLLER_MENU_INCREMENT_DATA_VALUE);
 
  _menus[CONTROLLER_MENU_EDITINFO].name = (F("Select item to bind"));
  _menus[CONTROLLER_MENU_EDITINFO].backTo = CONTROLLER_MENU_MAIN;
@@ -558,9 +565,6 @@ void ControllerModule::manageRoot(boolean syncMenu) {
   }
 }
 
-void ControllerModule::manageMain(boolean syncMenu) {
-  drawMenu();
-}
 
 void ControllerModule::manageStart(boolean syncMenu) {
   if (syncMenu) {
@@ -638,17 +642,70 @@ void ControllerModule::manageEdit(boolean syncMenu) {
 void ControllerModule::drawEditMenuItem(uint8_t index, uint8_t y) {
   if (_menus[_menu].items[index].name) {
     _display->setFont(ArialMT_Plain_10);
-    _display->drawString(2, y, _menus[_menu].items[index].name);
+    if (_invert[ _menus[_menu].items[index].data ])
+      _display->drawString(0, y, "!");
+    _display->drawString(4, y, _menus[_menu].items[index].name);
   }
 
 
   uint8_t axis = _menus[_menu].items[index].data;
   if (_bindings[axis].param != 255) {
     _display->setFont(TomThumb4x6);
-    _display->drawString(20, y+4, _bindingLabels[axis]);
+    _display->drawString(24, y+4, _bindingLabels[axis]);
   }
 }
 
+void ControllerModule::manageEditAxis(boolean syncMenu) {
+  _display->setColor(WHITE);
+
+  // get selected axis
+  uint8_t axis = _menus[CONTROLLER_MENU_EDIT].items[_menus[CONTROLLER_MENU_EDIT].selected].data;
+
+  boolean invertChanged = false;
+  boolean bindingChanged = false;
+
+  String tempStr;
+
+  // update menu title to match current axis
+  if (_lastMenu != _menu) {
+    bindingChanged = true;
+    invertChanged = true;
+  }
+
+  // keep an eye on axis invert
+  if (_menus[_menu].items[1].data > 0) {
+    // toggle axis inversion
+    _invert[axis] = !_invert[axis];
+    invertChanged = true;
+    bindingChanged = true;
+    _menus[_menu].items[1].data = 0;
+  }
+
+  if (invertChanged) {
+    // update invert option to match current invert setting
+    tempStr = "Invert [";
+    if (_invert[axis]) tempStr += "Y]"; else tempStr += "N]";
+    _menus[CONTROLLER_MENU_EDITAXIS].items[1].name = tempStr;
+  }
+
+  // keep an eye on clear
+  if (_menus[_menu].items[2].data > 0) {
+    // clear axis binding and update title
+    _bindings[axis].param = 255;
+    _bindingLabels[axis] = "";
+    bindingChanged = true;
+    _menus[_menu].items[2].data = 0;
+  }
+
+  if (bindingChanged) {
+    if (_invert[axis]) tempStr = "!"; else tempStr = "";
+    tempStr += _menus[CONTROLLER_MENU_EDIT].items[_menus[CONTROLLER_MENU_EDIT].selected].name;
+    if (_bindings[axis].param != 255) tempStr += ": " + _bindingLabels[axis];
+    _menus[CONTROLLER_MENU_EDITAXIS].name = tempStr;
+  }
+
+  drawMenu();
+}
 
 void ControllerModule::manageBindAxis(boolean syncMenu) {
   //Serial.println("Manage bindAxis");
@@ -919,7 +976,11 @@ void ControllerModule::loop() {
   if (_axes[CONTROLLER_AXIS_RIGHT_B] > 0 &&  _neutral[CONTROLLER_AXIS_RIGHT_B]) {
     // right button pressed
     if (_menus[_menu].items.size() > 0) {
-      _menu = _menus[_menu].items[_menus[_menu].selected].menu;
+      uint8_t newMenu = _menus[_menu].items[_menus[_menu].selected].menu;
+      if (newMenu == CONTROLLER_MENU_INCREMENT_DATA_VALUE) {
+        _menus[_menu].items[_menus[_menu].selected].data++;
+      } else
+        _menu = newMenu;
     }
 
     _neutral[CONTROLLER_AXIS_RIGHT_B] = false;
@@ -1005,10 +1066,11 @@ void ControllerModule::loop() {
 
   switch(_menu) {
     case CONTROLLER_MENU_ROOT: manageRoot(syncMenu); break;
-    case CONTROLLER_MENU_MAIN: manageMain(syncMenu); break;
+    case CONTROLLER_MENU_MAIN: drawMenu(); break;
     case CONTROLLER_MENU_START: manageStart(syncMenu); break;
     case CONTROLLER_MENU_CREATE: manageCreate(syncMenu); break;
     case CONTROLLER_MENU_EDIT: manageEdit(syncMenu); break;
+    case CONTROLLER_MENU_EDITAXIS: manageEditAxis(syncMenu); break;
     case CONTROLLER_MENU_BINDAXIS: manageBindAxis(syncMenu); break;
     case CONTROLLER_MENU_BINDAXIS2: manageBindAxis2(syncMenu); break;
     case CONTROLLER_MENU_BINDAXIS3: manageBindAxis3(syncMenu); break;
