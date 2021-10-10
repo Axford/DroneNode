@@ -111,6 +111,7 @@ static const char DRONE_STR_TARGET[] PROGMEM = "target";
 static const char DRONE_STR_TARGET_LOCATION[] PROGMEM = "targetLocation";
 static const char DRONE_STR_TELEMETRY[] PROGMEM = "telemetry";
 static const char DRONE_STR_TEMPERATURE[] PROGMEM = "temperature";
+static const char DRONE_STR_TRIM[] PROGMEM = "trim";
 static const char DRONE_STR_TURN_RATE[] PROGMEM = "turnRate";
 static const char DRONE_STR_TYPE[] PROGMEM = "type";
 static const char DRONE_STR_UPTIME[] PROGMEM = "uptime";

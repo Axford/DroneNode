@@ -1,10 +1,18 @@
 
 # todo
 
-Other
-* Add string error message in DroneModule
+* Add trim to tanksteer... ideally need a physical trim pot on the controller for this
+* Axis inversion
+* Speed limiter
+* Add cell voltage output for ina219
+* SNR from radio?
+* FIX the LAG
+   * Add a lag monitoring system... ping? part of mgmt module?
+   * Turn off discovery dynamically (from controller)
+   * Prioritise specifc channel subscriptions over wildcards
+* Additional mgmt controls on controller ... like reset?
+   * Turn off remote UDP when out of range
 
-* Add trim to tanksteer 
 
 ! stop channel flood when publishing/discovering
 

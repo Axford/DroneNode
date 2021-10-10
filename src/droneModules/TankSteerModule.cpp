@@ -24,6 +24,11 @@ TankSteerModule::TankSteerModule(uint8_t id, DroneModuleManager* dmm, DroneLinkM
    sub->param.param = TANK_STEER_SUB_SPEED;
    setParamName(FPSTR(DRONE_STR_SPEED), &sub->param);
 
+   sub = &_subs[TANK_STEER_SUB_TRIM_E];
+   sub->addrParam = TANK_STEER_SUB_TRIM_ADDR;
+   sub->param.param = TANK_STEER_SUB_TRIM;
+   setParamName(FPSTR(DRONE_STR_TRIM), &sub->param);
+
    // pubs
    initParams(TANK_STEER_PARAM_ENTRIES);
 
@@ -66,9 +71,10 @@ void TankSteerModule::update() {
 
   // local shortcuts
   float x = _subs[TANK_STEER_SUB_TURN_RATE_E].param.data.f[0];
-
-  // set target speed based on distance to go
   float y = _subs[TANK_STEER_SUB_SPEED_E].param.data.f[0];
+
+  // use trim as offset to x value
+  x += _subs[TANK_STEER_SUB_TRIM_E].param.data.f[0];
 
   x = -x;
   float v = (1- abs(x)) * y + y;

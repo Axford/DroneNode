@@ -30,7 +30,11 @@ Tank steering:
 #define TANK_STEER_SUB_SPEED_ADDR     13
 #define TANK_STEER_SUB_SPEED_E        1
 
-#define TANK_STEER_SUBS               2
+#define TANK_STEER_SUB_TRIM          14
+#define TANK_STEER_SUB_TRIM_ADDR     15
+#define TANK_STEER_SUB_TRIM_E        2
+
+#define TANK_STEER_SUBS               3
 
 
 
