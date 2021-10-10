@@ -52,6 +52,8 @@ _id(id) {
   _numSubs = 0;
   _loopInterval = 0;  // default no delay between loop calls
   _lastLoop = 0;
+  _discoveryState = DRONE_MODULE_DISCOVERY_PENDING;
+  _discoveryIndex = 0;
 
   // alloc for mgmt params
   _mgmtParams = (DRONE_PARAM_ENTRY*)malloc( sizeof(DRONE_PARAM_ENTRY) * DRONE_MGMT_PARAM_ENTRIES);
@@ -531,4 +533,74 @@ boolean DroneModule::readyToLoop() {
 
 void DroneModule::loop() {
   _lastLoop = millis();
+}
+
+
+boolean DroneModule::doDiscovery() {
+  switch (_discoveryState) {
+    case DRONE_MODULE_DISCOVERY_PENDING:
+      _discoveryState = DRONE_MODULE_DISCOVERY_MGMT;
+      _discoveryIndex = 0;
+      // flow straight into mgmt discovery
+
+    case DRONE_MODULE_DISCOVERY_MGMT:
+      if (_discoveryIndex < DRONE_MGMT_PARAM_ENTRIES) {
+        if (_mgmtParams[_discoveryIndex].publish) {
+          publishParamEntry(&_mgmtParams[_discoveryIndex]);
+        }
+      }
+      _discoveryIndex++;
+      if (_discoveryIndex >= DRONE_MGMT_PARAM_ENTRIES ) {
+        _discoveryState = DRONE_MODULE_DISCOVERY_SUBS;
+        _discoveryIndex = 0;
+      }
+      break;
+
+    case DRONE_MODULE_DISCOVERY_SUBS:
+      if (!_enabled) {
+        _discoveryState = DRONE_MODULE_DISCOVERY_COMPLETE;
+        return true;
+      }
+      if (_discoveryIndex < _numSubs) {
+        if (_subs[_discoveryIndex].param.publish) {
+          publishParamEntry(&_subs[_discoveryIndex].param);
+          publishSubAddress(&_subs[_discoveryIndex]);
+        }
+      }
+      _discoveryIndex++;
+      if (_discoveryIndex >= _numSubs ) {
+        _discoveryState = DRONE_MODULE_DISCOVERY_PARAMS;
+        _discoveryIndex = 0;
+      }
+      break;
+
+    case DRONE_MODULE_DISCOVERY_PARAMS:
+      if (!_enabled) {
+        _discoveryState = DRONE_MODULE_DISCOVERY_COMPLETE;
+        return true;
+      }
+      if (_discoveryIndex < _numParamEntries) {
+        if (_params[_discoveryIndex].publish) {
+          publishParamEntry(&_params[_discoveryIndex]);
+        }
+      }
+      _discoveryIndex++;
+      if (_discoveryIndex >= _numParamEntries ) {
+        _discoveryState = DRONE_MODULE_DISCOVERY_COMPLETE;
+        _discoveryIndex = 0;
+        return true;
+      }
+      break;
+
+    case DRONE_MODULE_DISCOVERY_COMPLETE:
+      return true;
+      break;
+  }
+
+  return false;
+}
+
+void DroneModule::restartDiscovery() {
+  _discoveryState = DRONE_MODULE_DISCOVERY_PENDING;
+  _discoveryIndex = 0;
 }

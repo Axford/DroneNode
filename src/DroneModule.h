@@ -144,6 +144,14 @@ struct DRONE_PARAM_SUB {
   DRONE_PARAM_ENTRY param;
 };
 
+enum DRONE_MODULE_DISCOVERY_STATE {
+  DRONE_MODULE_DISCOVERY_PENDING,
+  DRONE_MODULE_DISCOVERY_MGMT,
+  DRONE_MODULE_DISCOVERY_SUBS,
+  DRONE_MODULE_DISCOVERY_PARAMS,
+  DRONE_MODULE_DISCOVERY_COMPLETE
+};
+
 // forward declarations
 class DroneLinkManager;
 class DroneModuleManager;
@@ -167,6 +175,9 @@ protected:
 
   uint8_t _numSubs;
   DRONE_PARAM_SUB *_subs;
+
+  DRONE_MODULE_DISCOVERY_STATE _discoveryState;
+  uint8_t _discoveryIndex;
 
   unsigned long _loopInterval;
   unsigned long _lastLoop;
@@ -223,6 +234,9 @@ public:
 
   virtual boolean readyToLoop();
   virtual void loop();
+
+  boolean doDiscovery();  // returns true when complete
+  void restartDiscovery();
 };
 
 

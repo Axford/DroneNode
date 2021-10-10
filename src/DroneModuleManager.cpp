@@ -227,14 +227,13 @@ void DroneModuleManager::loopModules() {
       if (loopTime > _lastDiscovery + DRONE_MODULE_MANAGER_DISCOVERY_INTERVAL) {
         m = _modules.get(_lastDiscoveryIndex);
 
-        m->publishMgmtParamEntries();
-        if (m->isEnabled()) {
-          m->publishParamEntries();
-          m->publishSubs();
-        }
-        _lastDiscoveryIndex++;
-        if (_lastDiscoveryIndex >= _modules.size()) {
-          _lastDiscoveryIndex = 0;
+        if (m->doDiscovery()) {
+          m->restartDiscovery();
+
+          _lastDiscoveryIndex++;
+          if (_lastDiscoveryIndex >= _modules.size()) {
+            _lastDiscoveryIndex = 0;
+          }
         }
 
         _lastDiscovery = loopTime;
