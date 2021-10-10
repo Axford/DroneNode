@@ -45,6 +45,8 @@ public:
 
   void registerModule(DroneModule *m);
 
+  DroneModule* getModuleById(uint8_t id);
+
   uint8_t node();
   String hostname();
   String buildTimestamp();

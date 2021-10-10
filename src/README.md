@@ -4,6 +4,8 @@
 Other
 * Add string error message in DroneModule
 
+* Add trim to tanksteer 
+
 ! stop channel flood when publishing/discovering
 
 

@@ -96,6 +96,10 @@ _id(id) {
 
 DroneModule::~DroneModule() { }
 
+uint8_t DroneModule::id() {
+  return _id;
+}
+
 
 void DroneModule::setTypeName( const __FlashStringHelper * name) {
   int len = strlen_P((PGM_P)name);

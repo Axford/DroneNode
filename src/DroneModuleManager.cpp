@@ -31,6 +31,15 @@ void DroneModuleManager::registerModule(DroneModule *m) {
   _modules.add(m);
 }
 
+DroneModule* DroneModuleManager::getModuleById(uint8_t id) {
+  DroneModule* m;
+  for(int i = 0; i < _modules.size(); i++) {
+    m = _modules.get(i);
+    if (m->id() == id) return m;
+  }
+  return NULL;
+}
+
 uint8_t DroneModuleManager::node() {
     return _node;
 }

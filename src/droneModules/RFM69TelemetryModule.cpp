@@ -37,10 +37,12 @@ void RFM69TelemetryModule::handleLinkMessage(DroneLinkMsg *msg) {
 
   // check to see if this is the same as the last message we received!
   // if so, we're getting stuck in a loop and the message should be ignored
-  if (_receivedMsg.sameSignature(msg)) return;
+  if (_receivedMsg.sameSignature(msg)) {
+    //Serial.print("RFM69: Blocked: ");
+    //msg->print();
+    return;
+  }
 
-  //Serial.print("RFM69: Sending: ");
-  //msg->print();
 
   // only send messages that originate on this node
   boolean sendPacket = (msg->source() == _dlm->node());
@@ -48,10 +50,24 @@ void RFM69TelemetryModule::handleLinkMessage(DroneLinkMsg *msg) {
     // OR!
     // on a different interface
     sendPacket = _dlm->getSourceInterface(msg->source()) != _id;
+
+    // OR!!
+    // that are queries
+    if (!sendPacket) {
+      sendPacket = msg->type() > DRONE_LINK_MSG_TYPE_CHAR;
+    }
   }
 
   if (sendPacket) {
+    if (msg->type() > DRONE_LINK_MSG_TYPE_CHAR) {
+      Serial.print("RFM69: Sending: ");
+      msg->print();
+    }
+
     _radio.send(255, (uint8_t*)&msg->_msg, msg->length() + sizeof(DRONE_LINK_ADDR));
+  } else {
+    //Serial.print("RFM69: Filtered: ");
+    //msg->print();
   }
 }
 

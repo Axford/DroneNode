@@ -49,18 +49,40 @@ public:
 
     uint8_t peakSize() { return _peakSize; }
 
-    boolean publish(DroneLinkMsg msg) {
+    boolean publish(DroneLinkMsg &msg) {
       if (_queue.size() < DRONE_LINK_CHANNEL_QUEUE_LIMIT) {
         //Log.errorln(F("Queue %d = %d"), _id, _queue.size());
 
         // TODO: do we pre-filter and only queue if there's a matching subscriber?
-        // TODO: screen for matching sig already in queue
+        // TODO: prioritise numeric values in the custom param range (>7)
 
-        // add to queue
-        DroneLinkMsg *tmp = new DroneLinkMsg(msg);
-        _queue.add(tmp);
+        // screen for matching sig already in queue
+        DroneLinkMsg *scrub;
+        boolean sameSig = false;
+        for (uint8_t i=0; i<_queue.size(); i++) {
+          scrub = _queue.get(i);
+          if (scrub->sameSignature(&msg)) {
+            sameSig = true;
+            // overwrite message payload
+            memcpy(scrub->_msg.payload.c, msg._msg.payload.c, msg.length());
+            break;
+          }
+        }
 
-        _peakSize = max(_peakSize, (uint8_t)_queue.size());
+        if (!sameSig) {
+          DroneLinkMsg *tmp = new DroneLinkMsg(msg);
+
+          if (msg.type() < DRONE_LINK_MSG_TYPE_CHAR) {
+            // priority message, jump the queue
+            // TODO: search back from the end until we find the first high priority item, then insert after it
+            _queue.unshift(tmp); // quick cheat
+          } else {
+            // add to queue
+            _queue.add(tmp);
+          }
+
+          _peakSize = max(_peakSize, (uint8_t)_queue.size());
+        }
 
         return true;
       } else {

@@ -212,6 +212,7 @@ void handleOTAEVent(OTAManagerEvent event, float progress) {
   if (event == start) {
     dmm.shutdown();
   } else if (event == progress) {
+    Serial.print(F("OTA progress: "));  Serial.println(progress*100);
     dmm.onOTAProgress(progress);
   }
 }

@@ -36,7 +36,7 @@ struct DRONE_LINK_ADDR {
   uint8_t addrType;   // e.g. DRONE_LINK_MSG_ADDRESS_SUB
 };
 
-static_assert(sizeof(DRONE_LINK_ADDR) == 5, "Incorrect Addr size");
+//static_assert(sizeof(DRONE_LINK_ADDR) == 5, "Incorrect Addr size");
 
 union DRONE_LINK_PAYLOAD {
   uint8_t uint8[DRONE_LINK_MSG_MAX_PAYLOAD];
@@ -46,7 +46,7 @@ union DRONE_LINK_PAYLOAD {
   DRONE_LINK_ADDR addr[3]; // doesn't pack neatly, so only 3 complete addresses can fit
 };
 
-static_assert(sizeof(DRONE_LINK_PAYLOAD) == 16, "Incorrect Payload size");
+//static_assert(sizeof(DRONE_LINK_PAYLOAD) == 16, "Incorrect Payload size");
 
 struct DRONE_LINK_MSG {
   uint8_t source; // node id of who originated the packet (e.g. requester for queries, or node if its a published message)
@@ -68,7 +68,7 @@ Strings of up to 16 characters can be sent as char
   DRONE_LINK_PAYLOAD payload;
 } __packed;
 
-static_assert(sizeof(DRONE_LINK_MSG) == 21, "Incorrect Msg size");
+//static_assert(sizeof(DRONE_LINK_MSG) == 21, "Incorrect Msg size");
 
 
 class DroneLinkMsg
@@ -172,6 +172,8 @@ public:
         case DRONE_LINK_MSG_TYPE_UINT32_T: Serial.print(F("uint32_t")); break;
         case DRONE_LINK_MSG_TYPE_FLOAT: Serial.print(F("Float")); break;
         case DRONE_LINK_MSG_TYPE_CHAR: Serial.print(F("Char")); break;
+        case DRONE_LINK_MSG_TYPE_NAME: Serial.print(F("Name")); break;
+        case DRONE_LINK_MSG_TYPE_NAMEQUERY: Serial.print(F("NameQuery")); break;
         case DRONE_LINK_MSG_TYPE_QUERY: Serial.print(F("Query")); break;
       }
       if (type() != DRONE_LINK_MSG_TYPE_QUERY) {

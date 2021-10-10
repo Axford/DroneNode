@@ -109,6 +109,7 @@ static const char DRONE_STR_SUB3[] PROGMEM = "sub3";
 static const char DRONE_STR_SUB4[] PROGMEM = "sub4";
 static const char DRONE_STR_TARGET[] PROGMEM = "target";
 static const char DRONE_STR_TARGET_LOCATION[] PROGMEM = "targetLocation";
+static const char DRONE_STR_TELEMETRY[] PROGMEM = "telemetry";
 static const char DRONE_STR_TEMPERATURE[] PROGMEM = "temperature";
 static const char DRONE_STR_TURN_RATE[] PROGMEM = "turnRate";
 static const char DRONE_STR_TYPE[] PROGMEM = "type";
@@ -172,6 +173,8 @@ protected:
 public:
   DroneModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm);
   ~DroneModule();
+
+  uint8_t id();
 
   void setTypeName( const __FlashStringHelper *name);
   void setParamName( const __FlashStringHelper *name, DRONE_PARAM_ENTRY *param);

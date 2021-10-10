@@ -50,6 +50,7 @@ void DroneLinkManager::subscribe(uint8_t node, uint8_t channel, DroneModule *sub
   // locate a matching channel (or create it if it doesn't exist)
   DroneLinkChannel* c = findChannel(node, channel);
   if (!c) {
+    Log.noticeln(F("Creating channel: %u > %u"), node, channel);
     c = new DroneLinkChannel(node, channel);
     _channels.add(c);
   }
