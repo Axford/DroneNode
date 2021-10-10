@@ -89,29 +89,32 @@ void ManagementModule::loop() {
   DroneModule::loop();
 
   // update stats
-  _params[MANAGEMENT_PARAM_HEAP_E].data.uint32[0] = ESP.getFreeHeap();
+  uint32_t temp32 = ESP.getFreeHeap();
+  updateAndPublishParam(&_params[MANAGEMENT_PARAM_HEAP_E], (uint8_t*)&temp32, sizeof(temp32));
 
-  _params[MANAGEMENT_PARAM_UPTIME_E].data.uint32[0] = millis() / 1000;
+  temp32 = millis() / 1000;
+  updateAndPublishParam(&_params[MANAGEMENT_PARAM_UPTIME_E], (uint8_t*)&temp32, sizeof(temp32));
 
-  _params[MANAGEMENT_PARAM_CHOKED_E].data.uint32[0] = _dlm->getChokes();
+  temp32 = _dlm->getChokes();
+  updateAndPublishParam(&_params[MANAGEMENT_PARAM_CHOKED_E], (uint8_t*)&temp32, sizeof(temp32));
 
   // fetch IP address
   if (WiFi.status() == WL_CONNECTED) {
     IPAddress ipa = WiFi.localIP();
-    for (uint8_t i=0; i<4; i++) {
-      _params[MANAGEMENT_PARAM_IP_E].data.uint8[i] = ipa[i];
-    }
+    temp32 = ipa[0]<<24 | ipa[1]<<16 | ipa[2]<<8 | ipa[3];
   } else {
-    _params[MANAGEMENT_PARAM_IP_E].data.uint32[0] = 0;
+    temp32 = 0;
   }
+  updateAndPublishParam(&_params[MANAGEMENT_PARAM_IP_E], (uint8_t*)&temp32, sizeof(temp32));
 
   if (_lastLoop > _lastRate) {
-    _params[MANAGEMENT_PARAM_PUBLISHRATE_E].data.f[0] = _dlm->publishedMessages() / ((_lastLoop - _lastRate) / 1000.0f);
+    float tempf = _dlm->publishedMessages() / ((_lastLoop - _lastRate) / 1000.0f);
+    updateAndPublishParam(&_params[MANAGEMENT_PARAM_PUBLISHRATE_E], (uint8_t*)&tempf, sizeof(tempf));
     _dlm->resetPublishedMessages();
 
     _lastRate = _lastLoop;
   }
 
   // publish param entries
-  publishParamEntries();
+  //publishParamEntries();
 }

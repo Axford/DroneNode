@@ -361,6 +361,15 @@ void DroneModule::onParamWrite(DRONE_PARAM_ENTRY *param) {
 }
 
 
+void DroneModule::updateAndPublishParam(DRONE_PARAM_ENTRY *param, uint8_t *newPayload, uint8_t length) {
+  if (memcmp(param->data.c, newPayload, length) != 0) {
+    memcpy(param->data.c, newPayload, length);
+    // publish
+    publishParamEntry(param);
+  }
+}
+
+
 void DroneModule::handleParamMessage(DroneLinkMsg *msg, DRONE_PARAM_ENTRY *param) {
   if (msg->type() == ((param->paramTypeLength >> 4) & 0x07)) {
     // write param

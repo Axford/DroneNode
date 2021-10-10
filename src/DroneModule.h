@@ -217,6 +217,9 @@ public:
 
   virtual void onParamWrite(DRONE_PARAM_ENTRY *param);
 
+  // write new value(s) to a param, and publish if it has changed
+  void updateAndPublishParam(DRONE_PARAM_ENTRY *param, uint8_t *newPayload, uint8_t length);
+
   void handleParamMessage(DroneLinkMsg *msg, DRONE_PARAM_ENTRY *param);
   void handleSubAddrMessage(DroneLinkMsg *msg, DRONE_PARAM_SUB *sub);
   virtual boolean handleManagementMessage(DroneLinkMsg *msg);
