@@ -96,8 +96,9 @@ struct CONTROLLER_MENU_STATE {
 #define CONTROLLER_MENU_BINDAXIS   5  // select module
 #define CONTROLLER_MENU_BINDAXIS2  6  // select parameter
 #define CONTROLLER_MENU_BINDAXIS3  7  // complete binding
+#define CONTROLLER_MENU_CLEAR      8
 
-#define CONTROLLER_MENU_COUNT      8
+#define CONTROLLER_MENU_COUNT      9
 
 //static_assert(CONTROLLER_MENU_COUNT == 5, "Incorrect menu size");
 
@@ -148,6 +149,8 @@ public:
   ControllerModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm);
   ~ControllerModule();
 
+  void clear();
+
   void doReset();
 
   void doShutdown();
@@ -168,6 +171,8 @@ public:
   void manageRoot(boolean syncMenu);
   void manageMain(boolean syncMenu);
   void manageStart(boolean syncMenu);
+  void manageClear(boolean syncMenu);
+
   void manageCreate(boolean syncMenu);
 
   void manageEdit(boolean syncMenu);

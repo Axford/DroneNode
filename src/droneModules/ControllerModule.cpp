@@ -7,7 +7,6 @@
 
 /*
 TODO
- - Clear down lists when changing node bindings
  - Save binding config
  - Load binding config
  - Create info bindings from all params
@@ -64,21 +63,8 @@ ControllerModule::ControllerModule(uint8_t id, DroneModuleManager* dmm, DroneLin
    _sendMsg.length(4);
    _sendMsg._msg.payload.f[0] = 0;
 
-   // init axes
-   for (uint8_t i=0; i<8; i++) {
-     _axes[i] = 0;
-     _neutral[i] = true;
-     _bindings[i].node = 255;
-     _bindings[i].channel = 255;
-     _bindings[i].param = 255;
-     _bindingLabels[i] = "";
-   }
-
    _brightness = 0;
 
-   // binding
-   _isBound = false;
-   _channelInfoChanged = false;
 
    // configure menus
    _menu = CONTROLLER_MENU_ROOT;
@@ -91,6 +77,7 @@ ControllerModule::ControllerModule(uint8_t id, DroneModuleManager* dmm, DroneLin
      _menus[i].selected = 0;
    }
 
+   clear();
 
    // subs
 
@@ -123,6 +110,40 @@ ControllerModule::~ControllerModule() {
   if (_display) delete _display;
 }
 
+
+void ControllerModule::clear() {
+  Log.noticeln(F("Clearing..."));
+  _isBound = false;
+  _bindingName = "";
+  _channelInfoChanged = false;
+
+  // init axes
+  for (uint8_t i=0; i<8; i++) {
+    _axes[i] = 0;
+    _neutral[i] = true;
+    _bindings[i].node = 255;
+    _bindings[i].channel = 255;
+    _bindings[i].param = 255;
+    _bindingLabels[i] = "";
+  }
+
+  // reset channel / param tree
+  for (uint8_t i=0; i < _availChannels.size(); i++) {
+    CONTROLLER_CHANNEL_INFO* chanInfo = _availChannels.get(i);
+
+    for (uint8_t j=0; j < chanInfo->params->size(); j++) {
+      // clear memory allocated for param
+      free(chanInfo->params->get(j));
+    }
+    chanInfo->params->clear();
+    // delete params list
+
+    // clear memory associaed with chanInfo
+    free(chanInfo);
+  }
+  _availChannels.clear();
+  Log.noticeln(F("done"));
+}
 
 void ControllerModule::doReset() {
   I2CBaseModule::doReset();
@@ -357,6 +378,7 @@ void ControllerModule::setup() {
  _menus[CONTROLLER_MENU_MAIN].backTo = CONTROLLER_MENU_ROOT;
  setMenuItem(CONTROLLER_MENU_MAIN, 0, F("Start"), 0, NULL, CONTROLLER_MENU_START);
  setMenuItem(CONTROLLER_MENU_MAIN, 1, F("Edit"), 1, NULL, CONTROLLER_MENU_EDIT);
+ setMenuItem(CONTROLLER_MENU_MAIN, 2, F("Clear"), 2, NULL, CONTROLLER_MENU_CLEAR);
 
  _menus[CONTROLLER_MENU_START].name = (F("Start: Select a node"));
  _menus[CONTROLLER_MENU_START].backTo = CONTROLLER_MENU_MAIN;
@@ -384,6 +406,9 @@ void ControllerModule::setup() {
 
  _menus[CONTROLLER_MENU_BINDAXIS3].name = (F("Bind: Complete"));
  _menus[CONTROLLER_MENU_BINDAXIS3].backTo = CONTROLLER_MENU_EDIT;
+
+ _menus[CONTROLLER_MENU_CLEAR].name = (F("Binding Cleared"));
+ _menus[CONTROLLER_MENU_CLEAR].backTo = CONTROLLER_MENU_MAIN;
 
  // Init display
  if (_display) {
@@ -468,6 +493,20 @@ void ControllerModule::manageStart(boolean syncMenu) {
 
   drawMenu();
   drawSpinner();
+}
+
+void ControllerModule::manageClear(boolean syncMenu) {
+  _display->setColor(WHITE);
+
+  if (_isBound) {
+    clear();
+
+  } else {
+    _menus[CONTROLLER_MENU_ROOT].name = "No Binding";
+
+    _display->setTextAlignment(TEXT_ALIGN_CENTER);
+    _display->drawString(64, 25, F("Binding cleared"));
+  }
 }
 
 void ControllerModule::manageCreate(boolean syncMenu) {
@@ -809,6 +848,7 @@ void ControllerModule::loop() {
     case CONTROLLER_MENU_BINDAXIS: manageBindAxis(syncMenu); break;
     case CONTROLLER_MENU_BINDAXIS2: manageBindAxis2(syncMenu); break;
     case CONTROLLER_MENU_BINDAXIS3: manageBindAxis3(syncMenu); break;
+    case CONTROLLER_MENU_CLEAR: manageClear(syncMenu); break;
   }
 
   // write the buffer to the display
