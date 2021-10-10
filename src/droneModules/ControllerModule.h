@@ -8,8 +8,7 @@ display.begin(SSD1306_SWITCHCAPVCC, 0x3C)
 #ifndef CONTROLLER_MODULE_H
 #define CONTROLLER_MODULE_H
 #include "Arduino.h"
-#include "ustd_platform.h"
-#include "ustd_functional.h"
+#include <functional>
 
 #include "../DroneModule.h"
 #include "../DroneWire.h"
@@ -30,7 +29,10 @@ display.begin(SSD1306_SWITCHCAPVCC, 0x3C)
 #define CONTROLLER_PARAM_RIGHT       9   // channel for right joystick
 #define CONTROLLER_PARAM_RIGHT_E     1
 
-#define CONTROLLER_PARAM_ENTRIES     2
+#define CONTROLLER_PARAM_TELEMETRY       10   // channel for telemetry module
+#define CONTROLLER_PARAM_TELEMETRY_E     2
+
+#define CONTROLLER_PARAM_ENTRIES     3
 
 
 // subs
@@ -48,15 +50,31 @@ enum CONTROLLER_LABEL_STATE {
     CONTROLLER_LABEL_RECEIVED
 };
 
+#define CONTROLLER_DISCOVERY_INTERVAL   250
+
 
 //typedef ustd::function<void(void*, boolean)> ManageMenuHandler;
 
-//typedef ustd::function<void(void*)> SelectMenuHandler;
+//typedef std::function<void(void*, uint8_t index, uint8_t y)> DrawMenuItemHandler;
 
+struct CONTROLLER_PARAM_INFO {
+  uint8_t param;
+  char name[17];
+  uint8_t paramTypeLength;
+};
+
+struct CONTROLLER_CHANNEL_INFO {
+  uint8_t channel;
+  char name[17];
+  uint8_t numFloats;
+  IvanLinkedList::LinkedList<CONTROLLER_PARAM_INFO*> *params;
+};
 
 struct CONTROLLER_MENU_ITEM {
   uint8_t menu;
-  char name[16];
+  uint8_t data;  // any menu data associated, e.g. node id
+  void *dataPointer; // use carefully!
+  String name;
 };
 
 
@@ -64,18 +82,24 @@ struct CONTROLLER_MENU_STATE {
   //uint8_t id;  // menu id - implicit
   uint8_t selected; // which item was selected
   uint8_t backTo;  // which menu item to go to if the left button is pushed
-  char * name;  // menu name
+  String name;  // menu name
   IvanLinkedList::LinkedList<CONTROLLER_MENU_ITEM> items;
-  //ManageMenuHandler manageHandler;
+  //DrawMenuItemHandler drawMenuItemHandler;
   //SelectMenuHandler selectHandler;
 };
 
-enum CONTROLLER_MENUS {
-  CONTROLLER_MENU_ROOT,
-  CONTROLLER_MENU_MAIN,
-  CONTROLLER_MENU_START,
-  CONTROLLER_MENU_CREATE
-};
+#define CONTROLLER_MENU_ROOT       0
+#define CONTROLLER_MENU_MAIN       1
+#define CONTROLLER_MENU_START      2
+#define CONTROLLER_MENU_CREATE     3
+#define CONTROLLER_MENU_EDIT       4
+#define CONTROLLER_MENU_BINDAXIS   5  // select module
+#define CONTROLLER_MENU_BINDAXIS2  6  // select parameter
+#define CONTROLLER_MENU_BINDAXIS3  7  // complete binding
+
+#define CONTROLLER_MENU_COUNT      8
+
+//static_assert(CONTROLLER_MENU_COUNT == 5, "Incorrect menu size");
 
 // axis indices
 #define CONTROLLER_AXIS_LEFT_X   0
@@ -91,20 +115,34 @@ enum CONTROLLER_MENUS {
 class ControllerModule:  public I2CBaseModule {
 protected:
   float _axes[8];
+  DRONE_LINK_ADDR _bindings[8];
+  String _bindingLabels[8]; // friendly binding labels (i.e. named channel > param)
   boolean _neutral[8];  // set true if entered neutral deadband, do provide hysterisis for menus
 
+  uint8_t _brightness;
   unsigned long _syncMenusTimer;
 
   boolean _isBound;
+  String _bindingName;
+  uint8_t _binding;  // node id we're bound to
 
-  CONTROLLER_MENUS _menu;  // active menu
+  uint8_t _menu;  // active menu
+  uint8_t _lastMenu;  // last menu drawn
 
-  CONTROLLER_MENU_STATE _menus[sizeof(CONTROLLER_MENUS)];
+  float _spinner;
+
+  // track modules for binding
+  boolean _channelInfoChanged;
+  unsigned long _lastDiscovery;
+  IvanLinkedList::LinkedList<CONTROLLER_CHANNEL_INFO*> _availChannels;
+
+  CONTROLLER_MENU_STATE _menus[CONTROLLER_MENU_COUNT];
 
   int _scroll;  // index of first item shown on screen i.e. top
 
   SSD1306Wire *_display;
   DroneLinkMsg _queryMsg;
+  DroneLinkMsg _sendMsg;
 public:
 
   ControllerModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm);
@@ -118,7 +156,12 @@ public:
 
   void loadConfiguration(JsonObject &obj);
 
-  void setMenuItem(uint8_t menu, uint8_t item, char* name, uint8_t nextMenu);
+  void setup();
+
+  CONTROLLER_PARAM_INFO* getParamInfo(CONTROLLER_CHANNEL_INFO *channel, uint8_t param);
+  CONTROLLER_CHANNEL_INFO* getChannelInfo(uint8_t channel);
+
+  void setMenuItem(uint8_t menu, uint8_t item, String name, uint8_t data, void* dataPointer, uint8_t nextMenu);
 
   void publishEntry(uint8_t i);
 
@@ -127,7 +170,18 @@ public:
   void manageStart(boolean syncMenu);
   void manageCreate(boolean syncMenu);
 
+  void manageEdit(boolean syncMenu);
+  void drawEditMenuItem(uint8_t index, uint8_t y);
+
+  void manageBindAxis(boolean syncMenu);
+  void drawBindAxisMenuItem(uint8_t index, uint8_t y);
+
+  void manageBindAxis2(boolean syncMenu);
+  void manageBindAxis3(boolean syncMenu);
+
   void drawMenu();
+
+  void drawSpinner();
 
   void loop();
 

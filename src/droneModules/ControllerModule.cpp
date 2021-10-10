@@ -4,6 +4,15 @@
 #include "../DroneModuleManager.h"
 #include "OLEDTomThumbFont.h"
 
+
+/*
+TODO
+ - Clear down lists when changing node bindings
+ - Save binding config
+ - Load binding config
+ - Create info bindings from all params
+*/
+
 /*
 
 Menu structure:
@@ -47,40 +56,40 @@ ControllerModule::ControllerModule(uint8_t id, DroneModuleManager* dmm, DroneLin
    _queryMsg.source(_dlm->node());
    _queryMsg.type(DRONE_LINK_MSG_TYPE_NAMEQUERY);
    _queryMsg.length(1);
-   _queryMsg._msg.payload.uint8[0] = _dlm->node();
+   _queryMsg._msg.payload.uint8[0] = 0;
+
+   _sendMsg.source(_dlm->node());
+   _sendMsg.type(DRONE_LINK_MSG_TYPE_FLOAT);
+   _sendMsg.writable(true);
+   _sendMsg.length(4);
+   _sendMsg._msg.payload.f[0] = 0;
 
    // init axes
    for (uint8_t i=0; i<8; i++) {
      _axes[i] = 0;
      _neutral[i] = true;
+     _bindings[i].node = 255;
+     _bindings[i].channel = 255;
+     _bindings[i].param = 255;
+     _bindingLabels[i] = "";
    }
+
+   _brightness = 0;
 
    // binding
    _isBound = false;
+   _channelInfoChanged = false;
 
    // configure menus
    _menu = CONTROLLER_MENU_ROOT;
    _scroll = 0;
    _syncMenusTimer = 0;
+   _lastDiscovery = 0;
 
    // defaults
-   for (uint8_t i=0; i<sizeof(CONTROLLER_MENUS); i++) {
+   for (uint8_t i=0; i<CONTROLLER_MENU_COUNT; i++) {
      _menus[i].selected = 0;
    }
-
-   _menus[CONTROLLER_MENU_ROOT].name = strdup(PSTR("Root"));
-   _menus[CONTROLLER_MENU_ROOT].backTo = CONTROLLER_MENU_ROOT;
-   setMenuItem(CONTROLLER_MENU_ROOT, 0, strdup(PSTR("Main")), CONTROLLER_MENU_MAIN);
-
-   _menus[CONTROLLER_MENU_MAIN].name = strdup(PSTR("Main"));
-   _menus[CONTROLLER_MENU_MAIN].backTo = CONTROLLER_MENU_ROOT;
-   setMenuItem(CONTROLLER_MENU_MAIN, 0, strdup(PSTR("Start")), CONTROLLER_MENU_START);
-
-   _menus[CONTROLLER_MENU_START].name = strdup(PSTR("Start: Select a node"));
-   _menus[CONTROLLER_MENU_START].backTo = CONTROLLER_MENU_MAIN;
-
-   _menus[CONTROLLER_MENU_CREATE].name = strdup(PSTR("Create binding"));
-   _menus[CONTROLLER_MENU_CREATE].backTo = CONTROLLER_MENU_MAIN;
 
 
    // subs
@@ -102,6 +111,12 @@ ControllerModule::ControllerModule(uint8_t id, DroneModuleManager* dmm, DroneLin
    setParamName(FPSTR(DRONE_STR_RIGHT), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_UINT8_T, 1);
    param->data.uint8[0] = 5;
+
+   param = &_params[CONTROLLER_PARAM_TELEMETRY_E];
+   param->param = CONTROLLER_PARAM_TELEMETRY;
+   setParamName(FPSTR(DRONE_STR_TELEMETRY), param);
+   param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_UINT8_T, 1);
+   param->data.uint8[0] = 6;
 }
 
 ControllerModule::~ControllerModule() {
@@ -114,11 +129,10 @@ void ControllerModule::doReset() {
 
   DroneWire::selectChannel(_bus);
 
-  _display->init();
-  //_display->resetDisplay();
+  //_display->init();
+  if (_display) _display->resetDisplay();
 
-  _display->flipScreenVertically();
-  _display->setFont(ArialMT_Plain_10);
+  //_display->flipScreenVertically();
 }
 
 
@@ -129,27 +143,52 @@ void ControllerModule::doShutdown() {
 
   // write shutdown message to screen
   // clear the display
-  _display->clear();
+  if (_display) {
 
-  _display->setColor(WHITE);
-  _display->setFont(ArialMT_Plain_10);
+    _display->clear();
 
-  _display->setTextAlignment(TEXT_ALIGN_LEFT);
-  _display->drawString(0, 30, F("Restarting..."));
+    _display->setColor(WHITE);
+    _display->setFont(ArialMT_Plain_10);
 
-  // write the buffer to the display
-  _display->display();
+    _display->setTextAlignment(TEXT_ALIGN_CENTER);
+    _display->drawString(64, 25, F("Restarting..."));
+
+    // write the buffer to the display
+    _display->display();
+  }
 }
 
+CONTROLLER_PARAM_INFO* ControllerModule::getParamInfo(CONTROLLER_CHANNEL_INFO *channel, uint8_t param) {
+  // find param
+  for (uint8_t i = 0; i<channel->params->size(); i++) {
+    if (channel->params->get(i)->param == param) {
+      return channel->params->get(i);
+    }
+  }
+  return NULL;
+}
+
+
+CONTROLLER_CHANNEL_INFO* ControllerModule::getChannelInfo(uint8_t channel) {
+  // find module
+  for (uint8_t i = 0; i<_availChannels.size(); i++) {
+    if (_availChannels[i]->channel == channel) {
+      return _availChannels[i];
+    }
+  }
+  return NULL;
+}
 
 void ControllerModule::handleLinkMessage(DroneLinkMsg *msg) {
   // intercept values for joysticks
 
   // left
+  uint8_t axis = 255;
   if (msg->channel() == _params[CONTROLLER_PARAM_LEFT_E].data.uint8[0]) {
     if (msg->param() >= 8 && msg->param() <= 11) {
       if (msg->type() == DRONE_LINK_MSG_TYPE_FLOAT) {
-        _axes[ CONTROLLER_AXIS_LEFT_X + msg->param() - 8] = msg->_msg.payload.f[0];
+        axis = CONTROLLER_AXIS_LEFT_X + msg->param() - 8;
+        _axes[ axis] = msg->_msg.payload.f[0];
       }
     }
   }
@@ -158,7 +197,129 @@ void ControllerModule::handleLinkMessage(DroneLinkMsg *msg) {
   if (msg->channel() == _params[CONTROLLER_PARAM_RIGHT_E].data.uint8[0]) {
     if (msg->param() >= 8 && msg->param() <= 11) {
       if (msg->type() == DRONE_LINK_MSG_TYPE_FLOAT) {
-        _axes[ CONTROLLER_AXIS_RIGHT_X + msg->param() - 8] = msg->_msg.payload.f[0];
+        axis = CONTROLLER_AXIS_RIGHT_X + msg->param() - 8;
+        _axes[ axis ] = msg->_msg.payload.f[0];
+      }
+    }
+  }
+
+  if (!_isBound) {
+    _spinner += PI / 8.0;
+  }
+
+  // listen to channels / params for active binding
+  // insert sort into relevant menu list
+  if (_isBound && msg->node() == _binding) {
+    _spinner += PI / 8.0;
+    //Serial.println("new binding info");
+
+    CONTROLLER_CHANNEL_INFO *chan = getChannelInfo(msg->channel());
+
+    // intercept module names
+    if (chan != NULL &&
+        msg->type() == DRONE_LINK_MSG_TYPE_CHAR &&
+        msg->param() == DRONE_MODULE_PARAM_NAME) {
+          Log.noticeln("Received module name %u", msg->channel());
+          memcpy(chan->name, msg->_msg.payload.c, msg->length());
+          chan->name[msg->length()] = '\0';
+          _channelInfoChanged = true;
+        }
+
+    // intercept param names
+    if (chan != NULL &&
+        msg->type() == DRONE_LINK_MSG_TYPE_NAME) {
+          // lets see if this is a param we're interested in:
+          CONTROLLER_PARAM_INFO *paramInfo = getParamInfo(chan, msg->param());
+          if (paramInfo != NULL) {
+            Log.noticeln("Received param name %u", msg->param());
+            memcpy(paramInfo->name, msg->_msg.payload.c, msg->length());
+            paramInfo->name[msg->length()] = '\0';
+            _channelInfoChanged = true;
+          }
+        }
+
+    // capture all displayable parameters
+    if (msg->type() <= DRONE_LINK_MSG_TYPE_CHAR) {
+
+      Log.noticeln("Received param info");
+
+      // add to list
+      if (chan == NULL) {
+        Serial.print("new writable param: ");
+        Serial.print(msg->channel());
+        Serial.print(".");
+        Serial.println(msg->param());
+
+        chan = (CONTROLLER_CHANNEL_INFO*)malloc(sizeof(CONTROLLER_CHANNEL_INFO));
+        chan->channel = msg->channel();
+        chan->name[0] = '?';
+        chan->name[1] = '\0';
+        chan->numFloats = 0;
+        chan->params = new IvanLinkedList::LinkedList<CONTROLLER_PARAM_INFO*>;
+
+        Serial.print("linked list size: ");
+        Serial.println(chan->params->size());
+
+        _channelInfoChanged = true;
+
+        _availChannels.add(chan);
+
+        // sort
+        _availChannels.sort([](CONTROLLER_CHANNEL_INFO *&a, CONTROLLER_CHANNEL_INFO *&b) {
+          return a->channel - b->channel;
+        });
+
+        // fire off a channel name query
+        /*
+        _queryMsg.type(DRONE_LINK_MSG_TYPE_QUERY);
+        _queryMsg.node(_binding);
+        _queryMsg.channel(msg->channel());
+        _queryMsg.param(DRONE_MODULE_PARAM_NAME);
+        _dlm->publish(_queryMsg);
+        */
+      }
+
+      // assuming chan is now available
+      if (chan != NULL) {
+        // store the param in chan info
+        Serial.println("Storing param info");
+
+        CONTROLLER_PARAM_INFO *paramInfo = getParamInfo(chan, msg->param());
+
+        if (paramInfo == NULL) {
+          Serial.print("new param: ");
+
+          paramInfo = (CONTROLLER_PARAM_INFO*)malloc(sizeof(CONTROLLER_PARAM_INFO));
+          paramInfo->param = msg->param();
+          paramInfo->paramTypeLength = msg->_msg.paramTypeLength;
+          paramInfo->name[0] = '?';
+          paramInfo->name[1] = '\0';
+
+          if (msg->type() == DRONE_LINK_MSG_TYPE_FLOAT &&
+              msg->length() == 4 &&
+              msg->writable()) {
+            // only look for single value floats
+            chan->numFloats++;
+          }
+
+          _channelInfoChanged = true;
+
+          chan->params->add(paramInfo);
+
+          // sort
+          chan->params->sort([](CONTROLLER_PARAM_INFO *&a, CONTROLLER_PARAM_INFO *&b) {
+            return a->param - b->param;
+          });
+
+          // fire off a param name query
+          /*
+          _queryMsg.type(DRONE_LINK_MSG_TYPE_NAMEQUERY);
+          _queryMsg.node(_binding);
+          _queryMsg.channel(msg->channel());
+          _queryMsg.param(msg->param());
+          _dlm->publish(_queryMsg);
+          */
+        }
       }
     }
   }
@@ -171,6 +332,8 @@ void ControllerModule::loadConfiguration(JsonObject &obj) {
   I2CBaseModule::loadConfiguration(obj);
 
   // instantiate sensor object, now _addr is known
+  DroneWire::selectChannel(_bus);
+
   _display = new SSD1306Wire(_addr, SDA, SCL);
 
   // read joystick channels
@@ -183,10 +346,73 @@ void ControllerModule::loadConfiguration(JsonObject &obj) {
 }
 
 
-void ControllerModule::setMenuItem(uint8_t menu, uint8_t item, char* name, uint8_t nextMenu) {
+void ControllerModule::setup() {
+  DroneModule::setup();
+
+ _menus[CONTROLLER_MENU_ROOT].name = (F("Root"));
+ _menus[CONTROLLER_MENU_ROOT].backTo = CONTROLLER_MENU_ROOT;
+ setMenuItem(CONTROLLER_MENU_ROOT, 0, (F("Main")), 0, NULL, CONTROLLER_MENU_MAIN);
+
+ _menus[CONTROLLER_MENU_MAIN].name = (F("Main"));
+ _menus[CONTROLLER_MENU_MAIN].backTo = CONTROLLER_MENU_ROOT;
+ setMenuItem(CONTROLLER_MENU_MAIN, 0, F("Start"), 0, NULL, CONTROLLER_MENU_START);
+ setMenuItem(CONTROLLER_MENU_MAIN, 1, F("Edit"), 1, NULL, CONTROLLER_MENU_EDIT);
+
+ _menus[CONTROLLER_MENU_START].name = (F("Start: Select a node"));
+ _menus[CONTROLLER_MENU_START].backTo = CONTROLLER_MENU_MAIN;
+
+ _menus[CONTROLLER_MENU_CREATE].name = (F("Create binding"));
+ _menus[CONTROLLER_MENU_CREATE].backTo = CONTROLLER_MENU_MAIN;
+ // dummy menu entry for navigation
+ setMenuItem(CONTROLLER_MENU_CREATE, 0, (F("Edit")), 0, NULL, CONTROLLER_MENU_EDIT);
+
+ _menus[CONTROLLER_MENU_EDIT].name = (F("Edit: Select axis to bind"));
+ _menus[CONTROLLER_MENU_EDIT].backTo = CONTROLLER_MENU_MAIN;
+ setMenuItem(CONTROLLER_MENU_EDIT, 0, F("LX"), 0, NULL, CONTROLLER_MENU_BINDAXIS);
+ setMenuItem(CONTROLLER_MENU_EDIT, 1, (F("LY")), 1, NULL, CONTROLLER_MENU_BINDAXIS);
+ setMenuItem(CONTROLLER_MENU_EDIT, 2, (F("LZ")), 2, NULL, CONTROLLER_MENU_BINDAXIS);
+ setMenuItem(CONTROLLER_MENU_EDIT, 3, (F("RX")), 4, NULL, CONTROLLER_MENU_BINDAXIS);
+ setMenuItem(CONTROLLER_MENU_EDIT, 4, (F("RY")), 5, NULL, CONTROLLER_MENU_BINDAXIS);
+ setMenuItem(CONTROLLER_MENU_EDIT, 5, (F("RZ")), 6, NULL, CONTROLLER_MENU_BINDAXIS);
+
+
+ _menus[CONTROLLER_MENU_BINDAXIS].name = (F("Bind: Select module"));
+ _menus[CONTROLLER_MENU_BINDAXIS].backTo = CONTROLLER_MENU_EDIT;
+
+ _menus[CONTROLLER_MENU_BINDAXIS2].name = (F("Bind: Select param"));
+ _menus[CONTROLLER_MENU_BINDAXIS2].backTo = CONTROLLER_MENU_BINDAXIS;
+
+ _menus[CONTROLLER_MENU_BINDAXIS3].name = (F("Bind: Complete"));
+ _menus[CONTROLLER_MENU_BINDAXIS3].backTo = CONTROLLER_MENU_EDIT;
+
+ // Init display
+ if (_display) {
+   DroneWire::selectChannel(_bus);
+
+   if (!_display->init()) {
+     Log.errorln(F("display->init()"));
+   }
+   //_display->resetDisplay();
+
+   _display->flipScreenVertically();
+
+   _display->clear();
+   _display->display();
+   _display->setBrightness(_brightness);
+ } else {
+   //Serial.println("Err: _display not created");
+ }
+}
+
+
+void ControllerModule::setMenuItem(uint8_t menu, uint8_t item, String name, uint8_t data, void* dataPointer, uint8_t nextMenu) {
   CONTROLLER_MENU_ITEM tempItem;
-  strcpy(tempItem.name, name);
+  //Serial.printf("Adding to menu %u, item %u \n", menu, item);
+
+  tempItem.name = name;
   tempItem.menu = nextMenu;
+  tempItem.data = data;
+  tempItem.dataPointer = dataPointer;
 
   if (item >= _menus[menu].items.size()) {
     // push
@@ -199,11 +425,17 @@ void ControllerModule::setMenuItem(uint8_t menu, uint8_t item, char* name, uint8
 
 
 void ControllerModule::manageRoot(boolean syncMenu) {
+  _display->setColor(WHITE);
+
   if (_isBound) {
-    _display->drawString(0, 12, "Bound");
+    //_display->drawString(0, 12, "Bound to " + String(_binding));
+
 
   } else {
-    _display->drawString(0, 12, "Unbound - click to start");
+    _menus[CONTROLLER_MENU_ROOT].name = "No Binding";
+
+    _display->setTextAlignment(TEXT_ALIGN_CENTER);
+    _display->drawString(64, 25, F("Click to start"));
   }
 }
 
@@ -221,10 +453,10 @@ void ControllerModule::manageStart(boolean syncMenu) {
       nodeInfo = _dlm->getNodeInfo(i);
       if (nodeInfo != NULL) {
         if (nodeInfo->name != NULL) {
-          setMenuItem(CONTROLLER_MENU_START, j, nodeInfo->name, CONTROLLER_MENU_CREATE);
+          setMenuItem(CONTROLLER_MENU_START, j, nodeInfo->name, i, NULL, CONTROLLER_MENU_CREATE);
         } else {
           itoa(i, temp, 10);
-          setMenuItem(CONTROLLER_MENU_START, j, temp, CONTROLLER_MENU_CREATE);
+          setMenuItem(CONTROLLER_MENU_START, j, temp, i, NULL, CONTROLLER_MENU_CREATE);
         }
 
         j++;
@@ -235,49 +467,259 @@ void ControllerModule::manageStart(boolean syncMenu) {
   }
 
   drawMenu();
+  drawSpinner();
 }
 
 void ControllerModule::manageCreate(boolean syncMenu) {
   // create new binding
 
-  _display->drawString(0, 12, "New binding created");
-  _display->drawString(0, 24, "Click to configure axes");
+  if (!_isBound) {
+    _isBound = true;
+    _bindingName = _menus[CONTROLLER_MENU_START].items[_menus[CONTROLLER_MENU_START].selected].name;
+    _binding = _menus[CONTROLLER_MENU_START].items[_menus[CONTROLLER_MENU_START].selected].data;
+
+    _menus[CONTROLLER_MENU_ROOT].name = String(_binding) + ">" + _bindingName;
+
+    // make sure we're subscribed to the bound node and all its channels/params
+    Log.noticeln("Subscribing Controller to: %u", _binding);
+    _dlm->subscribe(_binding, 0, this, 0);
+  }
+
+  _display->setColor(WHITE);
+  _display->drawString(0, 12, F("New binding created"));
+  _display->drawString(0, 24, F("Click to configure axes"));
 }
 
+void ControllerModule::manageEdit(boolean syncMenu) {
+  if (_isBound) {
+    // pick an axis to edit binding
+    drawMenu();
+  } else {
+    // redirect to start
+    _menu = CONTROLLER_MENU_START;
+    /*
+    _display->setColor(WHITE);
+    _display->setTextAlignment(TEXT_ALIGN_CENTER);
+    _display->drawString(64, 25, F("No binding to edit"));
+    */
+  }
+}
+
+void ControllerModule::drawEditMenuItem(uint8_t index, uint8_t y) {
+  if (_menus[_menu].items[index].name) {
+    _display->setFont(ArialMT_Plain_10);
+    _display->drawString(2, y, _menus[_menu].items[index].name);
+  }
+
+
+  uint8_t axis = _menus[_menu].items[index].data;
+  if (_bindings[axis].param != 255) {
+    _display->setFont(TomThumb4x6);
+    _display->drawString(20, y+4, _bindingLabels[axis]);
+    //temp += " = " + String(_bindings[axis].channel) + '.' + String(_bindings[axis].param);
+  }
+}
+
+
+void ControllerModule::manageBindAxis(boolean syncMenu) {
+  //Serial.println("Manage bindAxis");
+
+  if (_channelInfoChanged) {
+    //Serial.println("Syncing channel list");
+    //Serial.println(_availChannels.size());
+    CONTROLLER_CHANNEL_INFO* chanInfo;
+    for (uint8_t i=0; i<_availChannels.size(); i++) {
+      chanInfo = _availChannels[i];
+      Serial.println(chanInfo->channel);
+
+      if (chanInfo->name[0] == '?') {
+        // send a fresh name query
+        if (millis() > _lastDiscovery + CONTROLLER_DISCOVERY_INTERVAL) {
+          //Serial.println("requery module name");
+          _queryMsg.type(DRONE_LINK_MSG_TYPE_QUERY);
+          _queryMsg.node(_binding);
+          _queryMsg.channel(chanInfo->channel);
+          _queryMsg.param(DRONE_MODULE_PARAM_NAME);
+          _dlm->publish(_queryMsg);
+
+          _lastDiscovery = millis();
+        }
+      }
+
+      setMenuItem(CONTROLLER_MENU_BINDAXIS, i, chanInfo->name, chanInfo->channel, chanInfo, CONTROLLER_MENU_BINDAXIS2);
+    }
+    //Serial.println("done");
+
+    _channelInfoChanged = false;
+  }
+
+  // clear the param submenu items
+  _menus[CONTROLLER_MENU_BINDAXIS2].items.clear();
+
+  drawMenu();
+  drawSpinner();
+}
+
+
+void ControllerModule::drawBindAxisMenuItem(uint8_t index, uint8_t y) {
+  uint8_t channel = _menus[_menu].items[index].data;
+  String temp = String(channel) + ".";
+  if (_menus[_menu].items[index].name) {
+    temp += _menus[_menu].items[index].name;
+  } else {
+    temp += " ?";
+  }
+  // get number of params for this channel
+  CONTROLLER_CHANNEL_INFO *chan = getChannelInfo(channel);
+
+  if (chan != NULL) temp += " (" + String(chan->numFloats) +'/' + String(chan->params->size()) + ")";
+  _display->drawString(2, y, temp);
+}
+
+
+void ControllerModule::manageBindAxis2(boolean syncMenu) {
+  //Serial.println("Manage bindAxis");
+
+  if (_channelInfoChanged || syncMenu) {
+    //Serial.println("Syncing param list");
+
+    // get channel reference
+    CONTROLLER_CHANNEL_INFO* chanInfo = (CONTROLLER_CHANNEL_INFO*)_menus[CONTROLLER_MENU_BINDAXIS].items[ _menus[CONTROLLER_MENU_BINDAXIS].selected ].dataPointer;
+
+    // for each param
+    uint8_t j = 0;
+    for (uint8_t i=0; i<chanInfo->params->size(); i++) {
+      CONTROLLER_PARAM_INFO *paramInfo = chanInfo->params->get(i);
+      if (paramInfo->paramTypeLength == (DRONE_LINK_MSG_WRITABLE | (DRONE_LINK_MSG_TYPE_FLOAT << 4) | 0x3)) {
+        if (paramInfo->name[0] == '?') {
+          // send a fresh name query
+          if (millis() > _lastDiscovery + CONTROLLER_DISCOVERY_INTERVAL) {
+            //Serial.println("requery param name");
+            _queryMsg.type(DRONE_LINK_MSG_TYPE_NAMEQUERY);
+            _queryMsg.node(_binding);
+            _queryMsg.channel(chanInfo->channel);
+            _queryMsg.param(paramInfo->param);
+            _dlm->publish(_queryMsg);
+
+            _lastDiscovery = millis();
+          }
+        }
+
+        setMenuItem(CONTROLLER_MENU_BINDAXIS2, j, paramInfo->name, paramInfo->param, paramInfo, CONTROLLER_MENU_BINDAXIS3);
+        j++;
+      }
+
+    }
+    //Serial.println("done");
+    _channelInfoChanged = false;
+  }
+
+  drawMenu();
+  drawSpinner();
+}
+
+
+void ControllerModule::manageBindAxis3(boolean syncMenu) {
+  // complete new binding
+
+  // get axis
+  uint8_t axis = _menus[CONTROLLER_MENU_EDIT].items[ _menus[CONTROLLER_MENU_EDIT].selected ].data;
+
+  // get channel reference
+  CONTROLLER_CHANNEL_INFO* chanInfo = (CONTROLLER_CHANNEL_INFO*)_menus[CONTROLLER_MENU_BINDAXIS].items[ _menus[CONTROLLER_MENU_BINDAXIS].selected ].dataPointer;
+
+  // get param reference
+  CONTROLLER_PARAM_INFO* paramInfo = (CONTROLLER_PARAM_INFO*)_menus[CONTROLLER_MENU_BINDAXIS2].items[ _menus[CONTROLLER_MENU_BINDAXIS2].selected ].dataPointer;
+
+  _bindings[axis].node = _binding;
+  _bindings[axis].channel = chanInfo->channel;
+  _bindings[axis].param = paramInfo->param;
+
+  _bindingLabels[axis] = String(chanInfo->name) + "." + String(paramInfo->name);
+
+  // immediately redirect to edit menu
+  _menu = CONTROLLER_MENU_EDIT;
+}
 
 
 
 void ControllerModule::drawMenu() {
   // draw menu items
   _display->setTextAlignment(TEXT_ALIGN_LEFT);
+  uint8_t y;
   for (uint8_t i=0; i< _menus[_menu].items.size(); i++) {
-    if (i == _menus[_menu].selected) {
-      _display->setColor(WHITE);
-      _display->fillRect(0, 15 + i*12, 128, 11);
-      _display->setColor(BLACK);
-    } else {
-      _display->setColor(WHITE);
-    }
+    if (i >= _scroll) {
+      y = 14 + (i - _scroll) *12;
 
-    if (_menus[_menu].items[i].name) {
-      _display->drawString(2, 14 + i*12, _menus[_menu].items[i].name);
-    } else {
-      _display->drawString(2, 14 + i*12, String(i) + " ?");
-    }
+      if (i == _menus[_menu].selected) {
+        _display->setColor(WHITE);
+        _display->fillRect(0, y+1, 128, 11);
+        _display->setColor(BLACK);
+      } else {
+        _display->setColor(WHITE);
+      }
 
+      if (_menu == CONTROLLER_MENU_BINDAXIS) {
+        drawBindAxisMenuItem(i,y);
+      } else if (_menu == CONTROLLER_MENU_EDIT) {
+        drawEditMenuItem(i,y);
+      } else {
+        if (_menus[_menu].items[i].name) {
+          _display->drawString(2, y, String(_menus[_menu].items[i].data) + "." + _menus[_menu].items[i].name);
+        } else {
+          _display->drawString(2, y, String(_menus[_menu].items[i].data) + ". ?");
+        }
+      }
+    }
   }
+}
+
+
+void ControllerModule::drawSpinner() {
+  int cx = 122;
+  int cy = 58;
+
+  int x = 4 * cos(_spinner);
+  int y = 4 * sin(_spinner);
+
+  _display->setColor(WHITE);
+
+  _display->drawLine(cx - x, cy - y,  cx + x, cy + y);
 }
 
 
 void ControllerModule::loop() {
   I2CBaseModule::loop();
 
+  //Serial.println("loop");
+
+  DroneWire::selectChannel(_bus);
+
+
+  // do we have an active binding to send to?
+  // in which case keep spamming values to allow for any packet loss
+  if (_isBound && _menu == CONTROLLER_MENU_ROOT) {
+    _sendMsg.node(_binding);
+    for (uint8_t i=0; i<8; i++) {
+      if (_bindings[i].param <255) {
+        _sendMsg.channel(_bindings[i].channel);
+        _sendMsg.param(_bindings[i].param);
+        _sendMsg._msg.payload.f[0] = _axes[i];
+        _dlm->publish(_sendMsg);
+      }
+    }
+  }
+
+
   unsigned long loopTime = millis();
 
   boolean syncMenu = false;
-  if (loopTime > _syncMenusTimer + 2000) {
+  if (loopTime > _syncMenusTimer + 1000) {
     syncMenu = true;
     _syncMenusTimer = loopTime;
+  }
+  if (_menu != _lastMenu) {
+    syncMenu = true;
   }
 
   if ((_axes[CONTROLLER_AXIS_RIGHT_B]) < 0) _neutral[CONTROLLER_AXIS_RIGHT_B] = true;
@@ -288,14 +730,17 @@ void ControllerModule::loop() {
   // buttons - positive is pressed
   if (_axes[CONTROLLER_AXIS_RIGHT_B] > 0 &&  _neutral[CONTROLLER_AXIS_RIGHT_B]) {
     // right button pressed
-    _menu = (CONTROLLER_MENUS)_menus[_menu].items[_menus[_menu].selected].menu;
+    if (_menus[_menu].items.size() > 0) {
+      _menu = _menus[_menu].items[_menus[_menu].selected].menu;
+    }
+
     _neutral[CONTROLLER_AXIS_RIGHT_B] = false;
   }
 
   if (_axes[CONTROLLER_AXIS_LEFT_B] > 0 &&  _neutral[CONTROLLER_AXIS_LEFT_B]) {
     // left button pressed
     // go back
-    _menu = (CONTROLLER_MENUS)_menus[_menu].backTo;
+    _menu = _menus[_menu].backTo;
     _neutral[CONTROLLER_AXIS_LEFT_B] = false;
   }
 
@@ -311,13 +756,22 @@ void ControllerModule::loop() {
     // right down
     if (_menus[_menu].selected < _menus[_menu].items.size()-1)
       _menus[_menu].selected++;
-    if (_menus[_menu].selected > _scroll + 4) _scroll++;
+    if (_menus[_menu].selected > _scroll + 3) _scroll++;
     _neutral[CONTROLLER_AXIS_RIGHT_Y] = false;
   }
+
+  // ensure selected is in range
+  if (_menus[_menu].selected >= _menus[_menu].items.size())
+    _menus[_menu].selected = _menus[_menu].items.size()-1;
+
+  // ensure scroll in range when we change menus
+  if (_menus[_menu].selected < _scroll) _scroll = _menus[_menu].selected;
+  if (_menus[_menu].selected > _scroll + 3) _scroll = _menus[_menu].selected - 3;
   _scroll = max(min((int)(_menus[_menu].items.size() - 4), (int)_scroll), 0);
 
-
-  DroneWire::selectChannel(_bus);
+  // dim up on start
+  if (_brightness < 254) _brightness+= 2;
+  _display->setBrightness(_brightness);
 
   // clear the display
   _display->clear();
@@ -329,17 +783,21 @@ void ControllerModule::loop() {
   _display->setFont(ArialMT_Plain_10);
 
   // menu title
-  _display->setTextAlignment(TEXT_ALIGN_LEFT);
-  _display->drawString(2, 0, String(_menu) + "." + _menus[_menu].name);
+  if (_menu < CONTROLLER_MENU_COUNT && _menus[_menu].name.length() > 0) {
+    _display->setTextAlignment(TEXT_ALIGN_LEFT);
+    _display->drawString(2, 0, _menus[_menu].name);
+  }
 
   // draw menu size for debugging
   _display->setTextAlignment(TEXT_ALIGN_RIGHT);
   _display->setColor(BLACK);
   _display->setFont(TomThumb4x6);
-  _display->drawString(128, 1, String(_menus[_menu].items.size()));
+  if (_menu < CONTROLLER_MENU_COUNT)
+    _display->drawString(128, 1, String(_menus[_menu].items.size()));
 
   // draw active menu
   _display->setColor(WHITE);
+  _display->setTextAlignment(TEXT_ALIGN_LEFT);
   _display->setFont(ArialMT_Plain_10);
 
   switch(_menu) {
@@ -347,9 +805,14 @@ void ControllerModule::loop() {
     case CONTROLLER_MENU_MAIN: manageMain(syncMenu); break;
     case CONTROLLER_MENU_START: manageStart(syncMenu); break;
     case CONTROLLER_MENU_CREATE: manageCreate(syncMenu); break;
+    case CONTROLLER_MENU_EDIT: manageEdit(syncMenu); break;
+    case CONTROLLER_MENU_BINDAXIS: manageBindAxis(syncMenu); break;
+    case CONTROLLER_MENU_BINDAXIS2: manageBindAxis2(syncMenu); break;
+    case CONTROLLER_MENU_BINDAXIS3: manageBindAxis3(syncMenu); break;
   }
 
   // write the buffer to the display
   _display->display();
 
+  _lastMenu = _menu;
 }
