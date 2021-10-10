@@ -58,6 +58,7 @@ void MotorModule::setup() {
 
   } else {
     Log.errorln(F("Undefined pins"));
+    setError(1);
     disable();
   }
 }
@@ -71,6 +72,8 @@ void MotorModule::disable() {
 
 
 void MotorModule::update() {
+  if (_error > 0) return;
+  
   float v = _subs[MOTOR_SUB_SPEED_E].param.data.f[0];
 
   // limit range
