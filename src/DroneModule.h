@@ -60,6 +60,7 @@ static const char DRONE_STR_BUSV[] PROGMEM = "busV";
 static const char DRONE_STR_BUTTON[] PROGMEM = "button";
 static const char DRONE_STR_CALIB_X[] PROGMEM = "calibX";
 static const char DRONE_STR_CALIB_Y[] PROGMEM = "calibY";
+static const char DRONE_STR_CELLS[] PROGMEM = "cells";
 static const char DRONE_STR_CENTRE[] PROGMEM = "centre";
 static const char DRONE_STR_CHOKED[] PROGMEM = "choked";
 static const char DRONE_STR_CURRENT[] PROGMEM = "current";

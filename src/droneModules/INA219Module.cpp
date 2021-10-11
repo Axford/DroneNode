@@ -9,44 +9,42 @@ INA219Module::INA219Module(uint8_t id, DroneModuleManager* dmm, DroneLinkManager
    setTypeName(FPSTR(INA219_STR_INA219));
    _addr = INA219_I2C_ADDRESS;
 
-   _numParamEntries = INA219_PARAM_ENTRIES;
-   _params = new DRONE_PARAM_ENTRY[_numParamEntries];
+   _numCells = 1;
 
-   // defaults
-   for (uint8_t i=0; i<_numParamEntries; i++) {
-     _params[i].paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 4);
-     _params[i].publish = false;
-     _params[i].data.f[0] = 0;
-   }
+   // pubs
+   initParams(INA219_PARAM_ENTRIES);
 
-   _mgmtParams[DRONE_MODULE_PARAM_TYPE_E].paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_CHAR, sizeof(INA219_STR_INA219));
-   strncpy_P(_mgmtParams[DRONE_MODULE_PARAM_TYPE_E].data.c, INA219_STR_INA219, sizeof(INA219_STR_INA219));
+   DRONE_PARAM_ENTRY *param;
 
+   param = &_params[INA219_PARAM_SHUNTV_E];
+   param->param = INA219_PARAM_SHUNTV;
+   setParamName(FPSTR(DRONE_STR_SHUNTV), param);
+   param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 4);
 
-   // init param entries
-   _params[INA219_PARAM_SHUNTV_E].param = INA219_PARAM_SHUNTV;
-   _params[INA219_PARAM_SHUNTV_E].name = FPSTR(DRONE_STR_SHUNTV);
-   _params[INA219_PARAM_SHUNTV_E].nameLen = sizeof(DRONE_STR_SHUNTV);
+   param = &_params[INA219_PARAM_BUSV_E];
+   param->param = INA219_PARAM_BUSV;
+   setParamName(FPSTR(DRONE_STR_BUSV), param);
+   param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 4);
 
+   param = &_params[INA219_PARAM_CURRENT_E];
+   param->param = INA219_PARAM_CURRENT;
+   setParamName(FPSTR(DRONE_STR_CURRENT), param);
+   param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 4);
 
-   _params[INA219_PARAM_BUSV_E].param = INA219_PARAM_BUSV;
-   _params[INA219_PARAM_BUSV_E].name = FPSTR(DRONE_STR_BUSV);
-   _params[INA219_PARAM_BUSV_E].nameLen = sizeof(DRONE_STR_BUSV);
+   param = &_params[INA219_PARAM_POWER_E];
+   param->param = INA219_PARAM_POWER;
+   setParamName(FPSTR(DRONE_STR_POWER), param);
+   param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 4);
 
+   param = &_params[INA219_PARAM_LOADV_E];
+   param->param = INA219_PARAM_LOADV;
+   setParamName(FPSTR(DRONE_STR_LOADV), param);
+   param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 4);
 
-   _params[INA219_PARAM_CURRENT_E].param = INA219_PARAM_CURRENT;
-   _params[INA219_PARAM_CURRENT_E].name = FPSTR(DRONE_STR_CURRENT);
-   _params[INA219_PARAM_CURRENT_E].nameLen = sizeof(DRONE_STR_CURRENT);
-
-
-   _params[INA219_PARAM_POWER_E].param = INA219_PARAM_POWER;
-   _params[INA219_PARAM_POWER_E].name = FPSTR(DRONE_STR_POWER);
-   _params[INA219_PARAM_POWER_E].nameLen = sizeof(DRONE_STR_POWER);
-
-
-   _params[INA219_PARAM_LOADV_E].param = INA219_PARAM_LOADV;
-   _params[INA219_PARAM_LOADV_E].name = FPSTR(DRONE_STR_LOADV);
-   _params[INA219_PARAM_LOADV_E].nameLen = sizeof(DRONE_STR_LOADV);
+   param = &_params[INA219_PARAM_CELLV_E];
+   param->param = INA219_PARAM_CELLV;
+   setParamName(FPSTR(DRONE_STR_CELLV), param);
+   param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 4);
 
 }
 
@@ -74,6 +72,9 @@ void INA219Module::loadConfiguration(JsonObject &obj) {
 
   // instantiate sensor object, now _addr is known
   _sensor = new Adafruit_INA219(_addr);
+
+  _numCells = obj[DRONE_STR_CELLS] | _numCells;
+  if (_numCells < 1) _numCells = 1;
 }
 
 
@@ -83,11 +84,26 @@ void INA219Module::loop() {
   DroneWire::selectChannel(_bus);
 
   // get sensor values
-  _params[INA219_PARAM_SHUNTV_E].data.f[0] = _sensor->getShuntVoltage_mV() / 1000.0f;
-  _params[INA219_PARAM_BUSV_E].data.f[0] = _sensor->getBusVoltage_V();
-  _params[INA219_PARAM_CURRENT_E].data.f[0] = _sensor->getCurrent_mA() / 1000.0f;
-  _params[INA219_PARAM_POWER_E].data.f[0] = _sensor->getPower_mW() / 1000.0f;
-  _params[INA219_PARAM_LOADV_E].data.f[0] = _params[INA219_PARAM_BUSV_E].data.f[0] + _params[INA219_PARAM_SHUNTV_E].data.f[0];
+  float tempf;
+
+  tempf = _sensor->getShuntVoltage_mV() / 1000.0f;
+  updateAndPublishParam(&_params[INA219_PARAM_SHUNTV_E], (uint8_t*)&tempf, sizeof(tempf));
+
+  tempf = _sensor->getBusVoltage_V();
+  updateAndPublishParam(&_params[INA219_PARAM_BUSV_E], (uint8_t*)&tempf, sizeof(tempf));
+
+  tempf = _sensor->getCurrent_mA() / 1000.0f;
+  updateAndPublishParam(&_params[INA219_PARAM_CURRENT_E], (uint8_t*)&tempf, sizeof(tempf));
+
+  tempf = _sensor->getPower_mW() / 1000.0f;
+  updateAndPublishParam(&_params[INA219_PARAM_POWER_E], (uint8_t*)&tempf, sizeof(tempf));
+
+  tempf = _params[INA219_PARAM_BUSV_E].data.f[0] + _params[INA219_PARAM_SHUNTV_E].data.f[0];
+  updateAndPublishParam(&_params[INA219_PARAM_LOADV_E], (uint8_t*)&tempf, sizeof(tempf));
+
+  // calculate cell voltage
+  tempf = _params[INA219_PARAM_LOADV_E].data.f[0] / _numCells;
+  updateAndPublishParam(&_params[INA219_PARAM_CELLV_E], (uint8_t*)&tempf, sizeof(tempf));
 
   // error check
   if (isnan(_params[INA219_PARAM_SHUNTV_E].data.f[0])) {
