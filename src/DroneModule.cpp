@@ -122,6 +122,7 @@ void DroneModule::initSubs(uint8_t numSubs) {
 
   for (uint8_t i=0; i<_numSubs; i++) {
     _subs[i].received = false;
+    _subs[i].addr.source = _dlm->node();
     _subs[i].addr.param = 255;
     _subs[i].param.publish = false;
     _subs[i].param.nameLen = sizeof(DRONE_STR_BLANK);
@@ -546,6 +547,7 @@ void DroneModule::loop() {
 
 
 boolean DroneModule::doDiscovery() {
+  //Log.noticeln("Discover module: %u", _id);
   switch (_discoveryState) {
     case DRONE_MODULE_DISCOVERY_PENDING:
       _discoveryState = DRONE_MODULE_DISCOVERY_MGMT;
@@ -555,6 +557,7 @@ boolean DroneModule::doDiscovery() {
     case DRONE_MODULE_DISCOVERY_MGMT:
       if (_discoveryIndex < DRONE_MGMT_PARAM_ENTRIES) {
         if (_mgmtParams[_discoveryIndex].publish) {
+          //Log.noticeln("Discover mgmt: %u", _discoveryIndex);
           publishParamEntry(&_mgmtParams[_discoveryIndex]);
         }
       }
@@ -572,6 +575,7 @@ boolean DroneModule::doDiscovery() {
       }
       if (_discoveryIndex < _numSubs) {
         if (_subs[_discoveryIndex].param.publish) {
+          Log.noticeln("Discover sub: %u . %u", _id, _subs[_discoveryIndex].addrParam);
           publishParamEntry(&_subs[_discoveryIndex].param);
           publishSubAddress(&_subs[_discoveryIndex]);
         }
@@ -590,6 +594,7 @@ boolean DroneModule::doDiscovery() {
       }
       if (_discoveryIndex < _numParamEntries) {
         if (_params[_discoveryIndex].publish) {
+          //Log.noticeln("Discover param: %u", _discoveryIndex);
           publishParamEntry(&_params[_discoveryIndex]);
         }
       }

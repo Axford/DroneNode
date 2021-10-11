@@ -503,13 +503,18 @@ void ControllerModule::manageRoot(boolean syncMenu) {
   _display->setColor(WHITE);
 
   if (_isBound) {
-    // show any configured info bindings
 
+    // debug joystick positions
+    _display->setFont(TomThumb4x6);
+    _display->setTextAlignment(TEXT_ALIGN_LEFT);
+    _display->drawString(2, 14, String(_axes[0]));
+
+    // show any configured info bindings
     _display->setTextAlignment(TEXT_ALIGN_LEFT);
     uint8_t y;
     String valueStr = "";
     for (uint8_t i=0; i< CONTROLLER_INFO_COUNT; i++) {
-      y = 14 + (i) *12;
+      y = 24 + (i) *12;
 
       if (_info[i].param() < 255) {
         // draw label
@@ -949,7 +954,7 @@ void ControllerModule::loop() {
       if (_bindings[i].param <255) {
         _sendMsg.channel(_bindings[i].channel);
         _sendMsg.param(_bindings[i].param);
-        _sendMsg._msg.payload.f[0] = _axes[i];
+        _sendMsg._msg.payload.f[0] = (_invert[i] ? -1 : 1) * _axes[i];
         _dlm->publish(_sendMsg);
       }
     }
