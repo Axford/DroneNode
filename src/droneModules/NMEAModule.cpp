@@ -100,27 +100,30 @@ void NMEAModule::loop() {
       } else {
         if (_nmea->isValid()) {
           //Log.noticeln(F("Fresh GPS"));
-          _params[NMEA_PARAM_LOCATION_E].data.f[1] = _nmea->getLatitude() / 1000000.;
-          _params[NMEA_PARAM_LOCATION_E].data.f[0] = _nmea->getLongitude() / 1000000.;
+          float tempf[3];
+          tempf[1] = _nmea->getLatitude() / 1000000.;
+          tempf[0] = _nmea->getLongitude() / 1000000.;
           long alt = 0;
           _nmea->getAltitude(alt);
-          _params[NMEA_PARAM_LOCATION_E].data.f[2] = alt/1000.0;
+          tempf[2] = alt/1000.0;
+          updateAndPublishParam(&_params[NMEA_PARAM_LOCATION_E], (uint8_t*)&tempf, sizeof(tempf));
 
-          _params[NMEA_PARAM_SATELLITES_E].data.uint8[0] = _nmea->getNumSatellites();
+          uint8_t temp8 =  _nmea->getNumSatellites();
+          updateAndPublishParam(&_params[NMEA_PARAM_SATELLITES_E], (uint8_t*)&temp8, sizeof(temp8));
+
 
           float v = _nmea->getSpeed() / 1000.0;
           if (v >= 0) {
-            _params[NMEA_PARAM_SPEED_E].data.f[0] = v;
+            updateAndPublishParam(&_params[NMEA_PARAM_SPEED_E], (uint8_t*)&v, 4);
           }
 
           v = _nmea->getCourse() / 1000.0;
           if (v >= 0) {
-            _params[NMEA_PARAM_HEADING_E].data.f[0] = v;
+            updateAndPublishParam(&_params[NMEA_PARAM_HEADING_E], (uint8_t*)&v, 4);
           }
 
-          _params[NMEA_PARAM_HDOP_E].data.uint8[0] = _nmea->getHDOP();
-
-          publishParamEntries();
+          temp8 = _nmea->getHDOP();
+          updateAndPublishParam(&_params[NMEA_PARAM_HDOP_E], (uint8_t*)&temp8, sizeof(temp8));
         }
       }
 
