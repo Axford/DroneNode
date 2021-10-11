@@ -25,6 +25,7 @@
 #include "droneModules/JoystickModule.h"
 #include "droneModules/OLEDModule.h"
 #include "droneModules/ControllerModule.h"
+#include "droneModules/NunchuckJoystickModule.h"
 
 
 void DroneModuleManager::registerModule(DroneModule *m) {
@@ -157,6 +158,8 @@ void DroneModuleManager::loadModulesFromJSON(const JsonArray &array) {
             newMod = new OLEDModule(id, this, _dlm);
           } else if (typeName.equals(CONTROLLER_STR_CONTROLLER)) {
             newMod = new ControllerModule(id, this, _dlm);
+          } else if (typeName.equals(NunJOYSTICK_STR_NunJOYSTICK)) {
+            newMod = new NunchuckJoystick(id, this, _dlm);
           } else {
             Log.errorln(F("Unknown type"));
           }
