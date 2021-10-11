@@ -10,7 +10,7 @@ Manages all active modules.  Deals with the management channel (e.g. dynamic sub
 #include <ArduinoJson.h>
 
 #define DRONE_MODULE_MANAGER_WATCHDOG_INTERVAL 10000
-#define DRONE_MODULE_MANAGER_DISCOVERY_INTERVAL 1000
+#define DRONE_MODULE_MANAGER_DISCOVERY_INTERVAL 250
 
 // forward declarations
 class DroneModule;
