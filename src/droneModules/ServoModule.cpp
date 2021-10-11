@@ -8,6 +8,8 @@ ServoModule::ServoModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* 
  {
    setTypeName(FPSTR(SERVO_STR_SERVO));
    _pins[0] = 0;
+   _limits[0] = -1;
+   _limits[1] = 1;
 
    // subs
    initSubs(SERVO_SUBS);
@@ -24,6 +26,18 @@ ServoModule::ServoModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* 
 
 void ServoModule::loadConfiguration(JsonObject &obj) {
   DroneModule::loadConfiguration(obj);
+
+  // limits
+  if (obj.containsKey(DRONE_STR_LIMITS)) {
+    Log.noticeln(F("[DroneModule.loadConfiguration]  Read limits..."));
+    JsonArray array = obj[DRONE_STR_LIMITS].as<JsonArray>();
+    uint8_t i=0;
+    for(JsonVariant v : array) {
+      if (i < sizeof(_limits))
+        _limits[i] = v | _limits[i];
+      i++;
+    }
+  }
 
   DroneModule::parsePins(obj, _pins, (uint8_t)sizeof(_pins));
 }

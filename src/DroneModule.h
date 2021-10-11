@@ -80,6 +80,7 @@ static const char DRONE_STR_INTERVAL[] PROGMEM = "interval";
 static const char DRONE_STR_INVERT[] PROGMEM = "invert";
 static const char DRONE_STR_IP[] PROGMEM = "IP";
 static const char DRONE_STR_LEFT[] PROGMEM = "left";
+static const char DRONE_STR_LIMITS[] PROGMEM = "limits";
 static const char DRONE_STR_LOADV[] PROGMEM = "loadV";
 static const char DRONE_STR_LOCATION[] PROGMEM = "location";
 static const char DRONE_STR_LOOPTO[] PROGMEM = "loopTo";

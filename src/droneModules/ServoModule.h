@@ -23,6 +23,7 @@ class ServoModule:  public DroneModule {
 protected:
   uint8_t _pins[1];
   Servo _servo;
+  float _limits[2];  // min, max
 public:
 
   ServoModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm);
