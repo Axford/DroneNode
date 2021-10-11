@@ -34,7 +34,7 @@ struct DRONE_LINK_ADDR {
   uint8_t channel;  // message channel ID, e.g. navigation
   uint8_t param;    // e.g. current location
   uint8_t addrType;   // e.g. DRONE_LINK_MSG_ADDRESS_SUB
-};
+} __packed;
 
 //static_assert(sizeof(DRONE_LINK_ADDR) == 5, "Incorrect Addr size");
 
@@ -44,7 +44,7 @@ union DRONE_LINK_PAYLOAD {
   float f[4];
   char c[DRONE_LINK_MSG_MAX_PAYLOAD];
   DRONE_LINK_ADDR addr[3]; // doesn't pack neatly, so only 3 complete addresses can fit
-};
+} __packed;
 
 //static_assert(sizeof(DRONE_LINK_PAYLOAD) == 16, "Incorrect Payload size");
 
