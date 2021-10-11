@@ -115,9 +115,9 @@ void RFM69TelemetryModule::loop() {
       v = (9*v + _radio.RSSI)/10;
       _params[RFM69_TELEMETRY_PARAM_RSSI_E].data.f[0] = v;
 
-      // publish every 10 packets
-      if (_packetsReceived % 10 == 0) {
-        publishParamEntries();
+      // publish every xx packets
+      if (_packetsReceived % 40 == 0) {
+        publishParamEntry(&_params[RFM69_TELEMETRY_PARAM_RSSI_E]);
       }
     }
   }
