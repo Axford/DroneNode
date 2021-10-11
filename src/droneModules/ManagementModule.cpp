@@ -101,7 +101,7 @@ void ManagementModule::loop() {
   // fetch IP address
   if (WiFi.status() == WL_CONNECTED) {
     IPAddress ipa = WiFi.localIP();
-    temp32 = ipa[0]<<24 | ipa[1]<<16 | ipa[2]<<8 | ipa[3];
+    temp32 = ipa[3]<<24 | ipa[2]<<16 | ipa[1]<<8 | ipa[0];
   } else {
     temp32 = 0;
   }

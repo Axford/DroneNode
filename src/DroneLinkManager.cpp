@@ -63,7 +63,7 @@ void DroneLinkManager::subscribe(uint8_t node, uint8_t channel, DroneModule *sub
 }
 
 
-bool DroneLinkManager::publish(DroneLinkMsg msg) {
+bool DroneLinkManager::publish(DroneLinkMsg &msg) {
   // see if there's a matching channel... or a catchall channel
   bool f = false;
 
@@ -85,7 +85,7 @@ bool DroneLinkManager::publish(DroneLinkMsg msg) {
   return f;
 }
 
-bool DroneLinkManager::publishPeer(DroneLinkMsg msg, uint8_t RSSI, uint8_t interface) {
+bool DroneLinkManager::publishPeer(DroneLinkMsg &msg, uint8_t RSSI, uint8_t interface) {
 
   // update nodeInfo map
   if (msg.source() != node()) {

@@ -149,11 +149,14 @@ public:
     boolean sameSignature(DroneLinkMsg *msg) {
       // returns true if channel, param and type match
       // TODO - accelerate this with a memcmp
+      return memcmp(&_msg, &msg->_msg, 5) == 0;
+      /*
       return (source() == msg->source()) &&
              (node() == msg->node()) &&
              (channel() == msg->channel()) &&
              (param() == msg->param()) &&
              (type() == msg->type());
+            */
     }
 
     void print() {

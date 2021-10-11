@@ -42,18 +42,23 @@ void UDPTelemetryModule::handleLinkMessage(DroneLinkMsg *msg) {
   boolean wifiConnected = (WiFi.status() == WL_CONNECTED) || (WiFi.softAPIP()[0] > 0);
   if (!wifiConnected) return;
 
-  // TODO - load from config
   IPAddress broadcastIp(_broadcast[0], _broadcast[1], _broadcast[2], _broadcast[3]);
 
   //Log.noticeln("UDP Broadcast: ");
   //msg->print();
 
   // only send messages that originate on this node
-  // OR!
-  // on a different interface
   boolean sendPacket = (msg->source() == _dlm->node());
   if (!sendPacket) {
+    // OR!
+    // on a different interface
     sendPacket = _dlm->getSourceInterface(msg->source()) != _id;
+
+    // OR!!
+    // that are queries
+    if (!sendPacket) {
+      sendPacket = msg->type() > DRONE_LINK_MSG_TYPE_CHAR;
+    }
   }
 
   if (sendPacket) {
