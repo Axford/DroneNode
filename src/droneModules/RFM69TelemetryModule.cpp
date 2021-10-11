@@ -59,7 +59,7 @@ void RFM69TelemetryModule::handleLinkMessage(DroneLinkMsg *msg) {
   }
 
   if (sendPacket) {
-    if (msg->type() > DRONE_LINK_MSG_TYPE_CHAR) {
+    if (msg->type() == DRONE_LINK_MSG_TYPE_FLOAT) {
       Serial.print("RFM69: Sending: ");
       msg->print();
     }
@@ -96,8 +96,8 @@ void RFM69TelemetryModule::loop() {
       _packetsReceived++;
 
       memcpy(&_receivedMsg._msg, _radio.DATA, _radio.DATALEN);
-      //Serial.print("RFM69 Receveived: ");
-      //_receivedMsg.print();
+      Serial.print("RFM69 Receveived: ");
+      _receivedMsg.print();
       uint8_t RSSI = -_radio.RSSI;
 
       _dlm->publishPeer(_receivedMsg, RSSI, _id);
