@@ -573,7 +573,7 @@ void ControllerModule::manageRoot(boolean syncMenu) {
 
 void ControllerModule::manageStart(boolean syncMenu) {
   if (syncMenu) {
-    Serial.println("Syncing start menu");
+    //Serial.println("Syncing start menu");
     uint8_t j=0; // menu index
     char temp[16];
     DRONE_LINK_NODE_INFO* nodeInfo;
@@ -590,7 +590,7 @@ void ControllerModule::manageStart(boolean syncMenu) {
         j++;
       }
     }
-    Serial.println("done");
+    //Serial.println("done");
 
   }
 
@@ -721,7 +721,7 @@ void ControllerModule::manageBindAxis(boolean syncMenu) {
     CONTROLLER_CHANNEL_INFO* chanInfo;
     for (uint8_t i=0; i<_availChannels.size(); i++) {
       chanInfo = _availChannels[i];
-      Serial.println(chanInfo->channel);
+      //Serial.println(chanInfo->channel);
 
       if (chanInfo->name[0] == '?') {
         // send a fresh name query
