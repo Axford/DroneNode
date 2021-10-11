@@ -109,3 +109,4 @@ dist
 .tern-port
 .clang_complete
 .gcc-flags.json
+platformio.ini

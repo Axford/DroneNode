@@ -3,7 +3,6 @@
 
 * add a physical pot on the controller for trim, etc
 * Speed limiter
-* SNR from radio?
 * FIX the LAG
    * Add a lag monitoring system... ping? part of mgmt module?
    * Turn off discovery dynamically (from controller)
@@ -24,18 +23,8 @@ Switch module
 * can switch between two or more inputs based on a control value
 eg. to switch between waypoint locations and a home location based on low voltage trigger
 
-other
-* auto-generate base config if it doesn't exist
-* add wifi manager
-
-UI stuff for setting up a new node
-* set config via UI
-  * define config template per module type
-  * copy config from another node via UI
-
 
 * trigger firmware update via mamangement module
-
 
 
 waypoint nav
@@ -48,7 +37,6 @@ waypoint nav
 
 servo
 * add centre calibration value
-* add limits
 
 motor + rudder controller
 * Sub to target heading
@@ -57,10 +45,6 @@ motor + rudder controller
 * Generate rudder and motor speed values
 * add rudder range
 * implement PID for rudder control vs current heading
-
-
-add telemetry interface to server
-* TRANSMIT: fix telemetry transmit - doesn't seem to be receiving properly
 
 
 * Modules to implement:
