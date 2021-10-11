@@ -2,9 +2,7 @@
 # todo
 
 * add a physical pot on the controller for trim, etc
-* Axis inversion
 * Speed limiter
-* Add cell voltage output for ina219
 * SNR from radio?
 * FIX the LAG
    * Add a lag monitoring system... ping? part of mgmt module?
@@ -14,9 +12,6 @@
    * Turn off remote UDP when out of range
 
 
-! stop channel flood when publishing/discovering
-
-
 useful stuff: https://www.movable-type.co.uk/scripts/latlong.html
 
 
@@ -24,9 +19,6 @@ useful stuff: https://www.movable-type.co.uk/scripts/latlong.html
 * allow easy editing of input params via UI
 * explore a node-based visualisation of param wiring
 
-
-INA219
-* Add low voltage event - threshold and an output param (0, 1)
 
 Switch module
 * can switch between two or more inputs based on a control value
