@@ -10,6 +10,7 @@ INA219Module::INA219Module(uint8_t id, DroneModuleManager* dmm, DroneLinkManager
    _addr = INA219_I2C_ADDRESS;
 
    _numCells = 1;
+   _threshold = 0;  //voltage threshold for alarm
 
    // pubs
    initParams(INA219_PARAM_ENTRIES);
@@ -46,6 +47,11 @@ INA219Module::INA219Module(uint8_t id, DroneModuleManager* dmm, DroneLinkManager
    setParamName(FPSTR(DRONE_STR_CELLV), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 4);
 
+   param = &_params[INA219_PARAM_ALARM_E];
+   param->param = INA219_PARAM_ALARM;
+   setParamName(FPSTR(DRONE_STR_ALARM), param);
+   param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_UINT8_T, 1);
+
 }
 
 INA219Module::~INA219Module() {
@@ -75,6 +81,8 @@ void INA219Module::loadConfiguration(JsonObject &obj) {
 
   _numCells = obj[DRONE_STR_CELLS] | _numCells;
   if (_numCells < 1) _numCells = 1;
+
+  _threshold = obj[DRONE_STR_THRESHOLD] | _threshold;
 }
 
 
@@ -104,6 +112,10 @@ void INA219Module::loop() {
   // calculate cell voltage
   tempf = _params[INA219_PARAM_LOADV_E].data.f[0] / _numCells;
   updateAndPublishParam(&_params[INA219_PARAM_CELLV_E], (uint8_t*)&tempf, sizeof(tempf));
+
+  // check voltage vs threshold and set alarm
+  uint8_t temp8 = (_params[INA219_PARAM_LOADV_E].data.f[0] < _threshold) ? 1 : 0;
+  updateAndPublishParam(&_params[INA219_PARAM_ALARM_E], (uint8_t*)&temp8, sizeof(temp8));
 
   // error check
   if (isnan(_params[INA219_PARAM_SHUNTV_E].data.f[0])) {

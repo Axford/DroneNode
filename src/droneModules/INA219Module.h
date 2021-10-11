@@ -20,8 +20,8 @@ Manages a INA219 I2C power monitor
 #define INA219_PARAM_CURRENT         B00100000
 #define INA219_PARAM_POWER           B01000000
 #define INA219_PARAM_LOADV           B10000000
-#define INA219_PARAM_CELLV           B10001000
-
+#define INA219_PARAM_CELLV           9
+#define INA219_PARAM_ALARM           10
 
 #define INA219_PARAM_SHUNTV_E          0
 #define INA219_PARAM_BUSV_E            1
@@ -29,8 +29,9 @@ Manages a INA219 I2C power monitor
 #define INA219_PARAM_POWER_E           3
 #define INA219_PARAM_LOADV_E           4
 #define INA219_PARAM_CELLV_E           5
+#define INA219_PARAM_ALARM_E           6
 
-#define INA219_PARAM_ENTRIES           6
+#define INA219_PARAM_ENTRIES           7
 
 // strings
 static const char INA219_STR_INA219[] PROGMEM = "INA219";
@@ -41,6 +42,7 @@ class INA219Module:  public I2CBaseModule {
 protected:
   Adafruit_INA219 *_sensor;
   uint8_t _numCells;
+  float _threshold;
 public:
 
   INA219Module(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm);
