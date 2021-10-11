@@ -70,7 +70,11 @@ void ServoModule::loop() {
 
 
 void ServoModule::update() {
-  int pos = (_subs[SERVO_SUB_POSITION_E].param.data.f[0]*90.0) + 90.0;
+  float v = _subs[SERVO_SUB_POSITION_E].param.data.f[0];
+  // remap -1 to 1 into _limits[0] to _limits[1]
+  v = (v + 1) * (_limits[1] - _limits[0]) / (2) + _limits[0];
+
+  int pos = (v*90.0) + 90.0;
   // limits
   if (pos > 180) pos = 180;
   if (pos < 0) pos = 0;
