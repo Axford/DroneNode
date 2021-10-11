@@ -505,16 +505,18 @@ void ControllerModule::manageRoot(boolean syncMenu) {
   if (_isBound) {
 
     // debug joystick positions
+    /*
     _display->setFont(TomThumb4x6);
     _display->setTextAlignment(TEXT_ALIGN_LEFT);
     _display->drawString(2, 14, String(_axes[0]));
+    */
 
     // show any configured info bindings
     _display->setTextAlignment(TEXT_ALIGN_LEFT);
     uint8_t y;
     String valueStr = "";
     for (uint8_t i=0; i< CONTROLLER_INFO_COUNT; i++) {
-      y = 24 + (i) *12;
+      y = 14 + (i) *12;
 
       if (_info[i].param() < 255) {
         // draw label
