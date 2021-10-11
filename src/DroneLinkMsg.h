@@ -182,14 +182,15 @@ public:
       if (type() != DRONE_LINK_MSG_TYPE_QUERY) {
         Serial.print('[');
         Serial.print(length());
+        if (writable()) Serial.print(",W");
         Serial.print(']');
         Serial.print('=');
       }
 
       switch(type()) {
         case DRONE_LINK_MSG_TYPE_UINT8_T: Serial.print(_msg.payload.uint8[0], HEX); break;
-        //case DRONE_LINK_MSG_TYPE_UINT32_T: Serial.print(F("uint32_t")); break;
-        //case DRONE_LINK_MSG_TYPE_FLOAT: Serial.print(F("Float")); break;
+        case DRONE_LINK_MSG_TYPE_UINT32_T: Serial.print(_msg.payload.uint32[0]); break;
+        case DRONE_LINK_MSG_TYPE_FLOAT: Serial.print(_msg.payload.f[0]); break;
         case DRONE_LINK_MSG_TYPE_CHAR:
           for (uint8_t i=0; i<length(); i++) {
             Serial.print(char(_msg.payload.c[i]));
