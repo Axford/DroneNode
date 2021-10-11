@@ -33,6 +33,7 @@ byte    = value
 
 static const char RFM69_TELEMETRY_STR_RFM69_TELEMETRY[] PROGMEM = "RFM69Telemetry";
 
+#define RFM69_TELEMTRY_ENCRYPTKEY     "abcd1234dcba4321"
 
 class RFM69TelemetryModule:  public DroneModule {
 protected:

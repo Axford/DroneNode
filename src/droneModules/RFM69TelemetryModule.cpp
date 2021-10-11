@@ -4,6 +4,8 @@
 #include "WiFi.h"
 #include "../pinConfig.h"
 
+#include "RFM69registers.h"
+
 RFM69TelemetryModule::RFM69TelemetryModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm):
   DroneModule ( id, dmm, dlm )
  {
@@ -60,8 +62,8 @@ void RFM69TelemetryModule::handleLinkMessage(DroneLinkMsg *msg) {
 
   if (sendPacket) {
     if (msg->type() == DRONE_LINK_MSG_TYPE_FLOAT) {
-      Serial.print("RFM69: Sending: ");
-      msg->print();
+      //Serial.print("RFM69: Sending: ");
+      //msg->print();
     }
 
     _radio.send(255, (uint8_t*)&msg->_msg, msg->length() + sizeof(DRONE_LINK_ADDR));
@@ -82,6 +84,12 @@ void RFM69TelemetryModule::setup() {
   } else {
     _radio.setHighPower(); // for RFM69HW/HCW!
     _radio.spyMode(true);
+    _radio.encrypt(RFM69_TELEMTRY_ENCRYPTKEY);
+
+    // enable whitening
+    _radio.writeReg(REG_PACKETCONFIG1,
+      RF_PACKET1_FORMAT_VARIABLE | RF_PACKET1_DCFREE_WHITENING | RF_PACKET1_CRC_ON | RF_PACKET1_CRCAUTOCLEAR_ON | RF_PACKET1_ADRSFILTERING_OFF );
+
     Log.errorln(F("RFM69 initialised"));
   }
 }
@@ -96,8 +104,8 @@ void RFM69TelemetryModule::loop() {
       _packetsReceived++;
 
       memcpy(&_receivedMsg._msg, _radio.DATA, _radio.DATALEN);
-      Serial.print("RFM69 Receveived: ");
-      _receivedMsg.print();
+      //Serial.print("RFM69 Receveived: ");
+      //_receivedMsg.print();
       uint8_t RSSI = -_radio.RSSI;
 
       _dlm->publishPeer(_receivedMsg, RSSI, _id);
