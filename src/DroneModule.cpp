@@ -378,8 +378,8 @@ void DroneModule::handleParamMessage(DroneLinkMsg *msg, DRONE_PARAM_ENTRY *param
       uint8_t len = msg->length();
       // compare to see if anything has changed... which may including receiving our own messages after a query!!
       if (memcmp(param->data.c, msg->_msg.payload.c, len) != 0) {
-        Log.noticeln("Write to param: ");
-        msg->print();
+        //Log.noticeln("Write to param: ");
+        //msg->print();
         memcpy(param->data.c, msg->_msg.payload.c, len);
         // trigger callback
         onParamWrite(param);
@@ -575,8 +575,27 @@ boolean DroneModule::doDiscovery() {
       }
       if (_discoveryIndex < _numSubs) {
         if (_subs[_discoveryIndex].param.publish) {
-          Log.noticeln("Discover sub: %u . %u", _id, _subs[_discoveryIndex].addrParam);
+          Log.noticeln("Discover sub: %u . %u", _id, _subs[_discoveryIndex].param.param);
           publishParamEntry(&_subs[_discoveryIndex].param);
+          //publishSubAddress(&_subs[_discoveryIndex]);
+        }
+      }
+      _discoveryIndex++;
+      if (_discoveryIndex >= _numSubs ) {
+        _discoveryState = DRONE_MODULE_DISCOVERY_SUB_ADDRS;
+        _discoveryIndex = 0;
+      }
+      break;
+
+    case DRONE_MODULE_DISCOVERY_SUB_ADDRS:
+      if (!_enabled) {
+        _discoveryState = DRONE_MODULE_DISCOVERY_COMPLETE;
+        return true;
+      }
+      if (_discoveryIndex < _numSubs) {
+        if (_subs[_discoveryIndex].param.publish) {
+          Log.noticeln("Discover sub addr: %u . %u", _id, _subs[_discoveryIndex].addrParam);
+          //publishParamEntry(&_subs[_discoveryIndex].param);
           publishSubAddress(&_subs[_discoveryIndex]);
         }
       }
