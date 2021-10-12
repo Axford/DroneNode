@@ -1,7 +1,6 @@
 {
-  "APMode":false,
   "networks":[
-    {"ssid":"Badger", "password:":"LouisVuitton"},
-    {"ssid":"Freyr_2G", "password:":"Colour_Limited_27"}
+    {"ssid":"Badger", "password":"LouisVuitton"},
+    {"ssid":"Freyr_2G", "password":"Colour_Limited_27"}
   ]
 }

@@ -5,13 +5,14 @@
 #include "LinkedList.h"
 #include <ArduinoJson.h>
 #include <ArduinoLog.h>
+#include "DroneModuleManager.h"
 
-#define WIFI_TIMEOUT_MS       3000
+#define WIFI_TIMEOUT_MS       10000
 #define WIFI_RECOVER_TIME_MS  10000
 
 struct WiFiNetworkCredentials {
-  char *ssid;
-  char *password;
+  String ssid;
+  String password;
 };
 
 class WiFiManager {
@@ -19,12 +20,14 @@ public:
 
   WiFiManager();
 
-  void start();
+  void start(DroneModuleManager &dmm);
   void loadConfiguration();
 
-private:
-  IvanLinkedList::LinkedList<WiFiNetworkCredentials*> _networks;
+protected:
+  IvanLinkedList::LinkedList<WiFiNetworkCredentials> _networks;
 
+  boolean _scanActive;
+  boolean _attemptingConnection;
   uint8_t _activeNetwork;
   int _taskCore;
   int _taskPriority;
