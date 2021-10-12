@@ -9,7 +9,9 @@ MotorModule::MotorModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* 
    setTypeName(FPSTR(MOTOR_STR_MOTOR));
 
    _deadband = 0.3; // +- 0.2
-   // TODO: make deadband a configurable value
+
+   _limits[0] = -1;
+   _limits[1] = 1;
 
    _pins[0] = 0;
    _pins[1] = 0;
@@ -35,6 +37,18 @@ void MotorModule::loadConfiguration(JsonObject &obj) {
   DroneModule::parsePins(obj, _pins, (uint8_t)sizeof(_pins));
 
   _deadband = obj[DRONE_STR_DEADBAND] | _deadband;
+
+  // limits
+  if (obj.containsKey(DRONE_STR_LIMITS)) {
+    Log.noticeln(F("[MotorModule.loadConfiguration]  Read limits..."));
+    JsonArray array = obj[DRONE_STR_LIMITS].as<JsonArray>();
+    uint8_t i=0;
+    for(JsonVariant v : array) {
+      if (i < sizeof(_limits))
+        _limits[i] = v | _limits[i];
+      i++;
+    }
+  }
 
   _PWMChannel = obj[DRONE_STR_PWM_CHANNEL] | _PWMChannel;
 }
@@ -73,12 +87,15 @@ void MotorModule::disable() {
 
 void MotorModule::update() {
   if (_error > 0) return;
-  
+
   float v = _subs[MOTOR_SUB_SPEED_E].param.data.f[0];
 
   // limit range
   if (v > 1) v = 1;
   if (v< -1) v = -1;
+
+  // remap -1 to 1 into _limits[0] to _limits[1]
+  v = (v + 1) * (_limits[1] - _limits[0]) / (2) + _limits[0];
 
   // check for deadband
   if (abs(v) < abs(_deadband)) v = 0;

@@ -29,7 +29,7 @@ void ServoModule::loadConfiguration(JsonObject &obj) {
 
   // limits
   if (obj.containsKey(DRONE_STR_LIMITS)) {
-    Log.noticeln(F("[DroneModule.loadConfiguration]  Read limits..."));
+    Log.noticeln(F("[ServoModule.loadConfiguration]  Read limits..."));
     JsonArray array = obj[DRONE_STR_LIMITS].as<JsonArray>();
     uint8_t i=0;
     for(JsonVariant v : array) {
@@ -71,6 +71,10 @@ void ServoModule::loop() {
 
 void ServoModule::update() {
   float v = _subs[SERVO_SUB_POSITION_E].param.data.f[0];
+  // limit range
+  if (v > 1) v = 1;
+  if (v< -1) v = -1;
+
   // remap -1 to 1 into _limits[0] to _limits[1]
   v = (v + 1) * (_limits[1] - _limits[0]) / (2) + _limits[0];
 
