@@ -14,10 +14,10 @@ struct WiFiNetworkCredentials {
   char *password;
 };
 
-class WiFiKeepConnected {
+class WiFiManager {
 public:
 
-  WiFiKeepConnected();
+  WiFiManager();
 
   void start();
   void loadConfiguration();

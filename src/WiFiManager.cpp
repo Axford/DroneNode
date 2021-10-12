@@ -1,10 +1,10 @@
 #include "Arduino.h"
-#include "WiFiKeepConnected.h"
+#include "WiFiManager.h"
 #include "WiFi.h"
 #include "esp_wifi.h"
 #include "SPIFFS.h"
 
-WiFiKeepConnected::WiFiKeepConnected() {
+WiFiManager::WiFiManager() {
   _taskCore = 1;
   _taskPriority = 1;
   _connectionCounter = 0;
@@ -12,7 +12,7 @@ WiFiKeepConnected::WiFiKeepConnected() {
 }
 
 
-void WiFiKeepConnected::loadConfiguration() {
+void WiFiManager::loadConfiguration() {
   if (SPIFFS.exists(F("/wifi.json"))) {
     File file = SPIFFS.open(F("/wifi.json"), FILE_READ);
 
@@ -40,7 +40,7 @@ void WiFiKeepConnected::loadConfiguration() {
 }
 
 //const char * ssid, const char * pwd
-void WiFiKeepConnected::start() {
+void WiFiManager::start() {
   //_ssid = ssid;
   //_pwd = pwd;
 
@@ -58,8 +58,8 @@ void WiFiKeepConnected::start() {
     _taskCore);              //Core where the task should run
 }
 
-void WiFiKeepConnected::keepWiFiAlive(void *pvParameters){
-  WiFiKeepConnected *l_pThis = (WiFiKeepConnected *) pvParameters;
+void WiFiManager::keepWiFiAlive(void *pvParameters){
+  WiFiManager *l_pThis = (WiFiManager *) pvParameters;
 
   for(;;){
     if(WiFi.status() == WL_CONNECTED){
