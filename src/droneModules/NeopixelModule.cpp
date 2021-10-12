@@ -110,6 +110,14 @@ void NeopixelModule::loadConfiguration(JsonObject &obj) {
 }
 
 
+void NeopixelModule::disable() {
+  _strip->setBrightness(25);
+  _strip->clear();
+  _strip->show();
+  DroneModule::disable();
+}
+
+
 void NeopixelModule::setup() {
   DroneModule::setup();
 

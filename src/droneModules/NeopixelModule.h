@@ -96,6 +96,8 @@ public:
 
   void loadConfiguration(JsonObject &obj);
 
+  void disable();
+
   virtual void setup();
   virtual void loop();
 
