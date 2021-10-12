@@ -7,7 +7,6 @@ Controller
 
 
 * add a physical pot on the controller for trim, etc
-* Speed limiter - add as limits to motor module, similar to servo
 * FIX the LAG
    * Add a lag monitoring system... ping? part of mgmt module?
    * Turn off discovery dynamically (from controller)
