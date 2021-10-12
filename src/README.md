@@ -1,8 +1,49 @@
 
 # todo
 
+Controller
+* AP Config - switch between AP mode and STA mode on the fly
+* Possibly choose between several pre-configured wireless networks
+
+Neopixel module
+* WS2182b - maybe add config for different LED types?
+* Variable number of LEDs
+* Assign them to bow, stern, port, stardboard?   
+*  or just assign colour values per LED
+* Brightness control
+* Turn on/off
+* Mode input (e.g. from a switch module or battery alarm)
+
+Neopixel Module
+* Disable module will clear LEDs first (turn off) -so can be used to toggle on/off
+* Base settings:
+  - Pin
+  - Num pixels (automatically divided into four segments)
+  - Colour order (e.g. GRB vs RGB)
+  - Driver type/speed (e.g. NEO_KHZ800)
+* Subs
+  - Scene number (0..x) - so other modules can select a scene
+  - Active scene - so other modules can configure the active scene - for extensibility
+* Params
+  - 0..x scenes - with addresses incrementing from xx (like waypoints)
+
+* Scene (struct stored in uint8_t msg):
+  - brightness - overall brightness for this scene
+  - effect:
+      0: solid Colour
+      1: flash
+      2: theatre chase
+      3: breath
+  - effect param 1:
+      e.g. flash speed
+  - effect param 2:
+      e.g. flash duty cycle
+  - segment 1..4 - r,g,b (12 bytes total)
+
+
+
 * add a physical pot on the controller for trim, etc
-* Speed limiter
+* Speed limiter - add as limits to motor module, similar to servo
 * FIX the LAG
    * Add a lag monitoring system... ping? part of mgmt module?
    * Turn off discovery dynamically (from controller)

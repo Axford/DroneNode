@@ -67,6 +67,12 @@ ManagementModule::ManagementModule(uint8_t id, DroneModuleManager* dmm, DroneLin
    _params[MANAGEMENT_PARAM_CHOKED_E].nameLen = sizeof(DRONE_STR_CHOKED);
    _params[MANAGEMENT_PARAM_CHOKED_E].paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_UINT32_T, 4);
    _params[MANAGEMENT_PARAM_CHOKED_E].data.uint32[0] = 0;
+
+   _params[MANAGEMENT_PARAM_DISCOVERY_E].param = MANAGEMENT_PARAM_DISCOVERY;
+   _params[MANAGEMENT_PARAM_DISCOVERY_E].name = FPSTR(DRONE_STR_DISCOVERY);
+   _params[MANAGEMENT_PARAM_DISCOVERY_E].nameLen = sizeof(DRONE_STR_DISCOVERY);
+   _params[MANAGEMENT_PARAM_DISCOVERY_E].paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_UINT8_T, 1);
+   _params[MANAGEMENT_PARAM_DISCOVERY_E].data.uint8[0] = _dmm->discovery() ? 1 : 0;
 }
 
 void ManagementModule::onParamWrite(DRONE_PARAM_ENTRY *param) {
@@ -75,9 +81,15 @@ void ManagementModule::onParamWrite(DRONE_PARAM_ENTRY *param) {
   if (param->param == MANAGEMENT_PARAM_RESET) {
     // trigger local reset
     if (_params[MANAGEMENT_PARAM_RESET_E].data.uint8[0] > 0) {
-      Serial.println("Restart requested");
+      Log.noticeln("Restart requested");
       _dmm->restart();
     }
+  }
+
+  if (param->param == MANAGEMENT_PARAM_DISCOVERY) {
+    // update discovery state
+    Log.noticeln("Changing discovery mode to: %u", _params[MANAGEMENT_PARAM_DISCOVERY_E].data.uint8[0]);
+    _dmm->discovery( _params[MANAGEMENT_PARAM_DISCOVERY_E].data.uint8[0] > 0 );
   }
 }
 
@@ -114,7 +126,4 @@ void ManagementModule::loop() {
 
     _lastRate = _lastLoop;
   }
-
-  // publish param entries
-  //publishParamEntries();
 }

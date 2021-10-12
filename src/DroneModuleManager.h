@@ -50,6 +50,8 @@ public:
   uint8_t node();
   String hostname();
   String buildTimestamp();
+  boolean discovery(); // get discovery state
+  void discovery(boolean v); // set discovery state
 
   void loadConfiguration();
   void loadModulesFromJSON(const JsonArray &array);

@@ -69,6 +69,7 @@ static const char DRONE_STR_CURRENT[] PROGMEM = "current";
 static const char DRONE_STR_DEADBAND[] PROGMEM = "deadband";
 static const char DRONE_STR_DECLINATION[] PROGMEM = "declination";
 static const char DRONE_STR_DISTANCE[] PROGMEM = "distance";
+static const char DRONE_STR_DISCOVERY[] PROGMEM = "discovery";
 static const char DRONE_STR_DRONE[] PROGMEM = "Drone";
 static const char DRONE_STR_ERROR[] PROGMEM = "error";
 static const char DRONE_STR_ENABLE[] PROGMEM = "enable";

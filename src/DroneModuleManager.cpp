@@ -49,6 +49,14 @@ String DroneModuleManager::hostname() {
   return _hostname;
 }
 
+boolean DroneModuleManager::discovery() { // get discovery state
+  return _doDiscovery;
+}
+
+void DroneModuleManager::discovery(boolean v) { // set discovery state
+  _doDiscovery = v;
+}
+
 String DroneModuleManager::buildTimestamp() {
   return _buildTimestamp;
 }
