@@ -29,6 +29,7 @@ protected:
   float _deadband;  // width of deadband (measured from zero, do actually double this value)
   uint8_t _PWMChannel;
   uint8_t _pins[3];
+  float _limits[2];  // min, max
 
 public:
 
