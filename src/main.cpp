@@ -240,7 +240,7 @@ void setup() {
   File logFile = SPIFFS.open("/startup.log", FILE_WRITE);
 
   // switch to logging to startup.log file on spiffs
-  Log.begin(LOG_LEVEL_VERBOSE, &logFile);
+  //Log.begin(LOG_LEVEL_VERBOSE, &logFile);
   Log.noticeln(F("[] Starting..."));
 
   //ESP32PWM::allocateTimer(0);

@@ -51,6 +51,7 @@ static const char DRONE_STR_X[] PROGMEM = " %X ";
 static const char DRONE_STR_BLANK[] PROGMEM = "";
 
 static const char DRONE_STR_ACCEL[] PROGMEM = "accel";
+static const char DRONE_STR_ACTIVESCENE[] PROGMEM = "activeScene";
 static const char DRONE_STR_ADDR[] PROGMEM = "addr";
 static const char DRONE_STR_ALARM[] PROGMEM = "alarm";
 static const char DRONE_STR_ALTITUDE[] PROGMEM = "altitude";
@@ -104,6 +105,8 @@ static const char DRONE_STR_RIGHT[] PROGMEM = "right";
 static const char DRONE_STR_RSSI[] PROGMEM = "RSSI";
 static const char DRONE_STR_SAMPLEINTERVAL[] PROGMEM = "sampleInterval";
 static const char DRONE_STR_SATELLITES[] PROGMEM = "satellites";
+static const char DRONE_STR_SCENE[] PROGMEM = "scene";
+static const char DRONE_STR_SCENES[] PROGMEM = "scenes";
 static const char DRONE_STR_SHUNTV[] PROGMEM = "shuntV";
 static const char DRONE_STR_SPEED[] PROGMEM = "speed";
 static const char DRONE_STR_STATUS[] PROGMEM = "status";
