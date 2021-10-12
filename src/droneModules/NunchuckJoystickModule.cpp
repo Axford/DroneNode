@@ -1,4 +1,4 @@
-#include "NunchuckJoystick.h"
+#include "NunchuckJoystickModule.h"
 #include "../DroneLinkMsg.h"
 #include "../DroneLinkManager.h"
 
@@ -52,7 +52,7 @@ void NunchuckJoystick::doReset() {
 
 
 void NunchuckJoystick::loadConfiguration(JsonObject &obj) {
-  
+
   I2CBaseModule::loadConfiguration(obj);
 
 
@@ -85,7 +85,7 @@ void NunchuckJoystick::setup() {
 
 void NunchuckJoystick::loop() {
   I2CBaseModule::loop();
-  
+
   DroneWire::selectChannel(_bus);
 
   //uint8_t bytes = Wire.requestFrom((uint16_t)_addr, (uint8_t)4, true);
@@ -94,7 +94,7 @@ void NunchuckJoystick::loop() {
 
   	//Serial.println("-------------------------------------------");
 	nunchuck1.readData();    // Read inputs and update maps
-  
+
 /*
   values[1]=map(getJoyX(),0,255,0,255);
 	values[2]=map(getJoyY(),0,255,0,255);
@@ -114,34 +114,34 @@ void NunchuckJoystick::loop() {
   float v;
 
   // X
-  v = nunchuck1.values[0]; 
+  v = nunchuck1.values[0];
   v = (v - 128) / 128.0f;   // remap to -1 .. 1
   if (_invert[NunJOYSTICK_PARAM_X_E]) v = -v;
   // if changed, then publish
   updateAndPublishParam(&_params[NunJOYSTICK_PARAM_X_E], (uint8_t*)&v, sizeof(v));
-      
+
   // Y
-  v = nunchuck1.values[1]; 
+  v = nunchuck1.values[1];
   v = (v - 128) / 128.0f;   // remap to -1 .. 1
   if (_invert[NunJOYSTICK_PARAM_Y_E]) v = -v;
   // if changed, then publish
   updateAndPublishParam(&_params[NunJOYSTICK_PARAM_Y_E], (uint8_t*)&v, sizeof(v));
-    
+
   // Z Button
-  v = nunchuck1.values[10]; 
+  v = nunchuck1.values[10];
   v = (v - 128) / 128.0f;   // remap to -1 .. 1
   if (_invert[NunJOYSTICK_PARAM_Z_E]) v = -v;
   // if changed, then publish
   updateAndPublishParam(&_params[NunJOYSTICK_PARAM_Z_E], (uint8_t*)&v, sizeof(v));
 
   // C  Button
-  v = nunchuck1.values[11]; 
+  v = nunchuck1.values[11];
   v = (v - 128) / 128.0f;   // remap to -1 .. 1
   if (_invert[NunJOYSTICK_PARAM_BUTTON_E]) v = -v;
   // if changed, then publish
   updateAndPublishParam(&_params[NunJOYSTICK_PARAM_BUTTON_E], (uint8_t*)&v, sizeof(v));
     //Serial.println("");
-  
+
 //Serial.print("X: "); Serial.print(_params[NunJOYSTICK_PARAM_X_E].data.f[0]);
 //Serial.print(", Y: "); Serial.print(_params[NunJOYSTICK_PARAM_Y_E].data.f[0]);
 //Serial.print(", Z: "); Serial.print(_params[NunJOYSTICK_PARAM_Z_E].data.f[0]);
