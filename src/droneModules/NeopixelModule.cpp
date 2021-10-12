@@ -10,7 +10,7 @@ NeopixelModule::NeopixelModule(uint8_t id, DroneModuleManager* dmm, DroneLinkMan
    _pins[0] = 0;
 
    _numPixels = 4;
-   _colourOrder = NEO_GRB;
+   //_colourOrder = NEO_GRB;
 
    _blackout.r = 0;
    _blackout.g = 0;
@@ -106,14 +106,18 @@ void NeopixelModule::loadConfiguration(JsonObject &obj) {
   }
 
   // now instance the _strip object:
-  _strip = new Adafruit_NeoPixel(_numPixels, _pins[0], _colourOrder + NEO_KHZ800);
+  //_strip = new Adafruit_NeoPixel(_numPixels, _pins[0], _colourOrder + NEO_KHZ800);
+  //CRGB leds[NUM_LEDS]
+  //_strip = new CRGB(_numPixels);
+  _strip = new NeoPixelBrightnessBus<NeoGrbFeature, Neo800KbpsMethod>(_numPixels, _pins[0]);
 }
 
 
 void NeopixelModule::disable() {
-  _strip->setBrightness(25);
-  _strip->clear();
-  _strip->show();
+  _strip->SetBrightness(25);
+  _strip->ClearTo(RgbColor(0,0,0));
+
+  _strip->Show();
   DroneModule::disable();
 }
 
@@ -122,15 +126,15 @@ void NeopixelModule::setup() {
   DroneModule::setup();
 
   if (_pins[0] > 0) {
-    _strip->begin();
-    _strip->show();
-    _strip->setBrightness(25); // to be overridden by scenes
+    _strip->Begin();
+    _strip->Show();
+    _strip->SetBrightness(25); // to be overridden by scenes
 
     // init blue while booting
     for(uint8_t i=0; i<_numPixels; i++) {
-      _strip->setPixelColor(i, _strip->Color(0, 0, 255));
+      _strip->SetPixelColor(i, RgbColor(0, 0, 255));
     }
-    _strip->show();
+    _strip->Show();
 
   } else {
     Log.errorln(F("Undefined pin %d"), _pins[0]);
@@ -183,18 +187,20 @@ void NeopixelModule::loop() {
     }
 
     // update segments
-    _strip->setBrightness(scene->brightness);
+    _strip->SetBrightness(scene->brightness);
     for(uint8_t i=0; i<_numPixels; i++) {
       uint8_t seg = i / pixPerSeg;
 
-      _strip->setPixelColor(i, _strip->Color(
+
+      _strip->SetPixelColor(i, RgbColor(
         segs[seg].r,
         segs[seg].g,
         segs[seg].b
       ));
+
     }
 
-    _strip->show();
+    _strip->Show();
   }
 
   _effectTime = loopTime;

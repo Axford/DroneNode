@@ -34,7 +34,8 @@ Manage a strip of NEOPixels (WS2812B)
 #define NEOPIXEL_MODULE_H
 
 #include "../DroneModule.h"
-#include <Adafruit_Neopixel.h>
+//#include <Adafruit_Neopixel.h>
+#include <NeoPixelBrightnessBus.h>
 
 #define NEOPIXEL_NUM_SEGMENTS    4
 
@@ -85,7 +86,7 @@ protected:
   uint8_t _pins[1];
   uint8_t _numPixels;
   uint8_t _colourOrder;
-  Adafruit_NeoPixel *_strip;
+  NeoPixelBrightnessBus<NeoGrbFeature, Neo800KbpsMethod> *_strip;
   unsigned long _effectTime;
   NEOPIXEL_COLOUR _blackout;
 public:
