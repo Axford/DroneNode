@@ -110,3 +110,4 @@ dist
 .clang_complete
 .gcc-flags.json
 platformio.ini
+data/testBoard.json

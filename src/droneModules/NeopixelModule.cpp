@@ -162,32 +162,53 @@ void NeopixelModule::loop() {
     NEOPIXEL_COLOUR segs[NEOPIXEL_NUM_SEGMENTS];
 
 
+    boolean doFlash = false;
+    float b = 255;
+
     switch(scene->effect) {
       case NEOPIXEL_SOLID:
+        _strip->SetBrightness(scene->brightness);
         for(uint8_t i=0; i<NEOPIXEL_NUM_SEGMENTS; i++) {
           segs[i] = scene->segments[i];
         }
         break;
 
       case NEOPIXEL_FLASH:
-        boolean flash = true;
+        doFlash = true;
+        _strip->SetBrightness(scene->brightness);
         if (scene->p1 > 0) {
           int flashTime = loopTime % (scene->p1 * 100);
-          flash = (flashTime < scene->p2*100);
+          doFlash = (flashTime < scene->p2*100);
         }
 
         for(uint8_t i=0; i<NEOPIXEL_NUM_SEGMENTS; i++) {
-          if (flash) {
+          if (doFlash) {
             segs[i] = scene->segments[i];
           } else {
             segs[i] = _blackout;
           }
         }
         break;
+
+      case NEOPIXEL_PULSE:
+
+        if (scene->p1 > 0) {
+          b = 0.5 + sin( 2.0 * PI * (float)(loopTime % (scene->p1 * 100)) / (scene->p1 * 100) )/2.0;
+          b *= scene->brightness;
+        }
+
+        // set brightness to pulse (ensure in range)
+        if (b > 255) b = 255;
+        if (b < 0) b = 0;
+        _strip->SetBrightness(b);
+
+        for(uint8_t i=0; i<NEOPIXEL_NUM_SEGMENTS; i++) {
+          segs[i] = scene->segments[i];
+        }
+        break;
     }
 
     // update segments
-    _strip->SetBrightness(scene->brightness);
     for(uint8_t i=0; i<_numPixels; i++) {
       uint8_t seg = i / pixPerSeg;
 
