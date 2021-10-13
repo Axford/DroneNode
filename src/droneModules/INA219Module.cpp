@@ -64,7 +64,6 @@ void INA219Module::doReset() {
 
   DroneWire::selectChannel(_bus);
 
-
   setError( _sensor->begin() ? 0 : 1 );
   if (_error) {
     Log.errorln(INA219_STR_INA219);
@@ -84,6 +83,7 @@ void INA219Module::loadConfiguration(JsonObject &obj) {
 
   _threshold = obj[DRONE_STR_THRESHOLD] | _threshold;
 }
+
 
 
 void INA219Module::loop() {
@@ -123,7 +123,7 @@ void INA219Module::loop() {
   }
 
   // publish param entries
-  publishParamEntries();
+  //publishParamEntries();
 
 
 }
