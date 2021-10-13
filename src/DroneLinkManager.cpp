@@ -89,7 +89,7 @@ bool DroneLinkManager::publish(DroneLinkMsg &msg) {
   return f;
 }
 
-bool DroneLinkManager::publishPeer(DroneLinkMsg &msg, uint8_t RSSI, uint8_t interface) {
+bool DroneLinkManager::publishPeer(DroneLinkMsg &msg, int16_t RSSI, uint8_t interface) {
 
   // update nodeInfo map
   if (msg.source() != node()) {
@@ -116,7 +116,7 @@ bool DroneLinkManager::publishPeer(DroneLinkMsg &msg, uint8_t RSSI, uint8_t inte
     if (!page->nodeInfo[nodeIndex].heard) _peerNodes++;
     page->nodeInfo[nodeIndex].heard = true;
     page->nodeInfo[nodeIndex].lastHeard = millis();
-    page->nodeInfo[nodeIndex].RSSI = RSSI;
+    page->nodeInfo[nodeIndex].RSSI = abs(RSSI);
     page->nodeInfo[nodeIndex].interface = interface;
 
     _minPeer = min(_minPeer, msg.source());

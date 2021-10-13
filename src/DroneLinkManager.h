@@ -52,7 +52,7 @@ public:
     void subscribe(uint8_t node, uint8_t channel, DroneModule *subscriber, uint8_t param);
 
     bool publish(DroneLinkMsg &msg);
-    bool publishPeer(DroneLinkMsg &msg, uint8_t RSSI, uint8_t interface);
+    bool publishPeer(DroneLinkMsg &msg, int16_t RSSI, uint8_t interface);
 
     void processChannels();
 

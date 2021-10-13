@@ -106,7 +106,7 @@ void RFM69TelemetryModule::loop() {
       memcpy(&_receivedMsg._msg, _radio.DATA, _radio.DATALEN);
       //Serial.print("RFM69 Receveived: ");
       //_receivedMsg.print();
-      uint8_t RSSI = -_radio.RSSI;
+      int16_t RSSI = -_radio.RSSI;
 
       _dlm->publishPeer(_receivedMsg, RSSI, _id);
 
