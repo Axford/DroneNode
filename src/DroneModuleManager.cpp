@@ -87,7 +87,7 @@ void DroneModuleManager::loadConfiguration() {
 
       // get hostname
       _hostname = obj[F("hostname")] | _hostname;
-      Log.noticeln(F("hostname=%s"), _hostname);
+      Log.noticeln(F("hostname=%s"), _hostname.c_str());
 
       // discovery
       _doDiscovery = obj[F("discovery")] | _doDiscovery;
