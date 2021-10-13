@@ -26,6 +26,7 @@ void I2CBaseModule::doReset() {
   if (_resetCount > 1) {
     // attempt resetting the multiplexer
     DroneWire::reset();
+
   }
   _resetCount++;
 }
@@ -33,8 +34,7 @@ void I2CBaseModule::doReset() {
 
 boolean I2CBaseModule::isAlive() {
   // if already in error state, then assume dead
-  if (_error > 0) return false;
-
+  //if (_error > 0) return false;
   // poll sensor to see if we're alive
   DroneWire::selectChannel(_bus);
 
@@ -42,6 +42,8 @@ boolean I2CBaseModule::isAlive() {
   byte err = Wire.endTransmission();
   if (err != 0) {
     setError(1);
+  } else {
+    setError(0);
   }
   return (err == 0);
 }
