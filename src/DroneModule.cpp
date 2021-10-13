@@ -366,7 +366,7 @@ void DroneModule::updateAndPublishParam(DRONE_PARAM_ENTRY *param, uint8_t *newPa
   if (memcmp(param->data.c, newPayload, length) != 0) {
     memcpy(param->data.c, newPayload, length);
     // publish
-    publishParamEntry(param);
+    if (param->publish) publishParamEntry(param);
   }
 }
 
