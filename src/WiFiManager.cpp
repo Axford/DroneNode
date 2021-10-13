@@ -22,7 +22,7 @@ Process
 */
 
 WiFiManager::WiFiManager() {
-  _taskCore = 1;
+  _taskCore = 0;
   _taskPriority = 1;
   _connectionCounter = 0;
   _APMode = true;
@@ -44,10 +44,10 @@ void WiFiManager::loadConfiguration() {
       JsonObject obj = doc.as<JsonObject>();
 
       // read networks
+      WiFiNetworkCredentials cred;
       if (obj.containsKey(F("networks"))) {
         Log.noticeln("[WIFI] Parsing networks...");
         JsonArray array = obj[F("networks")].as<JsonArray>();
-        WiFiNetworkCredentials cred;
         for(JsonVariant v : array) {
           cred.ssid = v[F("ssid")] | "";
           cred.password = v[F("password")] | "";
@@ -56,6 +56,11 @@ void WiFiManager::loadConfiguration() {
             _networks.add(cred);
           }
         }
+      } else {
+        // add default credentials
+        cred.ssid = "Badger";
+        cred.password = "LouisVuitton";
+        _networks.add(cred);
       }
     }
 
@@ -109,7 +114,8 @@ void WiFiManager::keepWiFiAlive(void *pvParameters){
       continue;
     } else if (!l_pThis->_scanActive && !l_pThis->_attemptingConnection) {
       Log.noticeln("[WIFI] Not connected, scanning...");
-      WiFi.scanNetworks(true);
+      WiFi.scanNetworks(true, false, false, 500, 0);
+      //bool async = false, bool show_hidden = false, bool passive = false, uint32_t max_ms_per_chan = 300, uint8_t channel = 0
       l_pThis->_scanActive = true;
       l_pThis->_attemptingConnection = false;
     }
