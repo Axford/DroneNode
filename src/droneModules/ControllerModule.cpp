@@ -1083,7 +1083,7 @@ void ControllerModule::loop() {
   uint8_t sigBars = 5;
   for (uint8_t i=0; i<sigBars; i++) {
     if ( (1.0f * i / sigBars) <= sigStrength)
-      _display->drawLine(113 + i*2, 11- i -1, 113 + i*2, 11);
+      _display->drawLine(113 + i*2, 11- i, 113 + i*2, 11);
   }
 
   // battery indicator
