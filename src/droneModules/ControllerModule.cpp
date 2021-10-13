@@ -70,6 +70,8 @@ ControllerModule::ControllerModule(uint8_t id, DroneModuleManager* dmm, DroneLin
 
    _brightness = 0;
    _spinner = 0;
+   _cellVoltage = 0;
+   _batteryCapacity = 0;
 
    _RSSI = 0;
 
@@ -97,20 +99,26 @@ ControllerModule::ControllerModule(uint8_t id, DroneModuleManager* dmm, DroneLin
    param = &_params[CONTROLLER_PARAM_LEFT_E];
    param->param = CONTROLLER_PARAM_LEFT;
    setParamName(FPSTR(DRONE_STR_LEFT), param);
-   param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_UINT8_T, 1);
+   param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_UINT8_T, 1);
    param->data.uint8[0] = 4;
 
    param = &_params[CONTROLLER_PARAM_RIGHT_E];
    param->param = CONTROLLER_PARAM_RIGHT;
    setParamName(FPSTR(DRONE_STR_RIGHT), param);
-   param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_UINT8_T, 1);
+   param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_UINT8_T, 1);
    param->data.uint8[0] = 5;
 
    param = &_params[CONTROLLER_PARAM_TELEMETRY_E];
    param->param = CONTROLLER_PARAM_TELEMETRY;
    setParamName(FPSTR(DRONE_STR_TELEMETRY), param);
-   param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_UINT8_T, 1);
+   param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_UINT8_T, 1);
    param->data.uint8[0] = 6;
+
+   param = &_params[CONTROLLER_PARAM_POWER_E];
+   param->param = CONTROLLER_PARAM_POWER;
+   setParamName(FPSTR(DRONE_STR_POWER), param);
+   param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_UINT8_T, 1);
+   param->data.uint8[0] = 9;
 }
 
 ControllerModule::~ControllerModule() {
@@ -248,6 +256,20 @@ void ControllerModule::handleLinkMessage(DroneLinkMsg *msg) {
       msg->param() == 8 &&
       msg->type() == DRONE_LINK_MSG_TYPE_FLOAT) {
     _RSSI = msg->_msg.payload.f[0];
+  }
+
+  // intercept voltage from INA219
+  if (msg->channel() == _params[CONTROLLER_PARAM_POWER_E].data.uint8[0] &&
+      msg->param() == 9 &&  // cellV
+      msg->type() == DRONE_LINK_MSG_TYPE_FLOAT) {
+    _cellVoltage = msg->_msg.payload.f[0];
+
+    // map into range 0..1
+    // TODO: account for nonlinearity!
+    _batteryCapacity = (_cellVoltage - LIPO_MIN_V) / (LIPO_MAX_V - LIPO_MIN_V);
+    if (_batteryCapacity > 1) _batteryCapacity = 1;
+    if (_batteryCapacity < 0) _batteryCapacity = 0;
+    Log.noticeln("Cell V %d, capacity %d", _cellVoltage, _batteryCapacity);
   }
 
   if (!_isBound) {
@@ -402,6 +424,8 @@ void ControllerModule::loadConfiguration(JsonObject &obj) {
   // make sure we're subscribed to the joystick channels
   _dlm->subscribe(_params[CONTROLLER_PARAM_LEFT_E].data.uint8[0], this, DRONE_LINK_PARAM_ALL);
   _dlm->subscribe(_params[CONTROLLER_PARAM_RIGHT_E].data.uint8[0], this, DRONE_LINK_PARAM_ALL);
+  _dlm->subscribe(_params[CONTROLLER_PARAM_TELEMETRY_E].data.uint8[0], this, DRONE_LINK_PARAM_ALL);
+  _dlm->subscribe(_params[CONTROLLER_PARAM_POWER_E].data.uint8[0], this, DRONE_LINK_PARAM_ALL);
 }
 
 
@@ -1048,10 +1072,24 @@ void ControllerModule::loop() {
   _display->setTextAlignment(TEXT_ALIGN_RIGHT);
   _display->setColor(BLACK);
   _display->setFont(TomThumb4x6);
-
   char rs[8];
   dtostrf(_RSSI, 2, 0, rs);
-  _display->drawString(128, 3, rs);
+  _display->drawString(122, 1, rs);
+
+  // RSSI graph
+  // map rssi in range 15 to 90 into sig strength 0..1
+  float sigStrength = 1 - ( (abs(_RSSI)-15) / (90-15) );
+  if (sigStrength < 0) sigStrength = 0;
+  uint8_t sigBars = 5;
+  for (uint8_t i=0; i<sigBars; i++) {
+    if ( (1.0f * i / sigBars) <= sigStrength)
+      _display->drawLine(113 + i*2, 11- i -1, 113 + i*2, 11);
+  }
+
+  // battery indicator
+  _display->setColor(BLACK);
+  _display->drawRect(123,1,4,10);
+  _display->fillRect(124,1,2,(10.0f * (1-_batteryCapacity)));
 
 
   // battery indicator

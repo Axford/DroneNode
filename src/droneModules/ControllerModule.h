@@ -29,10 +29,13 @@ display.begin(SSD1306_SWITCHCAPVCC, 0x3C)
 #define CONTROLLER_PARAM_RIGHT       9   // channel for right joystick
 #define CONTROLLER_PARAM_RIGHT_E     1
 
-#define CONTROLLER_PARAM_TELEMETRY       10   // channel for telemetry module
-#define CONTROLLER_PARAM_TELEMETRY_E     2
+#define CONTROLLER_PARAM_TELEMETRY   10   // channel for telemetry module
+#define CONTROLLER_PARAM_TELEMETRY_E 2
 
-#define CONTROLLER_PARAM_ENTRIES     3
+#define CONTROLLER_PARAM_POWER       11   // channel for INA219 module
+#define CONTROLLER_PARAM_POWER_E     3
+
+#define CONTROLLER_PARAM_ENTRIES     4
 
 
 // subs
@@ -120,6 +123,9 @@ struct CONTROLLER_MENU_STATE {
 
 #define CONTROLLER_INFO_COUNT    4
 
+#define LIPO_MIN_V    3.7f
+#define LIPO_MAX_V    4.2f
+
 // class
 class ControllerModule:  public I2CBaseModule {
 protected:
@@ -133,7 +139,7 @@ protected:
   DroneLinkMsg _info[CONTROLLER_INFO_COUNT];
   String _infoLabels[CONTROLLER_INFO_COUNT]; // friendly info labels (i.e. named channel > param)
 
-  uint8_t _RSSI;  // last received RSSI from telemetry module
+  float _RSSI;  // last received RSSI from telemetry module
 
   uint8_t _brightness;
   unsigned long _syncMenusTimer;
@@ -148,6 +154,8 @@ protected:
   uint8_t _lastMenu;  // last menu drawn
 
   float _spinner;
+  float _cellVoltage;  // cell battery voltage measured from INA219
+  float _batteryCapacity; // 0..1 as approx battery %
 
   // track modules for binding
   boolean _channelInfoChanged;
