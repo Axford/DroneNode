@@ -4,7 +4,7 @@
 #include "esp_wifi.h"
 #include "SPIFFS.h"
 
-
+//#include "esp_int_wdt.h"
 
 /*
 
@@ -22,7 +22,7 @@ Process
 */
 
 WiFiManager::WiFiManager() {
-  _taskCore = 0;
+  _taskCore = 1;
   _taskPriority = 1;
   _connectionCounter = 0;
   _APMode = true;
@@ -79,16 +79,6 @@ void WiFiManager::start(DroneModuleManager &dmm) {
   WiFi.mode(WIFI_AP_STA);
   WiFi.softAP(dmm.hostname().c_str());
 
-  /*
-  if ( APMode ) {
-
-
-  } else {
-    WiFi.mode(WIFI_STA);
-    WiFi.begin(ssid.c_str(), password.c_str());
-  }
-  */
-
   Log.noticeln("[WIFI] Starting connection task");
 
   WiFi.setSleep(false);
@@ -101,6 +91,8 @@ void WiFiManager::start(DroneModuleManager &dmm) {
     _taskPriority,           //Priority of the task
     &_Task1,                 //Task handle.
     _taskCore);              //Core where the task should run
+
+  //esp_err_tesp_task_wdt_delete(&_Task1);
 }
 
 void WiFiManager::keepWiFiAlive(void *pvParameters){
@@ -114,10 +106,12 @@ void WiFiManager::keepWiFiAlive(void *pvParameters){
       continue;
     } else if (!l_pThis->_scanActive && !l_pThis->_attemptingConnection) {
       Log.noticeln("[WIFI] Not connected, scanning...");
-      WiFi.scanNetworks(true, false, false, 500, 0);
+      WiFi.scanNetworks(true, false, false, 300, 0);
       //bool async = false, bool show_hidden = false, bool passive = false, uint32_t max_ms_per_chan = 300, uint8_t channel = 0
       l_pThis->_scanActive = true;
       l_pThis->_attemptingConnection = false;
+
+      vTaskDelay(1);
     }
 
     if (l_pThis->_scanActive) {
@@ -142,6 +136,7 @@ void WiFiManager::keepWiFiAlive(void *pvParameters){
               Log.noticeln("[WIFI] Connecting with password: %s", l_pThis->_networks[i].password.c_str());
               WiFi.begin(l_pThis->_networks[i].ssid.c_str(), l_pThis->_networks[i].password.c_str());
               l_pThis->_attemptingConnection = true;
+              vTaskDelay(1);
             }
           }
         }

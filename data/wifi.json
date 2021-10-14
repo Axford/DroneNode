@@ -1,6 +1,7 @@
 {
   "networks":[
     {"ssid":"Badger", "password":"LouisVuitton"},
-    {"ssid":"Freyr_2G", "password":"Colour_Limited_27"}
+    {"ssid":"Freyr_2G", "password":"Colour_Limited_27"},
+    {"ssid":"AndroidAP3554", "password":"deuf01793"}
   ]
 }

@@ -92,14 +92,15 @@ void NMEAModule::loop() {
 
       if (_nmea->isUnknown()) {
         // pass to AIS decoder
-        //Log.noticeln(F("Unknown NMEA Message: "));
-        //Log.noticeln(_nmea->getSentence());
+        Log.noticeln(F("Unknown NMEA Message: "));
+        Log.noticeln(_nmea->getSentence());
         //getSentence
 
         // TODO:
       } else {
         if (_nmea->isValid()) {
-          //Log.noticeln(F("Fresh GPS"));
+          Log.noticeln(F("Fresh GPS"));
+
           float tempf[3];
           tempf[1] = _nmea->getLatitude() / 1000000.;
           tempf[0] = _nmea->getLongitude() / 1000000.;
@@ -124,6 +125,8 @@ void NMEAModule::loop() {
 
           temp8 = _nmea->getHDOP();
           updateAndPublishParam(&_params[NMEA_PARAM_HDOP_E], (uint8_t*)&temp8, sizeof(temp8));
+        } else {
+          Log.errorln(F("Invalid NMEA sentence"));
         }
       }
 

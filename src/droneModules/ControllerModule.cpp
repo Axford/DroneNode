@@ -263,13 +263,15 @@ void ControllerModule::handleLinkMessage(DroneLinkMsg *msg) {
       msg->param() == 9 &&  // cellV
       msg->type() == DRONE_LINK_MSG_TYPE_FLOAT) {
     _cellVoltage = msg->_msg.payload.f[0];
+    if (_cellVoltage < 0) _cellVoltage = 0;
+    if (_cellVoltage > 100) _cellVoltage = 100;
 
     // map into range 0..1
     // TODO: account for nonlinearity!
     _batteryCapacity = (_cellVoltage - LIPO_MIN_V) / (LIPO_MAX_V - LIPO_MIN_V);
     if (_batteryCapacity > 1) _batteryCapacity = 1;
     if (_batteryCapacity < 0) _batteryCapacity = 0;
-    Log.noticeln("Cell V %d, capacity %d", _cellVoltage, _batteryCapacity);
+    //Log.noticeln("Cell V %d, capacity %d", _cellVoltage, _batteryCapacity);
   }
 
   if (!_isBound) {
@@ -920,30 +922,32 @@ void ControllerModule::drawEditInfoMenuItem(uint8_t index, uint8_t y) {
 void ControllerModule::drawMenu() {
   // draw menu items
   _display->setTextAlignment(TEXT_ALIGN_LEFT);
-  uint8_t y;
+  int y;
   for (uint8_t i=0; i< _menus[_menu].items.size(); i++) {
     if (i >= _scroll) {
       y = 14 + (i - _scroll) *12;
 
-      if (i == _menus[_menu].selected) {
-        _display->setColor(WHITE);
-        _display->fillRect(0, y+1, 128, 11);
-        _display->setColor(BLACK);
-      } else {
-        _display->setColor(WHITE);
-      }
-
-      if (_menu == CONTROLLER_MENU_BINDAXIS) {
-        drawBindAxisMenuItem(i,y);
-      } else if (_menu == CONTROLLER_MENU_EDIT) {
-        drawEditMenuItem(i,y);
-      } else if (_menu == CONTROLLER_MENU_EDITINFO) {
-        drawEditInfoMenuItem(i,y);
-      } else {
-        if (_menus[_menu].items[i].name) {
-          _display->drawString(2, y, String(_menus[_menu].items[i].data) + "." + _menus[_menu].items[i].name);
+      if (y >0 && y < 64) {
+        if (i == _menus[_menu].selected) {
+          _display->setColor(WHITE);
+          _display->fillRect(0, y+1, 128, 11);
+          _display->setColor(BLACK);
         } else {
-          _display->drawString(2, y, String(_menus[_menu].items[i].data) + ". ?");
+          _display->setColor(WHITE);
+        }
+
+        if (_menu == CONTROLLER_MENU_BINDAXIS) {
+          drawBindAxisMenuItem(i,y);
+        } else if (_menu == CONTROLLER_MENU_EDIT) {
+          drawEditMenuItem(i,y);
+        } else if (_menu == CONTROLLER_MENU_EDITINFO) {
+          drawEditInfoMenuItem(i,y);
+        } else {
+          if (_menus[_menu].items[i].name) {
+            _display->drawString(2, y, String(_menus[_menu].items[i].data) + "." + _menus[_menu].items[i].name);
+          } else {
+            _display->drawString(2, y, String(_menus[_menu].items[i].data) + ". ?");
+          }
         }
       }
     }
@@ -1083,7 +1087,7 @@ void ControllerModule::loop() {
   uint8_t sigBars = 5;
   for (uint8_t i=0; i<sigBars; i++) {
     if ( (1.0f * i / sigBars) <= sigStrength)
-      _display->drawLine(113 + i*2, 11- i, 113 + i*2, 11);
+      _display->drawLine(113 + i*2, 10- i, 113 + i*2, 10);
   }
 
   // battery indicator

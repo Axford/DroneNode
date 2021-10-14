@@ -13,6 +13,7 @@ Handles packet framing, sync, etc
 #include "../DroneLinkMsg.h"
 #include <RFM69.h>
 #include <SPI.h>
+#include <FastCRC.h>
 /*
 
 Packet framing:
@@ -34,12 +35,16 @@ byte    = value
 static const char RFM69_TELEMETRY_STR_RFM69_TELEMETRY[] PROGMEM = "RFM69Telemetry";
 
 #define RFM69_TELEMTRY_ENCRYPTKEY     "abcd1234dcba4321"
+#define RFM69_START_OF_FRAME          0xFE
 
 class RFM69TelemetryModule:  public DroneModule {
 protected:
   RFM69 _radio;
   DroneLinkMsg _receivedMsg;
   uint32_t _packetsReceived;
+  uint32_t _packetsRejected;
+  FastCRC8 _CRC8;
+  uint8_t _buffer[sizeof(DRONE_LINK_MSG)+2];
 public:
 
   RFM69TelemetryModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm);

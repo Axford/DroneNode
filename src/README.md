@@ -1,10 +1,26 @@
 
 # todo
 
+Notes following latest lake testing:
+* ping + response to track when radio getting out of range - dropped ping %
+* track to heading - e.g. fed in by a rotary encoder on the controller
+* Add a compass to the controller - to aid heading based navigation
+
+* Add node type to management module:
+  * Allow for templating module layout for known node physical designs (e.g. paddle boats)
+  * Nodes with same nodetype should have interchangeable configuration (i.e. same physical design and wiring)
+
+
+
+
+
 Controller
 * AP Config - switch between AP mode and STA mode on the fly
 * Possibly choose between several pre-configured wireless networks
+* Save config - and auto-reload on reset, in case controller crashes!!!
 
+
+* Arm and Disarm module.... and all output modules need to subscribe to it
 
 * add a physical pot on the controller for trim, etc
 * FIX the LAG
@@ -12,7 +28,7 @@ Controller
    * Turn off discovery dynamically (from controller)
    * Prioritise specifc channel subscriptions over wildcards
 * Additional mgmt controls on controller ... like reset?
-   * Turn off remote UDP when out of range
+   * Turn off remote UDP when bound?
 
 
 useful stuff: https://www.movable-type.co.uk/scripts/latlong.html
