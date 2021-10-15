@@ -1,7 +1,7 @@
 #include "INA219Module.h"
 #include "../DroneLinkMsg.h"
 #include "../DroneLinkManager.h"
-
+#include "strings.h"
 
 INA219Module::INA219Module(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm):
   I2CBaseModule ( id, dmm, dlm )
@@ -19,37 +19,37 @@ INA219Module::INA219Module(uint8_t id, DroneModuleManager* dmm, DroneLinkManager
 
    param = &_params[INA219_PARAM_SHUNTV_E];
    param->param = INA219_PARAM_SHUNTV;
-   setParamName(FPSTR(DRONE_STR_SHUNTV), param);
+   setParamName(FPSTR(STRING_SHUNTV), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 4);
 
    param = &_params[INA219_PARAM_BUSV_E];
    param->param = INA219_PARAM_BUSV;
-   setParamName(FPSTR(DRONE_STR_BUSV), param);
+   setParamName(FPSTR(STRING_BUSV), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 4);
 
    param = &_params[INA219_PARAM_CURRENT_E];
    param->param = INA219_PARAM_CURRENT;
-   setParamName(FPSTR(DRONE_STR_CURRENT), param);
+   setParamName(FPSTR(STRING_CURRENT), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 4);
 
    param = &_params[INA219_PARAM_POWER_E];
    param->param = INA219_PARAM_POWER;
-   setParamName(FPSTR(DRONE_STR_POWER), param);
+   setParamName(FPSTR(STRING_POWER), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 4);
 
    param = &_params[INA219_PARAM_LOADV_E];
    param->param = INA219_PARAM_LOADV;
-   setParamName(FPSTR(DRONE_STR_LOADV), param);
+   setParamName(FPSTR(STRING_LOADV), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 4);
 
    param = &_params[INA219_PARAM_CELLV_E];
    param->param = INA219_PARAM_CELLV;
-   setParamName(FPSTR(DRONE_STR_CELLV), param);
+   setParamName(FPSTR(STRING_CELLV), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 4);
 
    param = &_params[INA219_PARAM_ALARM_E];
    param->param = INA219_PARAM_ALARM;
-   setParamName(FPSTR(DRONE_STR_ALARM), param);
+   setParamName(FPSTR(STRING_ALARM), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_UINT8_T, 1);
 
 }
@@ -78,10 +78,10 @@ void INA219Module::loadConfiguration(JsonObject &obj) {
   // instantiate sensor object, now _addr is known
   _sensor = new Adafruit_INA219(_addr);
 
-  _numCells = obj[DRONE_STR_CELLS] | _numCells;
+  _numCells = obj[STRING_CELLS] | _numCells;
   if (_numCells < 1) _numCells = 1;
 
-  _threshold = obj[DRONE_STR_THRESHOLD] | _threshold;
+  _threshold = obj[STRING_THRESHOLD] | _threshold;
 }
 
 

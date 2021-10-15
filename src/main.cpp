@@ -30,6 +30,7 @@ Steps to setup a new device:
 #include "DroneModule.h"
 #include "DroneModuleManager.h"
 #include "DroneWire.h"
+#include "DroneExecutionManager.h"
 
 #define INC_WEB_SERVER
 #define INC_SPIFFS_EDITOR
@@ -70,6 +71,7 @@ OTAManager OTAMgr(&events);
 
 DroneLinkManager dlm;
 DroneModuleManager dmm(&dlm);
+DroneExecutionManager dem(&dmm, &dlm);
 
 
 // HTML web page to handle 3 input fields (input1, input2, input3)
@@ -194,9 +196,9 @@ void setup() {
   Serial.begin(115200);
   while(!Serial) {  }
 
-  delay(2500); // to allow serial to reconnect after programming
-
   Log.begin(LOG_LEVEL_VERBOSE, &Serial);
+
+  delay(2500); // to allow serial to reconnect after programming
 
   // direct log output to file in SPIFFS
   Log.noticeln(F("[] Starting SPIFFS"));
@@ -219,7 +221,10 @@ void setup() {
 
   DroneWire::setup();
 
-  dmm.loadConfiguration();
+  dem.load(PSTR(PSTR("/start.txt")));
+
+  // TODO: move to DEM
+  //dmm.loadConfiguration();
 
   // load WIFI Configuration
   wifiManager.loadConfiguration();
@@ -239,10 +244,13 @@ void setup() {
   DroneWire::scanAll();
 
   // Complete Setup of all modules
+  //TODO: implement in DEM
+  /*
   Log.noticeln(F("[] Completing module setup..."));
   dmm.setupModules();
 
   Log.noticeln(F("[] Setup done"));
+  */
 
   // redirect logging to serial
   logFile.close();
@@ -266,6 +274,8 @@ void loop() {
     dmm.loopModules();
 
     dlm.processChannels();
+
+    dem.loop();
   } else {
     digitalWrite(PIN_LED, HIGH);
   }

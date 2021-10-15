@@ -3,7 +3,7 @@
 #include "../DroneLinkManager.h"
 #include "../DroneModuleManager.h"
 #include "../OTAManager.h"
-
+#include "strings.h"
 
 ManagementModule::ManagementModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm):
   DroneModule ( id, dmm, dlm )
@@ -22,55 +22,55 @@ ManagementModule::ManagementModule(uint8_t id, DroneModuleManager* dmm, DroneLin
 
    // init param entries
    _params[MANAGEMENT_PARAM_HOSTNAME_E].param = MANAGEMENT_PARAM_HOSTNAME;
-   _params[MANAGEMENT_PARAM_HOSTNAME_E].name = FPSTR(DRONE_STR_HOSTNAME);
-   _params[MANAGEMENT_PARAM_HOSTNAME_E].nameLen = sizeof(DRONE_STR_HOSTNAME);
+   _params[MANAGEMENT_PARAM_HOSTNAME_E].name = FPSTR(STRING_HOSTNAME);
+   _params[MANAGEMENT_PARAM_HOSTNAME_E].nameLen = sizeof(STRING_HOSTNAME);
    _params[MANAGEMENT_PARAM_HOSTNAME_E].paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_CHAR, _dmm->hostname().length());
    _dmm->hostname().toCharArray(_params[MANAGEMENT_PARAM_HOSTNAME_E].data.c, 16);
 
    _params[MANAGEMENT_PARAM_BUILD_E].param = MANAGEMENT_PARAM_BUILD;
-   _params[MANAGEMENT_PARAM_BUILD_E].name = FPSTR(DRONE_STR_BUILD);
-   _params[MANAGEMENT_PARAM_BUILD_E].nameLen = sizeof(DRONE_STR_BUILD);
+   _params[MANAGEMENT_PARAM_BUILD_E].name = FPSTR(STRING_BUILD);
+   _params[MANAGEMENT_PARAM_BUILD_E].nameLen = sizeof(STRING_BUILD);
    _params[MANAGEMENT_PARAM_BUILD_E].paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_CHAR, _dmm->buildTimestamp().length());
    _dmm->buildTimestamp().toCharArray(_params[MANAGEMENT_PARAM_BUILD_E].data.c, 16);
 
    _params[MANAGEMENT_PARAM_RESET_E].param = MANAGEMENT_PARAM_RESET;
-   _params[MANAGEMENT_PARAM_RESET_E].name = FPSTR(DRONE_STR_RESET);
-   _params[MANAGEMENT_PARAM_RESET_E].nameLen = sizeof(DRONE_STR_RESET);
+   _params[MANAGEMENT_PARAM_RESET_E].name = FPSTR(STRING_RESET);
+   _params[MANAGEMENT_PARAM_RESET_E].nameLen = sizeof(STRING_RESET);
    _params[MANAGEMENT_PARAM_RESET_E].paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_UINT8_T, 1);
 
    _params[MANAGEMENT_PARAM_HEAP_E].param = MANAGEMENT_PARAM_HEAP;
-   _params[MANAGEMENT_PARAM_HEAP_E].name = FPSTR(DRONE_STR_HEAP);
-   _params[MANAGEMENT_PARAM_HEAP_E].nameLen = sizeof(DRONE_STR_HEAP);
+   _params[MANAGEMENT_PARAM_HEAP_E].name = FPSTR(STRING_HEAP);
+   _params[MANAGEMENT_PARAM_HEAP_E].nameLen = sizeof(STRING_HEAP);
    _params[MANAGEMENT_PARAM_HEAP_E].paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_UINT32_T, 4);
    _params[MANAGEMENT_PARAM_HEAP_E].data.uint32[0] = ESP.getFreeHeap();
 
    _params[MANAGEMENT_PARAM_IP_E].param = MANAGEMENT_PARAM_IP;
-   _params[MANAGEMENT_PARAM_IP_E].name = FPSTR(DRONE_STR_IP);
-   _params[MANAGEMENT_PARAM_IP_E].nameLen = sizeof(DRONE_STR_IP);
+   _params[MANAGEMENT_PARAM_IP_E].name = FPSTR(STRING_IP);
+   _params[MANAGEMENT_PARAM_IP_E].nameLen = sizeof(STRING_IP);
    _params[MANAGEMENT_PARAM_IP_E].paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_UINT8_T, 4);
    _params[MANAGEMENT_PARAM_IP_E].data.uint8[0] = 0;
 
    _params[MANAGEMENT_PARAM_UPTIME_E].param = MANAGEMENT_PARAM_UPTIME;
-   _params[MANAGEMENT_PARAM_UPTIME_E].name = FPSTR(DRONE_STR_UPTIME);
-   _params[MANAGEMENT_PARAM_UPTIME_E].nameLen = sizeof(DRONE_STR_UPTIME);
+   _params[MANAGEMENT_PARAM_UPTIME_E].name = FPSTR(STRING_UPTIME);
+   _params[MANAGEMENT_PARAM_UPTIME_E].nameLen = sizeof(STRING_UPTIME);
    _params[MANAGEMENT_PARAM_UPTIME_E].paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_UINT32_T, 4);
    _params[MANAGEMENT_PARAM_UPTIME_E].data.uint32[0] = 0;
 
    _params[MANAGEMENT_PARAM_PUBLISHRATE_E].param = MANAGEMENT_PARAM_PUBLISHRATE;
-   _params[MANAGEMENT_PARAM_PUBLISHRATE_E].name = FPSTR(DRONE_STR_PUBLISHRATE);
-   _params[MANAGEMENT_PARAM_PUBLISHRATE_E].nameLen = sizeof(DRONE_STR_PUBLISHRATE);
+   _params[MANAGEMENT_PARAM_PUBLISHRATE_E].name = FPSTR(STRING_PUBLISHRATE);
+   _params[MANAGEMENT_PARAM_PUBLISHRATE_E].nameLen = sizeof(STRING_PUBLISHRATE);
    _params[MANAGEMENT_PARAM_PUBLISHRATE_E].paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 4);
    _params[MANAGEMENT_PARAM_PUBLISHRATE_E].data.f[0] = 0;
 
    _params[MANAGEMENT_PARAM_CHOKED_E].param = MANAGEMENT_PARAM_CHOKED;
-   _params[MANAGEMENT_PARAM_CHOKED_E].name = FPSTR(DRONE_STR_CHOKED);
-   _params[MANAGEMENT_PARAM_CHOKED_E].nameLen = sizeof(DRONE_STR_CHOKED);
+   _params[MANAGEMENT_PARAM_CHOKED_E].name = FPSTR(STRING_CHOKED);
+   _params[MANAGEMENT_PARAM_CHOKED_E].nameLen = sizeof(STRING_CHOKED);
    _params[MANAGEMENT_PARAM_CHOKED_E].paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_UINT32_T, 4);
    _params[MANAGEMENT_PARAM_CHOKED_E].data.uint32[0] = 0;
 
    _params[MANAGEMENT_PARAM_DISCOVERY_E].param = MANAGEMENT_PARAM_DISCOVERY;
-   _params[MANAGEMENT_PARAM_DISCOVERY_E].name = FPSTR(DRONE_STR_DISCOVERY);
-   _params[MANAGEMENT_PARAM_DISCOVERY_E].nameLen = sizeof(DRONE_STR_DISCOVERY);
+   _params[MANAGEMENT_PARAM_DISCOVERY_E].name = FPSTR(STRING_DISCOVERY);
+   _params[MANAGEMENT_PARAM_DISCOVERY_E].nameLen = sizeof(STRING_DISCOVERY);
    _params[MANAGEMENT_PARAM_DISCOVERY_E].paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_UINT8_T, 1);
    _params[MANAGEMENT_PARAM_DISCOVERY_E].data.uint8[0] = _dmm->discovery() ? 1 : 0;
 }

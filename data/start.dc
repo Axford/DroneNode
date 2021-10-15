@@ -1,0 +1,18 @@
+// D-Code Startup Script
+
+// Setup the node
+CN
+  CP hostname = "TestBoard"
+
+// Init modules
+.CM Management = 1
+  CP name = "Management"
+  .CP enable = true
+  .CP interval = 1000
+  CP publish = hostname build reset uptime heap IP publishRate choked discovery
+
+// finish setup
+CE
+
+// enable wifi
+AW true

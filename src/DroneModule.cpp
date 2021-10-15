@@ -3,9 +3,11 @@
 #include "DroneLinkManager.h"
 #include "DroneModuleManager.h"
 #include "pinConfig.h"
+#include "strings.h"
 
 // PIN Name to Number lookups
 
+/*
 #define PINS_NUM    10
 
 char PIN_NAMES[PINS_NUM] [7] = {
@@ -33,6 +35,7 @@ uint8_t PIN_NUMBERS[PINS_NUM] = {
   PIN_IN0_0,
   PIN_IN0_1
 };
+*/
 
 
 DroneModule::DroneModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm):
@@ -59,39 +62,39 @@ _id(id) {
   _mgmtParams = (DRONE_PARAM_ENTRY*)malloc( sizeof(DRONE_PARAM_ENTRY) * DRONE_MGMT_PARAM_ENTRIES);
 
   _mgmtParams[DRONE_MODULE_PARAM_STATUS_E].param = DRONE_MODULE_PARAM_STATUS;
-  _mgmtParams[DRONE_MODULE_PARAM_STATUS_E].name = FPSTR(DRONE_STR_STATUS);
-  _mgmtParams[DRONE_MODULE_PARAM_STATUS_E].nameLen = sizeof(DRONE_STR_STATUS);
+  _mgmtParams[DRONE_MODULE_PARAM_STATUS_E].name = FPSTR(STRING_STATUS);
+  _mgmtParams[DRONE_MODULE_PARAM_STATUS_E].nameLen = sizeof(STRING_STATUS);
   _mgmtParams[DRONE_MODULE_PARAM_STATUS_E].paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_UINT8_T, 1);
   _mgmtParams[DRONE_MODULE_PARAM_STATUS_E].publish = true;
   _mgmtParams[DRONE_MODULE_PARAM_STATUS_E].data.uint8[0] = _enabled ? 1 : 0;
 
   _mgmtParams[DRONE_MODULE_PARAM_NAME_E].param = DRONE_MODULE_PARAM_NAME;
-  _mgmtParams[DRONE_MODULE_PARAM_NAME_E].name = FPSTR(DRONE_STR_NAME);
-  _mgmtParams[DRONE_MODULE_PARAM_NAME_E].nameLen = sizeof(DRONE_STR_NAME);
+  _mgmtParams[DRONE_MODULE_PARAM_NAME_E].name = FPSTR(STRING_NAME);
+  _mgmtParams[DRONE_MODULE_PARAM_NAME_E].nameLen = sizeof(STRING_NAME);
   _mgmtParams[DRONE_MODULE_PARAM_NAME_E].paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_CHAR, 1);
   _mgmtParams[DRONE_MODULE_PARAM_NAME_E].publish = true;
   _mgmtParams[DRONE_MODULE_PARAM_NAME_E].data.c[0] = '?';
 
   _mgmtParams[DRONE_MODULE_PARAM_ERROR_E].param = DRONE_MODULE_PARAM_ERROR;
-  _mgmtParams[DRONE_MODULE_PARAM_ERROR_E].name = FPSTR(DRONE_STR_ERROR);
-  _mgmtParams[DRONE_MODULE_PARAM_ERROR_E].nameLen = sizeof(DRONE_STR_ERROR);
+  _mgmtParams[DRONE_MODULE_PARAM_ERROR_E].name = FPSTR(STRING_ERROR);
+  _mgmtParams[DRONE_MODULE_PARAM_ERROR_E].nameLen = sizeof(STRING_ERROR);
   _mgmtParams[DRONE_MODULE_PARAM_ERROR_E].paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_UINT8_T, 1);
   _mgmtParams[DRONE_MODULE_PARAM_ERROR_E].publish = true;
   _mgmtParams[DRONE_MODULE_PARAM_ERROR_E].data.uint8[0] = _error;
 
   _mgmtParams[DRONE_MODULE_PARAM_RESETCOUNT_E].param = DRONE_MODULE_PARAM_RESETCOUNT;
-  _mgmtParams[DRONE_MODULE_PARAM_RESETCOUNT_E].name = FPSTR(DRONE_STR_RESETCOUNT);
-  _mgmtParams[DRONE_MODULE_PARAM_RESETCOUNT_E].nameLen = sizeof(DRONE_STR_RESETCOUNT);
+  _mgmtParams[DRONE_MODULE_PARAM_RESETCOUNT_E].name = FPSTR(STRING_RESETCOUNT);
+  _mgmtParams[DRONE_MODULE_PARAM_RESETCOUNT_E].nameLen = sizeof(STRING_RESETCOUNT);
   _mgmtParams[DRONE_MODULE_PARAM_RESETCOUNT_E].paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_UINT8_T, 1);
   _mgmtParams[DRONE_MODULE_PARAM_RESETCOUNT_E].publish = true;
   _mgmtParams[DRONE_MODULE_PARAM_RESETCOUNT_E].data.uint8[0] = _resetCount;
 
   _mgmtParams[DRONE_MODULE_PARAM_TYPE_E].param = DRONE_MODULE_PARAM_TYPE;
-  _mgmtParams[DRONE_MODULE_PARAM_TYPE_E].name = FPSTR(DRONE_STR_TYPE);
-  _mgmtParams[DRONE_MODULE_PARAM_TYPE_E].nameLen = sizeof(DRONE_STR_TYPE);
+  _mgmtParams[DRONE_MODULE_PARAM_TYPE_E].name = FPSTR(STRING_TYPE);
+  _mgmtParams[DRONE_MODULE_PARAM_TYPE_E].nameLen = sizeof(STRING_TYPE);
   _mgmtParams[DRONE_MODULE_PARAM_TYPE_E].publish = true;
-  _mgmtParams[DRONE_MODULE_PARAM_TYPE_E].paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_CHAR, sizeof(DRONE_STR_DRONE));
-  strncpy_P(_mgmtParams[DRONE_MODULE_PARAM_TYPE_E].data.c, DRONE_STR_DRONE, sizeof(DRONE_STR_DRONE));
+  _mgmtParams[DRONE_MODULE_PARAM_TYPE_E].paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_CHAR, sizeof(STRING_DRONE));
+  strncpy_P(_mgmtParams[DRONE_MODULE_PARAM_TYPE_E].data.c, STRING_DRONE, sizeof(STRING_DRONE));
 
 }
 
@@ -125,8 +128,8 @@ void DroneModule::initSubs(uint8_t numSubs) {
     _subs[i].addr.source = _dlm->node();
     _subs[i].addr.param = 255;
     _subs[i].param.publish = false;
-    _subs[i].param.nameLen = sizeof(DRONE_STR_BLANK);
-    _subs[i].param.name = FPSTR(DRONE_STR_BLANK);
+    _subs[i].param.nameLen = sizeof(STRING_BLANK);
+    _subs[i].param.name = FPSTR(STRING_BLANK);
     // input values are writable by default, unless wired to a valid address
     _subs[i].param.paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_FLOAT, 4);
     _subs[i].param.data.f[0] = 0;
@@ -175,13 +178,13 @@ void DroneModule::doShutdown() {
 
 boolean DroneModule::isAlive() { return true; }
 
-
+/*
 void DroneModule::parsePins(JsonObject &obj, uint8_t *pins, uint8_t numPins) {
-  if (obj.containsKey(DRONE_STR_PINS)) {
-    Log.noticeln(DRONE_STR_PINS);
+  if (obj.containsKey(STRING_PINS)) {
+    Log.noticeln(STRING_PINS);
 
-    if (obj[DRONE_STR_PINS].is<JsonArray>()) {
-      JsonArray array = obj[DRONE_STR_PINS].as<JsonArray>();
+    if (obj[STRING_PINS].is<JsonArray>()) {
+      JsonArray array = obj[STRING_PINS].as<JsonArray>();
 
       uint8_t i = 0;
       for(JsonVariant v : array) {
@@ -199,7 +202,7 @@ void DroneModule::parsePins(JsonObject &obj, uint8_t *pins, uint8_t numPins) {
       }
     } else {
       // attempt to lookup pin number from name
-      String pinName = obj[DRONE_STR_PINS];
+      String pinName = obj[STRING_PINS];
 
       for (uint8_t j=0; j<PINS_NUM; j++) {
         if (pinName == PIN_NAMES[j]) {
@@ -211,23 +214,24 @@ void DroneModule::parsePins(JsonObject &obj, uint8_t *pins, uint8_t numPins) {
 
   }
 }
+*/
 
 
 void DroneModule::loadConfiguration(JsonObject &obj) {
-  String name = obj[DRONE_STR_NAME] | "unnamed";
+  String name = obj[STRING_NAME] | "unnamed";
   _mgmtParams[DRONE_MODULE_PARAM_NAME_E].paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_CHAR, name.length());
   name.toCharArray(_mgmtParams[DRONE_MODULE_PARAM_NAME_E].data.c, 16);
   Log.noticeln(F("[DroneModule.loadConfiguration] loading config for: %s"), name.c_str());
 
-  _enabled = obj[DRONE_STR_ENABLE] | _enabled;
+  _enabled = obj[STRING_ENABLE] | _enabled;
   _mgmtParams[DRONE_MODULE_PARAM_STATUS_E].data.uint8[0] = _enabled ? 1 : 0;
 
-  _loopInterval = obj[DRONE_STR_INTERVAL] | _loopInterval;
+  _loopInterval = obj[STRING_INTERVAL] | _loopInterval;
 
   // subs: []  ... used for telemetry
-  if (obj.containsKey(DRONE_STR_SUBSCRIBETO)) {
+  if (obj.containsKey(STRING_SUBSCRIBETO)) {
     Log.noticeln(F("[DroneModule.loadConfiguration]  Read subs..."));
-    JsonArray array = obj[DRONE_STR_SUBSCRIBETO].as<JsonArray>();
+    JsonArray array = obj[STRING_SUBSCRIBETO].as<JsonArray>();
     DRONE_LINK_ADDR addr;
     for(JsonVariant v : array) {
       addr = DroneLinkMsg::parseAddress(v);
@@ -280,9 +284,9 @@ void DroneModule::loadConfiguration(JsonObject &obj) {
 
 
   // read publish settings
-  if (obj.containsKey(DRONE_STR_PUBLISH)) {
+  if (obj.containsKey(STRING_PUBLISH)) {
     Log.noticeln(F("[DroneModule.loadConfiguration] Read publish settings..."));
-    JsonArray array = obj[DRONE_STR_PUBLISH].as<JsonArray>();
+    JsonArray array = obj[STRING_PUBLISH].as<JsonArray>();
     for(JsonVariant v : array) {
       // see if this matches an output param
       for (uint8_t i=0; i<_numParamEntries; i++) {

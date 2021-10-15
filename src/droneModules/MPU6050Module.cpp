@@ -1,7 +1,7 @@
 #include "MPU6050Module.h"
 #include "../DroneLinkMsg.h"
 #include "../DroneLinkManager.h"
-
+#include "strings.h"
 
 MPU6050Module::MPU6050Module(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm):
   I2CBaseModule ( id, dmm, dlm )
@@ -26,12 +26,12 @@ MPU6050Module::MPU6050Module(uint8_t id, DroneModuleManager* dmm, DroneLinkManag
 
    // init param entries
    _params[MPU6050_PARAM_ACCEL_E].param = MPU6050_PARAM_ACCEL;
-   _params[MPU6050_PARAM_ACCEL_E].name = FPSTR(DRONE_STR_ACCEL);
-   _params[MPU6050_PARAM_ACCEL_E].nameLen = sizeof(DRONE_STR_ACCEL);
+   _params[MPU6050_PARAM_ACCEL_E].name = FPSTR(STRING_ACCEL);
+   _params[MPU6050_PARAM_ACCEL_E].nameLen = sizeof(STRING_ACCEL);
 
    _params[MPU6050_PARAM_GYRO_E].param = MPU6050_PARAM_GYRO;
-   _params[MPU6050_PARAM_GYRO_E].name = FPSTR(DRONE_STR_GYRO);
-   _params[MPU6050_PARAM_GYRO_E].nameLen = sizeof(DRONE_STR_GYRO);
+   _params[MPU6050_PARAM_GYRO_E].name = FPSTR(STRING_GYRO);
+   _params[MPU6050_PARAM_GYRO_E].nameLen = sizeof(STRING_GYRO);
 
 }
 

@@ -1,7 +1,7 @@
 #include "MotorModule.h"
 #include "../DroneLinkMsg.h"
 #include "../DroneLinkManager.h"
-
+#include "strings.h"
 
 MotorModule::MotorModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm):
   DroneModule ( id, dmm, dlm )
@@ -27,7 +27,7 @@ MotorModule::MotorModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* 
    sub = &_subs[MOTOR_SUB_SPEED_E];
    sub->addrParam = MOTOR_SUB_SPEED_ADDR;
    sub->param.param = MOTOR_SUB_SPEED;
-   setParamName(FPSTR(DRONE_STR_SPEED), &sub->param);
+   setParamName(FPSTR(STRING_SPEED), &sub->param);
 }
 
 
@@ -36,12 +36,12 @@ void MotorModule::loadConfiguration(JsonObject &obj) {
 
   DroneModule::parsePins(obj, _pins, (uint8_t)sizeof(_pins));
 
-  _deadband = obj[DRONE_STR_DEADBAND] | _deadband;
+  _deadband = obj[STRING_DEADBAND] | _deadband;
 
   // limits
-  if (obj.containsKey(DRONE_STR_LIMITS)) {
+  if (obj.containsKey(STRING_LIMITS)) {
     Log.noticeln(F("[MotorModule.loadConfiguration]  Read limits..."));
-    JsonArray array = obj[DRONE_STR_LIMITS].as<JsonArray>();
+    JsonArray array = obj[STRING_LIMITS].as<JsonArray>();
     uint8_t i=0;
     for(JsonVariant v : array) {
       if (i < sizeof(_limits))
@@ -50,7 +50,7 @@ void MotorModule::loadConfiguration(JsonObject &obj) {
     }
   }
 
-  _PWMChannel = obj[DRONE_STR_PWM_CHANNEL] | _PWMChannel;
+  _PWMChannel = obj[STRING_PWM_CHANNEL] | _PWMChannel;
 }
 
 

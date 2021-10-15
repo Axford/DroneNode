@@ -1,7 +1,7 @@
 #include "BasicNavModule.h"
 #include "../DroneLinkMsg.h"
 #include "../DroneLinkManager.h"
-
+#include "strings.h"
 
 BasicNavModule::BasicNavModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm):
   DroneModule ( id, dmm, dlm )
@@ -25,24 +25,24 @@ BasicNavModule::BasicNavModule(uint8_t id, DroneModuleManager* dmm, DroneLinkMan
    strncpy_P(_mgmtParams[DRONE_MODULE_PARAM_TYPE_E].data.c, BASIC_NAV_STR_BASIC_NAV, sizeof(BASIC_NAV_STR_BASIC_NAV));
 
    _params[BASIC_NAV_PARAM_TARGET_E].param = BASIC_NAV_PARAM_TARGET;
-   _params[BASIC_NAV_PARAM_TARGET_E].name = FPSTR(DRONE_STR_TARGET);
-   _params[BASIC_NAV_PARAM_TARGET_E].nameLen = sizeof(DRONE_STR_TARGET);
+   _params[BASIC_NAV_PARAM_TARGET_E].name = FPSTR(STRING_TARGET);
+   _params[BASIC_NAV_PARAM_TARGET_E].nameLen = sizeof(STRING_TARGET);
    _params[BASIC_NAV_PARAM_TARGET_E].paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_FLOAT, 8);
 
    _params[BASIC_NAV_PARAM_LOCATION_E].param = BASIC_NAV_PARAM_LOCATION;
-   _params[BASIC_NAV_PARAM_LOCATION_E].name = FPSTR(DRONE_STR_LOCATION);
-   _params[BASIC_NAV_PARAM_LOCATION_E].nameLen = sizeof(DRONE_STR_LOCATION);
+   _params[BASIC_NAV_PARAM_LOCATION_E].name = FPSTR(STRING_LOCATION);
+   _params[BASIC_NAV_PARAM_LOCATION_E].nameLen = sizeof(STRING_LOCATION);
    _params[BASIC_NAV_PARAM_LOCATION_E].paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_FLOAT, 8);
 
    _params[BASIC_NAV_PARAM_HEADING_E].param = BASIC_NAV_PARAM_HEADING;
-   _params[BASIC_NAV_PARAM_HEADING_E].name = FPSTR(DRONE_STR_HEADING);
-   _params[BASIC_NAV_PARAM_HEADING_E].nameLen = sizeof(DRONE_STR_HEADING);
+   _params[BASIC_NAV_PARAM_HEADING_E].name = FPSTR(STRING_HEADING);
+   _params[BASIC_NAV_PARAM_HEADING_E].nameLen = sizeof(STRING_HEADING);
    _params[BASIC_NAV_PARAM_HEADING_E].publish = true;
    _params[BASIC_NAV_PARAM_HEADING_E].paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 4);
 
    _params[BASIC_NAV_PARAM_DISTANCE_E].param = BASIC_NAV_PARAM_DISTANCE;
-   _params[BASIC_NAV_PARAM_DISTANCE_E].name = FPSTR(DRONE_STR_DISTANCE);
-   _params[BASIC_NAV_PARAM_DISTANCE_E].nameLen = sizeof(DRONE_STR_DISTANCE);
+   _params[BASIC_NAV_PARAM_DISTANCE_E].name = FPSTR(STRING_DISTANCE);
+   _params[BASIC_NAV_PARAM_DISTANCE_E].nameLen = sizeof(STRING_DISTANCE);
    _params[BASIC_NAV_PARAM_DISTANCE_E].publish = true;
    _params[BASIC_NAV_PARAM_DISTANCE_E].paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 4);
 
@@ -63,13 +63,13 @@ void BasicNavModule::onParamWrite(DRONE_PARAM_ENTRY *param) {
 void BasicNavModule::loadConfiguration(JsonObject &obj) {
   DroneModule::loadConfiguration(obj);
 
-  _target = DroneLinkMsg::parseAddress( obj[DRONE_STR_TARGET] );
+  _target = DroneLinkMsg::parseAddress( obj[STRING_TARGET] );
   if (_target.param != 255) {
     // make read-only
     _params[BASIC_NAV_PARAM_TARGET_E].paramTypeLength &= ~DRONE_LINK_MSG_WRITABLE;
   }
 
-  _location = DroneLinkMsg::parseAddress( obj[DRONE_STR_LOCATION] );
+  _location = DroneLinkMsg::parseAddress( obj[STRING_LOCATION] );
   if (_location.param != 255) {
     // make read-only
     _params[BASIC_NAV_PARAM_LOCATION_E].paramTypeLength &= ~DRONE_LINK_MSG_WRITABLE;

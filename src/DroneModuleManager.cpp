@@ -115,9 +115,9 @@ void DroneModuleManager::loadModulesFromJSON(const JsonArray &array) {
       if (v.is<JsonObject>()) {
         JsonObject modObj = v.as<JsonObject>();
 
-        if (modObj.containsKey(DRONE_STR_TYPE)) {
+        if (modObj.containsKey(STRING_TYPE)) {
           // decode module type typeName
-          String typeName = modObj[DRONE_STR_TYPE].as<String>();
+          String typeName = modObj[STRING_TYPE].as<String>();
 
           // decode id
           uint8_t id = modObj[F("id")] | 255;

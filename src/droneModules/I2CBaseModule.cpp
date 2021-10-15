@@ -1,7 +1,7 @@
 #include "I2CBaseModule.h"
 #include "../DroneLinkMsg.h"
 #include "../DroneLinkManager.h"
-
+#include "strings.h"
 
 I2CBaseModule::I2CBaseModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm):
   DroneModule ( id, dmm, dlm )
@@ -16,8 +16,8 @@ I2CBaseModule::I2CBaseModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManag
 void I2CBaseModule::loadConfiguration(JsonObject &obj) {
   DroneModule::loadConfiguration(obj);
 
-  _bus = obj[DRONE_STR_BUS] | _bus;
-  _addr = obj[DRONE_STR_ADDR] | _addr;
+  _bus = obj[STRING_BUS] | _bus;
+  _addr = obj[STRING_ADDR] | _addr;
 }
 
 

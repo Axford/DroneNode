@@ -1,7 +1,7 @@
 #include "TelemetryModule.h"
 #include "../DroneLinkMsg.h"
 #include "../DroneLinkManager.h"
-
+#include "strings.h"
 
 TelemetryModule::TelemetryModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm):
   DroneModule ( id, dmm, dlm )
@@ -20,14 +20,14 @@ TelemetryModule::TelemetryModule(uint8_t id, DroneModuleManager* dmm, DroneLinkM
 void TelemetryModule::loadConfiguration(JsonObject &obj) {
   DroneModule::loadConfiguration(obj);
 
-  _portNum = obj[DRONE_STR_PORT] | _portNum;
+  _portNum = obj[STRING_PORT] | _portNum;
   switch(_portNum) {
     case 0: setPort(&Serial); break;
     case 1: setPort(&Serial1); break;
     case 2: setPort(&Serial2); break;
   }
 
-  _baud = obj[DRONE_STR_BAUD] | _baud;
+  _baud = obj[STRING_BAUD] | _baud;
 }
 
 void TelemetryModule::handleLinkMessage(DroneLinkMsg *msg) {

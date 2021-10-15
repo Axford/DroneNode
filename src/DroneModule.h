@@ -42,95 +42,6 @@ things that would be useful for all modules
 #define DRONE_CUSTOM_PARAM_START        8  // address at which custom params start
 
 
-// strings
-static const char DRONE_STR_D[] PROGMEM = " %d ";
-static const char DRONE_STR_F[] PROGMEM = " %F ";
-static const char DRONE_STR_S[] PROGMEM = " %s ";
-static const char DRONE_STR_X[] PROGMEM = " %X ";
-
-static const char DRONE_STR_BLANK[] PROGMEM = "";
-
-static const char DRONE_STR_ACCEL[] PROGMEM = "accel";
-static const char DRONE_STR_ACTIVESCENE[] PROGMEM = "activeScene";
-static const char DRONE_STR_ADDR[] PROGMEM = "addr";
-static const char DRONE_STR_ALARM[] PROGMEM = "alarm";
-static const char DRONE_STR_ALTITUDE[] PROGMEM = "altitude";
-static const char DRONE_STR_BAUD[] PROGMEM = "baud";
-static const char DRONE_STR_BUILD[] PROGMEM = "build";
-static const char DRONE_STR_BUS[] PROGMEM = "bus";
-static const char DRONE_STR_BUSV[] PROGMEM = "busV";
-static const char DRONE_STR_BUTTON[] PROGMEM = "button";
-static const char DRONE_STR_CALIB_X[] PROGMEM = "calibX";
-static const char DRONE_STR_CALIB_Y[] PROGMEM = "calibY";
-static const char DRONE_STR_CELLS[] PROGMEM = "cells";
-static const char DRONE_STR_CELLV[] PROGMEM = "cellV";
-static const char DRONE_STR_CENTRE[] PROGMEM = "centre";
-static const char DRONE_STR_CHOKED[] PROGMEM = "choked";
-static const char DRONE_STR_CURRENT[] PROGMEM = "current";
-static const char DRONE_STR_DEADBAND[] PROGMEM = "deadband";
-static const char DRONE_STR_DECLINATION[] PROGMEM = "declination";
-static const char DRONE_STR_DISTANCE[] PROGMEM = "distance";
-static const char DRONE_STR_DISCOVERY[] PROGMEM = "discovery";
-static const char DRONE_STR_DRONE[] PROGMEM = "Drone";
-static const char DRONE_STR_ERROR[] PROGMEM = "error";
-static const char DRONE_STR_ENABLE[] PROGMEM = "enable";
-static const char DRONE_STR_GYRO[] PROGMEM = "gyro";
-static const char DRONE_STR_HDOP[] PROGMEM = "HDOP";
-static const char DRONE_STR_HEADING[] PROGMEM = "heading";
-static const char DRONE_STR_HEAP[] PROGMEM = "heap";
-static const char DRONE_STR_HOSTNAME[] PROGMEM = "hostname";
-static const char DRONE_STR_HUMIDITY[] PROGMEM = "humidity";
-static const char DRONE_STR_INPUT[] PROGMEM = "input";
-static const char DRONE_STR_INTERVAL[] PROGMEM = "interval";
-static const char DRONE_STR_INVERT[] PROGMEM = "invert";
-static const char DRONE_STR_IP[] PROGMEM = "IP";
-static const char DRONE_STR_LEFT[] PROGMEM = "left";
-static const char DRONE_STR_LIMITS[] PROGMEM = "limits";
-static const char DRONE_STR_LOADV[] PROGMEM = "loadV";
-static const char DRONE_STR_LOCATION[] PROGMEM = "location";
-static const char DRONE_STR_LOOPTO[] PROGMEM = "loopTo";
-static const char DRONE_STR_NAME[] PROGMEM = "name";
-static const char DRONE_STR_PID[] PROGMEM = "PID";
-static const char DRONE_STR_PINS[] PROGMEM = "pins";
-static const char DRONE_STR_PORT[] PROGMEM = "port";
-static const char DRONE_STR_POSITION[] PROGMEM = "position";
-static const char DRONE_STR_POWER[] PROGMEM = "power";
-static const char DRONE_STR_PRESSURE[] PROGMEM = "pressure";
-static const char DRONE_STR_PUBLISH[] PROGMEM = "publish";
-static const char DRONE_STR_PUBLISHRATE[] PROGMEM = "publishRate";
-static const char DRONE_STR_PWM_CHANNEL[] PROGMEM = "PWMChannel";
-static const char DRONE_STR_RESET[] PROGMEM = "reset";
-static const char DRONE_STR_RESETCOUNT[] PROGMEM = "resetCount";
-static const char DRONE_STR_RIGHT[] PROGMEM = "right";
-static const char DRONE_STR_RSSI[] PROGMEM = "RSSI";
-static const char DRONE_STR_SAMPLEINTERVAL[] PROGMEM = "sampleInterval";
-static const char DRONE_STR_SATELLITES[] PROGMEM = "satellites";
-static const char DRONE_STR_SCENE[] PROGMEM = "scene";
-static const char DRONE_STR_SCENES[] PROGMEM = "scenes";
-static const char DRONE_STR_SHUNTV[] PROGMEM = "shuntV";
-static const char DRONE_STR_SPEED[] PROGMEM = "speed";
-static const char DRONE_STR_STATUS[] PROGMEM = "status";
-static const char DRONE_STR_SUBSCRIBETO[] PROGMEM = "subs";
-static const char DRONE_STR_SUB1[] PROGMEM = "sub1";
-static const char DRONE_STR_SUB2[] PROGMEM = "sub2";
-static const char DRONE_STR_SUB3[] PROGMEM = "sub3";
-static const char DRONE_STR_SUB4[] PROGMEM = "sub4";
-static const char DRONE_STR_TARGET[] PROGMEM = "target";
-static const char DRONE_STR_TARGET_LOCATION[] PROGMEM = "targetLocation";
-static const char DRONE_STR_TELEMETRY[] PROGMEM = "telemetry";
-static const char DRONE_STR_TEMPERATURE[] PROGMEM = "temperature";
-static const char DRONE_STR_THRESHOLD[] PROGMEM = "threshold";
-static const char DRONE_STR_TRIM[] PROGMEM = "trim";
-static const char DRONE_STR_TURN_RATE[] PROGMEM = "turnRate";
-static const char DRONE_STR_TYPE[] PROGMEM = "type";
-static const char DRONE_STR_UPTIME[] PROGMEM = "uptime";
-static const char DRONE_STR_VECTOR[] PROGMEM = "vector";
-static const char DRONE_STR_WAYPOINTS[] PROGMEM = "waypoints";
-static const char DRONE_STR_WAYPOINT[] PROGMEM = "waypoint";
-static const char DRONE_STR_XAXIS[] PROGMEM = "xAxis";
-static const char DRONE_STR_YAXIS[] PROGMEM = "yAxis";
-static const char DRONE_STR_ZAXIS[] PROGMEM = "zAxis";
-
 // other
 #define DRONE_MODULE_RESET_INTERVAL  10000  // ms between reset attempts
 
@@ -215,7 +126,7 @@ public:
 
   virtual boolean isAlive();  // polled by watchdog, return true if everything ok
 
-  virtual void parsePins(JsonObject &obj, uint8_t *pins, uint8_t numPins);
+  //virtual void parsePins(JsonObject &obj, uint8_t *pins, uint8_t numPins);
   virtual void loadConfiguration(JsonObject &obj);
 
   boolean publishParamEntry(DRONE_PARAM_ENTRY *param);

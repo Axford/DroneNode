@@ -3,7 +3,7 @@
 #include "../DroneLinkManager.h"
 #include "../DroneModuleManager.h"
 #include "OLEDTomThumbFont.h"
-
+#include "strings.h"
 
 /*
 TODO
@@ -98,25 +98,25 @@ ControllerModule::ControllerModule(uint8_t id, DroneModuleManager* dmm, DroneLin
 
    param = &_params[CONTROLLER_PARAM_LEFT_E];
    param->param = CONTROLLER_PARAM_LEFT;
-   setParamName(FPSTR(DRONE_STR_LEFT), param);
+   setParamName(FPSTR(STRING_LEFT), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_UINT8_T, 1);
    param->data.uint8[0] = 4;
 
    param = &_params[CONTROLLER_PARAM_RIGHT_E];
    param->param = CONTROLLER_PARAM_RIGHT;
-   setParamName(FPSTR(DRONE_STR_RIGHT), param);
+   setParamName(FPSTR(STRING_RIGHT), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_UINT8_T, 1);
    param->data.uint8[0] = 5;
 
    param = &_params[CONTROLLER_PARAM_TELEMETRY_E];
    param->param = CONTROLLER_PARAM_TELEMETRY;
-   setParamName(FPSTR(DRONE_STR_TELEMETRY), param);
+   setParamName(FPSTR(STRING_TELEMETRY), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_UINT8_T, 1);
    param->data.uint8[0] = 6;
 
    param = &_params[CONTROLLER_PARAM_POWER_E];
    param->param = CONTROLLER_PARAM_POWER;
-   setParamName(FPSTR(DRONE_STR_POWER), param);
+   setParamName(FPSTR(STRING_POWER), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_UINT8_T, 1);
    param->data.uint8[0] = 9;
 }
@@ -420,8 +420,8 @@ void ControllerModule::loadConfiguration(JsonObject &obj) {
   _display = new SSD1306Wire(_addr, SDA, SCL);
 
   // read joystick channels
-  _params[CONTROLLER_PARAM_LEFT_E].data.uint8[0] = obj[DRONE_STR_LEFT] | _params[CONTROLLER_PARAM_LEFT_E].data.uint8[0];
-  _params[CONTROLLER_PARAM_RIGHT_E].data.uint8[0] = obj[DRONE_STR_RIGHT] | _params[CONTROLLER_PARAM_RIGHT_E].data.uint8[0];
+  _params[CONTROLLER_PARAM_LEFT_E].data.uint8[0] = obj[STRING_LEFT] | _params[CONTROLLER_PARAM_LEFT_E].data.uint8[0];
+  _params[CONTROLLER_PARAM_RIGHT_E].data.uint8[0] = obj[STRING_RIGHT] | _params[CONTROLLER_PARAM_RIGHT_E].data.uint8[0];
 
   // make sure we're subscribed to the joystick channels
   _dlm->subscribe(_params[CONTROLLER_PARAM_LEFT_E].data.uint8[0], this, DRONE_LINK_PARAM_ALL);

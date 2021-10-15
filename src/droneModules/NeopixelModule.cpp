@@ -1,7 +1,7 @@
 #include "NeopixelModule.h"
 #include "../DroneLinkMsg.h"
 #include "../DroneLinkManager.h"
-
+#include "strings.h"
 
 NeopixelModule::NeopixelModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm):
   DroneModule ( id, dmm, dlm )
@@ -24,7 +24,7 @@ NeopixelModule::NeopixelModule(uint8_t id, DroneModuleManager* dmm, DroneLinkMan
    sub = &_subs[NEOPIXEL_SUB_SCENE_E];
    sub->addrParam = NEOPIXEL_SUB_SCENE_ADDR;
    sub->param.param = NEOPIXEL_SUB_SCENE;
-   setParamName(FPSTR(DRONE_STR_SCENE), &sub->param);
+   setParamName(FPSTR(STRING_SCENE), &sub->param);
    sub->param.paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_UINT8_T, 16);
 
    initScene((NEOPIXEL_SCENE*)&sub->param.data.c);
@@ -32,7 +32,7 @@ NeopixelModule::NeopixelModule(uint8_t id, DroneModuleManager* dmm, DroneLinkMan
    sub = &_subs[NEOPIXEL_SUB_ACTIVESCENE_E];
    sub->addrParam = NEOPIXEL_SUB_ACTIVESCENE_ADDR;
    sub->param.param = NEOPIXEL_SUB_ACTIVESCENE;
-   setParamName(FPSTR(DRONE_STR_ACTIVESCENE), &sub->param);
+   setParamName(FPSTR(STRING_ACTIVESCENE), &sub->param);
    sub->param.paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_UINT8_T, 1);
    sub->param.data.uint8[0] = 0;
 
@@ -44,7 +44,7 @@ NeopixelModule::NeopixelModule(uint8_t id, DroneModuleManager* dmm, DroneLinkMan
    for (uint8_t i=0; i < NEOPIXEL_PARAM_ENTRIES; i++) {
      param = &_params[NEOPIXEL_PARAM_SCENE0_E + i];
      param->param = NEOPIXEL_PARAM_SCENE0 + i;
-     setParamName(FPSTR(DRONE_STR_SCENE), param);
+     setParamName(FPSTR(STRING_SCENE), param);
      param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_UINT8_T, 16);
      NEOPIXEL_SCENE *scene = (NEOPIXEL_SCENE*)&param->data.c;
      initScene(scene);
@@ -86,9 +86,9 @@ void NeopixelModule::loadConfiguration(JsonObject &obj) {
   // TODO: think about best way to define/load colour order
 
   // load scenes
-  if (obj.containsKey(DRONE_STR_SCENES)) {
-    Log.noticeln(DRONE_STR_SCENES);
-    JsonArray array = obj[DRONE_STR_SCENES].as<JsonArray>();
+  if (obj.containsKey(STRING_SCENES)) {
+    Log.noticeln(STRING_SCENES);
+    JsonArray array = obj[STRING_SCENES].as<JsonArray>();
 
     uint8_t i = 0;
     for(JsonVariant v : array) {

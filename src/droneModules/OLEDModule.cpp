@@ -3,6 +3,7 @@
 #include "../DroneLinkManager.h"
 #include "../DroneModuleManager.h"
 #include "OLEDTomThumbFont.h"
+#include "strings.h"
 
 OLEDModule::OLEDModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm):
   I2CBaseModule ( id, dmm, dlm )
@@ -30,22 +31,22 @@ OLEDModule::OLEDModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dl
    sub = &_subs[OLED_SUB_SUB1_E];
    sub->addrParam = OLED_SUB_SUB1_ADDR;
    sub->param.param = OLED_SUB_SUB1;
-   setParamName(FPSTR(DRONE_STR_SUB1), &sub->param);
+   setParamName(FPSTR(STRING_SUB1), &sub->param);
 
    sub = &_subs[OLED_SUB_SUB2_E];
    sub->addrParam = OLED_SUB_SUB2_ADDR;
    sub->param.param = OLED_SUB_SUB2;
-   setParamName(FPSTR(DRONE_STR_SUB2), &sub->param);
+   setParamName(FPSTR(STRING_SUB2), &sub->param);
 
    sub = &_subs[OLED_SUB_SUB3_E];
    sub->addrParam = OLED_SUB_SUB3_ADDR;
    sub->param.param = OLED_SUB_SUB3;
-   setParamName(FPSTR(DRONE_STR_SUB3), &sub->param);
+   setParamName(FPSTR(STRING_SUB3), &sub->param);
 
    sub = &_subs[OLED_SUB_SUB4_E];
    sub->addrParam = OLED_SUB_SUB4_ADDR;
    sub->param.param = OLED_SUB_SUB4;
-   setParamName(FPSTR(DRONE_STR_SUB4), &sub->param);
+   setParamName(FPSTR(STRING_SUB4), &sub->param);
 }
 
 OLEDModule::~OLEDModule() {

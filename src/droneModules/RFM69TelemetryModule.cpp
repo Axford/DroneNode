@@ -3,7 +3,7 @@
 #include "../DroneLinkManager.h"
 #include "WiFi.h"
 #include "../pinConfig.h"
-
+#include "strings.h"
 #include "RFM69registers.h"
 
 RFM69TelemetryModule::RFM69TelemetryModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm):
@@ -21,7 +21,7 @@ RFM69TelemetryModule::RFM69TelemetryModule(uint8_t id, DroneModuleManager* dmm, 
 
    param = &_params[RFM69_TELEMETRY_PARAM_RSSI_E];
    param->param = RFM69_TELEMETRY_PARAM_RSSI;
-   setParamName(FPSTR(DRONE_STR_RSSI), param);
+   setParamName(FPSTR(STRING_RSSI), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 4);
 
 }

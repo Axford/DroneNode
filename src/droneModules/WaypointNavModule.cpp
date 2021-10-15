@@ -1,7 +1,7 @@
 #include "WaypointNavModule.h"
 #include "../DroneLinkMsg.h"
 #include "../DroneLinkManager.h"
-
+#include "strings.h"
 
 WaypointNavModule::WaypointNavModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm):
   DroneModule ( id, dmm, dlm )
@@ -34,42 +34,42 @@ WaypointNavModule::WaypointNavModule(uint8_t id, DroneModuleManager* dmm, DroneL
    }
 
    _params[WAYPOINT_NAV_PARAM_TARGET_E].param = WAYPOINT_NAV_PARAM_TARGET;
-   _params[WAYPOINT_NAV_PARAM_TARGET_E].name = FPSTR(DRONE_STR_TARGET);
-   _params[WAYPOINT_NAV_PARAM_TARGET_E].nameLen = sizeof(DRONE_STR_TARGET);
+   _params[WAYPOINT_NAV_PARAM_TARGET_E].name = FPSTR(STRING_TARGET);
+   _params[WAYPOINT_NAV_PARAM_TARGET_E].nameLen = sizeof(STRING_TARGET);
    _params[WAYPOINT_NAV_PARAM_TARGET_E].paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 12);
 
    _params[WAYPOINT_NAV_PARAM_LOCATION_E].param = WAYPOINT_NAV_PARAM_LOCATION;
-   _params[WAYPOINT_NAV_PARAM_LOCATION_E].name = FPSTR(DRONE_STR_LOCATION);
-   _params[WAYPOINT_NAV_PARAM_LOCATION_E].nameLen = sizeof(DRONE_STR_LOCATION);
+   _params[WAYPOINT_NAV_PARAM_LOCATION_E].name = FPSTR(STRING_LOCATION);
+   _params[WAYPOINT_NAV_PARAM_LOCATION_E].nameLen = sizeof(STRING_LOCATION);
    _params[WAYPOINT_NAV_PARAM_LOCATION_E].paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_FLOAT, 8);
 
    _params[WAYPOINT_NAV_PARAM_HEADING_E].param = WAYPOINT_NAV_PARAM_HEADING;
-   _params[WAYPOINT_NAV_PARAM_HEADING_E].name = FPSTR(DRONE_STR_HEADING);
-   _params[WAYPOINT_NAV_PARAM_HEADING_E].nameLen = sizeof(DRONE_STR_HEADING);
+   _params[WAYPOINT_NAV_PARAM_HEADING_E].name = FPSTR(STRING_HEADING);
+   _params[WAYPOINT_NAV_PARAM_HEADING_E].nameLen = sizeof(STRING_HEADING);
    _params[WAYPOINT_NAV_PARAM_HEADING_E].publish = true;
    _params[WAYPOINT_NAV_PARAM_HEADING_E].paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 4);
 
    _params[WAYPOINT_NAV_PARAM_DISTANCE_E].param = WAYPOINT_NAV_PARAM_DISTANCE;
-   _params[WAYPOINT_NAV_PARAM_DISTANCE_E].name = FPSTR(DRONE_STR_DISTANCE);
-   _params[WAYPOINT_NAV_PARAM_DISTANCE_E].nameLen = sizeof(DRONE_STR_DISTANCE);
+   _params[WAYPOINT_NAV_PARAM_DISTANCE_E].name = FPSTR(STRING_DISTANCE);
+   _params[WAYPOINT_NAV_PARAM_DISTANCE_E].nameLen = sizeof(STRING_DISTANCE);
    _params[WAYPOINT_NAV_PARAM_DISTANCE_E].publish = true;
    _params[WAYPOINT_NAV_PARAM_DISTANCE_E].paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 4);
 
    _params[WAYPOINT_NAV_PARAM_WAYPOINTS_E].param = WAYPOINT_NAV_PARAM_WAYPOINTS;
-   _params[WAYPOINT_NAV_PARAM_WAYPOINTS_E].name = FPSTR(DRONE_STR_WAYPOINTS);
-   _params[WAYPOINT_NAV_PARAM_WAYPOINTS_E].nameLen = sizeof(DRONE_STR_WAYPOINTS);
+   _params[WAYPOINT_NAV_PARAM_WAYPOINTS_E].name = FPSTR(STRING_WAYPOINTS);
+   _params[WAYPOINT_NAV_PARAM_WAYPOINTS_E].nameLen = sizeof(STRING_WAYPOINTS);
    _params[WAYPOINT_NAV_PARAM_WAYPOINTS_E].paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_UINT8_T, 1);
    _params[WAYPOINT_NAV_PARAM_WAYPOINTS_E].data.uint8[0] = _allocatedWaypoints;
 
    _params[WAYPOINT_NAV_PARAM_WAYPOINT_E].param = WAYPOINT_NAV_PARAM_WAYPOINT;
-   _params[WAYPOINT_NAV_PARAM_WAYPOINT_E].name = FPSTR(DRONE_STR_WAYPOINT);
-   _params[WAYPOINT_NAV_PARAM_WAYPOINT_E].nameLen = sizeof(DRONE_STR_WAYPOINT);
+   _params[WAYPOINT_NAV_PARAM_WAYPOINT_E].name = FPSTR(STRING_WAYPOINT);
+   _params[WAYPOINT_NAV_PARAM_WAYPOINT_E].nameLen = sizeof(STRING_WAYPOINT);
    _params[WAYPOINT_NAV_PARAM_WAYPOINT_E].paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_UINT8_T, 1);
    _params[WAYPOINT_NAV_PARAM_WAYPOINT_E].data.uint8[0] = 0;
 
    _params[WAYPOINT_NAV_PARAM_LOOPTO_E].param = WAYPOINT_NAV_PARAM_LOOPTO;
-   _params[WAYPOINT_NAV_PARAM_LOOPTO_E].name = FPSTR(DRONE_STR_LOOPTO);
-   _params[WAYPOINT_NAV_PARAM_LOOPTO_E].nameLen = sizeof(DRONE_STR_LOOPTO);
+   _params[WAYPOINT_NAV_PARAM_LOOPTO_E].name = FPSTR(STRING_LOOPTO);
+   _params[WAYPOINT_NAV_PARAM_LOOPTO_E].nameLen = sizeof(STRING_LOOPTO);
    _params[WAYPOINT_NAV_PARAM_LOOPTO_E].paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_UINT8_T, 1);
    _params[WAYPOINT_NAV_PARAM_LOOPTO_E].data.uint8[0] = 0;
 }
@@ -77,8 +77,8 @@ WaypointNavModule::WaypointNavModule(uint8_t id, DroneModuleManager* dmm, DroneL
 
 void WaypointNavModule::initWaypoint(uint8_t i) {
   _waypoints[i].param = WAYPOINT_NAV_PARAM_WAYPOINTS_START + i;
-  _waypoints[i].name = FPSTR(DRONE_STR_TARGET);
-  _waypoints[i].nameLen = sizeof(DRONE_STR_TARGET);
+  _waypoints[i].name = FPSTR(STRING_TARGET);
+  _waypoints[i].nameLen = sizeof(STRING_TARGET);
   _waypoints[i].paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_FLOAT, 12);
   _waypoints[i].publish = true;
   _waypoints[i].data.f[0] = 0;
@@ -107,19 +107,19 @@ void WaypointNavModule::onParamWrite(DRONE_PARAM_ENTRY *param) {
 void WaypointNavModule::loadConfiguration(JsonObject &obj) {
   DroneModule::loadConfiguration(obj);
 
-  _location = DroneLinkMsg::parseAddress( obj[DRONE_STR_LOCATION] );
+  _location = DroneLinkMsg::parseAddress( obj[STRING_LOCATION] );
   if (_location.param != 255) {
     // make read-only
     _params[WAYPOINT_NAV_PARAM_LOCATION_E].paramTypeLength &= ~DRONE_LINK_MSG_WRITABLE;
   }
 
   // loopTo
-  _params[WAYPOINT_NAV_PARAM_LOOPTO_E].data.uint8[0] = obj[DRONE_STR_LOOPTO] | _params[WAYPOINT_NAV_PARAM_LOOPTO_E].data.uint8[0];
+  _params[WAYPOINT_NAV_PARAM_LOOPTO_E].data.uint8[0] = obj[STRING_LOOPTO] | _params[WAYPOINT_NAV_PARAM_LOOPTO_E].data.uint8[0];
 
   // load waypoints
-  if (obj.containsKey(DRONE_STR_WAYPOINTS)) {
-    Log.noticeln(DRONE_STR_WAYPOINTS);
-    JsonArray array = obj[DRONE_STR_WAYPOINTS].as<JsonArray>();
+  if (obj.containsKey(STRING_WAYPOINTS)) {
+    Log.noticeln(STRING_WAYPOINTS);
+    JsonArray array = obj[STRING_WAYPOINTS].as<JsonArray>();
 
     // init memory
     _allocatedWaypoints = array.size();

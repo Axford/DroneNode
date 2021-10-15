@@ -1,7 +1,7 @@
 #include "BME280Module.h"
 #include "../DroneLinkMsg.h"
 #include "../DroneLinkManager.h"
-
+#include "strings.h"
 
 BME280Module::BME280Module(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm):
   I2CBaseModule ( id, dmm, dlm )
@@ -25,20 +25,20 @@ BME280Module::BME280Module(uint8_t id, DroneModuleManager* dmm, DroneLinkManager
 
    // init param entries
    _params[BME280_PARAM_TEMPERATURE_E].param = BME280_PARAM_TEMPERATURE;
-   _params[BME280_PARAM_TEMPERATURE_E].name = FPSTR(DRONE_STR_TEMPERATURE);
-   _params[BME280_PARAM_TEMPERATURE_E].nameLen = sizeof(DRONE_STR_TEMPERATURE);
+   _params[BME280_PARAM_TEMPERATURE_E].name = FPSTR(STRING_TEMPERATURE);
+   _params[BME280_PARAM_TEMPERATURE_E].nameLen = sizeof(STRING_TEMPERATURE);
 
    _params[BME280_PARAM_HUMIDITY_E].param = BME280_PARAM_HUMIDITY;
-   _params[BME280_PARAM_HUMIDITY_E].name = FPSTR(DRONE_STR_HUMIDITY);
-   _params[BME280_PARAM_HUMIDITY_E].nameLen = sizeof(DRONE_STR_HUMIDITY);
+   _params[BME280_PARAM_HUMIDITY_E].name = FPSTR(STRING_HUMIDITY);
+   _params[BME280_PARAM_HUMIDITY_E].nameLen = sizeof(STRING_HUMIDITY);
 
    _params[BME280_PARAM_PRESSURE_E].param = BME280_PARAM_PRESSURE;
-   _params[BME280_PARAM_PRESSURE_E].name = FPSTR(DRONE_STR_PRESSURE);
-   _params[BME280_PARAM_PRESSURE_E].nameLen = sizeof(DRONE_STR_PRESSURE);
+   _params[BME280_PARAM_PRESSURE_E].name = FPSTR(STRING_PRESSURE);
+   _params[BME280_PARAM_PRESSURE_E].nameLen = sizeof(STRING_PRESSURE);
 
    _params[BME280_PARAM_ALTITUDE_E].param = BME280_PARAM_ALTITUDE;
-   _params[BME280_PARAM_ALTITUDE_E].name = FPSTR(DRONE_STR_ALTITUDE);
-   _params[BME280_PARAM_ALTITUDE_E].nameLen = sizeof(DRONE_STR_ALTITUDE);
+   _params[BME280_PARAM_ALTITUDE_E].name = FPSTR(STRING_ALTITUDE);
+   _params[BME280_PARAM_ALTITUDE_E].nameLen = sizeof(STRING_ALTITUDE);
 }
 
 

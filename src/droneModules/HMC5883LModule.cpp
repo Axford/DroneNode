@@ -1,7 +1,7 @@
 #include "HMC5883LModule.h"
 #include "../DroneLinkMsg.h"
 #include "../DroneLinkManager.h"
-
+#include "strings.h"
 #include <SPIFFS.h>
 
 
@@ -24,35 +24,35 @@ HMC5883LModule::HMC5883LModule(uint8_t id, DroneModuleManager* dmm, DroneLinkMan
    sub = &_subs[HMC5883L_SUB_LOCATION_E];
    sub->addrParam = HMC5883L_SUB_LOCATION_ADDR;
    sub->param.param = HMC5883L_SUB_LOCATION;
-   setParamName(FPSTR(DRONE_STR_LOCATION), &sub->param);
+   setParamName(FPSTR(STRING_LOCATION), &sub->param);
 
    // pubs
    initParams(HMC5883L_PARAM_ENTRIES);
 
    // init param entries
    _params[HMC5883L_PARAM_VECTOR_E].param = HMC5883L_PARAM_VECTOR;
-   _params[HMC5883L_PARAM_VECTOR_E].name = FPSTR(DRONE_STR_VECTOR);
-   _params[HMC5883L_PARAM_VECTOR_E].nameLen = sizeof(DRONE_STR_VECTOR);
+   _params[HMC5883L_PARAM_VECTOR_E].name = FPSTR(STRING_VECTOR);
+   _params[HMC5883L_PARAM_VECTOR_E].nameLen = sizeof(STRING_VECTOR);
    _params[HMC5883L_PARAM_VECTOR_E].paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 12);
 
    _params[HMC5883L_PARAM_HEADING_E].param = HMC5883L_PARAM_HEADING;
-   _params[HMC5883L_PARAM_HEADING_E].name = FPSTR(DRONE_STR_HEADING);
-   _params[HMC5883L_PARAM_HEADING_E].nameLen = sizeof(DRONE_STR_HEADING);
+   _params[HMC5883L_PARAM_HEADING_E].name = FPSTR(STRING_HEADING);
+   _params[HMC5883L_PARAM_HEADING_E].nameLen = sizeof(STRING_HEADING);
    _params[HMC5883L_PARAM_HEADING_E].paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 4);
 
    _params[HMC5883L_PARAM_DECLINATION_E].param = HMC5883L_PARAM_DECLINATION;
-   _params[HMC5883L_PARAM_DECLINATION_E].name = FPSTR(DRONE_STR_DECLINATION);
-   _params[HMC5883L_PARAM_DECLINATION_E].nameLen = sizeof(DRONE_STR_DECLINATION);
+   _params[HMC5883L_PARAM_DECLINATION_E].name = FPSTR(STRING_DECLINATION);
+   _params[HMC5883L_PARAM_DECLINATION_E].nameLen = sizeof(STRING_DECLINATION);
    _params[HMC5883L_PARAM_DECLINATION_E].data.f[0] = 0;
 
    _params[HMC5883L_PARAM_CALIB_X_E].param = HMC5883L_PARAM_CALIB_X;
-   _params[HMC5883L_PARAM_CALIB_X_E].name = FPSTR(DRONE_STR_CALIB_X);
-   _params[HMC5883L_PARAM_CALIB_X_E].nameLen = sizeof(DRONE_STR_CALIB_X);
+   _params[HMC5883L_PARAM_CALIB_X_E].name = FPSTR(STRING_CALIB_X);
+   _params[HMC5883L_PARAM_CALIB_X_E].nameLen = sizeof(STRING_CALIB_X);
    _params[HMC5883L_PARAM_CALIB_X_E].paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 12);
 
    _params[HMC5883L_PARAM_CALIB_Y_E].param = HMC5883L_PARAM_CALIB_Y;
-   _params[HMC5883L_PARAM_CALIB_Y_E].name = FPSTR(DRONE_STR_CALIB_Y);
-   _params[HMC5883L_PARAM_CALIB_Y_E].nameLen = sizeof(DRONE_STR_CALIB_Y);
+   _params[HMC5883L_PARAM_CALIB_Y_E].name = FPSTR(STRING_CALIB_Y);
+   _params[HMC5883L_PARAM_CALIB_Y_E].nameLen = sizeof(STRING_CALIB_Y);
    _params[HMC5883L_PARAM_CALIB_Y_E].paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 12);
 
 }
@@ -81,23 +81,23 @@ void HMC5883LModule::loadConfiguration(JsonObject &obj) {
   _sensor = new Adafruit_HMC5883_Unified(_id);
 
   // read default declination
-  if (obj.containsKey(DRONE_STR_DECLINATION)) {
-    _params[HMC5883L_PARAM_CALIB_X_E].data.f[0] = obj[DRONE_STR_DECLINATION];
+  if (obj.containsKey(STRING_DECLINATION)) {
+    _params[HMC5883L_PARAM_CALIB_X_E].data.f[0] = obj[STRING_DECLINATION];
   }
 
   // read calibration values
-  if (obj.containsKey(DRONE_STR_CALIB_X)) {
-    Log.noticeln(DRONE_STR_CALIB_X);
-    JsonArray array = obj[DRONE_STR_CALIB_X].as<JsonArray>();
+  if (obj.containsKey(STRING_CALIB_X)) {
+    Log.noticeln(STRING_CALIB_X);
+    JsonArray array = obj[STRING_CALIB_X].as<JsonArray>();
     if (array.size()==2) {
       _params[HMC5883L_PARAM_CALIB_X_E].data.f[0] = array[0];
       _params[HMC5883L_PARAM_CALIB_X_E].data.f[2] = array[1];
     }
   }
 
-  if (obj.containsKey(DRONE_STR_CALIB_Y)) {
-    Log.noticeln(DRONE_STR_CALIB_Y);
-    JsonArray array = obj[DRONE_STR_CALIB_Y].as<JsonArray>();
+  if (obj.containsKey(STRING_CALIB_Y)) {
+    Log.noticeln(STRING_CALIB_Y);
+    JsonArray array = obj[STRING_CALIB_Y].as<JsonArray>();
     if (array.size()==2) {
       _params[HMC5883L_PARAM_CALIB_Y_E].data.f[0] = array[0];
       _params[HMC5883L_PARAM_CALIB_Y_E].data.f[2] = array[1];

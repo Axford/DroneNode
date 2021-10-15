@@ -182,6 +182,24 @@ uint8_t DroneLinkManager::minPeer() {
   return _minPeer;
 }
 
+uint8_t DroneLinkManager::getNodeByName(char * name) {
+  DRONE_LINK_NODE_PAGE *page;
+  for (uint8_t i=0; i<DRONE_LINK_NODE_PAGES; i++) {
+    page = _nodePages[i];
+    if (page != NULL) {
+      for (uint8_t j=0; j<DRONE_LINK_NODE_PAGE_SIZE; j++) {
+        if (page->nodeInfo[j].name != NULL) {
+          if (strcmp(page->nodeInfo[j].name, name) ==0) {
+            uint8_t id = (i << 4) + j;
+            return id;
+          }
+        }
+      }
+    }
+  }
+  return 0;
+}
+
 DRONE_LINK_NODE_INFO* DroneLinkManager::getNodeInfo(uint8_t source) {
   // get page
   uint8_t pageIndex = source >> 4;  // div by 16

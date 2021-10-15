@@ -2,6 +2,7 @@
 #include "../DroneLinkMsg.h"
 #include "../DroneLinkManager.h"
 #include "../pinConfig.h"
+#include "strings.h"
 
 NMEAModule::NMEAModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm):
   DroneModule ( id, dmm, dlm )
@@ -25,34 +26,34 @@ NMEAModule::NMEAModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dl
 
    //nmea.setUnknownSentenceHandler(printUnknownSentence);
    _params[NMEA_PARAM_LOCATION_E].param = NMEA_PARAM_LOCATION;
-   _params[NMEA_PARAM_LOCATION_E].name = FPSTR(DRONE_STR_LOCATION);
-   _params[NMEA_PARAM_LOCATION_E].nameLen = sizeof(DRONE_STR_LOCATION);
+   _params[NMEA_PARAM_LOCATION_E].name = FPSTR(STRING_LOCATION);
+   _params[NMEA_PARAM_LOCATION_E].nameLen = sizeof(STRING_LOCATION);
    _params[NMEA_PARAM_LOCATION_E].paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 12);
    _params[NMEA_PARAM_LOCATION_E].data.f[0] = 0;
    _params[NMEA_PARAM_LOCATION_E].data.f[1] = 0;
    _params[NMEA_PARAM_LOCATION_E].data.f[2] = 0;
 
    _params[NMEA_PARAM_SATELLITES_E].param = NMEA_PARAM_SATELLITES;
-   _params[NMEA_PARAM_SATELLITES_E].name = FPSTR(DRONE_STR_SATELLITES);
-   _params[NMEA_PARAM_SATELLITES_E].nameLen = sizeof(DRONE_STR_SATELLITES);
+   _params[NMEA_PARAM_SATELLITES_E].name = FPSTR(STRING_SATELLITES);
+   _params[NMEA_PARAM_SATELLITES_E].nameLen = sizeof(STRING_SATELLITES);
    _params[NMEA_PARAM_SATELLITES_E].paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_UINT8_T, 1);
    _params[NMEA_PARAM_SATELLITES_E].data.uint8[0] = 0;
 
    _params[NMEA_PARAM_HEADING_E].param = NMEA_PARAM_HEADING;
-   _params[NMEA_PARAM_HEADING_E].name = FPSTR(DRONE_STR_HEADING);
-   _params[NMEA_PARAM_HEADING_E].nameLen = sizeof(DRONE_STR_HEADING);
+   _params[NMEA_PARAM_HEADING_E].name = FPSTR(STRING_HEADING);
+   _params[NMEA_PARAM_HEADING_E].nameLen = sizeof(STRING_HEADING);
    _params[NMEA_PARAM_HEADING_E].paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 4);
    _params[NMEA_PARAM_HEADING_E].data.f[0] = 0;
 
    _params[NMEA_PARAM_SPEED_E].param = NMEA_PARAM_SPEED;
-   _params[NMEA_PARAM_SPEED_E].name = FPSTR(DRONE_STR_SPEED);
-   _params[NMEA_PARAM_SPEED_E].nameLen = sizeof(DRONE_STR_SPEED);
+   _params[NMEA_PARAM_SPEED_E].name = FPSTR(STRING_SPEED);
+   _params[NMEA_PARAM_SPEED_E].nameLen = sizeof(STRING_SPEED);
    _params[NMEA_PARAM_SPEED_E].paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 4);
    _params[NMEA_PARAM_SPEED_E].data.f[0] = 0;
 
    _params[NMEA_PARAM_HDOP_E].param = NMEA_PARAM_HDOP;
-   _params[NMEA_PARAM_HDOP_E].name = FPSTR(DRONE_STR_HDOP);
-   _params[NMEA_PARAM_HDOP_E].nameLen = sizeof(DRONE_STR_HDOP);
+   _params[NMEA_PARAM_HDOP_E].name = FPSTR(STRING_HDOP);
+   _params[NMEA_PARAM_HDOP_E].nameLen = sizeof(STRING_HDOP);
    _params[NMEA_PARAM_HDOP_E].paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_UINT8_T, 1);
    _params[NMEA_PARAM_HDOP_E].data.uint8[0] = 0;
 }
@@ -61,14 +62,14 @@ NMEAModule::NMEAModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dl
 void NMEAModule::loadConfiguration(JsonObject &obj) {
   DroneModule::loadConfiguration(obj);
 
-  _portNum = obj[DRONE_STR_PORT] | _portNum;
+  _portNum = obj[STRING_PORT] | _portNum;
   switch(_portNum) {
     case 0: setPort(&Serial); break;
     case 1: setPort(&Serial1); break;
     case 2: setPort(&Serial2); break;
   }
 
-  _baud = obj[DRONE_STR_BAUD] | _baud;
+  _baud = obj[STRING_BAUD] | _baud;
 }
 
 void NMEAModule::setup() {
