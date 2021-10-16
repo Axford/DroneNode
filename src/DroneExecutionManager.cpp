@@ -26,13 +26,13 @@ DEM_ENUM_MAPPING DEM_ENUM_TABLE[] PROGMEM = {
 DroneExecutionManager::DroneExecutionManager(DroneModuleManager *dmm, DroneLinkManager *dlm) {
   _dmm = dmm;
   _dlm = dlm;
-  _scriptLoaded = false;
-  _callStackPointer = -1;
-  _dataStackPointer = -1;
+  _call.p = -1;
+  _data.p = -1;
 
   _instruction.ns = 0;
   _instruction.command[0] = '_';
   _instruction.command[1] = '_';
+  _instruction.command[2] = 0;
   _instruction.addr.node = dlm->node();
   _instruction.addr.channel = 0;
   _instruction.addr.param = 0;
@@ -40,12 +40,30 @@ DroneExecutionManager::DroneExecutionManager(DroneModuleManager *dmm, DroneLinkM
   _instruction.numTokens = 0;
 
   _channelContext = 0;
+
+  // register core commands
+  DEM_NAMESPACE *core = createNamespace(PSTR("core"),0);
+
+  using std::placeholders::_1;
+  using std::placeholders::_2;
+  using std::placeholders::_3;
+  using std::placeholders::_4;
+
+  registerCommand(core, PSTR("AL"), std::bind(&DroneExecutionManager::core_AL, this, _1, _2, _3, _4));
+  registerCommand(core, PSTR("AM"), std::bind(&DroneExecutionManager::core_AM, this, _1, _2, _3, _4));
+
+  registerCommand(core, PSTR("FC"), std::bind(&DroneExecutionManager::core_FC, this, _1, _2, _3, _4));
 }
 
 
 
 // looks up macro by name, returns null if not found
 DEM_MACRO* DroneExecutionManager::getMacro(const char* name) {
+  DEM_MACRO* m;
+  for(int i = 0; i < _macros.size(); i++){
+    m = _macros.get(i);
+    if (strcmp(m->name, name) == 0) return m;
+  }
   return NULL;
 }
 
@@ -53,12 +71,92 @@ DEM_MACRO* DroneExecutionManager::getMacro(const char* name) {
 // allocates memory, adds to list and returns new macro
 // or returns existing macro address if already created
 DEM_MACRO* DroneExecutionManager::createMacro(const char* name) {
+  DEM_MACRO* res = getMacro(name);
+
+  if (res == NULL) {
+    res =  (DEM_MACRO*)malloc(sizeof(DEM_MACRO));
+    strcpy(res->name, name);
+    res->eventAddr.node = 0;
+    res->eventAddr.channel = 0;
+    res->eventAddr.param = 0;
+    res->commands = new IvanLinkedList::LinkedList<DEM_INSTRUCTION_COMPILED>();
+
+    _macros.add(res);
+  }
+
+  return res;
+}
+
+
+DEM_NAMESPACE* DroneExecutionManager::getNamespace(const char* name) {
+  DEM_NAMESPACE* n;
+  for(int i = 0; i < _namespaces.size(); i++){
+    n = _namespaces.get(i);
+    if (strcmp(n->name, name) == 0) return n;
+  }
   return NULL;
+}
+
+DEM_NAMESPACE* DroneExecutionManager::createNamespace(const char* name, uint8_t module) {
+  DEM_NAMESPACE* res = getNamespace(name);
+
+  if (res == NULL) {
+    res =  (DEM_NAMESPACE*)malloc(sizeof(DEM_NAMESPACE));
+    strcpy(res->name, name);
+    res->module = module;
+    res->commands = new IvanLinkedList::LinkedList<DEM_COMMAND>();
+
+    _namespaces.add(res);
+  }
+
+  return res;
+}
+
+void DroneExecutionManager::registerCommand(DEM_NAMESPACE* ns, const char* command, DEMCommandHandler handler) {
+  if (ns == NULL || command == NULL || handler == NULL) return;
+
+  DEM_COMMAND temp;
+  temp.str = command;
+  temp.handler = handler;
+  ns->commands->add(temp);
+}
+
+DEM_COMMAND DroneExecutionManager::getCommand(DEM_NAMESPACE* ns, const char* command) {
+  DEM_COMMAND cmd;
+  Serial.printf("Finding handler for %s\n", command);
+  if (ns != NULL) {
+    for(int i = 0; i < ns->commands->size(); i++){
+      cmd = ns->commands->get(i);
+      if (strcmp(cmd.str, command) == 0) {
+        Serial.printf("Found matching handler for %s\n", command);
+        return cmd;
+      }
+    }
+  }
+  Serial.println("No handler found");
+  cmd.handler = NULL;
+  cmd.str = NULL;
+  return cmd;
+}
+
+
+void DroneExecutionManager::callStackPush(DEM_CALLSTACK_ENTRY entry) {
+  if (_call.p < DEM_CALLSTACK_SIZE-1) {
+    _call.p++;
+    _call.stack[_call.p] = entry;
+  } else {
+    Log.errorln("Call stack full");
+  }
+}
+
+
+void DroneExecutionManager::callStackPop() {
+  if (_call.p > -1) _call.p--;
 }
 
 
 void DroneExecutionManager::printInstruction(DEM_INSTRUCTION * instruction) {
-  Serial.print("NS: "); Serial.print(instruction->ns);
+  //Serial.print("NS: "); Serial.print(instruction->ns);
   Serial.print(", C: "); Serial.print(instruction->command[0]); Serial.print(instruction->command[1]);
   Serial.print(", ");
   Serial.print(instruction->addr.node);
@@ -132,6 +230,8 @@ boolean DroneExecutionManager::load(const char * filename) {
 
   Log.noticeln(F("[DEM] Load %s"), filename);
   if (SPIFFS.exists(filename)) {
+    uint32_t startTime = millis();
+
     _file = SPIFFS.open(filename, FILE_READ);
 
     if(!_file){
@@ -139,11 +239,50 @@ boolean DroneExecutionManager::load(const char * filename) {
         return false;
     }
 
-    // script seems legit
-    _filename = filename;
-    _scriptLoaded = true;
-
     Log.noticeln(F("[DEM] File open, size: %u"), _file.size());
+
+    // crete new macro
+    DEM_MACRO *m = createMacro(filename);
+
+    // TODO - parse, compile and store
+    char readBuffer[128];
+    uint8_t rp =0;  //read buffer position
+    DEM_INSTRUCTION_COMPILED instr;
+
+    while(_file.available()) {
+      char c = _file.read();
+      switch(c) {
+        case '\n':
+          // end of line, parse the readBuffer
+          if (rp > 0) {
+            // ensure line is terminated
+            readBuffer[rp] = 0;
+            Serial.println("");
+            Serial.println("Compiling line...");
+            if (compileLine(readBuffer, &instr)) {
+              // store the compiled line
+              m->commands->add(instr);
+            }
+          }
+          rp = 0;
+          break;
+        case '\r': break; // ignore
+        default:
+          if (rp < 126) {
+            readBuffer[rp] = c;
+            Serial.print(c);
+            rp++;
+          } else {
+            Log.errorln("buffer limit reached in load");
+          }
+
+      }
+    }
+
+    //
+
+    uint32_t duration = millis() - startTime;
+    Log.noticeln(F("[DEM] Load complete: %u commands, %u ms"), m->commands->size(), duration);
 
     return true;
   } else {
@@ -158,15 +297,10 @@ boolean DroneExecutionManager::tokenContainsNumber(char tokenStart) {
 }
 
 
-void DroneExecutionManager::executeNextLine() {
-  uint32_t startTime = millis();
+boolean DroneExecutionManager::compileLine(const char * line, DEM_INSTRUCTION_COMPILED* instr) {
+  //uint32_t startTime = millis();
 
-  //if (!_scriptLoaded) return;
-
-  if (_file) {
-    //Log.noticeln("[DEM] nextLine:");
-
-    // continue reading next line
+  if (line[0] != 0) {
     char token[DEM_TOKEN_LENGTH+1];
     uint8_t tokenLen = 0;
     _instruction.numTokens = 0;
@@ -188,9 +322,10 @@ void DroneExecutionManager::executeNextLine() {
     boolean eop = false; //end of param
 
     char c;
+    uint8_t cp = 0; // character position
     boolean eol = false;
     do {
-      if (_file.available()) { c = _file.read(); }
+      if (line[cp] > 0) { c = line[cp]; }
       else { c = '\n'; } // dummy char to finish a file cleanly
 
       //Serial.print(c);
@@ -459,7 +594,7 @@ void DroneExecutionManager::executeNextLine() {
           // catch zero length namespace
           if (eon) {
             Serial.print("_NS_");
-            _instruction.ns = 0;
+            _instruction.ns = getNamespace("core");
             eon = false;
           }
         }
@@ -467,7 +602,8 @@ void DroneExecutionManager::executeNextLine() {
         eot = false;
       }
 
-    } while (_file.available() && !eol);
+      cp++;
+    } while (!eol);
 
     Serial.println("");
 
@@ -484,23 +620,94 @@ void DroneExecutionManager::executeNextLine() {
 
       Log.noticeln("Decoded instruction: (%u)", _instruction.numTokens);
       printInstruction(&_instruction);
+
+      // parse the command
+
+      if (_instruction.ns == 0) {
+        _instruction.ns = getNamespace("core");
+      }
+      DEM_COMMAND temp = getCommand(_instruction.ns, _instruction.command);
+      instr->handler = temp.handler;
+      instr->cmd = temp.str;
+      if (instr->handler != NULL) {
+
+        instr->msg.node = _instruction.addr.node;
+        instr->msg.channel = _instruction.addr.channel;
+        instr->msg.param = _instruction.addr.param;
+        uint8_t byteLen = DRONE_LINK_MSG_TYPE_SIZES[_instruction.dataType] * _instruction.numTokens;
+        instr->msg.payload.c[0] = 0; // safety
+        if (byteLen <= DRONE_LINK_MSG_MAX_PAYLOAD) {
+          instr->msg.paramTypeLength = DRONE_LINK_MSG_WRITABLE | ((_instruction.dataType & 0x7) << 4) | (byteLen-1);
+          for(uint8_t i=0; i<_instruction.numTokens; i++) {
+            switch(_instruction.dataType) {
+              case DRONE_LINK_MSG_TYPE_UINT8_T:
+                instr->msg.payload.uint8[i] = _instruction.tokens[i].value.uint8;
+                break;
+              case DRONE_LINK_MSG_TYPE_ADDR:
+                instr->msg.payload.addr[i] = _instruction.tokens[i].value.addr;
+                break;
+              case DRONE_LINK_MSG_TYPE_UINT32_T:
+                instr->msg.payload.uint32[i] = _instruction.tokens[i].value.uint32;
+                break;
+              case DRONE_LINK_MSG_TYPE_FLOAT:
+                instr->msg.payload.f[i] = _instruction.tokens[i].value.f;
+                break;
+              case DRONE_LINK_MSG_TYPE_CHAR:
+                instr->msg.payload.c[i] = _instruction.tokens[i].value.c;
+                break;
+            }
+          }
+        } else {
+          valid = false;
+          error = true;
+          Log.errorln("Compiled message exceeds 16 bytes");
+        }
+      } else {
+        valid = false;
+        error = true;
+        Log.errorln("Unknown command");
+      }
+
     }
 
-    int32_t elapsed = millis() - startTime;
-    Log.noticeln(F("executed in: %u ms"), elapsed);
-
-    if (_file.available() ==0) {
-      Log.noticeln("[DEM] reached EOF");
-      _scriptLoaded = false;
-      _file.close();
-    }
+    //int32_t elapsed = millis() - startTime;
+    return (valid && !error);
+    //Log.noticeln(F("compiled in: %u ms"), elapsed);
   }
+
+  return false;
 }
 
 
-void DroneExecutionManager::loop() {
-  //Log.noticeln("log");
-  executeNextLine();
+void DroneExecutionManager::execute() {
+  // if we have an active macro
+  if (_call.p > -1) {
+    DEM_CALLSTACK_ENTRY *cse = &_call.stack[_call.p];
+    // check valid macro pointer
+    if (cse->macro) {
+      // check we haven't reached the end of the macro
+      if (cse->i < cse->macro->commands->size()) {
+        Serial.printf("Executing instruction %u from macro %s\n", cse->i, cse->macro->name);
+        // fetch the instruction
+        DEM_INSTRUCTION_COMPILED ic = cse->macro->commands->get(cse->i);
+
+        Serial.printf("instruction fetched %s (%u)\n", ic.cmd, (uint32_t)&ic.handler);
+
+        // execute the instruction
+        if (ic.handler(&ic, &_call, &_data, cse->continuation)) {
+          // command completed
+          // increment instruction pointer
+          cse->i++;
+        } else {
+          // command is still busy executing
+          cse->continuation = true;
+        }
+      } else {
+        // pop the call stack
+        callStackPop();
+      }
+    }
+  }
 }
 
 
@@ -513,9 +720,96 @@ void DroneExecutionManager::serveMacroInfo(AsyncWebServerRequest *request) {
   DEM_MACRO* m;
   for(int i = 0; i < _macros.size(); i++){
     m = _macros.get(i);
-    response->printf("%u: %s)\n", i, m->name);
+    response->printf("%u: %s - %u commands\n", i, m->name, m->commands->size());
+
+    // now print all associated commands
+    DEM_INSTRUCTION_COMPILED ic;
+    for (uint8_t j=0; j<m->commands->size(); j++) {
+      ic = m->commands->get(j);
+      response->printf("   %u: %s\n", j, ic.cmd);
+    }
+    response->print("\n");
   }
 
   //send the response last
   request->send(response);
+}
+
+
+void DroneExecutionManager::serveCommandInfo(AsyncWebServerRequest *request) {
+
+  AsyncResponseStream *response = request->beginResponseStream("text/text");
+  response->addHeader("Server","ESP Async Web Server");
+  response->print(F("Namespaces and Commands: \n"));
+
+  DEM_NAMESPACE* ns;
+  for(uint8_t i = 0; i < _namespaces.size(); i++){
+    ns = _namespaces.get(i);
+    response->printf("%u: %s - %u commands\n", i, ns->name, ns->commands->size());
+
+    // now print all registred commands
+    DEM_COMMAND c;
+    for (uint8_t j=0; j<ns->commands->size(); j++) {
+      c = ns->commands->get(j);
+      response->printf("   %u: %s - %u\n", j, c.str, (c.handler != NULL ? 1 : 0));
+    }
+    response->print("\n");
+  }
+
+  //send the response last
+  request->send(response);
+}
+
+
+boolean DroneExecutionManager::core_AL(DEM_INSTRUCTION_COMPILED* instr, DEM_CALLSTACK* cs, DEM_DATASTACK* ds, boolean continuation) {
+  Serial.println("core_AL");
+  char buffer[DRONE_LINK_MSG_MAX_PAYLOAD+1];
+  uint8_t len = (instr->msg.paramTypeLength & 0xF)+1;
+  memcpy(buffer, instr->msg.payload.c, len);
+  buffer[len] = 0;
+
+  if (len > 1) {
+    load(buffer);
+  }
+  return true;
+}
+
+boolean DroneExecutionManager::core_AM(DEM_INSTRUCTION_COMPILED* instr, DEM_CALLSTACK* cs, DEM_DATASTACK* ds, boolean continuation) {
+  Serial.println("core_AM");
+  Serial.printf("Publish msg to: %u>%u.%u", instr->msg.node, instr->msg.channel, instr->msg.param);
+  DroneLinkMsg temp(&instr->msg);
+  if (instr->msg.node > 0 && instr->msg.channel > 0 && instr->msg.param  > 0) {
+    _dlm->publish(temp);
+  } else {
+    Serial.println("Invalid address");
+  }
+
+  return true;
+}
+
+boolean DroneExecutionManager::core_FC(DEM_INSTRUCTION_COMPILED* instr, DEM_CALLSTACK* cs, DEM_DATASTACK* ds, boolean continuation) {
+  Serial.println("core_FC");
+  char buffer[DRONE_LINK_MSG_MAX_PAYLOAD+1];
+  uint8_t len = (instr->msg.paramTypeLength & 0xF)+1;
+  memcpy(buffer, instr->msg.payload.c, len);
+  buffer[len] = 0;
+
+  if (len > 1) {
+    DEM_CALLSTACK_ENTRY cse;
+    cse.i=0;
+    cse.macro = getMacro(buffer);
+    cse.continuation = false;
+    if (cse.macro != NULL) {
+      Serial.printf("Executing macro %s\n", buffer);
+      if (cse.macro->commands->size() > 0) {
+        callStackPush(cse);
+      } else {
+        Serial.println("Macro has no compiled commands");
+      }
+
+    } else {
+      Log.errorln("Unknown macro %s", instr->msg.payload.c);
+    }
+  }
+  return true;
 }

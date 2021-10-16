@@ -7,12 +7,16 @@
 #include "DroneLinkMsg.h"
 #include <SPIFFS.h>
 #include <ESPAsyncWebServer.h>
+#include <functional>
 
 // forward declarations
 class DroneModule;
 class DroneLinkManager;
 class DroneModuleManager;
-
+struct DEM_NAMESPACE;
+struct DEM_INSTRUCTION_COMPILED;
+struct DEM_MACRO;
+struct DEM_COMMAND;
 
 #define DEM_ENUM_LENGTH   5
 #define DEM_TOKEN_LENGTH  16
@@ -20,21 +24,17 @@ class DroneModuleManager;
 #define DEM_CALLSTACK_SIZE    64  // 64 x uint32_t = 256 bytes
 #define DEM_DATASTACK_SIZE    64  // 64 x uint8_t = 64 bytes
 
+
 struct DEM_ENUM_MAPPING {
   const char *const str;
   uint8_t value;
-};
-
-
-struct DEM_NAMESPACE {
-  char name[DEM_ENUM_LENGTH+1];    // 5 char + \0
-  uint8_t module;  // module address
 };
 
 union DEM_TOKEN_VALUE {
   float f;
   uint32_t uint32;
   uint8_t uint8;
+  DRONE_LINK_ADDR addr;
   char c;
 } __packed;
 
@@ -45,48 +45,71 @@ struct DEM_TOKEN {
 };
 
 struct DEM_INSTRUCTION {
-  uint8_t ns;  // index into namespace array
-  char command[2];
+  DEM_NAMESPACE *ns;
+  char command[3];
   DRONE_LINK_ADDR addr;
   uint8_t dataType;
   uint8_t numTokens;
   DEM_TOKEN tokens[DRONE_LINK_MSG_MAX_PAYLOAD]; // max 16 tokens (e.g. 16x true false enums)
 };
 
+struct DEM_CALLSTACK_ENTRY {
+  DEM_MACRO* macro;
+  uint8_t i;  // instruction number
+  boolean continuation; // true if we're calling this command for a second time
+};
+
+struct DEM_CALLSTACK {
+  int8_t p; // stack pointer
+  DEM_CALLSTACK_ENTRY stack[DEM_CALLSTACK_SIZE];
+};
+
+struct DEM_DATASTACK {
+  int8_t p; // stack pointer
+  uint8_t stack[DEM_DATASTACK_SIZE];
+};
+
+typedef std::function<boolean(DEM_INSTRUCTION_COMPILED* instr, DEM_CALLSTACK* cs, DEM_DATASTACK* ds, boolean continuation)> DEMCommandHandler;
+
 struct DEM_INSTRUCTION_COMPILED {
-  uint8_t ns;
-  uint8_t command;
+  DEMCommandHandler handler;
+  const char * cmd;
   DRONE_LINK_MSG msg;
+};
+
+struct DEM_COMMAND {
+  const char * str;
+  DEMCommandHandler handler;
+};
+
+struct DEM_NAMESPACE {
+  char name[DEM_ENUM_LENGTH+1];    // 5 char + \0
+  uint8_t module;  // module address
+  IvanLinkedList::LinkedList<DEM_COMMAND> *commands;
 };
 
 struct DEM_MACRO {
   char name[DRONE_LINK_MSG_MAX_PAYLOAD+1];
   DRONE_LINK_ADDR eventAddr;  // set if this is an event handler
-  IvanLinkedList::LinkedList<DEM_INSTRUCTION_COMPILED> commands;
+  IvanLinkedList::LinkedList<DEM_INSTRUCTION_COMPILED> *commands;
 };
 
 
 class DroneExecutionManager
 {
 protected:
-  int8_t _callStackPointer;
-  uint32_t _callStack[DEM_CALLSTACK_SIZE];
-
-  int8_t _dataStackPointer;
-  uint8_t _dataStack[DEM_DATASTACK_SIZE];
+  DEM_CALLSTACK _call;
+  DEM_DATASTACK _data;
 
   IvanLinkedList::LinkedList<DEM_MACRO*> _macros;
+  IvanLinkedList::LinkedList<DEM_NAMESPACE*> _namespaces;
 
   DroneLinkManager *_dlm;
   DroneModuleManager *_dmm;
-  boolean _scriptLoaded;  // set true by .load()
-  //unsigned long _filePos; // where did we last read up to
-  const char * _filename;
-  File _file;
+  File _file;  // TODO - can prob remove this
 
   uint8_t _channelContext;  // set by CP command
   DEM_INSTRUCTION _instruction;  // newly parsed instruction
-  DEM_INSTRUCTION_COMPILED _compiledInstruction;
 
   //IvanLinkedList::LinkedList<DroneLinkChannel*> _channels;
   //DRONE_LINK_NODE_PAGE *_nodePages[DRONE_LINK_NODE_PAGES];
@@ -100,6 +123,16 @@ public:
     // or returns existing macro address if already created
     DEM_MACRO* createMacro(const char* name);
 
+    DEM_NAMESPACE* getNamespace(const char* name);
+
+    DEM_NAMESPACE* createNamespace(const char* name, uint8_t module);
+
+    void registerCommand(DEM_NAMESPACE* ns, const char* command, DEMCommandHandler handler);
+
+    DEM_COMMAND getCommand(DEM_NAMESPACE* ns, const char* command);
+
+    void callStackPush(DEM_CALLSTACK_ENTRY entry);
+    void callStackPop();
 
     void printInstruction(DEM_INSTRUCTION * instruction);
 
@@ -111,12 +144,19 @@ public:
     boolean load(const char * filename);
 
     boolean tokenContainsNumber(char tokenStart);
-    void executeNextLine();
+    boolean compileLine(const char * line, DEM_INSTRUCTION_COMPILED* instr);
 
-    // process current script
-    void loop();
+    // execute next instruction
+    void execute();
 
     void serveMacroInfo(AsyncWebServerRequest *request);
+    void serveCommandInfo(AsyncWebServerRequest *request);
+
+    // command handlers
+    boolean core_AL(DEM_INSTRUCTION_COMPILED* instr, DEM_CALLSTACK* cs, DEM_DATASTACK* ds, boolean continuation);
+    boolean core_AM(DEM_INSTRUCTION_COMPILED* instr, DEM_CALLSTACK* cs, DEM_DATASTACK* ds, boolean continuation);
+
+    boolean core_FC(DEM_INSTRUCTION_COMPILED* instr, DEM_CALLSTACK* cs, DEM_DATASTACK* ds, boolean continuation);
 };
 
 

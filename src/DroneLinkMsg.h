@@ -25,15 +25,12 @@
 
 const uint8_t DRONE_LINK_MSG_TYPE_SIZES[16] = {1,4,4,4,1,1,1,1, 1,1,1,1, 1,1,1,1};
 
-#define DRONE_LINK_MSG_ADDRESS_SUB    0  // this address is a subscription (input)
-#define DRONE_LINK_MSG_ADDRESS_PUB    1  // this value is published to address (output)
 
 struct DRONE_LINK_ADDR {
   uint8_t source; // node id of who originated the packet (e.g. requester for queries, or node if its a published message)
   uint8_t node;  // destination node id for writes, or origin if its a published change
   uint8_t channel;  // message channel ID, e.g. navigation
   uint8_t param;    // e.g. current location
-  uint8_t addrType;   // e.g. DRONE_LINK_MSG_ADDRESS_SUB
 } __packed;
 
 //static_assert(sizeof(DRONE_LINK_ADDR) == 5, "Incorrect Addr size");
@@ -82,6 +79,10 @@ public:
 
     DroneLinkMsg(DroneLinkMsg *msg) {
       _msg = msg->_msg;
+    }
+
+    DroneLinkMsg(DRONE_LINK_MSG *msg) {
+      memcpy(&_msg, msg, sizeof(_msg));
     }
 
     virtual ~DroneLinkMsg() { }

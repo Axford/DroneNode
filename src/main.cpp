@@ -167,6 +167,11 @@ void setupWebServer() {
     dem.serveMacroInfo(request);
   });
 
+  // dem commands
+  server.on("/commands", HTTP_GET, [](AsyncWebServerRequest *request){
+    dem.serveCommandInfo(request);
+  });
+
 
   #ifdef INC_SPIFFS_EDITOR
   server.addHandler(new SPIFFSEditor(SPIFFS));
@@ -226,7 +231,29 @@ void setup() {
 
   DroneWire::setup();
 
-  dem.load(PSTR(PSTR("/start.txt")));
+  // define root macro
+  DEM_MACRO * root = dem.createMacro("root");
+  DEM_INSTRUCTION_COMPILED instr;
+  if (dem.compileLine(PSTR("AL \"/config.txt\""), &instr)) {
+    root->commands->add(instr);
+  } else {
+    Log.errorln("Invalid command");
+  }
+
+  dem.compileLine(PSTR("FC \"/config.txt\""), &instr);
+  root->commands->add(instr);
+  dem.compileLine(PSTR("AL \"/main.txt\""), &instr);
+  root->commands->add(instr);
+  // now execute main
+  dem.compileLine(PSTR("FC \"/main.txt\""), &instr);
+  root->commands->add(instr);
+
+  // prep execution of root
+  DEM_CALLSTACK_ENTRY cse;
+  cse.i=0;
+  cse.macro = root;
+  cse.continuation = false;
+  dem.callStackPush(cse);
 
   // TODO: move to DEM
   //dmm.loadConfiguration();
@@ -280,7 +307,7 @@ void loop() {
 
     dlm.processChannels();
 
-    dem.loop();
+    dem.execute();
   } else {
     digitalWrite(PIN_LED, HIGH);
   }
