@@ -162,6 +162,11 @@ void setupWebServer() {
     dlm.serveChannelInfo(request);
   });
 
+  // dem macros
+  server.on("/macros", HTTP_GET, [](AsyncWebServerRequest *request){
+    dem.serveMacroInfo(request);
+  });
+
 
   #ifdef INC_SPIFFS_EDITOR
   server.addHandler(new SPIFFSEditor(SPIFFS));

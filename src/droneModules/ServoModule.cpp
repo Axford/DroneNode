@@ -39,7 +39,8 @@ void ServoModule::loadConfiguration(JsonObject &obj) {
     }
   }
 
-  DroneModule::parsePins(obj, _pins, (uint8_t)sizeof(_pins));
+  //TODO: fix
+  //DroneModule::parsePins(obj, _pins, (uint8_t)sizeof(_pins));
 }
 
 

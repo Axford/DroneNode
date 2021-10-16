@@ -10,16 +10,16 @@ DEM_ENUM_MAPPING DEM_ENUM_TABLE[] PROGMEM = {
   { STRING_TRUE, 1 },
 
   // pins
-  { "OUT0_0", PIN_OUT0_0},
-  { "OUT0_1", PIN_OUT0_1 },
-  { "OUT1_0", PIN_OUT1_0 },
-  { "OUT1_1", PIN_OUT1_1 },
-  { "OUT2_0", PIN_OUT2_0 },
-  { "OUT2_1", PIN_OUT2_1 },
-  { "DAC0_0", PIN_DAC0_0 },
-  { "DAC0_1", PIN_DAC0_1 },
-  { "IN0_0", PIN_IN0_0 },
-  { "IN0_1", PIN_IN0_1 }
+  { PSTR("OUT0_0"), PIN_OUT0_0},
+  { PSTR("OUT0_1"), PIN_OUT0_1 },
+  { PSTR("OUT1_0"), PIN_OUT1_0 },
+  { PSTR("OUT1_1"), PIN_OUT1_1 },
+  { PSTR("OUT2_0"), PIN_OUT2_0 },
+  { PSTR("OUT2_1"), PIN_OUT2_1 },
+  { PSTR("DAC0_0"), PIN_DAC0_0 },
+  { PSTR("DAC0_1"), PIN_DAC0_1 },
+  { PSTR("IN0_0"), PIN_IN0_0 },
+  { PSTR("IN0_1"), PIN_IN0_1 }
 };
 
 
@@ -27,7 +27,8 @@ DroneExecutionManager::DroneExecutionManager(DroneModuleManager *dmm, DroneLinkM
   _dmm = dmm;
   _dlm = dlm;
   _scriptLoaded = false;
-  //_filePos = 0;
+  _callStackPointer = -1;
+  _dataStackPointer = -1;
 
   _instruction.ns = 0;
   _instruction.command[0] = '_';
@@ -42,6 +43,20 @@ DroneExecutionManager::DroneExecutionManager(DroneModuleManager *dmm, DroneLinkM
 }
 
 
+
+// looks up macro by name, returns null if not found
+DEM_MACRO* DroneExecutionManager::getMacro(const char* name) {
+  return NULL;
+}
+
+
+// allocates memory, adds to list and returns new macro
+// or returns existing macro address if already created
+DEM_MACRO* DroneExecutionManager::createMacro(const char* name) {
+  return NULL;
+}
+
+
 void DroneExecutionManager::printInstruction(DEM_INSTRUCTION * instruction) {
   Serial.print("NS: "); Serial.print(instruction->ns);
   Serial.print(", C: "); Serial.print(instruction->command[0]); Serial.print(instruction->command[1]);
@@ -52,7 +67,7 @@ void DroneExecutionManager::printInstruction(DEM_INSTRUCTION * instruction) {
   Serial.print('.');
   Serial.print(instruction->addr.param);
   Serial.print(' ');
-  uint8_t ty = (instruction->dataType >> 4) & 0x7;
+  uint8_t ty = instruction->dataType;
   switch(ty) {
     case DRONE_LINK_MSG_TYPE_UINT8_T: Serial.print(F("uint8_t")); break;
     case DRONE_LINK_MSG_TYPE_ADDR: Serial.print(F("addr")); break;
@@ -144,11 +159,12 @@ boolean DroneExecutionManager::tokenContainsNumber(char tokenStart) {
 
 
 void DroneExecutionManager::executeNextLine() {
+  uint32_t startTime = millis();
 
   //if (!_scriptLoaded) return;
 
   if (_file) {
-    Log.noticeln("[DEM] nextLine:");
+    //Log.noticeln("[DEM] nextLine:");
 
     // continue reading next line
     char token[DEM_TOKEN_LENGTH+1];
@@ -193,7 +209,15 @@ void DroneExecutionManager::executeNextLine() {
             eoc = true;
             eot = true;
           }
-          else if (valid) { att =true; }
+          else if (valid) {
+            if (tokenLen == 0) {
+              // short-hand parameter address
+              inAddr = true;
+            } else {
+              // probably part of a numeric value
+              att =true;
+            }
+          }
           else { eon = true; eot = true; } break;
 
           // detect address
@@ -320,6 +344,7 @@ void DroneExecutionManager::executeNextLine() {
                 _instruction.tokens[i].isEnum = false;
               }
               _instruction.numTokens = tokenLen;
+              _instruction.dataType= DRONE_LINK_MSG_TYPE_CHAR;
             } else {
               Log.errorln("Values already written, but string found");
               error = true;
@@ -461,6 +486,9 @@ void DroneExecutionManager::executeNextLine() {
       printInstruction(&_instruction);
     }
 
+    int32_t elapsed = millis() - startTime;
+    Log.noticeln(F("executed in: %u ms"), elapsed);
+
     if (_file.available() ==0) {
       Log.noticeln("[DEM] reached EOF");
       _scriptLoaded = false;
@@ -473,4 +501,21 @@ void DroneExecutionManager::executeNextLine() {
 void DroneExecutionManager::loop() {
   //Log.noticeln("log");
   executeNextLine();
+}
+
+
+void DroneExecutionManager::serveMacroInfo(AsyncWebServerRequest *request) {
+
+  AsyncResponseStream *response = request->beginResponseStream("text/text");
+  response->addHeader("Server","ESP Async Web Server");
+  response->print(F("Macros: \n"));
+
+  DEM_MACRO* m;
+  for(int i = 0; i < _macros.size(); i++){
+    m = _macros.get(i);
+    response->printf("%u: %s)\n", i, m->name);
+  }
+
+  //send the response last
+  request->send(response);
 }

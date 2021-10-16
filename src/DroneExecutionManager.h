@@ -6,6 +6,7 @@
 
 #include "DroneLinkMsg.h"
 #include <SPIFFS.h>
+#include <ESPAsyncWebServer.h>
 
 // forward declarations
 class DroneModule;
@@ -16,6 +17,8 @@ class DroneModuleManager;
 #define DEM_ENUM_LENGTH   5
 #define DEM_TOKEN_LENGTH  16
 
+#define DEM_CALLSTACK_SIZE    64  // 64 x uint32_t = 256 bytes
+#define DEM_DATASTACK_SIZE    64  // 64 x uint8_t = 64 bytes
 
 struct DEM_ENUM_MAPPING {
   const char *const str;
@@ -56,14 +59,24 @@ struct DEM_INSTRUCTION_COMPILED {
   DRONE_LINK_MSG msg;
 };
 
-struct DEM_STACK_ITEM {
-  // program pointer
-
+struct DEM_MACRO {
+  char name[DRONE_LINK_MSG_MAX_PAYLOAD+1];
+  DRONE_LINK_ADDR eventAddr;  // set if this is an event handler
+  IvanLinkedList::LinkedList<DEM_INSTRUCTION_COMPILED> commands;
 };
+
 
 class DroneExecutionManager
 {
 protected:
+  int8_t _callStackPointer;
+  uint32_t _callStack[DEM_CALLSTACK_SIZE];
+
+  int8_t _dataStackPointer;
+  uint8_t _dataStack[DEM_DATASTACK_SIZE];
+
+  IvanLinkedList::LinkedList<DEM_MACRO*> _macros;
+
   DroneLinkManager *_dlm;
   DroneModuleManager *_dmm;
   boolean _scriptLoaded;  // set true by .load()
@@ -73,12 +86,20 @@ protected:
 
   uint8_t _channelContext;  // set by CP command
   DEM_INSTRUCTION _instruction;  // newly parsed instruction
+  DEM_INSTRUCTION_COMPILED _compiledInstruction;
 
   //IvanLinkedList::LinkedList<DroneLinkChannel*> _channels;
   //DRONE_LINK_NODE_PAGE *_nodePages[DRONE_LINK_NODE_PAGES];
 
 public:
     DroneExecutionManager(DroneModuleManager *dmm, DroneLinkManager *dlm);
+
+    // looks up macro by name, returns null if not found
+    DEM_MACRO* getMacro(const char* name);
+    // allocates memory, adds to list and returns new macro
+    // or returns existing macro address if already created
+    DEM_MACRO* createMacro(const char* name);
+
 
     void printInstruction(DEM_INSTRUCTION * instruction);
 
@@ -94,6 +115,8 @@ public:
 
     // process current script
     void loop();
+
+    void serveMacroInfo(AsyncWebServerRequest *request);
 };
 
 

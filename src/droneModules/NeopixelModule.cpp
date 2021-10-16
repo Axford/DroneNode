@@ -79,7 +79,8 @@ void NeopixelModule::initScene(NEOPIXEL_SCENE *scene) {
 void NeopixelModule::loadConfiguration(JsonObject &obj) {
   DroneModule::loadConfiguration(obj);
 
-  DroneModule::parsePins(obj, _pins, (uint8_t)sizeof(_pins));
+  // TODO: fix
+  //DroneModule::parsePins(obj, _pins, (uint8_t)sizeof(_pins));
 
   _numPixels = obj[F("numPixels")] | _numPixels;
   //_colourOrder = obj[F("colourOrder")] | _colourOrder;

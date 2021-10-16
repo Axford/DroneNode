@@ -4,6 +4,7 @@
 #include "DroneModuleManager.h"
 #include "DroneLinkManager.h"
 #include "DroneModule.h"
+#include "strings.h"
 
 // drone modules
 #include "droneModules/ManagementModule.h"
