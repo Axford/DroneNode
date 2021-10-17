@@ -7,7 +7,6 @@ BME280Module::BME280Module(uint8_t id, DroneModuleManager* dmm, DroneLinkManager
   I2CBaseModule ( id, dmm, dlm, dem )
  {
    setTypeName(FPSTR(BME280_STR_BME280));
-   _addr = BME280_I2C_ADDRESS;
 
    _numParamEntries = BME280_PARAM_ENTRIES;
    _params = new DRONE_PARAM_ENTRY[_numParamEntries];
@@ -18,6 +17,9 @@ BME280Module::BME280Module(uint8_t id, DroneModuleManager* dmm, DroneLinkManager
      _params[i].publish = false;
      _params[i].data.f[0] = 0;
    }
+
+   I2CBaseModule::initBaseParams();
+   _params[I2CBASE_PARAM_ADDR_E].data.uint8[0] = BME280_I2C_ADDRESS;
 
    _mgmtParams[DRONE_MODULE_PARAM_TYPE_E].paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_CHAR, sizeof(BME280_STR_BME280));
    strncpy_P(_mgmtParams[DRONE_MODULE_PARAM_TYPE_E].data.c, BME280_STR_BME280, sizeof(BME280_STR_BME280));
@@ -45,9 +47,9 @@ BME280Module::BME280Module(uint8_t id, DroneModuleManager* dmm, DroneLinkManager
 void BME280Module::doReset() {
   I2CBaseModule::doReset();
 
-  DroneWire::selectChannel(_bus);
+  DroneWire::selectChannel(_params[I2CBASE_PARAM_BUS_E].data.uint8[0]);
 
-  setError( _sensor.begin(_addr) ? 0 : 1 );
+  setError( _sensor.begin(_params[I2CBASE_PARAM_ADDR_E].data.uint8[0]) ? 0 : 1 );
   if (_error) {
     Log.errorln(BME280_STR_BME280);
   }
@@ -57,7 +59,7 @@ void BME280Module::doReset() {
 void BME280Module::loop() {
   I2CBaseModule::loop();
 
-  DroneWire::selectChannel(_bus);
+  DroneWire::selectChannel(_params[I2CBASE_PARAM_BUS_E].data.uint8[0]);
 
   // get sensor values
   _params[BME280_PARAM_TEMPERATURE_E].data.f[0] = _sensor.readTemperature();

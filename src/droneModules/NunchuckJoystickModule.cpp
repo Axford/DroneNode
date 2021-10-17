@@ -8,7 +8,7 @@ NunchuckJoystick::NunchuckJoystick(uint8_t id, DroneModuleManager* dmm, DroneLin
  {
    setTypeName(FPSTR(NunJOYSTICK_STR_NunJOYSTICK));
    //_pins[0] = 0;
-   _addr = NunJOYSTICK_I2C_ADDRESS;
+
 
    for (uint8_t i=0; i<NunJOYSTICK_AXES; i++) {
      _invert[i] = false;
@@ -16,6 +16,9 @@ NunchuckJoystick::NunchuckJoystick(uint8_t id, DroneModuleManager* dmm, DroneLin
 
    // pubs
    initParams(NunJOYSTICK_PARAM_ENTRIES);
+
+   I2CBaseModule::initBaseParams();
+   _params[I2CBASE_PARAM_ADDR_E].data.uint8[0] = NunJOYSTICK_I2C_ADDRESS;
 
    DRONE_PARAM_ENTRY *param;
 
@@ -44,7 +47,7 @@ NunchuckJoystick::NunchuckJoystick(uint8_t id, DroneModuleManager* dmm, DroneLin
 void NunchuckJoystick::doReset() {
   I2CBaseModule::doReset();
 
-  DroneWire::selectChannel(_bus);
+  DroneWire::selectChannel(_params[I2CBASE_PARAM_BUS_E].data.uint8[0]);
 
   setError(0);
 }
@@ -86,9 +89,9 @@ void NunchuckJoystick::setup() {
 void NunchuckJoystick::loop() {
   I2CBaseModule::loop();
 
-  DroneWire::selectChannel(_bus);
+  DroneWire::selectChannel(_params[I2CBASE_PARAM_BUS_E].data.uint8[0]);
 
-  //uint8_t bytes = Wire.requestFrom((uint16_t)_addr, (uint8_t)4, true);
+  //uint8_t bytes = Wire.requestFrom((uint16_t)_params[I2CBASE_PARAM_ADDR_E].data.uint8[0], (uint8_t)4, true);
 
   nunchuck1.readData();    // Read inputs and update maps
 

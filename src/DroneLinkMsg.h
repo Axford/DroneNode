@@ -161,6 +161,27 @@ public:
             */
     }
 
+    static void printAddress(DRONE_LINK_ADDR *addr) {
+      Serial.print(addr->source);
+      Serial.print(':');
+      Serial.print(addr->node);
+      Serial.print('>');
+      Serial.print(addr->channel);
+      Serial.print('.');
+      Serial.print(addr->param);
+    }
+
+    static void printAddress(DRONE_LINK_ADDR *addr, AsyncResponseStream *response) {
+      response->print(addr->source);
+      response->print(':');
+      response->print(addr->node);
+      response->print('>');
+      response->print(addr->channel);
+      response->print('.');
+      response->print(addr->param);
+    }
+
+
     void print() {
       Serial.print(source());
       Serial.print(':');
@@ -177,14 +198,14 @@ public:
       uint8_t ty = (paramTypeLength >> 4) & 0x7;
       uint8_t len = (paramTypeLength & 0xF) + 1;
       switch(ty) {
-        case DRONE_LINK_MSG_TYPE_UINT8_T: Serial.print(F("uint8_t")); break;
-        case DRONE_LINK_MSG_TYPE_ADDR: Serial.print(F("addr")); break;
-        case DRONE_LINK_MSG_TYPE_UINT32_T: Serial.print(F("uint32_t")); break;
-        case DRONE_LINK_MSG_TYPE_FLOAT: Serial.print(F("Float")); break;
-        case DRONE_LINK_MSG_TYPE_CHAR: Serial.print(F("Char")); break;
-        case DRONE_LINK_MSG_TYPE_NAME: Serial.print(F("Name")); break;
-        case DRONE_LINK_MSG_TYPE_NAMEQUERY: Serial.print(F("NameQuery")); break;
-        case DRONE_LINK_MSG_TYPE_QUERY: Serial.print(F("Query")); break;
+        case DRONE_LINK_MSG_TYPE_UINT8_T: Serial.print(F("u8")); break;
+        case DRONE_LINK_MSG_TYPE_ADDR: Serial.print(F("a")); break;
+        case DRONE_LINK_MSG_TYPE_UINT32_T: Serial.print(F("u32")); break;
+        case DRONE_LINK_MSG_TYPE_FLOAT: Serial.print(F("f")); break;
+        case DRONE_LINK_MSG_TYPE_CHAR: Serial.print(F("c")); break;
+        case DRONE_LINK_MSG_TYPE_NAME: Serial.print(F("N")); break;
+        case DRONE_LINK_MSG_TYPE_NAMEQUERY: Serial.print(F("AQ")); break;
+        case DRONE_LINK_MSG_TYPE_QUERY: Serial.print(F("Q")); break;
       }
       if (ty != DRONE_LINK_MSG_TYPE_QUERY) {
         Serial.print('[');
@@ -194,16 +215,17 @@ public:
         Serial.print('=');
       }
 
-      switch(ty) {
-        case DRONE_LINK_MSG_TYPE_UINT8_T: Serial.print(payload->uint8[0], HEX); break;
-        case DRONE_LINK_MSG_TYPE_UINT32_T: Serial.print(payload->uint32[0]); break;
-        case DRONE_LINK_MSG_TYPE_FLOAT: Serial.print(payload->f[0]); break;
-        case DRONE_LINK_MSG_TYPE_CHAR:
-          for (uint8_t i=0; i<len; i++) {
-            Serial.print(char(payload->c[i]));
-          }
-          break;
-        //case DRONE_LINK_MSG_TYPE_QUERY: Serial.print(F("Query")); break;
+      uint8_t numValues = len / DRONE_LINK_MSG_TYPE_SIZES[ty];
+      for (uint8_t i=0; i<numValues; i++) {
+        switch(ty) {
+          case DRONE_LINK_MSG_TYPE_UINT8_T: Serial.print(payload->uint8[i]); break;
+          case DRONE_LINK_MSG_TYPE_UINT32_T: Serial.print(payload->uint32[i]); break;
+          case DRONE_LINK_MSG_TYPE_FLOAT: Serial.print(payload->f[i]); break;
+          case DRONE_LINK_MSG_TYPE_CHAR: Serial.print(char(payload->c[i])); break;
+          case DRONE_LINK_MSG_TYPE_ADDR: printAddress(&payload->addr[i]); break;
+          //case DRONE_LINK_MSG_TYPE_QUERY: response->print(F("Query")); break;
+        }
+        if (ty != DRONE_LINK_MSG_TYPE_CHAR) Serial.print(' ');
       }
       Serial.print('\n');
     }
@@ -213,14 +235,16 @@ public:
       uint8_t ty = (paramTypeLength >> 4) & 0x7;
       uint8_t len = (paramTypeLength & 0xF) + 1;
       switch(ty) {
-        case DRONE_LINK_MSG_TYPE_UINT8_T: response->print(F("uint8_t")); break;
-        case DRONE_LINK_MSG_TYPE_ADDR: response->print(F("addr")); break;
-        case DRONE_LINK_MSG_TYPE_UINT32_T: response->print(F("uint32_t")); break;
-        case DRONE_LINK_MSG_TYPE_FLOAT: response->print(F("Float")); break;
-        case DRONE_LINK_MSG_TYPE_CHAR: response->print(F("Char")); break;
-        case DRONE_LINK_MSG_TYPE_NAME: response->print(F("Name")); break;
-        case DRONE_LINK_MSG_TYPE_NAMEQUERY: response->print(F("NameQuery")); break;
-        case DRONE_LINK_MSG_TYPE_QUERY: response->print(F("Query")); break;
+        case DRONE_LINK_MSG_TYPE_UINT8_T: response->print(F("u8")); break;
+        case DRONE_LINK_MSG_TYPE_ADDR: response->print(F("a")); break;
+        case DRONE_LINK_MSG_TYPE_UINT32_T: response->print(F("u32")); break;
+        case DRONE_LINK_MSG_TYPE_FLOAT: response->print(F("f")); break;
+        case DRONE_LINK_MSG_TYPE_CHAR: response->print(F("c")); break;
+        case DRONE_LINK_MSG_TYPE_NAME: response->print(F("N")); break;
+        case DRONE_LINK_MSG_TYPE_NAMEQUERY: response->print(F("NQ")); break;
+        case DRONE_LINK_MSG_TYPE_QUERY: response->print(F("Q")); break;
+      default:
+        response->print(F("?"));
       }
       if (ty != DRONE_LINK_MSG_TYPE_QUERY) {
         response->print('[');
@@ -230,16 +254,16 @@ public:
         response->print('=');
       }
 
-      switch(ty) {
-        case DRONE_LINK_MSG_TYPE_UINT8_T: response->print(payload->uint8[0], HEX); break;
-        case DRONE_LINK_MSG_TYPE_UINT32_T: response->print(payload->uint32[0]); break;
-        case DRONE_LINK_MSG_TYPE_FLOAT: response->print(payload->f[0]); break;
-        case DRONE_LINK_MSG_TYPE_CHAR:
-          for (uint8_t i=0; i<len; i++) {
-            response->print(char(payload->c[i]));
-          }
-          break;
-        //case DRONE_LINK_MSG_TYPE_QUERY: response->print(F("Query")); break;
+      uint8_t numValues = len / DRONE_LINK_MSG_TYPE_SIZES[ty];
+      for (uint8_t i=0; i<numValues; i++) {
+        switch(ty) {
+          case DRONE_LINK_MSG_TYPE_UINT8_T: response->print(payload->uint8[i]); break;
+          case DRONE_LINK_MSG_TYPE_UINT32_T: response->print(payload->uint32[i]); break;
+          case DRONE_LINK_MSG_TYPE_FLOAT: response->print(payload->f[i]); break;
+          case DRONE_LINK_MSG_TYPE_CHAR: response->print(char(payload->c[i])); break;
+          case DRONE_LINK_MSG_TYPE_ADDR: printAddress(&payload->addr[i], response); break;
+        }
+        if (ty != DRONE_LINK_MSG_TYPE_CHAR) response->print(' ');
       }
       response->print('\n');
     }

@@ -5,7 +5,7 @@
 ## Overview
 
 * DroneModules inherit from the base DroneModule class (defined in src/DroneModule.h)
-* Modules that wrap an I2C device can inherit from the I2CBaseModule (defined in src/droneModules/I2CBaseModule.h) - which includes a lot of the base I2C functionality, including configurable I2C bus (_bus) and address (_addr)
+* Modules that wrap an I2C device can inherit from the I2CBaseModule (defined in src/droneModules/I2CBaseModule.h) - which includes a lot of the base I2C functionality, including configurable I2C bus (_params[I2CBASE_PARAM_BUS_E].data.uint8[0]) and address (_params[I2CBASE_PARAM_ADDR_E].data.uint8[0])
 
 ## Process
 

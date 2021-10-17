@@ -7,28 +7,29 @@
 #include <EEPROM.h>
 
 // drone modules
+#include "droneModules/HMC5883LModule.h"
+#include "droneModules/INA219Module.h"
 #include "droneModules/ManagementModule.h"
 #include "droneModules/MotorModule.h"
+#include "droneModules/NeopixelModule.h"
+#include "droneModules/NMEAModule.h"
+#include "droneModules/RFM69TelemetryModule.h"
+#include "droneModules/TankSteerModule.h"
+#include "droneModules/UDPTelemetryModule.h"
 /*
 #include "droneModules/TimerModule.h"
 #include "droneModules/ServoModule.h"
 #include "droneModules/TelemetryModule.h"
-#include "droneModules/UDPTelemetryModule.h"
 #include "droneModules/BME280Module.h"
-#include "droneModules/INA219Module.h"
-#include "droneModules/HMC5883LModule.h"
-#include "droneModules/NMEAModule.h"
 #include "droneModules/MPU6050Module.h"
-#include "droneModules/TankSteerModule.h"
 #include "droneModules/BasicNavModule.h"
 #include "droneModules/WaypointNavModule.h"
 #include "droneModules/TurnRateModule.h"
-#include "droneModules/RFM69TelemetryModule.h"
 #include "droneModules/JoystickModule.h"
 #include "droneModules/OLEDModule.h"
 #include "droneModules/ControllerModule.h"
 #include "droneModules/NunchuckJoystickModule.h"
-#include "droneModules/NeopixelModule.h"
+
 */
 
 
@@ -70,8 +71,8 @@ DroneExecutionManager::DroneExecutionManager(DroneModuleManager *dmm, DroneLinkM
 
   // read last boot status from EEPROM
   //_safeMode
-  EEPROM.begin(DEM_EEPROM_SIZE);
   _safeMode = (EEPROM.read(DEM_EEPROM_SUCCESSFUL_BOOT) != DEM_BOOT_SUCCESS);
+  Log.noticeln("[DEM.DEM] SafeMode %u", (_safeMode ? 1: 0));
 
   // now clear the _safeMode value ready for this boot attempt
   EEPROM.write(DEM_EEPROM_SUCCESSFUL_BOOT, DEM_BOOT_FAIL);
@@ -88,6 +89,7 @@ DroneExecutionManager::DroneExecutionManager(DroneModuleManager *dmm, DroneLinkM
   _instruction.numTokens = 0;
 
   _channelContext = 0;
+  _multiLineComment = false;
 
   // register core commands
   DEM_NAMESPACE *core = createNamespace(PSTR("core"), 0, false);
@@ -97,14 +99,15 @@ DroneExecutionManager::DroneExecutionManager(DroneModuleManager *dmm, DroneLinkM
   using std::placeholders::_3;
   using std::placeholders::_4;
 
-  registerCommand(core, PSTR("done"), DRONE_LINK_MSG_TYPE_UINT8_T, std::bind(&DroneExecutionManager::core_done, this, _1, _2, _3, _4));
+  registerCommand(core, PSTR("done"), DEM_DATATYPE_NONE, std::bind(&DroneExecutionManager::core_done, this, _1, _2, _3, _4));
   registerCommand(core, PSTR("load"), DRONE_LINK_MSG_TYPE_CHAR, std::bind(&DroneExecutionManager::core_load, this, _1, _2, _3, _4));
   registerCommand(core, PSTR("node"), DRONE_LINK_MSG_TYPE_UINT8_T, std::bind(&DroneExecutionManager::core_node, this, _1, _2, _3, _4));
   registerCommand(core, PSTR("publish"), DRONE_LINK_MSG_TYPE_UINT8_T, std::bind(&DroneExecutionManager::core_publish, this, _1, _2, _3, _4));
-  registerCommand(core, PSTR("restart"),DRONE_LINK_MSG_TYPE_UINT8_T, std::bind(&DroneExecutionManager::core_restart, this, _1, _2, _3, _4));
+  registerCommand(core, PSTR("restart"),DEM_DATATYPE_NONE, std::bind(&DroneExecutionManager::core_restart, this, _1, _2, _3, _4));
   registerCommand(core, PSTR("run"),DRONE_LINK_MSG_TYPE_CHAR, std::bind(&DroneExecutionManager::core_run, this, _1, _2, _3, _4));
   registerCommand(core, PSTR("send"), 255, std::bind(&DroneExecutionManager::core_send, this, _1, _2, _3, _4));
-  registerCommand(core, PSTR("setup"), DRONE_LINK_MSG_TYPE_UINT8_T, std::bind(&DroneExecutionManager::core_setup, this, _1, _2, _3, _4));
+  registerCommand(core, PSTR("setup"), DEM_DATATYPE_NONE, std::bind(&DroneExecutionManager::core_setup, this, _1, _2, _3, _4));
+  registerCommand(core, PSTR("sub"), DRONE_LINK_MSG_TYPE_ADDR, std::bind(&DroneExecutionManager::core_sub, this, _1, _2, _3, _4));
 
 
   // register modules
@@ -113,11 +116,15 @@ DroneExecutionManager::DroneExecutionManager(DroneModuleManager *dmm, DroneLinkM
   // register namespaces
   //ns = DroneModule::registerNamespace(this);
 
-  ns = ManagementModule::registerNamespace(this);
-  ManagementModule::registerParams(ns, this);
-
-  ns = MotorModule::registerNamespace(this);
-  MotorModule::registerParams(ns, this);
+  ns = HMC5883LModule::registerNamespace(this); HMC5883LModule::registerParams(ns, this);
+  ns = INA219Module::registerNamespace(this); INA219Module::registerParams(ns, this);
+  ns = ManagementModule::registerNamespace(this); ManagementModule::registerParams(ns, this);
+  ns = MotorModule::registerNamespace(this);  MotorModule::registerParams(ns, this);
+  ns = NMEAModule::registerNamespace(this); NMEAModule::registerParams(ns, this);
+  ns = NeopixelModule::registerNamespace(this); NeopixelModule::registerParams(ns, this);
+  ns = RFM69TelemetryModule::registerNamespace(this); RFM69TelemetryModule::registerParams(ns, this);
+  ns = TankSteerModule::registerNamespace(this);  TankSteerModule::registerParams(ns, this);
+  ns = UDPTelemetryModule::registerNamespace(this);  UDPTelemetryModule::registerParams(ns, this);
 
   // register constructors and mgmtParams for all module namespaces
   for (uint8_t i=0; i<_namespaces.size(); i++) {
@@ -364,6 +371,7 @@ boolean DroneExecutionManager::load(const char * filename) {
     //Log.noticeln(F("[DEM.load] File open, size: %u"), _file.size());
     // reset default namespace
     _instruction.ns = getNamespace("core");
+    _multiLineComment = false;
 
     // crete new macro
     DEM_MACRO *m = createMacro(filename);
@@ -437,8 +445,9 @@ boolean DroneExecutionManager::compileLine(const char * line, DEM_INSTRUCTION_CO
     boolean inType = false;  // in type name
     boolean gotType = false;
     boolean eoty = false; // end of type
-    boolean inComment = false;
+    boolean inComment = _multiLineComment;
     boolean inAddr = false;
+    boolean inAddrP = false;  // in address param
     boolean error = false;  // error parsing line - treat as invalid and skip
     boolean valid = false;
 
@@ -449,6 +458,10 @@ boolean DroneExecutionManager::compileLine(const char * line, DEM_INSTRUCTION_CO
     char c;
     uint8_t cp = 0; // character position
     boolean eol = false;
+
+    DRONE_LINK_ADDR tempAddr;
+    memcpy(&tempAddr, &_instruction.addr, sizeof(DRONE_LINK_ADDR));
+
     do {
       if (line[cp] > 0) { c = line[cp]; }
       else { c = '\n'; } // dummy char to finish a file cleanly
@@ -465,7 +478,7 @@ boolean DroneExecutionManager::compileLine(const char * line, DEM_INSTRUCTION_CO
           // end of channel if inAddr
           // add to str if inStr or valid cmd (e.g. numeric)
           case '.': if (inStr ) { att = true; }
-          else if (inAddr) {
+          else if (inAddr || inAddrP) {
             eoc = true;
             eot = true;
           }
@@ -482,12 +495,26 @@ boolean DroneExecutionManager::compileLine(const char * line, DEM_INSTRUCTION_CO
 
           // detect address
           case '>': if (inStr) { att = true; }
-          else { inAddr = true; eot=true; eono = true; } break;
+          else {
+            if (inAddrP) {
+
+            } else {
+              inAddr = true;
+            }
+            eot=true;
+            eono = true;
+          } break;
 
           // comments
           case '/':
           case '#':
-            if (inStr) { att = true; } else { eot=true; inComment = true; } break;
+            if (inStr) { att = true; } else {
+              eot=true; inComment = true;
+              // peek at next char and see if this is the start of a multiline comment
+              if (line[cp+1] == '*') {
+                _multiLineComment =true;
+              }
+            } break;
 
           // type name
           case '(': if (inStr) { att = true; } else { eot = true; inType = true; } break;
@@ -495,6 +522,18 @@ boolean DroneExecutionManager::compileLine(const char * line, DEM_INSTRUCTION_CO
             if (inType) {
               inType = false;
               eoty = true;
+            } else {
+              error = true;
+            }
+            eot = true;
+          } break;
+
+          // address param
+          case '[': if (inStr) { att = true; } else { eot = true; inAddrP = true; } break;
+          case ']': if (inStr) { att = true; } else {
+            if (inAddrP) {
+              eot = true;
+              eop = true;
             } else {
               error = true;
             }
@@ -521,6 +560,15 @@ boolean DroneExecutionManager::compileLine(const char * line, DEM_INSTRUCTION_CO
             if (c >= 32 && c <=126) att = true;
         }
       } else {
+        // catch end of multi-line comment
+        if (_multiLineComment) {
+          if (c == '*') {
+            // peek at next char and see if this is the end of a multiline comment
+            if (line[cp+1] == '/') {
+              _multiLineComment =false;
+            }
+          }
+        }
         // catch eol
         if (c == '\n') { eol = true; }
       }
@@ -540,19 +588,19 @@ boolean DroneExecutionManager::compileLine(const char * line, DEM_INSTRUCTION_CO
           token[tokenLen] = 0;
           // decode token
           // address component
-          if (inAddr) {
+          if (inAddr || inAddrP) {
             if (eono) {
               eono = false;
               if (token[0] == '@') {
-                _instruction.addr.node = _dlm->node();
+                tempAddr.node = _dlm->node();
               } else if (tokenContainsNumber(token[0])) {
-                _instruction.addr.node = atoi(token);
+                tempAddr.node = atoi(token);
               } else {
                 // named node
                 if (strcmp(token, _dmm->hostname().c_str()) == 0) {
-                  _instruction.addr.node = _dlm->node();
+                  tempAddr.node = _dlm->node();
                 } else
-                _instruction.addr.node = _dlm->getNodeByName(token);
+                tempAddr.node = _dlm->getNodeByName(token);
                 Serial.print("_Node lookup_");
               }
               Serial.print("_N_");
@@ -560,28 +608,56 @@ boolean DroneExecutionManager::compileLine(const char * line, DEM_INSTRUCTION_CO
             else if (eoc) {
               eoc = false;
               if (token[0] == '@') {
-                _instruction.addr.channel = _channelContext;
+                tempAddr.channel = _channelContext;
               } else if (tokenContainsNumber(token[0])) {
-                _instruction.addr.channel = atoi(token);
-              } else {
+                tempAddr.channel = atoi(token);
+              } else if (tempAddr.node == _dlm->node()) {
                 // named channel
-                // TODO:
-                _instruction.addr.channel = 0;
+                DroneModule* mod = _dmm->getModuleByName(token);
+                if (mod) {
+                  tempAddr.channel = mod->id();
+                } else {
+                  tempAddr.channel = 0;
+                  Log.errorln(F("Module not found"));
+                }
+
                 Serial.print("_Channel lookup_");
               }
               Serial.print("_C_");
             }
             else if (eop) {
               eop = false;
-              inAddr = false;
               if (tokenContainsNumber(token[0])) {
-                _instruction.addr.param = atoi(token);
-              } else {
+                tempAddr.param = atoi(token);
+              } else if (tempAddr.node == _dlm->node()) {
                 // named param
-                // TODO:
-                _instruction.addr.param = 0;
+                DroneModule* mod = _dmm->getModuleById(tempAddr.channel);
+                if (mod) {
+                  DRONE_PARAM_ENTRY* p = mod->getParamEntryByName(token);
+                  if (p) {
+                    tempAddr.param = p->param;
+                  } else {
+                    Log.errorln(F("Param not found"));
+                  }
+                } else {
+                  Log.errorln(F("Module not found, can't lookup param"));
+                }
+                tempAddr.param = 0;
                 Serial.print("_Param lookup_");
               }
+
+              // copy tempAddr to relevant area
+              if (inAddrP) {
+                _instruction.dataType = DRONE_LINK_MSG_TYPE_ADDR;
+                memcpy(&_instruction.tokens[_instruction.numTokens].value.addr, &tempAddr, sizeof(DRONE_LINK_ADDR));
+                _instruction.numTokens++;
+              } else {
+                memcpy(&_instruction.addr, &tempAddr, sizeof(DRONE_LINK_ADDR));
+              }
+              inAddr = false;
+              inAddrP = false;
+              DroneLinkMsg::printAddress(&tempAddr);  Serial.print('\n');
+
               Serial.print("_P_");
             } else {
               Log.errorln("Error decoding address");
@@ -621,7 +697,6 @@ boolean DroneExecutionManager::compileLine(const char * line, DEM_INSTRUCTION_CO
               Serial.print("_f_");
               _instruction.dataType = DRONE_LINK_MSG_TYPE_FLOAT;
             } else if (token[0] == 'a') {
-              // TODO - how is this meant to work???
               Serial.print("_a_");
               _instruction.dataType = DRONE_LINK_MSG_TYPE_ADDR;
             } else if (token[0] == 'c') {
@@ -657,14 +732,14 @@ boolean DroneExecutionManager::compileLine(const char * line, DEM_INSTRUCTION_CO
                 instr->ns = _instruction.ns;
                 if (gotType) {
                   // TODO:??
-                  if (temp.dataType<255) {
+                  if (temp.dataType != DEM_DATATYPE_NONE) {
                     if (_instruction.dataType != temp.dataType) {
                       Log.errorln("[DEM.cL] type mismatch %u > %u", _instruction.dataType,temp.dataType);
                     }
                   }
                 } else {
-                  if (temp.dataType == 255) {
-                    Log.errorln("[DEM.cL] unknown data type");
+                  if (temp.dataType == DEM_DATATYPE_NONE) {
+                    //Log.errorln("[DEM.cL] no params expected");
                   } else
                     _instruction.dataType = temp.dataType;
                 }
@@ -680,7 +755,7 @@ boolean DroneExecutionManager::compileLine(const char * line, DEM_INSTRUCTION_CO
               // attempt to decode token
 
               // addresses
-              if (inAddr) {
+              if (inAddr || inAddrP) {
                 // this should already have populated the msg address
                 inAddr = false;
                 Serial.print("_ADDR_");
@@ -717,7 +792,6 @@ boolean DroneExecutionManager::compileLine(const char * line, DEM_INSTRUCTION_CO
                   Log.errorln("Too many values!");
                   error = true;
                 }
-
 
               }
               // names a param, enum, etc
@@ -765,18 +839,11 @@ boolean DroneExecutionManager::compileLine(const char * line, DEM_INSTRUCTION_CO
       // parse DroneModule params
       parseEnums(&_instruction, (DEM_ENUM_MAPPING*)&DRONE_PARAM_TABLE, sizeof(DRONE_PARAM_TABLE)/sizeof(DEM_ENUM_MAPPING));
 
-      // parse namespace enums
-      // TODO
-
-      // parse command specific enums
-      // TODO
-
       //Log.noticeln("Decoded instruction: (%u)", _instruction.numTokens);
       //printInstruction(&_instruction);
 
       // compile the rest of the instruction
       if (instr->handler != NULL) {
-
         instr->msg.node = _instruction.addr.node;
         instr->msg.channel = _instruction.addr.channel;
         instr->msg.param = _instruction.addr.param;
@@ -829,6 +896,8 @@ void DroneExecutionManager::execute() {
 
   if (_safeMode) return;
 
+  //Log.errorln(F("[DEM.e]"));
+
   // if we have an active macro
   if (_call.p > -1) {
     DEM_CALLSTACK_ENTRY *cse = &_call.stack[_call.p];
@@ -858,6 +927,7 @@ void DroneExecutionManager::execute() {
       }
     }
   }
+  //Log.errorln(F("[DEM.e] end"));
 }
 
 
@@ -876,7 +946,8 @@ void DroneExecutionManager::serveMacroInfo(AsyncWebServerRequest *request) {
     DEM_INSTRUCTION_COMPILED ic;
     for (uint8_t j=0; j<m->commands->size(); j++) {
       ic = m->commands->get(j);
-      response->printf("   %u: %s\n", j, ic.cmd);
+      response->printf("   %u: %s ", j, ic.cmd);
+      DroneLinkMsg::printPayload(&ic.msg.payload, ic.msg.paramTypeLength, response);
     }
     response->print("\n");
   }
@@ -901,7 +972,16 @@ void DroneExecutionManager::serveCommandInfo(AsyncWebServerRequest *request) {
     DEM_COMMAND c;
     for (uint8_t j=0; j<ns->commands->size(); j++) {
       c = ns->commands->get(j);
-      response->printf("   %u: %s - %u\n", j, c.str, (c.handler != NULL ? 1 : 0));
+      response->printf("   %u: %s [", j, c.str);
+      switch(c.dataType) {
+        case DRONE_LINK_MSG_TYPE_UINT8_T: response->print(F("u8")); break;
+        case DRONE_LINK_MSG_TYPE_ADDR: response->print(F("a")); break;
+        case DRONE_LINK_MSG_TYPE_UINT32_T: response->print(F("u32")); break;
+        case DRONE_LINK_MSG_TYPE_FLOAT: response->print(F("f")); break;
+        case DRONE_LINK_MSG_TYPE_CHAR: response->print(F("c")); break;
+        case DEM_DATATYPE_NONE:  break;
+      }
+      response->print("]\n");
     }
     response->print("\n");
   }
@@ -1062,10 +1142,24 @@ boolean DroneExecutionManager::mod_constructor(DEM_INSTRUCTION_COMPILED* instr, 
   if (id > 0 && id < 255) {
     DroneModule *newMod;
 
-    if (strcmp_P(instr->ns->name, MANAGEMENT_STR_MANAGEMENT) == 0) {
+    if (strcmp_P(instr->ns->name, HMC5883L_STR_HMC5883L) == 0) {
+      newMod = new HMC5883LModule(id, _dmm, _dlm, this);
+    } else if (strcmp_P(instr->ns->name, INA219_STR_INA219) == 0) {
+      newMod = new INA219Module(id, _dmm, _dlm, this);
+    } else if (strcmp_P(instr->ns->name, MANAGEMENT_STR_MANAGEMENT) == 0) {
       newMod = new ManagementModule(id, _dmm, _dlm, this);
-    } if (strcmp_P(instr->ns->name, MOTOR_STR_MOTOR) == 0) {
+    } else if (strcmp_P(instr->ns->name, MOTOR_STR_MOTOR) == 0) {
       newMod = new MotorModule(id, _dmm, _dlm, this);
+    } else if (strcmp_P(instr->ns->name, NMEA_STR_NMEA) == 0) {
+      newMod = new NMEAModule(id, _dmm, _dlm, this);
+    } else if (strcmp_P(instr->ns->name, NEOPIXEL_STR_NEOPIXEL) == 0) {
+      newMod = new NeopixelModule(id, _dmm, _dlm, this);
+    }  else if (strcmp_P(instr->ns->name, RFM69_TELEMETRY_STR_RFM69_TELEMETRY) == 0) {
+      newMod = new RFM69TelemetryModule(id, _dmm, _dlm, this);
+    } else if (strcmp_P(instr->ns->name, TANK_STEER_STR_TANK_STEER) == 0) {
+      newMod = new TankSteerModule(id, _dmm, _dlm, this);
+    } else if (strcmp_P(instr->ns->name, UDP_TELEMETRY_STR_UDP_TELEMETRY) == 0) {
+      newMod = new UDPTelemetryModule(id, _dmm, _dlm, this);
     } else {
       Log.errorln(F("[.c] Unknown type"));
     }
@@ -1074,55 +1168,6 @@ boolean DroneExecutionManager::mod_constructor(DEM_INSTRUCTION_COMPILED* instr, 
       // push id onto data stack for use by param and publish commands
       dataStackPush(id);
     }
-    /*
-    if (typeName.equals(MANAGEMENT_STR_MANAGEMENT)) {
-                newMod = new ManagementModule(id, this, _dlm);
-              } else if (typeName.equals(TELEMETRY_STR_TELEMETRY)) {
-                newMod = new TelemetryModule(id, this, _dlm);
-              } else if (typeName.equals(PSTR("UDPTelemetry"))) {
-                newMod = new UDPTelemetryModule(id, this, _dlm);
-              } else if (typeName.equals(SERVO_STR_SERVO)) {
-                newMod = new ServoModule(id, this, _dlm);
-              } else if (typeName.equals(PSTR("Timer"))) {
-                newMod = new TimerModule(id, this, _dlm);
-              } else if (typeName.equals(PSTR("WindSpeedDir"))) {
-                //newMod = new WindSpeedDirModule(id, this, _dlm);
-              } else if (typeName.equals(BME280_STR_BME280)) {
-                newMod = new BME280Module(id, this, _dlm);
-              } else if (typeName.equals(INA219_STR_INA219)) {
-                newMod = new INA219Module(id, this, _dlm);
-              } else if (typeName.equals(HMC5883L_STR_HMC5883L)) {
-                newMod = new HMC5883LModule(id, this, _dlm);
-              } else if (typeName.equals(NMEA_STR_NMEA)) {
-                newMod = new NMEAModule(id, this, _dlm);
-              } else if (typeName.equals(MPU6050_STR_MPU6050)) {
-                newMod = new MPU6050Module(id, this, _dlm);
-              } else if (typeName.equals(MOTOR_STR_MOTOR)) {
-                newMod = new MotorModule(id, this, _dlm);
-              } else if (typeName.equals(TANK_STEER_STR_TANK_STEER)) {
-                newMod = new TankSteerModule(id, this, _dlm);
-              } else if (typeName.equals(BASIC_NAV_STR_BASIC_NAV)) {
-                newMod = new BasicNavModule(id, this, _dlm);
-              } else if (typeName.equals(WAYPOINT_NAV_STR_WAYPOINT_NAV)) {
-                newMod = new WaypointNavModule(id, this, _dlm);
-              } else if (typeName.equals(TURN_RATE_STR_TURN_RATE)) {
-                newMod = new TurnRateModule(id, this, _dlm);
-              } else if (typeName.equals(RFM69_TELEMETRY_STR_RFM69_TELEMETRY)) {
-                newMod = new RFM69TelemetryModule(id, this, _dlm);
-              } else if (typeName.equals(JOYSTICK_STR_JOYSTICK)) {
-                newMod = new JoystickModule(id, this, _dlm);
-              } else if (typeName.equals(OLED_STR_OLED)) {
-                newMod = new OLEDModule(id, this, _dlm);
-              } else if (typeName.equals(CONTROLLER_STR_CONTROLLER)) {
-                newMod = new ControllerModule(id, this, _dlm);
-              } else if (typeName.equals(NunJOYSTICK_STR_NunJOYSTICK)) {
-                newMod = new NunchuckJoystick(id, this, _dlm);
-              } else if (typeName.equals(NEOPIXEL_STR_NEOPIXEL)) {
-                newMod = new NeopixelModule(id, this, _dlm);
-              } else {
-                Log.errorln(F("Unknown type"));
-              }
-    */
     Log.noticeln(F("[.c] done"));
   } else {
     Log.errorln(F("[.c] Invalid id"));
@@ -1156,5 +1201,100 @@ boolean DroneExecutionManager::mod_param(DEM_INSTRUCTION_COMPILED* instr, DEM_CA
   } else {
     Log.errorln(F("[.p] Unable to locate module"));
   }
+  Log.noticeln(F("[.p] end"));
+  return true;
+}
+
+
+boolean DroneExecutionManager::mod_subAddr(DEM_INSTRUCTION_COMPILED* instr, DEM_CALLSTACK* cs, DEM_DATASTACK* ds, boolean continuation) {
+  uint8_t module = dataStackPeek(0);
+  Log.noticeln(F("[.p] Setting address for %s on module %u"), instr->cmd, module);
+  // get sub by name from module
+  DroneModule* mod = _dmm->getModuleById(module);
+
+  // skip the $ character
+  uint8_t param = mod->getSubIdByName(&instr->cmd[1]);
+
+  if (param != 0) {
+    // create msg
+    DroneLinkMsg temp(&instr->msg);
+    if (temp.node() == 0) temp.node(_dlm->node());
+    temp.channel(module);
+    temp.param(param);
+
+    temp.print();
+    _dlm->publish(temp);
+  } else {
+    Log.errorln(F("[.p] Unknown param"));
+  }
+
+  Log.noticeln(F("[.p] end"));
+  return true;
+}
+
+
+boolean DroneExecutionManager::core_sub(DEM_INSTRUCTION_COMPILED* instr, DEM_CALLSTACK* cs, DEM_DATASTACK* ds, boolean continuation) {
+  uint8_t module = dataStackPeek(0);
+  DRONE_LINK_ADDR *addr = &instr->msg.payload.addr[0];
+
+  if (addr->node == 0) addr->node = _dlm->node();
+
+  Log.warningln(F("[.sub] Creating sub for module %u"), module);
+  DroneLinkMsg::printAddress(addr);  Serial.print('\n');
+
+  // should have a single addr value in instr->msg
+  DroneModule* mod = _dmm->getModuleById(module);
+  if (mod != NULL && addr->node != 0) {
+
+    _dlm->subscribe(addr, mod);
+
+  } else {
+    Log.errorln(F("[.sub] Unable to locate module"));
+  }
+
+/*
+  char buffer[DRONE_LINK_MSG_MAX_PAYLOAD+1];
+  uint8_t len = (instr->msg.paramTypeLength & 0xF)+1;
+  memcpy(buffer, instr->msg.payload.c, len);
+  buffer[len] = 0;
+  char abuf[4];  //for atoi conversions
+
+  Log.warningln(F("[.sub] Creating sub %s for module %u"), buffer, module);
+  // get param address by name from module
+  DroneModule* mod = _dmm->getModuleById(module);
+  if (mod != NULL) {
+    // parse buffer into address
+    DRONE_LINK_ADDR addr;
+    char * gti = strchr(buffer, '>');
+    char * pi = strchr(buffer, '.');
+    if (gti != NULL && pi != NULL) {
+
+      uint8_t len = gti-buffer;
+      strncpy(abuf, buffer, len);
+      abuf[len] = 0;
+      if (abuf[0] == '@') {
+        addr.node = _dlm->node();
+      } else
+        addr.node = atoi(abuf);
+
+      len = pi-gti-1;
+      strncpy(abuf, gti+1, len);
+      abuf[len] = 0;
+      if (abuf[0] == '@') {
+        addr.channel = module;
+      } else
+        addr.channel = atoi(abuf);
+
+      strcpy(abuf, pi+1);
+      addr.param = atoi(abuf);
+
+      _dlm->subscribe(&addr, mod);
+    }
+
+  } else {
+    Log.errorln(F("[.sub] Unable to locate module"));
+  }
+  */
+  Log.noticeln(F("[.sub] end"));
   return true;
 }

@@ -31,7 +31,7 @@ struct DEM_COMMAND;
 #define DEM_BOOT_FAIL     0  // didnt make it to module setup
 #define DEM_BOOT_SUCCESS  1  // made it to module setup
 
-
+#define DEM_DATATYPE_NONE 255 // dummy dataType for no parameters
 
 struct DEM_ENUM_MAPPING {
   const char *const str;
@@ -123,6 +123,7 @@ protected:
   File _file;  // TODO - can prob remove this
 
   uint8_t _channelContext;  // set by CP command
+  boolean _multiLineComment; // set to true when /* encountered
   DEM_INSTRUCTION _instruction;  // newly parsed instruction
 
   //IvanLinkedList::LinkedList<DroneLinkChannel*> _channels;
@@ -186,6 +187,8 @@ public:
 
     boolean mod_constructor(DEM_INSTRUCTION_COMPILED* instr, DEM_CALLSTACK* cs, DEM_DATASTACK* ds, boolean continuation);
     boolean mod_param(DEM_INSTRUCTION_COMPILED* instr, DEM_CALLSTACK* cs, DEM_DATASTACK* ds, boolean continuation);
+    boolean mod_subAddr(DEM_INSTRUCTION_COMPILED* instr, DEM_CALLSTACK* cs, DEM_DATASTACK* ds, boolean continuation);
+    boolean core_sub(DEM_INSTRUCTION_COMPILED* instr, DEM_CALLSTACK* cs, DEM_DATASTACK* ds, boolean continuation);
 };
 
 

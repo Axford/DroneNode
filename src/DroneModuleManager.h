@@ -36,6 +36,7 @@ public:
   void registerModule(DroneModule *m);
 
   DroneModule* getModuleById(uint8_t id);
+  DroneModule* getModuleByName(char * name);
 
   void node(uint8_t id);
   uint8_t node();

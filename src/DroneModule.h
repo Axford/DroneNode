@@ -120,12 +120,15 @@ public:
 
   void setTypeName( const __FlashStringHelper *name);
   void setParamName( const __FlashStringHelper *name, DRONE_PARAM_ENTRY *param);
+  char* getName();
 
   virtual void initSubs(uint8_t numSubs);
   virtual void initParams(uint8_t numParams);
 
   uint8_t getParamIdByName(const char* name);
+  uint8_t getSubIdByName(const char* name);
   DRONE_PARAM_ENTRY* getParamEntryByName(const char* name);
+  DRONE_PARAM_SUB* getSubByName(const char* name);
 
   static DEM_NAMESPACE* registerNamespace(DroneExecutionManager *dem);
   static void registerConstructor(DEM_NAMESPACE* ns, DroneExecutionManager *dem);

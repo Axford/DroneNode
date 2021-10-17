@@ -16,23 +16,23 @@ Manages a HMC5883L I2C power monitor
 #define HMC5883L_I2C_ADDRESS  0x1E  // write address, read address is +1
 
 // pubs
-#define HMC5883L_PARAM_VECTOR          B00001000
-#define HMC5883L_PARAM_HEADING         B00010000
-#define HMC5883L_PARAM_DECLINATION     B00100000
-#define HMC5883L_PARAM_CALIB_X         B01000000
-#define HMC5883L_PARAM_CALIB_Y         B10000000
+#define HMC5883L_PARAM_VECTOR          (I2CBASE_SUBCLASS_PARAM_START+0)
+#define HMC5883L_PARAM_HEADING         (I2CBASE_SUBCLASS_PARAM_START+1)
+#define HMC5883L_PARAM_DECLINATION     (I2CBASE_SUBCLASS_PARAM_START+2)
+#define HMC5883L_PARAM_CALIB_X         (I2CBASE_SUBCLASS_PARAM_START+3)
+#define HMC5883L_PARAM_CALIB_Y         (I2CBASE_SUBCLASS_PARAM_START+4)
 
-#define HMC5883L_PARAM_VECTOR_E          0
-#define HMC5883L_PARAM_HEADING_E         1
-#define HMC5883L_PARAM_DECLINATION_E     2
-#define HMC5883L_PARAM_CALIB_X_E         3
-#define HMC5883L_PARAM_CALIB_Y_E         4
+#define HMC5883L_PARAM_VECTOR_E          (I2CBASE_PARAM_ENTRIES+0)
+#define HMC5883L_PARAM_HEADING_E         (I2CBASE_PARAM_ENTRIES+1)
+#define HMC5883L_PARAM_DECLINATION_E     (I2CBASE_PARAM_ENTRIES+2)
+#define HMC5883L_PARAM_CALIB_X_E         (I2CBASE_PARAM_ENTRIES+3)
+#define HMC5883L_PARAM_CALIB_Y_E         (I2CBASE_PARAM_ENTRIES+4)
 
-#define HMC5883L_PARAM_ENTRIES           5
+#define HMC5883L_PARAM_ENTRIES           (I2CBASE_PARAM_ENTRIES + 5)
 
 // subs
-#define HMC5883L_SUB_LOCATION            9
-#define HMC5883L_SUB_LOCATION_ADDR       10
+#define HMC5883L_SUB_LOCATION            (I2CBASE_SUBCLASS_PARAM_START+5)
+#define HMC5883L_SUB_LOCATION_ADDR       (I2CBASE_SUBCLASS_PARAM_START+6)
 #define HMC5883L_SUB_LOCATION_E          0
 
 #define HMC5883L_SUBS                    1
@@ -51,6 +51,9 @@ public:
 
   HMC5883LModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm, DroneExecutionManager* dem);
   ~HMC5883LModule();
+
+  static DEM_NAMESPACE* registerNamespace(DroneExecutionManager *dem);
+  static void registerParams(DEM_NAMESPACE* ns, DroneExecutionManager *dem);
 
   void doReset();
 

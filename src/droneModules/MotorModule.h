@@ -9,6 +9,22 @@ Manages a PWM MOTOR channel
 #include "../DroneModule.h"
 
 
+// params
+
+#define MOTOR_PARAM_PINS         10
+#define MOTOR_PARAM_PINS_E       0
+
+#define MOTOR_PARAM_PWMCHANNEL   11
+#define MOTOR_PARAM_PWMCHANNEL_E 1
+
+#define MOTOR_PARAM_LIMITS       12
+#define MOTOR_PARAM_LIMITS_E     2
+
+#define MOTOR_PARAM_DEADBAND     13
+#define MOTOR_PARAM_DEADBAND_E   3
+
+#define MOTOR_PARAM_ENTRIES      4
+
 // subs
 #define MOTOR_SUB_SPEED         8
 #define MOTOR_SUB_SPEED_ADDR    9
@@ -26,11 +42,7 @@ static const char MOTOR_STR_MOTOR[] PROGMEM = "Motor";
 
 class MotorModule:  public DroneModule {
 protected:
-  float _deadband;  // width of deadband (measured from zero, do actually double this value)
-  uint8_t _PWMChannel;
-  uint8_t _pins[3];
-  float _limits[2];  // min, max
-
+  
 public:
 
   MotorModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm, DroneExecutionManager* dem);

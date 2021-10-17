@@ -36,6 +36,15 @@ DroneModule* DroneModuleManager::getModuleById(uint8_t id) {
   return NULL;
 }
 
+DroneModule* DroneModuleManager::getModuleByName(char * name) {
+  DroneModule* m;
+  for(int i = 0; i < _modules.size(); i++) {
+    m = _modules.get(i);
+    if (strcmp(m->getName(), name)==0) return m;
+  }
+  return NULL;
+}
+
 void DroneModuleManager::node(uint8_t id) {
   _node = id;
 }

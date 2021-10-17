@@ -9,10 +9,10 @@ HMC5883LModule::HMC5883LModule(uint8_t id, DroneModuleManager* dmm, DroneLinkMan
   I2CBaseModule ( id, dmm, dlm, dem )
  {
    setTypeName(FPSTR(HMC5883L_STR_HMC5883L));
-   _addr = HMC5883L_I2C_ADDRESS;
+   //_params[I2CBASE_PARAM_ADDR_E].data.uint8[0] = HMC5883L_I2C_ADDRESS;
 
-   _location[0] = 0;
-   _location[1] = 0;
+   _location[0] = -1.8;
+   _location[1] = 52;
 
    // subs
    initSubs(HMC5883L_SUBS);
@@ -26,6 +26,9 @@ HMC5883LModule::HMC5883LModule(uint8_t id, DroneModuleManager* dmm, DroneLinkMan
 
    // pubs
    initParams(HMC5883L_PARAM_ENTRIES);
+
+   I2CBaseModule::initBaseParams();
+   _params[I2CBASE_PARAM_ADDR_E].data.uint8[0] = HMC5883L_I2C_ADDRESS;
 
    // init param entries
    _params[HMC5883L_PARAM_VECTOR_E].param = HMC5883L_PARAM_VECTOR;
@@ -42,16 +45,17 @@ HMC5883LModule::HMC5883LModule(uint8_t id, DroneModuleManager* dmm, DroneLinkMan
    _params[HMC5883L_PARAM_DECLINATION_E].name = FPSTR(STRING_DECLINATION);
    _params[HMC5883L_PARAM_DECLINATION_E].nameLen = sizeof(STRING_DECLINATION);
    _params[HMC5883L_PARAM_DECLINATION_E].data.f[0] = 0;
+   _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_FLOAT, 4);
 
    _params[HMC5883L_PARAM_CALIB_X_E].param = HMC5883L_PARAM_CALIB_X;
    _params[HMC5883L_PARAM_CALIB_X_E].name = FPSTR(STRING_CALIB_X);
    _params[HMC5883L_PARAM_CALIB_X_E].nameLen = sizeof(STRING_CALIB_X);
-   _params[HMC5883L_PARAM_CALIB_X_E].paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 12);
+   _params[HMC5883L_PARAM_CALIB_X_E].paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_FLOAT, 12);
 
    _params[HMC5883L_PARAM_CALIB_Y_E].param = HMC5883L_PARAM_CALIB_Y;
    _params[HMC5883L_PARAM_CALIB_Y_E].name = FPSTR(STRING_CALIB_Y);
    _params[HMC5883L_PARAM_CALIB_Y_E].nameLen = sizeof(STRING_CALIB_Y);
-   _params[HMC5883L_PARAM_CALIB_Y_E].paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 12);
+   _params[HMC5883L_PARAM_CALIB_Y_E].paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_FLOAT, 12);
 
 }
 
@@ -60,10 +64,32 @@ HMC5883LModule::~HMC5883LModule() {
 }
 
 
+DEM_NAMESPACE* HMC5883LModule::registerNamespace(DroneExecutionManager *dem) {
+  // namespace for module type
+  return dem->createNamespace(HMC5883L_STR_HMC5883L,0,true);
+}
+
+void HMC5883LModule::registerParams(DEM_NAMESPACE* ns, DroneExecutionManager *dem) {
+
+  I2CBaseModule::registerParams(ns, dem);
+
+  using std::placeholders::_1;
+  using std::placeholders::_2;
+  using std::placeholders::_3;
+  using std::placeholders::_4;
+
+  // writable mgmt params
+  DEMCommandHandler ph = std::bind(&DroneExecutionManager::mod_param, dem, _1, _2, _3, _4);
+  DEMCommandHandler pha = std::bind(&DroneExecutionManager::mod_subAddr, dem, _1, _2, _3, _4);
+
+  dem->registerCommand(ns, STRING_LOCATION, DRONE_LINK_MSG_TYPE_FLOAT, ph);
+  dem->registerCommand(ns, PSTR("$location"), DRONE_LINK_MSG_TYPE_FLOAT, pha);
+}
+
 void HMC5883LModule::doReset() {
   I2CBaseModule::doReset();
 
-  DroneWire::selectChannel(_bus);
+  DroneWire::selectChannel(_params[I2CBASE_PARAM_BUS_E].data.uint8[0]);
 
   setError( _sensor->begin() ? 0 : 1 );
   if (_error) {
@@ -75,9 +101,9 @@ void HMC5883LModule::doReset() {
 void HMC5883LModule::loadConfiguration(JsonObject &obj) {
   I2CBaseModule::loadConfiguration(obj);
 
-  // instantiate sensor object, now _addr is known
+  // instantiate sensor object, now _params[I2CBASE_PARAM_ADDR_E].data.uint8[0] is known
   _sensor = new Adafruit_HMC5883_Unified(_id);
-
+/*
   // read default declination
   if (obj.containsKey(STRING_DECLINATION)) {
     _params[HMC5883L_PARAM_CALIB_X_E].data.f[0] = obj[STRING_DECLINATION];
@@ -101,6 +127,7 @@ void HMC5883LModule::loadConfiguration(JsonObject &obj) {
       _params[HMC5883L_PARAM_CALIB_Y_E].data.f[2] = array[1];
     }
   }
+  */
 }
 
 
@@ -143,7 +170,7 @@ void HMC5883LModule::loop() {
 
   //Log.noticeln("HMC5883L.loop");
 
-  DroneWire::selectChannel(_bus);
+  DroneWire::selectChannel(_params[I2CBASE_PARAM_BUS_E].data.uint8[0]);
 
 
   // get sensor values

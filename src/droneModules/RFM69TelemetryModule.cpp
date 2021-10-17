@@ -26,6 +26,24 @@ RFM69TelemetryModule::RFM69TelemetryModule(uint8_t id, DroneModuleManager* dmm, 
 
 }
 
+DEM_NAMESPACE* RFM69TelemetryModule::registerNamespace(DroneExecutionManager *dem) {
+  // namespace for module type
+  return dem->createNamespace(RFM69_TELEMETRY_STR_RFM69_TELEMETRY,0,true);
+}
+
+void RFM69TelemetryModule::registerParams(DEM_NAMESPACE* ns, DroneExecutionManager *dem) {
+  using std::placeholders::_1;
+  using std::placeholders::_2;
+  using std::placeholders::_3;
+  using std::placeholders::_4;
+
+  // writable mgmt params
+  DEMCommandHandler ph = std::bind(&DroneExecutionManager::mod_param, dem, _1, _2, _3, _4);
+
+  //dem->registerCommand(ns, STRING_LOCATION, DRONE_LINK_MSG_TYPE_FLOAT, ph);
+}
+
+
 void RFM69TelemetryModule::loadConfiguration(JsonObject &obj) {
   DroneModule::loadConfiguration(obj);
 
@@ -34,7 +52,7 @@ void RFM69TelemetryModule::loadConfiguration(JsonObject &obj) {
 void RFM69TelemetryModule::handleLinkMessage(DroneLinkMsg *msg) {
   DroneModule::handleLinkMessage(msg);
 
-  if (!_enabled) return;
+  if (!_enabled || !_setupDone) return;
 
   if (_error > 0) return;
 
@@ -62,10 +80,9 @@ void RFM69TelemetryModule::handleLinkMessage(DroneLinkMsg *msg) {
   }
 
   if (sendPacket) {
-    if (msg->type() == DRONE_LINK_MSG_TYPE_FLOAT) {
-      //Serial.print("RFM69: Sending: ");
-      //msg->print();
-    }
+    Serial.print("RFM69: Sending: ");
+    msg->print();
+
 
     uint8_t transmitLength = msg->length() + sizeof(DRONE_LINK_ADDR) + 2;
 

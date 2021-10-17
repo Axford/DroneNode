@@ -7,8 +7,6 @@ JoystickModule::JoystickModule(uint8_t id, DroneModuleManager* dmm, DroneLinkMan
   I2CBaseModule ( id, dmm, dlm, dem )
  {
    setTypeName(FPSTR(JOYSTICK_STR_JOYSTICK));
-   //_pins[0] = 0;
-   _addr = JOYSTICK_I2C_ADDRESS;
 
    for (uint8_t i=0; i<JOYSTICK_AXES; i++) {
      _invert[i] = false;
@@ -16,6 +14,9 @@ JoystickModule::JoystickModule(uint8_t id, DroneModuleManager* dmm, DroneLinkMan
 
    // pubs
    initParams(JOYSTICK_PARAM_ENTRIES);
+
+   I2CBaseModule::initBaseParams();
+   _params[I2CBASE_PARAM_ADDR_E].data.uint8[0] = JOYSTICK_I2C_ADDRESS;
 
    DRONE_PARAM_ENTRY *param;
 
@@ -44,7 +45,7 @@ JoystickModule::JoystickModule(uint8_t id, DroneModuleManager* dmm, DroneLinkMan
 void JoystickModule::doReset() {
   I2CBaseModule::doReset();
 
-  DroneWire::selectChannel(_bus);
+  DroneWire::selectChannel(_params[I2CBASE_PARAM_BUS_E].data.uint8[0]);
 
   setError(0);
 }
@@ -76,9 +77,9 @@ void JoystickModule::loadConfiguration(JsonObject &obj) {
 void JoystickModule::loop() {
   I2CBaseModule::loop();
 
-  DroneWire::selectChannel(_bus);
+  DroneWire::selectChannel(_params[I2CBASE_PARAM_BUS_E].data.uint8[0]);
 
-  uint8_t bytes = Wire.requestFrom((uint16_t)_addr, (uint8_t)4, true);
+  uint8_t bytes = Wire.requestFrom((uint16_t)_params[I2CBASE_PARAM_ADDR_E].data.uint8[0], (uint8_t)4, true);
 
   //Serial.print("!");
 

@@ -101,6 +101,15 @@ void DroneModule::setParamName( const __FlashStringHelper * name, DRONE_PARAM_EN
 }
 
 
+char* DroneModule::getName() {
+  // make sure it's null terminated
+  uint8_t len = (_mgmtParams[DRONE_MODULE_PARAM_NAME_E].paramTypeLength & 0xF) + 1;
+  if (len < DRONE_LINK_MSG_MAX_PAYLOAD)
+    _mgmtParams[DRONE_MODULE_PARAM_NAME_E].data.c[len] = 0;
+  return _mgmtParams[DRONE_MODULE_PARAM_NAME_E].data.c;
+}
+
+
 void DroneModule::initSubs(uint8_t numSubs) {
   _numSubs = numSubs;
   _subs = (DRONE_PARAM_SUB*)malloc( sizeof(DRONE_PARAM_SUB) * _numSubs);
@@ -138,6 +147,14 @@ uint8_t DroneModule::getParamIdByName(const char* name) {
   return 0;
 }
 
+uint8_t DroneModule::getSubIdByName(const char* name) {
+  DRONE_PARAM_SUB* p = getSubByName(name);
+  if (p != NULL) {
+    return p->addrParam;
+  }
+  return 0;
+}
+
 
 DRONE_PARAM_ENTRY* DroneModule::getParamEntryByName(const char* name) {
   // check mgmt params first
@@ -156,6 +173,16 @@ DRONE_PARAM_ENTRY* DroneModule::getParamEntryByName(const char* name) {
   for (uint8_t i=0; i<_numSubs; i++) {
     if (strcmp_P(name, (PGM_P)_subs[i].param.name)==0) {
       return &_subs[i].param;
+    }
+  }
+
+  return NULL;
+}
+
+DRONE_PARAM_SUB* DroneModule::getSubByName(const char* name) {
+  for (uint8_t i=0; i<_numSubs; i++) {
+    if (strcmp_P(name, (PGM_P)_subs[i].param.name)==0) {
+      return &_subs[i];
     }
   }
 
@@ -186,8 +213,8 @@ void DroneModule::registerMgmtParams(DEM_NAMESPACE* ns, DroneExecutionManager *d
 
 void DroneModule::reset() {
   unsigned long loopTime = millis();
-  if (loopTime > _lastReset + DRONE_MODULE_RESET_INTERVAL) {
-    Log.warningln(F("Resetting %d"), _id);
+  if (_setupDone && loopTime > _lastReset + DRONE_MODULE_RESET_INTERVAL) {
+    Log.warningln(F("[DM.r] Resetting %d"), _id);
     _lastReset = loopTime;
     _resetCount++;
 
@@ -214,43 +241,6 @@ void DroneModule::doShutdown() {
 
 boolean DroneModule::isAlive() { return true; }
 
-/*
-void DroneModule::parsePins(JsonObject &obj, uint8_t *pins, uint8_t numPins) {
-  if (obj.containsKey(STRING_PINS)) {
-    Log.noticeln(STRING_PINS);
-
-    if (obj[STRING_PINS].is<JsonArray>()) {
-      JsonArray array = obj[STRING_PINS].as<JsonArray>();
-
-      uint8_t i = 0;
-      for(JsonVariant v : array) {
-        if (i<numPins) {
-          String pinName = v;
-          // attempt to lookup pin number from name
-          for (uint8_t j=0; j<PINS_NUM; j++) {
-            if (pinName == PIN_NAMES[j]) {
-              pins[i] = PIN_NUMBERS[j];
-              break;
-            }
-          }
-        }
-        i++;
-      }
-    } else {
-      // attempt to lookup pin number from name
-      String pinName = obj[STRING_PINS];
-
-      for (uint8_t j=0; j<PINS_NUM; j++) {
-        if (pinName == PIN_NAMES[j]) {
-          pins[0] = PIN_NUMBERS[j];
-          break;
-        }
-      }
-    }
-
-  }
-}
-*/
 
 
 void DroneModule::loadConfiguration(JsonObject &obj) {
@@ -566,14 +556,14 @@ void DroneModule::enable() {
   if (_enabled) return;
   _enabled = true;
   _mgmtParams[DRONE_MODULE_PARAM_STATUS_E].data.uint8[0] = _enabled ? 1 : 0;
-  Log.noticeln(F("Enable module %d"), _id);
+  Log.noticeln(F("[DM.en] enable %d"), _id);
 }
 
 void DroneModule::disable() {
   if (!_enabled) return;
   _enabled = false;
   _mgmtParams[DRONE_MODULE_PARAM_STATUS_E].data.uint8[0] = _enabled ? 1 : 0;
-  Log.noticeln(F("Disable module %d"), _id);
+  Log.noticeln(F("[DM.dis] disable %d"), _id);
 }
 
 boolean DroneModule::isEnabled() {
@@ -719,7 +709,11 @@ void DroneModule::respondWithInfo(AsyncResponseStream *response) {
   DRONE_PARAM_SUB *s;
   for (uint8_t i=0; i<_numSubs; i++) {
     s = &_subs[i];
-    response->printf("    %u/%u: %s ",s->addrParam, s->param.param, (PGM_P)s->param.name);
+    response->printf("    %u: $%s [", s->addrParam, (PGM_P)s->param.name);
+    DroneLinkMsg::printAddress(&s->addr, response);
+    response->print("]\n");
+
+    response->printf("    %u: %s ",s->param.param, (PGM_P)s->param.name);
     DroneLinkMsg::printPayload(&s->param.data, s->param.paramTypeLength, response);
   }
   response->print(F("\n"));

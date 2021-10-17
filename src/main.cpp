@@ -56,6 +56,7 @@ Steps to setup a new device:
 #include "OTAManager.h"
 #include <ESP32Servo.h>
 #include <ArduinoLog.h>
+#include <EEPROM.h>
 
 // config
 #include "pinConfig.h"
@@ -212,7 +213,9 @@ void setup() {
   Serial.begin(115200);
   while(!Serial) {  }
 
-  Log.begin(LOG_LEVEL_VERBOSE, &Serial);
+  EEPROM.begin(DEM_EEPROM_SIZE);
+
+  Log.begin(LOG_LEVEL_WARNING, &Serial);
 
   delay(2500); // to allow serial to reconnect after programming
 
@@ -287,7 +290,7 @@ void setup() {
 
   // redirect logging to serial
   logFile.close();
-  Log.begin(LOG_LEVEL_VERBOSE, &Serial);
+  Log.begin(LOG_LEVEL_WARNING, &Serial);
 
   //digitalWrite(PIN_LED, LOW);
 }

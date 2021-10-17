@@ -61,30 +61,28 @@ struct NEOPIXEL_SCENE {
 } __packed;
 
 //pubs
-#define NEOPIXEL_PARAM_SCENE0        100
-#define NEOPIXEL_PARAM_SCENE0_E      0
+#define NEOPIXEL_PARAM_PINS          12
+#define NEOPIXEL_PARAM_NUMPIXELS     13
 
-#define NEOPIXEL_PARAM_ENTRIES       4  // number of scenes to generate
+#define NEOPIXEL_PARAM_PINS_E          0
+#define NEOPIXEL_PARAM_NUMPIXELS_E     1
 
+#define NEOPIXEL_PARAM_ENTRIES       2
 
 // subs
 #define NEOPIXEL_SUB_SCENE         8
 #define NEOPIXEL_SUB_SCENE_ADDR    9
 #define NEOPIXEL_SUB_SCENE_E       0
 
-#define NEOPIXEL_SUB_ACTIVESCENE         10
-#define NEOPIXEL_SUB_ACTIVESCENE_ADDR    11
-#define NEOPIXEL_SUB_ACTIVESCENE_E       1
-
-#define NEOPIXEL_SUBS                    2
+#define NEOPIXEL_SUBS                    1
 
 
 static const char NEOPIXEL_STR_NEOPIXEL[] PROGMEM = "Neopixel";
 
 class NeopixelModule:  public DroneModule {
 protected:
-  uint8_t _pins[1];
-  uint8_t _numPixels;
+  //uint8_t _pins[1];
+  //uint8_t _numPixels;
   uint8_t _colourOrder;
   NeoPixelBrightnessBus<NeoGrbFeature, Neo800KbpsMethod> *_strip;
   unsigned long _effectTime;
@@ -92,6 +90,9 @@ protected:
 public:
 
   NeopixelModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm, DroneExecutionManager* dem);
+
+  static DEM_NAMESPACE* registerNamespace(DroneExecutionManager *dem);
+  static void registerParams(DEM_NAMESPACE* ns, DroneExecutionManager *dem);
 
   void initScene(NEOPIXEL_SCENE *scene);
 

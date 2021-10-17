@@ -54,7 +54,7 @@ ControllerModule::ControllerModule(uint8_t id, DroneModuleManager* dmm, DroneLin
   I2CBaseModule ( id, dmm, dlm, dem )
  {
    setTypeName(FPSTR(CONTROLLER_STR_CONTROLLER));
-   _addr = CONTROLLER_OLED_I2C_ADDRESS;
+   _params[I2CBASE_PARAM_ADDR_E].data.uint8[0] = CONTROLLER_OLED_I2C_ADDRESS;
 
    // init query msg
    _queryMsg.source(_dlm->node());
@@ -175,7 +175,7 @@ void ControllerModule::clear() {
 void ControllerModule::doReset() {
   I2CBaseModule::doReset();
 
-  DroneWire::selectChannel(_bus);
+  DroneWire::selectChannel(_params[I2CBASE_PARAM_BUS_E].data.uint8[0]);
 
   //_display->init();
   if (_display) _display->resetDisplay();
@@ -187,7 +187,7 @@ void ControllerModule::doReset() {
 void ControllerModule::doShutdown() {
   DroneModule::doShutdown(); // disables module
 
-  DroneWire::selectChannel(_bus);
+  DroneWire::selectChannel(_params[I2CBASE_PARAM_BUS_E].data.uint8[0]);
 
   // write shutdown message to screen
   // clear the display
@@ -414,10 +414,10 @@ void ControllerModule::handleLinkMessage(DroneLinkMsg *msg) {
 void ControllerModule::loadConfiguration(JsonObject &obj) {
   I2CBaseModule::loadConfiguration(obj);
 
-  // instantiate sensor object, now _addr is known
-  DroneWire::selectChannel(_bus);
+  // instantiate sensor object, now _params[I2CBASE_PARAM_ADDR_E].data.uint8[0] is known
+  DroneWire::selectChannel(_params[I2CBASE_PARAM_BUS_E].data.uint8[0]);
 
-  _display = new SSD1306Wire(_addr, SDA, SCL);
+  _display = new SSD1306Wire(_params[I2CBASE_PARAM_ADDR_E].data.uint8[0], SDA, SCL);
 
   // read joystick channels
   _params[CONTROLLER_PARAM_LEFT_E].data.uint8[0] = obj[STRING_LEFT] | _params[CONTROLLER_PARAM_LEFT_E].data.uint8[0];
@@ -488,7 +488,7 @@ void ControllerModule::setup() {
 
  // Init display
  if (_display) {
-   DroneWire::selectChannel(_bus);
+   DroneWire::selectChannel(_params[I2CBASE_PARAM_BUS_E].data.uint8[0]);
 
    if (!_display->init()) {
      Log.errorln(F("display->init()"));
@@ -973,7 +973,7 @@ void ControllerModule::loop() {
 
   //Serial.println("loop");
 
-  DroneWire::selectChannel(_bus);
+  DroneWire::selectChannel(_params[I2CBASE_PARAM_BUS_E].data.uint8[0]);
 
 
   // do we have an active binding to send to?

@@ -8,32 +8,54 @@ UDPTelemetryModule::UDPTelemetryModule(uint8_t id, DroneModuleManager* dmm, Dron
  {
    setTypeName(FPSTR(UDP_TELEMETRY_STR_UDP_TELEMETRY));
    _receivedSize = 0;
-   _port = UDP_TELEMETRY_PORT;
-   _broadcast[0] = 192;
-   _broadcast[1] = 168;
-   _broadcast[2] = 4;
-   _broadcast[3] = 255;
+
+   // pubs
+   initParams(UDP_PARAM_ENTRIES);
+
+   DRONE_PARAM_ENTRY *param;
+
+   param = &_params[UDP_PARAM_PORT_E];
+   param->param = UDP_PARAM_PORT;
+   setParamName(FPSTR(STRING_PORT), param);
+   _params[UDP_PARAM_PORT_E].paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_UINT32_T, 4);
+   _params[UDP_PARAM_PORT_E].data.uint32[0] = UDP_TELEMETRY_PORT;
+
+   param = &_params[UDP_PARAM_BROADCAST_E];
+   param->param = UDP_PARAM_BROADCAST;
+   setParamName(FPSTR(STRING_BROADCAST), param);
+   _params[UDP_PARAM_BROADCAST_E].paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_UINT32_T, 4);
+   _params[UDP_PARAM_BROADCAST_E].data.uint8[0] = 255;
+   _params[UDP_PARAM_BROADCAST_E].data.uint8[1] = 255;
+   _params[UDP_PARAM_BROADCAST_E].data.uint8[2] = 255;
+   _params[UDP_PARAM_BROADCAST_E].data.uint8[3] = 255;
+}
+
+DEM_NAMESPACE* UDPTelemetryModule::registerNamespace(DroneExecutionManager *dem) {
+  // namespace for module type
+  return dem->createNamespace(UDP_TELEMETRY_STR_UDP_TELEMETRY,0,true);
+}
+
+void UDPTelemetryModule::registerParams(DEM_NAMESPACE* ns, DroneExecutionManager *dem) {
+  using std::placeholders::_1;
+  using std::placeholders::_2;
+  using std::placeholders::_3;
+  using std::placeholders::_4;
+
+  // writable mgmt params
+  DEMCommandHandler ph = std::bind(&DroneExecutionManager::mod_param, dem, _1, _2, _3, _4);
+
+  dem->registerCommand(ns, STRING_PORT, DRONE_LINK_MSG_TYPE_UINT32_T, ph);
+  dem->registerCommand(ns, STRING_BROADCAST, DRONE_LINK_MSG_TYPE_UINT8_T, ph);
 }
 
 void UDPTelemetryModule::loadConfiguration(JsonObject &obj) {
   DroneModule::loadConfiguration(obj);
-
-  _port = obj[PSTR("port")] | _port;
-
-  if (obj.containsKey(F("broadcast"))) {
-    JsonArray arr = obj[F("broadcast")].as<JsonArray>();
-    if (arr.size() == 4) {
-      for (uint8_t i=0; i<4; i++) {
-        _broadcast[i] = arr[i];
-      }
-    }
-  }
 }
 
 void UDPTelemetryModule::handleLinkMessage(DroneLinkMsg *msg) {
   DroneModule::handleLinkMessage(msg);
 
-  if (!_enabled) return;
+  if (!_enabled || !_setupDone) return;
 
   // check to see if this is the same as the last message we received!
   // if so, we're getting stuck in a loop and the message should be ignored
@@ -42,7 +64,12 @@ void UDPTelemetryModule::handleLinkMessage(DroneLinkMsg *msg) {
   boolean wifiConnected = (WiFi.status() == WL_CONNECTED) || (WiFi.softAPIP()[0] > 0);
   if (!wifiConnected) return;
 
-  IPAddress broadcastIp(_broadcast[0], _broadcast[1], _broadcast[2], _broadcast[3]);
+  IPAddress broadcastIp(
+    _params[UDP_PARAM_BROADCAST_E].data.uint8[0],
+    _params[UDP_PARAM_BROADCAST_E].data.uint8[1],
+    _params[UDP_PARAM_BROADCAST_E].data.uint8[2],
+    _params[UDP_PARAM_BROADCAST_E].data.uint8[3]
+  );
 
   //Log.noticeln("UDP Broadcast: ");
   //msg->print();
@@ -62,14 +89,14 @@ void UDPTelemetryModule::handleLinkMessage(DroneLinkMsg *msg) {
   }
 
   if (sendPacket) {
-    _udp.beginPacket(broadcastIp, _port);
+    _udp.beginPacket(broadcastIp, _params[UDP_PARAM_PORT_E].data.uint32[0]);
     _udp.write((uint8_t*)&msg->_msg, msg->length() + sizeof(DRONE_LINK_ADDR));
     _udp.endPacket();
   }
 }
 
 void UDPTelemetryModule::setup() {
-  _udp.begin(_port);
+  _udp.begin(_params[UDP_PARAM_PORT_E].data.uint32[0]);
 }
 
 void UDPTelemetryModule::loop() {

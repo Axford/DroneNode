@@ -7,13 +7,13 @@ INA219Module::INA219Module(uint8_t id, DroneModuleManager* dmm, DroneLinkManager
   I2CBaseModule ( id, dmm, dlm, dem )
  {
    setTypeName(FPSTR(INA219_STR_INA219));
-   _addr = INA219_I2C_ADDRESS;
-
-   _numCells = 1;
-   _threshold = 0;  //voltage threshold for alarm
+   //_params[I2CBASE_PARAM_ADDR_E].data.uint8[0] = INA219_I2C_ADDRESS;
 
    // pubs
    initParams(INA219_PARAM_ENTRIES);
+
+   I2CBaseModule::initBaseParams();
+   _params[I2CBASE_PARAM_ADDR_E].data.uint8[0] = INA219_I2C_ADDRESS;
 
    DRONE_PARAM_ENTRY *param;
 
@@ -52,6 +52,17 @@ INA219Module::INA219Module(uint8_t id, DroneModuleManager* dmm, DroneLinkManager
    setParamName(FPSTR(STRING_ALARM), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_UINT8_T, 1);
 
+   param = &_params[INA219_PARAM_CELLS_E];
+   param->param = INA219_PARAM_CELLS;
+   setParamName(FPSTR(STRING_CELLS), param);
+   param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_UINT8_T, 1);
+   _params[INA219_PARAM_CELLS_E].data.uint8[0] = 3;
+
+   param = &_params[INA219_PARAM_THRESHOLD_E];
+   param->param = INA219_PARAM_THRESHOLD;
+   setParamName(FPSTR(STRING_THRESHOLD), param);
+   param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_FLOAT, 4);
+   _params[INA219_PARAM_THRESHOLD_E].data.f[0] = 11.2;
 }
 
 INA219Module::~INA219Module() {
@@ -59,10 +70,31 @@ INA219Module::~INA219Module() {
 }
 
 
+DEM_NAMESPACE* INA219Module::registerNamespace(DroneExecutionManager *dem) {
+  // namespace for module type
+  return dem->createNamespace(INA219_STR_INA219,0,true);
+}
+
+void INA219Module::registerParams(DEM_NAMESPACE* ns, DroneExecutionManager *dem) {
+  I2CBaseModule::registerParams(ns, dem);
+
+  using std::placeholders::_1;
+  using std::placeholders::_2;
+  using std::placeholders::_3;
+  using std::placeholders::_4;
+
+  // writable mgmt params
+  DEMCommandHandler ph = std::bind(&DroneExecutionManager::mod_param, dem, _1, _2, _3, _4);
+
+  dem->registerCommand(ns, STRING_THRESHOLD, DRONE_LINK_MSG_TYPE_FLOAT, ph);
+  dem->registerCommand(ns, STRING_CELLS, DRONE_LINK_MSG_TYPE_UINT8_T, ph);
+}
+
+
 void INA219Module::doReset() {
   I2CBaseModule::doReset();
 
-  DroneWire::selectChannel(_bus);
+  DroneWire::selectChannel(_params[I2CBASE_PARAM_BUS_E].data.uint8[0]);
 
   setError( _sensor->begin() ? 0 : 1 );
   if (_error) {
@@ -74,22 +106,20 @@ void INA219Module::doReset() {
 
 void INA219Module::loadConfiguration(JsonObject &obj) {
   I2CBaseModule::loadConfiguration(obj);
-
-  // instantiate sensor object, now _addr is known
-  _sensor = new Adafruit_INA219(_addr);
-
-  _numCells = obj[STRING_CELLS] | _numCells;
-  if (_numCells < 1) _numCells = 1;
-
-  _threshold = obj[STRING_THRESHOLD] | _threshold;
 }
 
+
+void INA219Module::setup() {
+  I2CBaseModule::setup();
+  // instantiate sensor object, now _params[I2CBASE_PARAM_ADDR_E].data.uint8[0] is known
+  _sensor = new Adafruit_INA219(_params[I2CBASE_PARAM_ADDR_E].data.uint8[0]);
+}
 
 
 void INA219Module::loop() {
   I2CBaseModule::loop();
 
-  DroneWire::selectChannel(_bus);
+  DroneWire::selectChannel(_params[I2CBASE_PARAM_BUS_E].data.uint8[0]);
 
   // get sensor values
   float tempf;
@@ -110,11 +140,11 @@ void INA219Module::loop() {
   updateAndPublishParam(&_params[INA219_PARAM_LOADV_E], (uint8_t*)&tempf, sizeof(tempf));
 
   // calculate cell voltage
-  tempf = _params[INA219_PARAM_LOADV_E].data.f[0] / _numCells;
+  tempf = _params[INA219_PARAM_LOADV_E].data.f[0] / _params[INA219_PARAM_CELLS_E].data.uint8[0];
   updateAndPublishParam(&_params[INA219_PARAM_CELLV_E], (uint8_t*)&tempf, sizeof(tempf));
 
   // check voltage vs threshold and set alarm
-  uint8_t temp8 = (_params[INA219_PARAM_LOADV_E].data.f[0] < _threshold) ? 1 : 0;
+  uint8_t temp8 = (_params[INA219_PARAM_LOADV_E].data.f[0] < _params[INA219_PARAM_THRESHOLD_E].data.f[0]) ? 1 : 0;
   updateAndPublishParam(&_params[INA219_PARAM_ALARM_E], (uint8_t*)&temp8, sizeof(temp8));
 
   // error check
