@@ -9,6 +9,7 @@ NMEAModule::NMEAModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dl
  {
    setTypeName(FPSTR(NMEA_STR_NMEA));
 
+   _port = NULL;
    _mgmtParams[DRONE_MODULE_PARAM_INTERVAL_E].data.uint32[0] = 1000;
 
    _nmea = new MicroNMEA(_buffer, sizeof(_buffer));
@@ -100,10 +101,15 @@ void NMEAModule::loadConfiguration(JsonObject &obj) {
 
 void NMEAModule::onParamWrite(DRONE_PARAM_ENTRY *param) {
   if (param->param == NMEA_PARAM_PORT) {
+    Log.noticeln(F("[NMEA.oPW] port: %u"), param->data.uint8[0]);
     switch(param->data.uint8[0]) {
-      case 0: setPort(&Serial); break;
+      //case 0: setPort(&Serial); break;
       case 1: setPort(&Serial1); break;
       case 2: setPort(&Serial2); break;
+      default:
+        _port = NULL;
+        Log.errorln(F("[NMEA.s] invalid port: %u"), _params[NMEA_PARAM_PORT_E].data.uint8[0]);
+        setError(1);
     }
   }
 }
@@ -115,17 +121,30 @@ void NMEAModule::setup() {
     //case 0: Serial.begin(_baud, SERIAL_8N1, PIN_SERIAL2_RX, PIN_SERIAL2_TX); break;
     case 1: Serial1.begin(_params[NMEA_PARAM_BAUD_E].data.uint32[0], SERIAL_8N1, PIN_SERIAL1_RX, PIN_SERIAL1_TX); break;
     case 2: Serial2.begin(_params[NMEA_PARAM_BAUD_E].data.uint32[0], SERIAL_8N1, PIN_SERIAL2_RX, PIN_SERIAL2_TX); break;
+    default:
+      _port = NULL;
+      Log.errorln(F("[NMEA.s] invalid port: %u"), _params[NMEA_PARAM_PORT_E].data.uint8[0]);
+      setError(1);
   }
 }
 
 
 void NMEAModule::loop() {
+  //Log.noticeln(F("[NMEA.l] a"));
   DroneModule::loop();
+
+  if (!_port) {
+    setError(1);
+    return;
+  }
+
+  //Log.noticeln(F("[NMEA.l] b"));
 
   while (_port->available()) {
     char c = _port->read();
     //Serial.print(c);
     if (_nmea->process( c )) {
+      //Log.noticeln(F("[NMEA.l] c"));
 
       if (_nmea->isUnknown()) {
         // pass to AIS decoder
@@ -169,6 +188,7 @@ void NMEAModule::loop() {
 
     }
   }
+  //Log.noticeln(F("[NMEA.l] end"));
 }
 
 void NMEAModule::setPort(Stream *port) {

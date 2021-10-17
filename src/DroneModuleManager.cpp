@@ -115,6 +115,7 @@ void DroneModuleManager::loopModules() {
     //Serial.print(m->getName());
     if (m->readyToLoop()) {
       //Serial.println(" Y");
+      //Log.noticeln(F("[DMM.lM] %s"), m->getName());
       m->loop();
     } else {
       //Serial.println(" N");

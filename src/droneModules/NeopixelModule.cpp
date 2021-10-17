@@ -7,6 +7,7 @@ NeopixelModule::NeopixelModule(uint8_t id, DroneModuleManager* dmm, DroneLinkMan
   DroneModule ( id, dmm, dlm, dem )
  {
    setTypeName(FPSTR(NEOPIXEL_STR_NEOPIXEL));
+   _strip = NULL;
    //_pins[0] = 0;
 
    //_numPixels = 4;
@@ -96,26 +97,30 @@ void NeopixelModule::loadConfiguration(JsonObject &obj) {
 
 
 void NeopixelModule::disable() {
-  _strip->SetBrightness(25);
-  _strip->ClearTo(RgbColor(0,0,0));
+  Log.noticeln(F("[NM.d]"));
+  if (_strip) {
+    _strip->SetBrightness(25);
+    _strip->ClearTo(RgbColor(0,0,0));
 
-  _strip->Show();
+    _strip->Show();
+  }
   DroneModule::disable();
+  Log.noticeln(F("[NM.d] end"));
 }
 
 
 void NeopixelModule::setup() {
+  //Log.noticeln(F("[NM.s]"));
   DroneModule::setup();
-
   if (_params[NEOPIXEL_PARAM_PINS_E].data.uint8[0] > 0) {
     if (_strip == NULL) {
       _strip = new NeoPixelBrightnessBus<NeoGrbFeature, Neo800KbpsMethod>(_params[NEOPIXEL_PARAM_NUMPIXELS_E].data.uint8[0], _params[NEOPIXEL_PARAM_PINS_E].data.uint8[0]);
     }
 
-
     _strip->Begin();
     _strip->Show();
     _strip->SetBrightness(25); // to be overridden by scenes
+
 
     // init blue while booting
     for(uint8_t i=0; i<_params[NEOPIXEL_PARAM_NUMPIXELS_E].data.uint8[0]; i++) {
@@ -132,6 +137,7 @@ void NeopixelModule::setup() {
 
 void NeopixelModule::loop() {
   DroneModule::loop();
+  Log.noticeln(F("[NM.l]"));
 
   unsigned long loopTime = millis();
 
