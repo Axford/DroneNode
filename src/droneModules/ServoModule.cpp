@@ -71,6 +71,8 @@ void ServoModule::loop() {
 
 
 void ServoModule::update() {
+  if (!_setupDone) return;
+  
   float v = _subs[SERVO_SUB_POSITION_E].param.data.f[0];
   // limit range
   if (v > 1) v = 1;

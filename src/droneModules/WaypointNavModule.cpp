@@ -8,7 +8,7 @@ WaypointNavModule::WaypointNavModule(uint8_t id, DroneModuleManager* dmm, DroneL
  {
    setTypeName(FPSTR(WAYPOINT_NAV_STR_WAYPOINT_NAV));
 
-   _loopInterval = 1000;
+   _mgmtParams[DRONE_MODULE_PARAM_INTERVAL_E].data.uint32[0] = 1000;
 
    _numParamEntries = WAYPOINT_NAV_PARAM_ENTRIES;
    _params = new DRONE_PARAM_ENTRY[_numParamEntries];
@@ -203,6 +203,7 @@ void WaypointNavModule::loop() {
 
 
 void WaypointNavModule::update() {
+  if (!_setupDone) return;
 
   // formulae from: https://www.movable-type.co.uk/scripts/latlong.html
 

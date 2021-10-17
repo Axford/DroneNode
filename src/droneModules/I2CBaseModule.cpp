@@ -9,7 +9,7 @@ I2CBaseModule::I2CBaseModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManag
    _bus = 0;
    _addr = 0;
 
-   _loopInterval = 1000;
+   _mgmtParams[DRONE_MODULE_PARAM_INTERVAL_E].data.uint32[0] = 1000;
 }
 
 

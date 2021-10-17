@@ -143,6 +143,7 @@ bool DroneLinkManager::publishPeer(DroneLinkMsg &msg, int16_t RSSI, uint8_t inte
 void DroneLinkManager::processChannels() {
   DroneLinkChannel* c;
   for(int i = 0; i < _channels.size(); i++){
+    //Log.noticeln("[DLM.pC]");
     c = _channels.get(i);
     c->processQueue();
   }

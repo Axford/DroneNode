@@ -12,7 +12,7 @@ NMEAModule::NMEAModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dl
    _numParamEntries = NMEA_PARAM_ENTRIES;
    _params = new DRONE_PARAM_ENTRY[_numParamEntries];
 
-   _loopInterval = 1000;
+   _mgmtParams[DRONE_MODULE_PARAM_INTERVAL_E].data.uint32[0] = 1000;
 
    _portNum = 1;
    _baud = 38400;

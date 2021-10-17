@@ -14,8 +14,6 @@ HMC5883LModule::HMC5883LModule(uint8_t id, DroneModuleManager* dmm, DroneLinkMan
    _location[0] = 0;
    _location[1] = 0;
 
-   _loopInterval = 1000;
-
    // subs
    initSubs(HMC5883L_SUBS);
 
@@ -107,6 +105,8 @@ void HMC5883LModule::loadConfiguration(JsonObject &obj) {
 
 
 void HMC5883LModule::update() {
+  if (!_setupDone) return;
+
   // see if location has changed
   int newLon = round(_subs[HMC5883L_SUB_LOCATION_E].param.data.f[0]);
   int newLat = round(_subs[HMC5883L_SUB_LOCATION_E].param.data.f[1]);

@@ -4,9 +4,11 @@
 #include "pinConfig.h"
 #include "strings.h"
 #include "DroneModule.h"
+#include <EEPROM.h>
 
 // drone modules
 #include "droneModules/ManagementModule.h"
+#include "droneModules/MotorModule.h"
 /*
 #include "droneModules/TimerModule.h"
 #include "droneModules/ServoModule.h"
@@ -17,7 +19,6 @@
 #include "droneModules/HMC5883LModule.h"
 #include "droneModules/NMEAModule.h"
 #include "droneModules/MPU6050Module.h"
-#include "droneModules/MotorModule.h"
 #include "droneModules/TankSteerModule.h"
 #include "droneModules/BasicNavModule.h"
 #include "droneModules/WaypointNavModule.h"
@@ -67,6 +68,15 @@ DroneExecutionManager::DroneExecutionManager(DroneModuleManager *dmm, DroneLinkM
   _call.p = -1;
   _data.p = -1;
 
+  // read last boot status from EEPROM
+  //_safeMode
+  EEPROM.begin(DEM_EEPROM_SIZE);
+  _safeMode = (EEPROM.read(DEM_EEPROM_SUCCESSFUL_BOOT) != DEM_BOOT_SUCCESS);
+
+  // now clear the _safeMode value ready for this boot attempt
+  EEPROM.write(DEM_EEPROM_SUCCESSFUL_BOOT, DEM_BOOT_FAIL);
+  EEPROM.commit();
+
   _instruction.ns = 0;
   _instruction.command[0] = '_';
   _instruction.command[1] = '_';
@@ -80,7 +90,7 @@ DroneExecutionManager::DroneExecutionManager(DroneModuleManager *dmm, DroneLinkM
   _channelContext = 0;
 
   // register core commands
-  DEM_NAMESPACE *core = createNamespace(PSTR("core"),0);
+  DEM_NAMESPACE *core = createNamespace(PSTR("core"), 0, false);
 
   using std::placeholders::_1;
   using std::placeholders::_2;
@@ -90,13 +100,36 @@ DroneExecutionManager::DroneExecutionManager(DroneModuleManager *dmm, DroneLinkM
   registerCommand(core, PSTR("done"), DRONE_LINK_MSG_TYPE_UINT8_T, std::bind(&DroneExecutionManager::core_done, this, _1, _2, _3, _4));
   registerCommand(core, PSTR("load"), DRONE_LINK_MSG_TYPE_CHAR, std::bind(&DroneExecutionManager::core_load, this, _1, _2, _3, _4));
   registerCommand(core, PSTR("node"), DRONE_LINK_MSG_TYPE_UINT8_T, std::bind(&DroneExecutionManager::core_node, this, _1, _2, _3, _4));
+  registerCommand(core, PSTR("publish"), DRONE_LINK_MSG_TYPE_UINT8_T, std::bind(&DroneExecutionManager::core_publish, this, _1, _2, _3, _4));
   registerCommand(core, PSTR("restart"),DRONE_LINK_MSG_TYPE_UINT8_T, std::bind(&DroneExecutionManager::core_restart, this, _1, _2, _3, _4));
   registerCommand(core, PSTR("run"),DRONE_LINK_MSG_TYPE_CHAR, std::bind(&DroneExecutionManager::core_run, this, _1, _2, _3, _4));
   registerCommand(core, PSTR("send"), 255, std::bind(&DroneExecutionManager::core_send, this, _1, _2, _3, _4));
   registerCommand(core, PSTR("setup"), DRONE_LINK_MSG_TYPE_UINT8_T, std::bind(&DroneExecutionManager::core_setup, this, _1, _2, _3, _4));
 
 
-  // register module consructors
+  // register modules
+  DEM_NAMESPACE* ns;
+
+  // register namespaces
+  //ns = DroneModule::registerNamespace(this);
+
+  ns = ManagementModule::registerNamespace(this);
+  ManagementModule::registerParams(ns, this);
+
+  ns = MotorModule::registerNamespace(this);
+  MotorModule::registerParams(ns, this);
+
+  // register constructors and mgmtParams for all module namespaces
+  for (uint8_t i=0; i<_namespaces.size(); i++) {
+    ns = _namespaces.get(i);
+    if (ns->isModuleType) {
+      DroneModule::registerConstructor(ns, this);
+      DroneModule::registerMgmtParams(ns, this);
+    }
+  }
+
+
+  /*
   DEMCommandHandler ch = std::bind(&DroneExecutionManager::mod_constructor, this, _1, _2, _3, _4);
   DEM_NAMESPACE *nsManagement = createNamespace(MANAGEMENT_STR_MANAGEMENT,0);
   registerCommand(nsManagement, STR_NEW, DRONE_LINK_MSG_TYPE_UINT8_T, ch);
@@ -104,7 +137,7 @@ DroneExecutionManager::DroneExecutionManager(DroneModuleManager *dmm, DroneLinkM
   DEMCommandHandler ph = std::bind(&DroneExecutionManager::mod_param, this, _1, _2, _3, _4);
   registerCommand(nsManagement, STRING_STATUS, DRONE_LINK_MSG_TYPE_UINT8_T, ph);
   registerCommand(nsManagement, STRING_NAME, DRONE_LINK_MSG_TYPE_CHAR, ph);
-  //registerCommand(nsManagement, STRING_ERROR, DRONE_LINK_MSG_TYPE_UINT8_T, ch);
+  */
 
 }
 
@@ -150,13 +183,14 @@ DEM_NAMESPACE* DroneExecutionManager::getNamespace(const char* name) {
   return NULL;
 }
 
-DEM_NAMESPACE* DroneExecutionManager::createNamespace(const char* name, uint8_t module) {
+DEM_NAMESPACE* DroneExecutionManager::createNamespace(const char* name, uint8_t module, boolean isModuleType) {
   DEM_NAMESPACE* res = getNamespace(name);
 
   if (res == NULL) {
     res =  (DEM_NAMESPACE*)malloc(sizeof(DEM_NAMESPACE));
     strcpy(res->name, name);
     res->module = module;
+    res->isModuleType = isModuleType;
     res->commands = new IvanLinkedList::LinkedList<DEM_COMMAND>();
 
     _namespaces.add(res);
@@ -165,10 +199,10 @@ DEM_NAMESPACE* DroneExecutionManager::createNamespace(const char* name, uint8_t 
   return res;
 }
 
-DEM_NAMESPACE* DroneExecutionManager::createNamespace(const __FlashStringHelper* name, uint8_t module) {
+DEM_NAMESPACE* DroneExecutionManager::createNamespace(const __FlashStringHelper* name, uint8_t module, boolean isModuleType) {
   char buffer[20];
   strcpy_P(buffer, (PGM_P)(name));
-  return createNamespace(buffer, module);
+  return createNamespace(buffer, module, isModuleType);
 }
 
 void DroneExecutionManager::registerCommand(DEM_NAMESPACE* ns, const char* command, uint8_t dataType, DEMCommandHandler handler) {
@@ -792,6 +826,9 @@ boolean DroneExecutionManager::compileLine(const char * line, DEM_INSTRUCTION_CO
 
 
 void DroneExecutionManager::execute() {
+
+  if (_safeMode) return;
+
   // if we have an active macro
   if (_call.p > -1) {
     DEM_CALLSTACK_ENTRY *cse = &_call.stack[_call.p];
@@ -873,6 +910,28 @@ void DroneExecutionManager::serveCommandInfo(AsyncWebServerRequest *request) {
   request->send(response);
 }
 
+void DroneExecutionManager::serveExecutionInfo(AsyncWebServerRequest *request) {
+
+  if(request->hasParam("execute")) {
+    // trigger immediate execution
+    _safeMode = false;
+  }
+
+  AsyncResponseStream *response = request->beginResponseStream("text/text");
+  response->addHeader("Server","ESP Async Web Server");
+  response->print(F("Execution state: \n"));
+
+  response->print(F("safeMode = "));
+  if (_safeMode) {
+    response->print(F("Yes\n"));
+  } else {
+    response->print(F("No\n"));
+  }
+
+  //send the response last
+  request->send(response);
+}
+
 
 boolean DroneExecutionManager::core_done(DEM_INSTRUCTION_COMPILED* instr, DEM_CALLSTACK* cs, DEM_DATASTACK* ds, boolean continuation) {
   Log.noticeln(F("[DEM.d]"));
@@ -901,6 +960,32 @@ boolean DroneExecutionManager::core_node(DEM_INSTRUCTION_COMPILED* instr, DEM_CA
     _dlm->node(id);
   } else
     Log.errorln(F("[.n] invalid address"));
+  return true;
+}
+
+boolean DroneExecutionManager::core_publish(DEM_INSTRUCTION_COMPILED* instr, DEM_CALLSTACK* cs, DEM_DATASTACK* ds, boolean continuation) {
+  uint8_t module = dataStackPeek(0);
+
+  char buffer[DRONE_LINK_MSG_MAX_PAYLOAD+1];
+  uint8_t len = (instr->msg.paramTypeLength & 0xF)+1;
+  memcpy(buffer, instr->msg.payload.c, len);
+  buffer[len] = 0;
+
+  Log.noticeln(F("[.pub] Publishing %s on module %u"), buffer, module);
+  // get param address by name from module
+  DroneModule* mod = _dmm->getModuleById(module);
+  if (mod != NULL) {
+    DRONE_PARAM_ENTRY* p = mod->getParamEntryByName(buffer);
+    if (p != NULL) {
+      p->publish = true;
+
+      } else {
+        Log.errorln(F("[.r] Unknown param"));
+      }
+
+  } else {
+      Log.errorln(F("[.pub] Unknown module"));
+  }
   return true;
 }
 
@@ -944,6 +1029,7 @@ boolean DroneExecutionManager::core_send(DEM_INSTRUCTION_COMPILED* instr, DEM_CA
   if (instr->msg.channel == 0) instr->msg.channel = dataStackPeek(0);
   DroneLinkMsg temp(&instr->msg);
   if (instr->msg.channel > 0 && instr->msg.param > 0) {
+    instr->msg.source = instr->msg.node;
     _dlm->publish(temp);
   } else {
     Log.errorln(F("[.send] Invalid address"));
@@ -955,6 +1041,11 @@ boolean DroneExecutionManager::core_send(DEM_INSTRUCTION_COMPILED* instr, DEM_CA
 boolean DroneExecutionManager::core_setup(DEM_INSTRUCTION_COMPILED* instr, DEM_CALLSTACK* cs, DEM_DATASTACK* ds, boolean continuation) {
   Log.noticeln(F("[.s] Completing module setup"));
   _dmm->setupModules();
+
+  // if we made it to here, can assume no crashes on startup
+  EEPROM.write(DEM_EEPROM_SUCCESSFUL_BOOT, DEM_BOOT_SUCCESS);
+  EEPROM.commit();
+
   Log.noticeln(F("[.s] Setup complete"));
   return true;
 }
@@ -973,6 +1064,8 @@ boolean DroneExecutionManager::mod_constructor(DEM_INSTRUCTION_COMPILED* instr, 
 
     if (strcmp_P(instr->ns->name, MANAGEMENT_STR_MANAGEMENT) == 0) {
       newMod = new ManagementModule(id, _dmm, _dlm, this);
+    } if (strcmp_P(instr->ns->name, MOTOR_STR_MOTOR) == 0) {
+      newMod = new MotorModule(id, _dmm, _dlm, this);
     } else {
       Log.errorln(F("[.c] Unknown type"));
     }
@@ -1049,13 +1142,13 @@ boolean DroneExecutionManager::mod_param(DEM_INSTRUCTION_COMPILED* instr, DEM_CA
     if (param != 0) {
       // set param
       if (instr->msg.node == 0) instr->msg.node = _dlm->node();
+      instr->msg.source = instr->msg.node;
       instr->msg.channel = module;
       instr->msg.param = param;
 
       DroneLinkMsg temp(&instr->msg);
       temp.print();
       _dlm->publish(temp);
-
     } else {
       Log.errorln(F("[.p] Unknown param"));
     }
@@ -1063,4 +1156,5 @@ boolean DroneExecutionManager::mod_param(DEM_INSTRUCTION_COMPILED* instr, DEM_CA
   } else {
     Log.errorln(F("[.p] Unable to locate module"));
   }
+  return true;
 }

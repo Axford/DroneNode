@@ -62,6 +62,8 @@ float TurnRateModule::getRotationDistance(float origin, float target){
 
 
 void TurnRateModule::update() {
+  if (!_setupDone) return;
+  
   // calc and publish new speeds
 
   // check we've received valid heading and target

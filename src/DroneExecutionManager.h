@@ -25,6 +25,13 @@ struct DEM_COMMAND;
 #define DEM_CALLSTACK_SIZE    64  // 64 x uint32_t = 256 bytes
 #define DEM_DATASTACK_SIZE    64  // 64 x uint8_t = 64 bytes
 
+#define DEM_EEPROM_SIZE              1
+#define DEM_EEPROM_SUCCESSFUL_BOOT   0
+
+#define DEM_BOOT_FAIL     0  // didnt make it to module setup
+#define DEM_BOOT_SUCCESS  1  // made it to module setup
+
+
 
 struct DEM_ENUM_MAPPING {
   const char *const str;
@@ -88,6 +95,7 @@ struct DEM_COMMAND {
 struct DEM_NAMESPACE {
   char name[DEM_NAMESPACE_LENGTH+1];    // 5 char + \0
   uint8_t module;  // module address
+  boolean isModuleType; // set to true if this namespace is mapped to a module type
   IvanLinkedList::LinkedList<DEM_COMMAND> *commands;
 };
 
@@ -108,6 +116,7 @@ protected:
   IvanLinkedList::LinkedList<DEM_NAMESPACE*> _namespaces;
   IvanLinkedList::LinkedList<DEM_NAMESPACE*> _types; // registered module types
 
+  boolean _safeMode;
 
   DroneLinkManager *_dlm;
   DroneModuleManager *_dmm;
@@ -130,8 +139,8 @@ public:
 
     DEM_NAMESPACE* getNamespace(const char* name);
 
-    DEM_NAMESPACE* createNamespace(const char* name, uint8_t module);
-    DEM_NAMESPACE* createNamespace(const __FlashStringHelper* name, uint8_t module);
+    DEM_NAMESPACE* createNamespace(const char* name, uint8_t module, boolean isModuleType);
+    DEM_NAMESPACE* createNamespace(const __FlashStringHelper* name, uint8_t module, boolean isModuleType);
 
     void registerCommand(DEM_NAMESPACE* ns, const char* command, uint8_t dataType, DEMCommandHandler handler);
 
@@ -163,11 +172,13 @@ public:
 
     void serveMacroInfo(AsyncWebServerRequest *request);
     void serveCommandInfo(AsyncWebServerRequest *request);
+    void serveExecutionInfo(AsyncWebServerRequest *request);
 
     // command handlers
     boolean core_done(DEM_INSTRUCTION_COMPILED* instr, DEM_CALLSTACK* cs, DEM_DATASTACK* ds, boolean continuation);
     boolean core_load(DEM_INSTRUCTION_COMPILED* instr, DEM_CALLSTACK* cs, DEM_DATASTACK* ds, boolean continuation);
     boolean core_node(DEM_INSTRUCTION_COMPILED* instr, DEM_CALLSTACK* cs, DEM_DATASTACK* ds, boolean continuation);
+    boolean core_publish(DEM_INSTRUCTION_COMPILED* instr, DEM_CALLSTACK* cs, DEM_DATASTACK* ds, boolean continuation);
     boolean core_restart(DEM_INSTRUCTION_COMPILED* instr, DEM_CALLSTACK* cs, DEM_DATASTACK* ds, boolean continuation);
     boolean core_run(DEM_INSTRUCTION_COMPILED* instr, DEM_CALLSTACK* cs, DEM_DATASTACK* ds, boolean continuation);
     boolean core_send(DEM_INSTRUCTION_COMPILED* instr, DEM_CALLSTACK* cs, DEM_DATASTACK* ds, boolean continuation);

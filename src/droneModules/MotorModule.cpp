@@ -30,6 +30,27 @@ MotorModule::MotorModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* 
    setParamName(FPSTR(STRING_SPEED), &sub->param);
 }
 
+DEM_NAMESPACE* MotorModule::registerNamespace(DroneExecutionManager *dem) {
+  // namespace for module type
+  return dem->createNamespace(MOTOR_STR_MOTOR,0,true);
+}
+
+void MotorModule::registerParams(DEM_NAMESPACE* ns, DroneExecutionManager *dem) {
+  using std::placeholders::_1;
+  using std::placeholders::_2;
+  using std::placeholders::_3;
+  using std::placeholders::_4;
+
+  // writable mgmt params
+  DEMCommandHandler ph = std::bind(&DroneExecutionManager::mod_param, dem, _1, _2, _3, _4);
+
+  dem->registerCommand(ns, STRING_SPEED, DRONE_LINK_MSG_TYPE_CHAR, ph);
+  dem->registerCommand(ns, STRING_PWM_CHANNEL, DRONE_LINK_MSG_TYPE_CHAR, ph);
+  dem->registerCommand(ns, STRING_PINS, DRONE_LINK_MSG_TYPE_CHAR, ph);
+  dem->registerCommand(ns, STRING_DEADBAND, DRONE_LINK_MSG_TYPE_CHAR, ph);
+  dem->registerCommand(ns, STRING_LIMITS, DRONE_LINK_MSG_TYPE_CHAR, ph);
+}
+
 
 void MotorModule::loadConfiguration(JsonObject &obj) {
   DroneModule::loadConfiguration(obj);
@@ -87,7 +108,7 @@ void MotorModule::disable() {
 
 
 void MotorModule::update() {
-  if (_error > 0) return;
+  if (_error > 0 || !_setupDone) return;
 
   float v = _subs[MOTOR_SUB_SPEED_E].param.data.f[0];
 

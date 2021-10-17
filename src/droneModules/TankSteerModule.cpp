@@ -67,6 +67,8 @@ float shortestSignedDistanceBetweenCircularValues(float origin, float target){
 
 
 void TankSteerModule::update() {
+  if (!_setupDone) return;
+  
   // calc and publish new speeds
 
   // local shortcuts

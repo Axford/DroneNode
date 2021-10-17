@@ -230,5 +230,5 @@ void NeopixelModule::loop() {
 
 
 void NeopixelModule::update() {
-  //
+  if (!_setupDone) return;
 }

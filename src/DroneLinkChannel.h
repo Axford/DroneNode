@@ -103,6 +103,8 @@ public:
 
       DroneLinkMsg *tmp = _queue.shift();
 
+      //Log.noticeln("[DLC.pQ]");
+
       // send msg to each subscriber
       DroneLinkChannelSubscription sub;
       for(int i = 0; i < _subs.size(); i++) {

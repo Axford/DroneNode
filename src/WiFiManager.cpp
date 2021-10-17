@@ -79,6 +79,8 @@ void WiFiManager::start(DroneModuleManager &dmm) {
   WiFi.mode(WIFI_AP_STA);
   WiFi.softAP(dmm.hostname().c_str());
 
+  vTaskDelay(2);
+
   // speculative... on the off chance we have valid stored credentials
   WiFi.begin();
 

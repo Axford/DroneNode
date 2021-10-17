@@ -112,7 +112,7 @@ void BasicNavModule::setup() {
 
 
 void BasicNavModule::update() {
-
+  if (!_setupDone) return;
   // formulae from: https://www.movable-type.co.uk/scripts/latlong.html
 
   /*

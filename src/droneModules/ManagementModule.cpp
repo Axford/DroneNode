@@ -11,7 +11,7 @@ ManagementModule::ManagementModule(uint8_t id, DroneModuleManager* dmm, DroneLin
  {
    setTypeName(FPSTR(MANAGEMENT_STR_MANAGEMENT));
 
-   _loopInterval = 30000;  // 30 sec
+   _mgmtParams[DRONE_MODULE_PARAM_INTERVAL_E].data.uint32[0] = 30000;  // 30 sec
    _lastRate = 0;
 
    initParams(MANAGEMENT_PARAM_ENTRIES);
@@ -74,6 +74,25 @@ ManagementModule::ManagementModule(uint8_t id, DroneModuleManager* dmm, DroneLin
    _params[MANAGEMENT_PARAM_DISCOVERY_E].nameLen = sizeof(STRING_DISCOVERY);
    _params[MANAGEMENT_PARAM_DISCOVERY_E].paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_UINT8_T, 1);
    _params[MANAGEMENT_PARAM_DISCOVERY_E].data.uint8[0] = _dmm->discovery() ? 1 : 0;
+}
+
+DEM_NAMESPACE* ManagementModule::registerNamespace(DroneExecutionManager *dem) {
+  // namespace for module type
+  return dem->createNamespace(MANAGEMENT_STR_MANAGEMENT,0,true);
+}
+
+void ManagementModule::registerParams(DEM_NAMESPACE* ns, DroneExecutionManager *dem) {
+  using std::placeholders::_1;
+  using std::placeholders::_2;
+  using std::placeholders::_3;
+  using std::placeholders::_4;
+
+  // writable mgmt params
+  DEMCommandHandler ph = std::bind(&DroneExecutionManager::mod_param, dem, _1, _2, _3, _4);
+
+  dem->registerCommand(ns, STRING_RESET, DRONE_LINK_MSG_TYPE_CHAR, ph);
+  dem->registerCommand(ns, STRING_DISCOVERY, DRONE_LINK_MSG_TYPE_CHAR, ph);
+  //dem->registerCommand(ns, STRING_, DRONE_LINK_MSG_TYPE_CHAR, ph);
 }
 
 void ManagementModule::onParamWrite(DRONE_PARAM_ENTRY *param) {

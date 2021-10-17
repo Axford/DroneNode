@@ -25,6 +25,7 @@ things that would be useful for all modules
 #include "DroneExecutionManager.h"
 #include "strings.h"
 #include <ESPAsyncWebServer.h>
+#include <functional>
 
 // defines for common params
 #define DRONE_MODULE_PARAM_STATUS      1  // 0=disabled, 1=enabled, write a value of 2 or above to trigger reset
@@ -32,6 +33,7 @@ things that would be useful for all modules
 #define DRONE_MODULE_PARAM_ERROR       3  // text or error code, module defined implementation
 #define DRONE_MODULE_PARAM_RESETCOUNT  4  // resetCount
 #define DRONE_MODULE_PARAM_TYPE        5  // classname - text
+#define DRONE_MODULE_PARAM_INTERVAL    6
 
 // indices
 #define DRONE_MODULE_PARAM_STATUS_E      0
@@ -39,8 +41,9 @@ things that would be useful for all modules
 #define DRONE_MODULE_PARAM_ERROR_E       2
 #define DRONE_MODULE_PARAM_RESETCOUNT_E  3
 #define DRONE_MODULE_PARAM_TYPE_E        4
+#define DRONE_MODULE_PARAM_INTERVAL_E    5
 
-#define DRONE_MGMT_PARAM_ENTRIES        5
+#define DRONE_MGMT_PARAM_ENTRIES        6
 
 #define DRONE_CUSTOM_PARAM_START        8  // address at which custom params start
 
@@ -106,7 +109,6 @@ protected:
   DRONE_MODULE_DISCOVERY_STATE _discoveryState;
   uint8_t _discoveryIndex;
 
-  unsigned long _loopInterval;
   unsigned long _lastLoop;
   boolean _setupDone;
 
@@ -123,6 +125,11 @@ public:
   virtual void initParams(uint8_t numParams);
 
   uint8_t getParamIdByName(const char* name);
+  DRONE_PARAM_ENTRY* getParamEntryByName(const char* name);
+
+  static DEM_NAMESPACE* registerNamespace(DroneExecutionManager *dem);
+  static void registerConstructor(DEM_NAMESPACE* ns, DroneExecutionManager *dem);
+  static void registerMgmtParams(DEM_NAMESPACE* ns, DroneExecutionManager *dem);
 
   void reset();
   virtual void doReset();

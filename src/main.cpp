@@ -167,12 +167,13 @@ void setupWebServer() {
     dmm.serveModuleInfo(request);
   });
 
-  // dem macros
+  // DEM handlers
   server.on("/macros", HTTP_GET, [](AsyncWebServerRequest *request){
     dem.serveMacroInfo(request);
   });
-
-  // dem commands
+  server.on("/execution", HTTP_GET, [](AsyncWebServerRequest *request){
+    dem.serveExecutionInfo(request);
+  });
   server.on("/commands", HTTP_GET, [](AsyncWebServerRequest *request){
     dem.serveCommandInfo(request);
   });
