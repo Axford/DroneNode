@@ -105,6 +105,7 @@ struct DEM_MACRO {
   IvanLinkedList::LinkedList<DEM_INSTRUCTION_COMPILED> *commands;
 };
 
+static const char DEM_BOOT_FILENAME[] PROGMEM = "/boot.dat";
 
 class DroneExecutionManager
 {
@@ -131,6 +132,9 @@ protected:
 
 public:
     DroneExecutionManager(DroneModuleManager *dmm, DroneLinkManager *dlm);
+
+    uint8_t getBootStatus();
+    void setBootStatus(uint8_t v);
 
     // looks up macro by name, returns null if not found
     DEM_MACRO* getMacro(const char* name);

@@ -80,8 +80,8 @@ void RFM69TelemetryModule::handleLinkMessage(DroneLinkMsg *msg) {
   }
 
   if (sendPacket) {
-    Serial.print("RFM69: Sending: ");
-    msg->print();
+    //Serial.print("RFM69: Sending: ");
+    //msg->print();
 
 
     uint8_t transmitLength = msg->length() + sizeof(DRONE_LINK_ADDR) + 2;

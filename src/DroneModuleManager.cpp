@@ -103,6 +103,7 @@ void DroneModuleManager::setupModules() {
   DroneModule* m;
   for(int i = 0; i < _modules.size(); i++) {
     m = _modules.get(i);
+    Log.noticeln(F("[DMM.sM] Setup: %s"), m->getName());
     m->setup();
   }
 }

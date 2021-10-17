@@ -61,8 +61,8 @@ public:
 
   void publishEntry(uint8_t i);
 
+  void setup();
   void update();
-
   void loop();
 
 

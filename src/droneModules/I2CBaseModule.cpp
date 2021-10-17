@@ -47,7 +47,7 @@ void I2CBaseModule::loadConfiguration(JsonObject &obj) {
 void I2CBaseModule::doReset() {
   if (!_setupDone) return;
 
-  Log.warningln(F("I2C doReset"));
+  Log.warningln(F("[I2C.dR]"));
   if (_resetCount > 1) {
     // attempt resetting the multiplexer
     DroneWire::reset();

@@ -290,7 +290,7 @@ void setup() {
 
   // redirect logging to serial
   logFile.close();
-  Log.begin(LOG_LEVEL_WARNING, &Serial);
+  Log.begin(LOG_LEVEL_VERBOSE, &Serial);
 
   //digitalWrite(PIN_LED, LOW);
 }

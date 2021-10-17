@@ -10,7 +10,7 @@ HMC5883LModule::HMC5883LModule(uint8_t id, DroneModuleManager* dmm, DroneLinkMan
  {
    setTypeName(FPSTR(HMC5883L_STR_HMC5883L));
    //_params[I2CBASE_PARAM_ADDR_E].data.uint8[0] = HMC5883L_I2C_ADDRESS;
-
+   _sensor = NULL;
    _location[0] = -1.8;
    _location[1] = 52;
 
@@ -87,14 +87,18 @@ void HMC5883LModule::registerParams(DEM_NAMESPACE* ns, DroneExecutionManager *de
 }
 
 void HMC5883LModule::doReset() {
+  Log.noticeln("[HMC.dR]");
   I2CBaseModule::doReset();
 
   DroneWire::selectChannel(_params[I2CBASE_PARAM_BUS_E].data.uint8[0]);
 
-  setError( _sensor->begin() ? 0 : 1 );
-  if (_error) {
-    Log.errorln(HMC5883L_STR_HMC5883L);
+  if (_sensor) {
+    setError( _sensor->begin() ? 0 : 1 );
+    if (_error) {
+      Log.errorln(HMC5883L_STR_HMC5883L);
+    }
   }
+  Log.noticeln("[HMC.dR] end");
 }
 
 
@@ -102,7 +106,7 @@ void HMC5883LModule::loadConfiguration(JsonObject &obj) {
   I2CBaseModule::loadConfiguration(obj);
 
   // instantiate sensor object, now _params[I2CBASE_PARAM_ADDR_E].data.uint8[0] is known
-  _sensor = new Adafruit_HMC5883_Unified(_id);
+
 /*
   // read default declination
   if (obj.containsKey(STRING_DECLINATION)) {
@@ -130,6 +134,12 @@ void HMC5883LModule::loadConfiguration(JsonObject &obj) {
   */
 }
 
+
+void HMC5883LModule::setup() {
+  I2CBaseModule::setup();
+
+  _sensor = new Adafruit_HMC5883_Unified(_id);
+}
 
 void HMC5883LModule::update() {
   if (!_setupDone) return;

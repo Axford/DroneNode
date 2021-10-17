@@ -446,7 +446,7 @@ void DroneModule::handleSubAddrMessage(DroneLinkMsg *msg, DRONE_PARAM_SUB *sub) 
     uint8_t len = msg->length();  // should always be sizeof(DRONE_LINK_ADDR) //msg->length();
     // compare to see if anything has changed... which may including receiving our own messages after a query!!
     if (memcmp((uint8_t*)&sub->addr, msg->_msg.payload.c, len) != 0) {
-      Log.noticeln("Write to address: ");
+      Log.noticeln("[DM.hSAM] Write to address: ");
       msg->print();
       memcpy((uint8_t*)&sub->addr, msg->_msg.payload.c, len);
       // trigger callback
@@ -488,7 +488,7 @@ boolean DroneModule::handleManagementMessage(DroneLinkMsg *msg) {
 void DroneModule::handleLinkMessage(DroneLinkMsg *msg) {
 
   //Log.noticeln("[DM.hLM]");
-  msg->print();
+  //msg->print();
 
   // handle subs
   if (_enabled) {

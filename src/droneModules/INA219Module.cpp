@@ -7,6 +7,7 @@ INA219Module::INA219Module(uint8_t id, DroneModuleManager* dmm, DroneLinkManager
   I2CBaseModule ( id, dmm, dlm, dem )
  {
    setTypeName(FPSTR(INA219_STR_INA219));
+   _sensor = NULL;
    //_params[I2CBASE_PARAM_ADDR_E].data.uint8[0] = INA219_I2C_ADDRESS;
 
    // pubs
@@ -92,15 +93,18 @@ void INA219Module::registerParams(DEM_NAMESPACE* ns, DroneExecutionManager *dem)
 
 
 void INA219Module::doReset() {
+  Log.noticeln("[INA.dR]");
   I2CBaseModule::doReset();
 
   DroneWire::selectChannel(_params[I2CBASE_PARAM_BUS_E].data.uint8[0]);
 
-  setError( _sensor->begin() ? 0 : 1 );
-  if (_error) {
-    Log.errorln(INA219_STR_INA219);
+  if (_sensor) {
+    setError( _sensor->begin() ? 0 : 1 );
+    if (_error) {
+      Log.errorln(INA219_STR_INA219);
+    }
   }
-
+  Log.noticeln("[INA.dR] end");
 }
 
 

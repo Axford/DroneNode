@@ -4,7 +4,6 @@
 #include "pinConfig.h"
 #include "strings.h"
 #include "DroneModule.h"
-#include <EEPROM.h>
 
 // drone modules
 #include "droneModules/HMC5883LModule.h"
@@ -71,12 +70,11 @@ DroneExecutionManager::DroneExecutionManager(DroneModuleManager *dmm, DroneLinkM
 
   // read last boot status from EEPROM
   //_safeMode
-  _safeMode = (EEPROM.read(DEM_EEPROM_SUCCESSFUL_BOOT) != DEM_BOOT_SUCCESS);
+  _safeMode = (getBootStatus() != DEM_BOOT_SUCCESS);
   Log.noticeln("[DEM.DEM] SafeMode %u", (_safeMode ? 1: 0));
 
   // now clear the _safeMode value ready for this boot attempt
-  EEPROM.write(DEM_EEPROM_SUCCESSFUL_BOOT, DEM_BOOT_FAIL);
-  EEPROM.commit();
+  setBootStatus(DEM_BOOT_FAIL);
 
   _instruction.ns = 0;
   _instruction.command[0] = '_';
@@ -134,20 +132,27 @@ DroneExecutionManager::DroneExecutionManager(DroneModuleManager *dmm, DroneLinkM
       DroneModule::registerMgmtParams(ns, this);
     }
   }
-
-
-  /*
-  DEMCommandHandler ch = std::bind(&DroneExecutionManager::mod_constructor, this, _1, _2, _3, _4);
-  DEM_NAMESPACE *nsManagement = createNamespace(MANAGEMENT_STR_MANAGEMENT,0);
-  registerCommand(nsManagement, STR_NEW, DRONE_LINK_MSG_TYPE_UINT8_T, ch);
-
-  DEMCommandHandler ph = std::bind(&DroneExecutionManager::mod_param, this, _1, _2, _3, _4);
-  registerCommand(nsManagement, STRING_STATUS, DRONE_LINK_MSG_TYPE_UINT8_T, ph);
-  registerCommand(nsManagement, STRING_NAME, DRONE_LINK_MSG_TYPE_CHAR, ph);
-  */
-
 }
 
+
+uint8_t DroneExecutionManager::getBootStatus() {
+  uint8_t v = DEM_BOOT_FAIL;
+  if(SPIFFS.exists(DEM_BOOT_FILENAME)) {
+    File f = SPIFFS.open(DEM_BOOT_FILENAME, FILE_READ);
+    if (f && f.available()) {
+      v = f.read();
+    }
+    f.close();
+  };
+  return v;
+}
+
+
+void DroneExecutionManager::setBootStatus(uint8_t v) {
+  File f = SPIFFS.open(DEM_BOOT_FILENAME, FILE_WRITE);
+  f.write(v);
+  f.close();
+}
 
 
 // looks up macro by name, returns null if not found
@@ -1123,8 +1128,9 @@ boolean DroneExecutionManager::core_setup(DEM_INSTRUCTION_COMPILED* instr, DEM_C
   _dmm->setupModules();
 
   // if we made it to here, can assume no crashes on startup
-  EEPROM.write(DEM_EEPROM_SUCCESSFUL_BOOT, DEM_BOOT_SUCCESS);
-  EEPROM.commit();
+  //EEPROM.write(DEM_EEPROM_SUCCESSFUL_BOOT, DEM_BOOT_SUCCESS);
+  //EEPROM.commit();
+  setBootStatus(DEM_BOOT_SUCCESS);
 
   Log.noticeln(F("[.s] Setup complete"));
   return true;
