@@ -22,6 +22,9 @@ things that would be useful for all modules
 #include "DroneLinkMsg.h"
 #include "ArduinoJson.h"
 #include <ArduinoLog.h>
+#include "DroneExecutionManager.h"
+#include "strings.h"
+#include <ESPAsyncWebServer.h>
 
 // defines for common params
 #define DRONE_MODULE_PARAM_STATUS      1  // 0=disabled, 1=enabled, write a value of 2 or above to trigger reset
@@ -76,13 +79,16 @@ enum DRONE_MODULE_DISCOVERY_STATE {
 // forward declarations
 class DroneLinkManager;
 class DroneModuleManager;
+class DroneExecutionManager;
 //class DroneLinkMsg;
+
 
 // DroneModule
 class DroneModule {
 protected:
   DroneLinkManager* _dlm;
   DroneModuleManager* _dmm;
+  DroneExecutionManager* _dem;
   uint8_t _id;
   boolean _enabled;
   uint8_t _error;
@@ -102,9 +108,10 @@ protected:
 
   unsigned long _loopInterval;
   unsigned long _lastLoop;
+  boolean _setupDone;
 
 public:
-  DroneModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm);
+  DroneModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm, DroneExecutionManager* dem);
   ~DroneModule();
 
   uint8_t id();
@@ -114,6 +121,8 @@ public:
 
   virtual void initSubs(uint8_t numSubs);
   virtual void initParams(uint8_t numParams);
+
+  uint8_t getParamIdByName(const char* name);
 
   void reset();
   virtual void doReset();
@@ -161,6 +170,8 @@ public:
 
   boolean doDiscovery();  // returns true when complete
   void restartDiscovery();
+
+  void respondWithInfo(AsyncResponseStream *response);
 };
 
 

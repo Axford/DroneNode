@@ -47,7 +47,7 @@ protected:
   unsigned long _lastRate;
 public:
 
-  ManagementModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm);
+  ManagementModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm, DroneExecutionManager* dem);
 
   void onParamWrite(DRONE_PARAM_ENTRY *param);
 

@@ -26,7 +26,7 @@ protected:
   float _limits[2];  // min, max
 public:
 
-  ServoModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm);
+  ServoModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm, DroneExecutionManager* dem);
 
   void loadConfiguration(JsonObject &obj);
 

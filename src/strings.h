@@ -52,6 +52,7 @@ static const char STRING_LOADV[] PROGMEM = "loadV";
 static const char STRING_LOCATION[] PROGMEM = "location";
 static const char STRING_LOOPTO[] PROGMEM = "loopTo";
 static const char STRING_NAME[] PROGMEM = "name";
+static const char STR_NEW[] PROGMEM = "new";
 static const char STRING_PID[] PROGMEM = "PID";
 static const char STRING_PINS[] PROGMEM = "pins";
 static const char STRING_PORT[] PROGMEM = "port";

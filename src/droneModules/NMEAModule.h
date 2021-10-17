@@ -35,7 +35,7 @@ protected:
   MicroNMEA *_nmea;
 public:
 
-  NMEAModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm);
+  NMEAModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm, DroneExecutionManager* dem);
 
   void loadConfiguration(JsonObject &obj);
 

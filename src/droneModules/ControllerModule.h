@@ -171,7 +171,7 @@ protected:
   DroneLinkMsg _sendMsg;
 public:
 
-  ControllerModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm);
+  ControllerModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm, DroneExecutionManager* dem);
   ~ControllerModule();
 
   void clear();

@@ -3,8 +3,8 @@
 #include "../DroneLinkManager.h"
 
 
-TimerModule::TimerModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm):
-  DroneModule ( id, dmm, dlm ),
+TimerModule::TimerModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm, DroneExecutionManager* dem):
+  DroneModule ( id, dmm, dlm, dem ),
   _lastTime(0),
   _interval(1000)
  {

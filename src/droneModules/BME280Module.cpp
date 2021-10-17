@@ -3,8 +3,8 @@
 #include "../DroneLinkManager.h"
 #include "strings.h"
 
-BME280Module::BME280Module(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm):
-  I2CBaseModule ( id, dmm, dlm )
+BME280Module::BME280Module(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm, DroneExecutionManager* dem):
+  I2CBaseModule ( id, dmm, dlm, dem )
  {
    setTypeName(FPSTR(BME280_STR_BME280));
    _addr = BME280_I2C_ADDRESS;

@@ -52,7 +52,7 @@ protected:
 
 public:
 
-  WaypointNavModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm);
+  WaypointNavModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm, DroneExecutionManager* dem);
 
   void initWaypoint(uint8_t i);
 

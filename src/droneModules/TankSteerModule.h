@@ -45,7 +45,7 @@ protected:
 
 public:
 
-  TankSteerModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm);
+  TankSteerModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm, DroneExecutionManager* dem);
 
   void update();
 };

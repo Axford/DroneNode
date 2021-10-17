@@ -3,8 +3,8 @@
 #include "../DroneLinkManager.h"
 #include "strings.h"
 
-WaypointNavModule::WaypointNavModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm):
-  DroneModule ( id, dmm, dlm )
+WaypointNavModule::WaypointNavModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm, DroneExecutionManager* dem):
+  DroneModule ( id, dmm, dlm, dem)
  {
    setTypeName(FPSTR(WAYPOINT_NAV_STR_WAYPOINT_NAV));
 

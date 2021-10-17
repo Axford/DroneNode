@@ -3,8 +3,8 @@
 #include "../DroneLinkManager.h"
 #include "strings.h"
 
-TurnRateModule::TurnRateModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm):
-  DroneModule ( id, dmm, dlm )
+TurnRateModule::TurnRateModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm, DroneExecutionManager* dem):
+  DroneModule ( id, dmm, dlm, dem )
  {
    setTypeName(FPSTR(TURN_RATE_STR_TURN_RATE));
 

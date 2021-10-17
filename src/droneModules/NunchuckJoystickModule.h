@@ -40,7 +40,7 @@ protected:
 
 public:
 
-  NunchuckJoystick(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm);
+  NunchuckJoystick(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm, DroneExecutionManager* dem);
 
   void doReset();
 

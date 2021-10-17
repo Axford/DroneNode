@@ -42,7 +42,7 @@ protected:
 
 public:
 
-  TurnRateModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm);
+  TurnRateModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm, DroneExecutionManager* dem);
 
   //shortestSignedDistanceBetweenCircularValues
   static float getRotationDistance(float origin, float target);

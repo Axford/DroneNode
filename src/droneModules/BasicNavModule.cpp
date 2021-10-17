@@ -3,8 +3,8 @@
 #include "../DroneLinkManager.h"
 #include "strings.h"
 
-BasicNavModule::BasicNavModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm):
-  DroneModule ( id, dmm, dlm )
+BasicNavModule::BasicNavModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm, DroneExecutionManager* dem):
+  DroneModule ( id, dmm, dlm, dem )
  {
    setTypeName(FPSTR(BASIC_NAV_STR_BASIC_NAV));
 

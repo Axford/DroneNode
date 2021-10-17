@@ -18,7 +18,8 @@ struct DEM_INSTRUCTION_COMPILED;
 struct DEM_MACRO;
 struct DEM_COMMAND;
 
-#define DEM_ENUM_LENGTH   5
+#define DEM_COMMAND_LENGTH 10  // max command length
+#define DEM_NAMESPACE_LENGTH   16
 #define DEM_TOKEN_LENGTH  16
 
 #define DEM_CALLSTACK_SIZE    64  // 64 x uint32_t = 256 bytes
@@ -46,7 +47,7 @@ struct DEM_TOKEN {
 
 struct DEM_INSTRUCTION {
   DEM_NAMESPACE *ns;
-  char command[3];
+  char command[DEM_COMMAND_LENGTH];
   DRONE_LINK_ADDR addr;
   uint8_t dataType;
   uint8_t numTokens;
@@ -73,17 +74,19 @@ typedef std::function<boolean(DEM_INSTRUCTION_COMPILED* instr, DEM_CALLSTACK* cs
 
 struct DEM_INSTRUCTION_COMPILED {
   DEMCommandHandler handler;
+  DEM_NAMESPACE *ns;
   const char * cmd;
   DRONE_LINK_MSG msg;
 };
 
 struct DEM_COMMAND {
   const char * str;
+  uint8_t dataType;
   DEMCommandHandler handler;
 };
 
 struct DEM_NAMESPACE {
-  char name[DEM_ENUM_LENGTH+1];    // 5 char + \0
+  char name[DEM_NAMESPACE_LENGTH+1];    // 5 char + \0
   uint8_t module;  // module address
   IvanLinkedList::LinkedList<DEM_COMMAND> *commands;
 };
@@ -103,6 +106,8 @@ protected:
 
   IvanLinkedList::LinkedList<DEM_MACRO*> _macros;
   IvanLinkedList::LinkedList<DEM_NAMESPACE*> _namespaces;
+  IvanLinkedList::LinkedList<DEM_NAMESPACE*> _types; // registered module types
+
 
   DroneLinkManager *_dlm;
   DroneModuleManager *_dmm;
@@ -126,13 +131,20 @@ public:
     DEM_NAMESPACE* getNamespace(const char* name);
 
     DEM_NAMESPACE* createNamespace(const char* name, uint8_t module);
+    DEM_NAMESPACE* createNamespace(const __FlashStringHelper* name, uint8_t module);
 
-    void registerCommand(DEM_NAMESPACE* ns, const char* command, DEMCommandHandler handler);
+    void registerCommand(DEM_NAMESPACE* ns, const char* command, uint8_t dataType, DEMCommandHandler handler);
 
     DEM_COMMAND getCommand(DEM_NAMESPACE* ns, const char* command);
 
     void callStackPush(DEM_CALLSTACK_ENTRY entry);
     void callStackPop();
+
+    void dataStackPush(uint8_t d);
+    uint8_t dataStackPop();
+
+    // peek at an item offset down from the top of the stack
+    uint8_t dataStackPeek(uint8_t offset);
 
     void printInstruction(DEM_INSTRUCTION * instruction);
 
@@ -153,10 +165,16 @@ public:
     void serveCommandInfo(AsyncWebServerRequest *request);
 
     // command handlers
-    boolean core_AL(DEM_INSTRUCTION_COMPILED* instr, DEM_CALLSTACK* cs, DEM_DATASTACK* ds, boolean continuation);
-    boolean core_AM(DEM_INSTRUCTION_COMPILED* instr, DEM_CALLSTACK* cs, DEM_DATASTACK* ds, boolean continuation);
+    boolean core_done(DEM_INSTRUCTION_COMPILED* instr, DEM_CALLSTACK* cs, DEM_DATASTACK* ds, boolean continuation);
+    boolean core_load(DEM_INSTRUCTION_COMPILED* instr, DEM_CALLSTACK* cs, DEM_DATASTACK* ds, boolean continuation);
+    boolean core_node(DEM_INSTRUCTION_COMPILED* instr, DEM_CALLSTACK* cs, DEM_DATASTACK* ds, boolean continuation);
+    boolean core_restart(DEM_INSTRUCTION_COMPILED* instr, DEM_CALLSTACK* cs, DEM_DATASTACK* ds, boolean continuation);
+    boolean core_run(DEM_INSTRUCTION_COMPILED* instr, DEM_CALLSTACK* cs, DEM_DATASTACK* ds, boolean continuation);
+    boolean core_send(DEM_INSTRUCTION_COMPILED* instr, DEM_CALLSTACK* cs, DEM_DATASTACK* ds, boolean continuation);
+    boolean core_setup(DEM_INSTRUCTION_COMPILED* instr, DEM_CALLSTACK* cs, DEM_DATASTACK* ds, boolean continuation);
 
-    boolean core_FC(DEM_INSTRUCTION_COMPILED* instr, DEM_CALLSTACK* cs, DEM_DATASTACK* ds, boolean continuation);
+    boolean mod_constructor(DEM_INSTRUCTION_COMPILED* instr, DEM_CALLSTACK* cs, DEM_DATASTACK* ds, boolean continuation);
+    boolean mod_param(DEM_INSTRUCTION_COMPILED* instr, DEM_CALLSTACK* cs, DEM_DATASTACK* ds, boolean continuation);
 };
 
 

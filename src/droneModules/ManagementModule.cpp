@@ -2,11 +2,12 @@
 #include "../DroneLinkMsg.h"
 #include "../DroneLinkManager.h"
 #include "../DroneModuleManager.h"
+#include "../DroneExecutionManager.h"
 #include "../OTAManager.h"
 #include "strings.h"
 
-ManagementModule::ManagementModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm):
-  DroneModule ( id, dmm, dlm )
+ManagementModule::ManagementModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm, DroneExecutionManager* dem):
+  DroneModule ( id, dmm, dlm, dem )
  {
    setTypeName(FPSTR(MANAGEMENT_STR_MANAGEMENT));
 

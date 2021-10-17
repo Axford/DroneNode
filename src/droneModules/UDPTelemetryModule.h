@@ -37,7 +37,7 @@ protected:
 
 public:
 
-  UDPTelemetryModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm);
+  UDPTelemetryModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm, DroneExecutionManager* dem);
 
   void loadConfiguration(JsonObject &obj);
 

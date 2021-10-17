@@ -38,7 +38,7 @@ protected:
   boolean _invert[JOYSTICK_AXES];
 public:
 
-  JoystickModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm);
+  JoystickModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm, DroneExecutionManager* dem);
 
   void doReset();
 

@@ -6,8 +6,8 @@
 #include "strings.h"
 #include "RFM69registers.h"
 
-RFM69TelemetryModule::RFM69TelemetryModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm):
-  DroneModule ( id, dmm, dlm )
+RFM69TelemetryModule::RFM69TelemetryModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm, DroneExecutionManager* dem):
+  DroneModule ( id, dmm, dlm, dem )
  {
    setTypeName(FPSTR(RFM69_TELEMETRY_STR_RFM69_TELEMETRY));
    _buffer[0] = RFM69_START_OF_FRAME;

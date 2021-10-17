@@ -37,7 +37,7 @@ protected:
 
 public:
 
-  BasicNavModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm);
+  BasicNavModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm, DroneExecutionManager* dem);
 
   void onParamWrite(DRONE_PARAM_ENTRY *param);
 

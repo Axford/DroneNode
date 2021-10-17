@@ -91,7 +91,7 @@ protected:
   NEOPIXEL_COLOUR _blackout;
 public:
 
-  NeopixelModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm);
+  NeopixelModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm, DroneExecutionManager* dem);
 
   void initScene(NEOPIXEL_SCENE *scene);
 

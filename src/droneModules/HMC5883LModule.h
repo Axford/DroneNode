@@ -49,7 +49,7 @@ protected:
   Adafruit_HMC5883_Unified *_sensor;
 public:
 
-  HMC5883LModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm);
+  HMC5883LModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm, DroneExecutionManager* dem);
   ~HMC5883LModule();
 
   void doReset();

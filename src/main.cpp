@@ -162,6 +162,11 @@ void setupWebServer() {
     dlm.serveChannelInfo(request);
   });
 
+  // modules
+  server.on("/modules", HTTP_GET, [](AsyncWebServerRequest *request){
+    dmm.serveModuleInfo(request);
+  });
+
   // dem macros
   server.on("/macros", HTTP_GET, [](AsyncWebServerRequest *request){
     dem.serveMacroInfo(request);
@@ -234,18 +239,14 @@ void setup() {
   // define root macro
   DEM_MACRO * root = dem.createMacro("root");
   DEM_INSTRUCTION_COMPILED instr;
-  if (dem.compileLine(PSTR("AL \"/config.txt\""), &instr)) {
+  if (dem.compileLine(PSTR("load \"/config.txt\""), &instr))
     root->commands->add(instr);
-  } else {
-    Log.errorln("Invalid command");
-  }
-
-  dem.compileLine(PSTR("FC \"/config.txt\""), &instr);
+  dem.compileLine(PSTR("run \"/config.txt\""), &instr);
   root->commands->add(instr);
-  dem.compileLine(PSTR("AL \"/main.txt\""), &instr);
+  dem.compileLine(PSTR("load \"/main.txt\""), &instr);
   root->commands->add(instr);
   // now execute main
-  dem.compileLine(PSTR("FC \"/main.txt\""), &instr);
+  dem.compileLine(PSTR("run \"/main.txt\""), &instr);
   root->commands->add(instr);
 
   // prep execution of root
@@ -262,9 +263,8 @@ void setup() {
   wifiManager.loadConfiguration();
   wifiManager.start(dmm);
 
-
-  OTAMgr.init( dmm.hostname() );
   OTAMgr.onEvent = handleOTAEVent;
+  OTAMgr.init( dmm.hostname() );
 
   MDNS.addService("http","tcp",80);
 

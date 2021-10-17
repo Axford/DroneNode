@@ -45,7 +45,7 @@ protected:
   float _threshold;
 public:
 
-  INA219Module(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm);
+  INA219Module(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm, DroneExecutionManager* dem);
   ~INA219Module();
 
   void doReset();

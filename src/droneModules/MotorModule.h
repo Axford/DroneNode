@@ -33,7 +33,7 @@ protected:
 
 public:
 
-  MotorModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm);
+  MotorModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm, DroneExecutionManager* dem);
 
   void loadConfiguration(JsonObject &obj);
 

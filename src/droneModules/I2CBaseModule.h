@@ -17,7 +17,7 @@ protected:
   uint8_t _addr;  // I2C address
 public:
 
-  I2CBaseModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm);
+  I2CBaseModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm, DroneExecutionManager* dem);
 
   //virtual void onParamWrite(DRONE_PARAM_ENTRY *param);
 

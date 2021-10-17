@@ -47,7 +47,7 @@ protected:
   uint8_t _buffer[sizeof(DRONE_LINK_MSG)+2];
 public:
 
-  RFM69TelemetryModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm);
+  RFM69TelemetryModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm, DroneExecutionManager* dem);
 
   void loadConfiguration(JsonObject &obj);
 
