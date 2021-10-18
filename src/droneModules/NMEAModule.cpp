@@ -80,13 +80,8 @@ void NMEAModule::registerParams(DEM_NAMESPACE* ns, DroneExecutionManager *dem) {
   // writable mgmt params
   DEMCommandHandler ph = std::bind(&DroneExecutionManager::mod_param, dem, _1, _2, _3, _4);
 
-  dem->registerCommand(ns, STRING_PORT, DRONE_LINK_MSG_TYPE_FLOAT, ph);
-  dem->registerCommand(ns, STRING_BAUD, DRONE_LINK_MSG_TYPE_FLOAT, ph);
-}
-
-
-void NMEAModule::onParamWrite(DRONE_PARAM_ENTRY *param) {
-
+  dem->registerCommand(ns, STRING_PORT, DRONE_LINK_MSG_TYPE_UINT8_T, ph);
+  dem->registerCommand(ns, STRING_BAUD, DRONE_LINK_MSG_TYPE_UINT32_T, ph);
 }
 
 void NMEAModule::setup() {
@@ -95,10 +90,12 @@ void NMEAModule::setup() {
   switch(_params[NMEA_PARAM_PORT_E].data.uint8[0]) {
     //case 0: Serial.begin(_baud, SERIAL_8N1, PIN_SERIAL2_RX, PIN_SERIAL2_TX); break;
     case 1:
+      Log.noticeln(F("[NMEA.s] Serial 1 at %u"), _params[NMEA_PARAM_BAUD_E].data.uint32[0]);
       Serial1.begin(_params[NMEA_PARAM_BAUD_E].data.uint32[0], SERIAL_8N1, PIN_SERIAL1_RX, PIN_SERIAL1_TX);
       setPort(&Serial1);
       break;
     case 2:
+      Log.noticeln(F("[NMEA.s] Serial 2 at %u"), _params[NMEA_PARAM_BAUD_E].data.uint32[0]);
       Serial2.begin(_params[NMEA_PARAM_BAUD_E].data.uint32[0], SERIAL_8N1, PIN_SERIAL2_RX, PIN_SERIAL2_TX);
       setPort(&Serial2);
       break;
@@ -132,14 +129,14 @@ void NMEAModule::loop() {
 
       if (_nmea->isUnknown()) {
         // pass to AIS decoder
-        Log.noticeln(F("Unknown NMEA Message: "));
-        Log.noticeln(_nmea->getSentence());
+        //Log.noticeln(F("Unknown NMEA Message: "));
+        //Log.noticeln(_nmea->getSentence());
         //getSentence
 
         // TODO:
       } else {
         if (_nmea->isValid()) {
-          Log.noticeln(F("Fresh GPS"));
+          //Log.noticeln(F("Fresh GPS"));
 
           float tempf[3];
           tempf[1] = _nmea->getLatitude() / 1000000.;
@@ -147,7 +144,9 @@ void NMEAModule::loop() {
           long alt = 0;
           _nmea->getAltitude(alt);
           tempf[2] = alt/1000.0;
-          updateAndPublishParam(&_params[NMEA_PARAM_LOCATION_E], (uint8_t*)&tempf, sizeof(tempf));
+          if (tempf[0] != 0 && tempf[1] != 0) {
+            updateAndPublishParam(&_params[NMEA_PARAM_LOCATION_E], (uint8_t*)&tempf, sizeof(tempf));
+          }
 
           uint8_t temp8 =  _nmea->getNumSatellites();
           updateAndPublishParam(&_params[NMEA_PARAM_SATELLITES_E], (uint8_t*)&temp8, sizeof(temp8));

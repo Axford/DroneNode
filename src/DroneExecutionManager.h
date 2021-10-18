@@ -23,7 +23,7 @@ struct DEM_COMMAND;
 #define DEM_TOKEN_LENGTH  16
 
 #define DEM_CALLSTACK_SIZE    64  // 64 x uint32_t = 256 bytes
-#define DEM_DATASTACK_SIZE    64  // 64 x uint8_t = 64 bytes
+#define DEM_DATASTACK_SIZE    64  // 64 x uint32_t = 256 bytes
 
 #define DEM_EEPROM_SIZE              1
 #define DEM_EEPROM_SUCCESSFUL_BOOT   0
@@ -63,7 +63,7 @@ struct DEM_INSTRUCTION {
 
 struct DEM_CALLSTACK_ENTRY {
   DEM_MACRO* macro;
-  uint8_t i;  // instruction number
+  int i;  // instruction number
   boolean continuation; // true if we're calling this command for a second time
 };
 
@@ -72,9 +72,14 @@ struct DEM_CALLSTACK {
   DEM_CALLSTACK_ENTRY stack[DEM_CALLSTACK_SIZE];
 };
 
+struct DEM_DATASTACK_ENTRY {
+  uint32_t d;
+  DEM_INSTRUCTION_COMPILED* owner;  // which instruction put/updated this data value here
+};
+
 struct DEM_DATASTACK {
   int8_t p; // stack pointer
-  uint8_t stack[DEM_DATASTACK_SIZE];
+  DEM_DATASTACK_ENTRY stack[DEM_DATASTACK_SIZE];
 };
 
 typedef std::function<boolean(DEM_INSTRUCTION_COMPILED* instr, DEM_CALLSTACK* cs, DEM_DATASTACK* ds, boolean continuation)> DEMCommandHandler;
@@ -154,12 +159,12 @@ public:
 
     void callStackPush(DEM_CALLSTACK_ENTRY entry);
     void callStackPop();
+    DEM_CALLSTACK_ENTRY* callStackPeek(uint8_t offset);
 
-    void dataStackPush(uint8_t d);
-    uint8_t dataStackPop();
-
+    void dataStackPush(uint32_t d, DEM_INSTRUCTION_COMPILED* owner);
+    DEM_DATASTACK_ENTRY* dataStackPop();
     // peek at an item offset down from the top of the stack
-    uint8_t dataStackPeek(uint8_t offset);
+    DEM_DATASTACK_ENTRY* dataStackPeek(uint8_t offset);
 
     void printInstruction(DEM_INSTRUCTION * instruction);
 
@@ -180,7 +185,11 @@ public:
     void serveCommandInfo(AsyncWebServerRequest *request);
     void serveExecutionInfo(AsyncWebServerRequest *request);
 
-    // command handlers
+
+    // core handlers
+    boolean core_counter(DEM_INSTRUCTION_COMPILED* instr, DEM_CALLSTACK* cs, DEM_DATASTACK* ds, boolean continuation);
+    boolean core_delay(DEM_INSTRUCTION_COMPILED* instr, DEM_CALLSTACK* cs, DEM_DATASTACK* ds, boolean continuation);
+    boolean core_do(DEM_INSTRUCTION_COMPILED* instr, DEM_CALLSTACK* cs, DEM_DATASTACK* ds, boolean continuation);
     boolean core_done(DEM_INSTRUCTION_COMPILED* instr, DEM_CALLSTACK* cs, DEM_DATASTACK* ds, boolean continuation);
     boolean core_load(DEM_INSTRUCTION_COMPILED* instr, DEM_CALLSTACK* cs, DEM_DATASTACK* ds, boolean continuation);
     boolean core_node(DEM_INSTRUCTION_COMPILED* instr, DEM_CALLSTACK* cs, DEM_DATASTACK* ds, boolean continuation);
@@ -189,6 +198,7 @@ public:
     boolean core_run(DEM_INSTRUCTION_COMPILED* instr, DEM_CALLSTACK* cs, DEM_DATASTACK* ds, boolean continuation);
     boolean core_send(DEM_INSTRUCTION_COMPILED* instr, DEM_CALLSTACK* cs, DEM_DATASTACK* ds, boolean continuation);
     boolean core_setup(DEM_INSTRUCTION_COMPILED* instr, DEM_CALLSTACK* cs, DEM_DATASTACK* ds, boolean continuation);
+    boolean core_until(DEM_INSTRUCTION_COMPILED* instr, DEM_CALLSTACK* cs, DEM_DATASTACK* ds, boolean continuation);
 
     boolean mod_constructor(DEM_INSTRUCTION_COMPILED* instr, DEM_CALLSTACK* cs, DEM_DATASTACK* ds, boolean continuation);
     boolean mod_param(DEM_INSTRUCTION_COMPILED* instr, DEM_CALLSTACK* cs, DEM_DATASTACK* ds, boolean continuation);

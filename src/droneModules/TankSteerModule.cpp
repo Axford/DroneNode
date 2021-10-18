@@ -61,10 +61,16 @@ void TankSteerModule::registerParams(DEM_NAMESPACE* ns, DroneExecutionManager *d
 
   // writable mgmt params
   DEMCommandHandler ph = std::bind(&DroneExecutionManager::mod_param, dem, _1, _2, _3, _4);
+  DEMCommandHandler pha = std::bind(&DroneExecutionManager::mod_subAddr, dem, _1, _2, _3, _4);
 
   dem->registerCommand(ns, STRING_TURN_RATE, DRONE_LINK_MSG_TYPE_FLOAT, ph);
+  dem->registerCommand(ns, PSTR("$turnRate"), DRONE_LINK_MSG_TYPE_ADDR, pha);
+
   dem->registerCommand(ns, STRING_SPEED, DRONE_LINK_MSG_TYPE_FLOAT, ph);
+  dem->registerCommand(ns, PSTR("$speed"), DRONE_LINK_MSG_TYPE_ADDR, pha);
+
   dem->registerCommand(ns, STRING_TRIM, DRONE_LINK_MSG_TYPE_FLOAT, ph);
+  dem->registerCommand(ns, PSTR("$trim"), DRONE_LINK_MSG_TYPE_ADDR, pha);
 }
 
 
@@ -93,7 +99,14 @@ void TankSteerModule::update() {
 
   // local shortcuts
   float x = _subs[TANK_STEER_SUB_TURN_RATE_E].param.data.f[0];
+  // limit turnRate
+  if (x > 1) x = 1;
+  if (x < -1) x = -1;
+  
   float y = _subs[TANK_STEER_SUB_SPEED_E].param.data.f[0];
+  // limit speed
+  if (y > 1) y = 1;
+  if (y < -1) y = -1;
 
   // use trim as offset to x value
   x += _subs[TANK_STEER_SUB_TRIM_E].param.data.f[0];
@@ -104,6 +117,12 @@ void TankSteerModule::update() {
 
   float right = (v + w)/2;
   float left = (v-w)/2;
+
+  // limits
+  if (right > 1) right = 1;
+  if (right < -1) right = -1;
+  if (left > 1) left = 1;
+  if (left < -1) left = -1;
 
   _params[TANK_STEER_PARAM_LEFT_E].data.f[0] = left;
   _params[TANK_STEER_PARAM_RIGHT_E].data.f[0] = right;

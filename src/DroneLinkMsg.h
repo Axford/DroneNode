@@ -34,7 +34,7 @@ struct DRONE_LINK_ADDR {
   uint8_t param;    // e.g. current location
 } __packed;
 
-//static_assert(sizeof(DRONE_LINK_ADDR) == 5, "Incorrect Addr size");
+//static_assert(sizeof(DRONE_LINK_ADDR) == 4, "Incorrect Addr size");
 
 union DRONE_LINK_PAYLOAD {
   uint8_t uint8[DRONE_LINK_MSG_MAX_PAYLOAD];

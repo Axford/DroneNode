@@ -9,6 +9,7 @@ Management.new 1
   name "Management"
   status true
   interval 1000
+  discovery true
 
   // publish
   .publish "hostname"
@@ -38,13 +39,14 @@ INA219.new 4
   .publish "current"
   .publish "power"
   .publish "loadV"
+  .publish "alarm"
 .done
 
 NMEA.new 5
   name "GPS"
   interval 1000
   port 1
-  baud 9600
+  baud 38400
   .publish "location"
   .publish "satellites"
   .publish "HDOP"
@@ -70,12 +72,17 @@ Nav.new 7
   .publish "target"
   .publish "heading"
   .publish "distance"
+  .publish "mode"
 .done
 
 TurnRate.new 8
   name "TurnRate"
   $target [@>7.8]
   $heading [@>6.11]
+  .publish "target"
+  .publish "heading"
+  .publish "PID"
+  .publish "turnRate"
 .done
 
 TankSteer.new 10
@@ -106,7 +113,7 @@ Motor.new 11
 Motor.new 12
   name "RightMotor"
   interval 50
-  pins OUT1_0 OUT1_1 DAC0_1
+  pins OUT1_1 OUT1_0 DAC0_1
   PWMChannel 14
   limits -1 1
   deadband 0.3

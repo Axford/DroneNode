@@ -30,7 +30,7 @@ Waypoint navigation:
 #define NAV_PARAM_DISTANCE       9  // distance to go
 #define NAV_PARAM_DISTANCE_E     1
 
-#define NAV_PARAM_MODE           10  // mode
+#define NAV_PARAM_MODE           14  // mode
 #define NAV_PARAM_MODE_E         2
 
 #define NAV_PARAM_ENTRIES        3

@@ -104,7 +104,7 @@ public:
 
       DroneLinkMsg *tmp = _queue.shift();
 
-      //Log.noticeln("[DLC.pQ]");
+      //Log.noticeln("[DLC.pQ] %u>%u", _node, _id);
 
       // send msg to each subscriber
       DroneLinkChannelSubscription sub;
@@ -112,12 +112,16 @@ public:
         sub = _subs.get(i);
         // check paramMask
         //if (tmp->matchParam(sub.paramMask))
-        if (tmp->param() == sub.param || sub.param == DRONE_LINK_PARAM_ALL)
+        if (tmp->param() == sub.param || sub.param == DRONE_LINK_PARAM_ALL) {
+          //Log.noticeln("[DLC.pQ] to %s", sub.module->getName());
           sub.module->handleLinkMessage(tmp);
+        }
+
       }
 
       // delete the tmp msg
       delete tmp;
+      //Log.noticeln("[DLC.pQ] end");
     }
 
     void subscribe(DroneModule* subscriber, uint8_t param) {

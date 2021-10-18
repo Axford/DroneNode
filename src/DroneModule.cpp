@@ -117,6 +117,8 @@ void DroneModule::initSubs(uint8_t numSubs) {
   for (uint8_t i=0; i<_numSubs; i++) {
     _subs[i].received = false;
     _subs[i].addr.source = _dlm->node();
+    _subs[i].addr.node = 0;
+    _subs[i].addr.channel = 0;
     _subs[i].addr.param = 255;
     _subs[i].param.publish = false;
     _subs[i].param.nameLen = sizeof(STRING_BLANK);

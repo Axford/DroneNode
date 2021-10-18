@@ -311,10 +311,13 @@ void loop() {
   digitalWrite(PIN_LED, (WiFi.status() != WL_CONNECTED));
 
   if (!OTAMgr.isUpdating) {
+    //Log.noticeln("[] lM");
     dmm->loopModules();
 
+    //Log.noticeln("[] pC");
     dlm->processChannels();
 
+    //Log.noticeln("[] e");
     dem->execute();
   } else {
     digitalWrite(PIN_LED, HIGH);

@@ -31,6 +31,7 @@ static const char STRING_CHOKED[] PROGMEM = "choked";
 static const char STRING_CURRENT[] PROGMEM = "current";
 static const char STRING_DEADBAND[] PROGMEM = "deadband";
 static const char STRING_DECLINATION[] PROGMEM = "declination";
+static const char STRING_DELAY[] PROGMEM = "delay";
 static const char STRING_DISTANCE[] PROGMEM = "distance";
 static const char STRING_DISCOVERY[] PROGMEM = "discovery";
 static const char STRING_DRONE[] PROGMEM = "Drone";

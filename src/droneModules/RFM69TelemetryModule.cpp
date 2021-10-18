@@ -52,6 +52,8 @@ void RFM69TelemetryModule::loadConfiguration(JsonObject &obj) {
 void RFM69TelemetryModule::handleLinkMessage(DroneLinkMsg *msg) {
   DroneModule::handleLinkMessage(msg);
 
+  //Log.noticeln("[RFM.hLM] a");
+
   if (!_enabled || !_setupDone) return;
 
   if (_error > 0) return;
@@ -64,6 +66,7 @@ void RFM69TelemetryModule::handleLinkMessage(DroneLinkMsg *msg) {
     return;
   }
 
+  //Log.noticeln("[RFM.hLM] b");
 
   // only send messages that originate on this node
   boolean sendPacket = (msg->source() == _dlm->node());
@@ -79,21 +82,26 @@ void RFM69TelemetryModule::handleLinkMessage(DroneLinkMsg *msg) {
     }
   }
 
+  //Log.noticeln("[RFM.hLM] c");
+
   if (sendPacket) {
-    //Serial.print("RFM69: Sending: ");
-    //msg->print();
+    Serial.print("[RFM69.hLM] ");
+    msg->print();
 
-
+    // TODO - is this length right????
     uint8_t transmitLength = msg->length() + sizeof(DRONE_LINK_ADDR) + 2;
 
     memcpy(_buffer + 1, &msg->_msg, transmitLength);
 
     _buffer[transmitLength-1] = _CRC8.smbus(_buffer + 1, msg->length() + sizeof(DRONE_LINK_ADDR));
 
+    //Log.noticeln("[RFM.hLM] d");
+
     _radio.send(255, (uint8_t*)_buffer, transmitLength);
   } else {
     //Serial.print("RFM69: Filtered: ");
     //msg->print();
+    //Log.noticeln("[RFM.hLM] e");
   }
 }
 

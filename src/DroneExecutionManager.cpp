@@ -99,7 +99,10 @@ DroneExecutionManager::DroneExecutionManager(DroneModuleManager *dmm, DroneLinkM
   using std::placeholders::_3;
   using std::placeholders::_4;
 
+  registerCommand(core, PSTR("counter"), DRONE_LINK_MSG_TYPE_UINT32_T, std::bind(&DroneExecutionManager::core_counter, this, _1, _2, _3, _4));
+  registerCommand(core, STRING_DELAY, DRONE_LINK_MSG_TYPE_UINT32_T, std::bind(&DroneExecutionManager::core_delay, this, _1, _2, _3, _4));
   registerCommand(core, PSTR("done"), DEM_DATATYPE_NONE, std::bind(&DroneExecutionManager::core_done, this, _1, _2, _3, _4));
+  registerCommand(core, PSTR("do"), DEM_DATATYPE_NONE, std::bind(&DroneExecutionManager::core_do, this, _1, _2, _3, _4));
   registerCommand(core, PSTR("load"), DRONE_LINK_MSG_TYPE_CHAR, std::bind(&DroneExecutionManager::core_load, this, _1, _2, _3, _4));
   registerCommand(core, PSTR("node"), DRONE_LINK_MSG_TYPE_UINT8_T, std::bind(&DroneExecutionManager::core_node, this, _1, _2, _3, _4));
   registerCommand(core, PSTR("publish"), DRONE_LINK_MSG_TYPE_UINT8_T, std::bind(&DroneExecutionManager::core_publish, this, _1, _2, _3, _4));
@@ -108,6 +111,8 @@ DroneExecutionManager::DroneExecutionManager(DroneModuleManager *dmm, DroneLinkM
   registerCommand(core, PSTR("send"), 255, std::bind(&DroneExecutionManager::core_send, this, _1, _2, _3, _4));
   registerCommand(core, PSTR("setup"), DEM_DATATYPE_NONE, std::bind(&DroneExecutionManager::core_setup, this, _1, _2, _3, _4));
   registerCommand(core, PSTR("sub"), DRONE_LINK_MSG_TYPE_ADDR, std::bind(&DroneExecutionManager::core_sub, this, _1, _2, _3, _4));
+  registerCommand(core, PSTR("until"), DEM_DATATYPE_NONE, std::bind(&DroneExecutionManager::core_until, this, _1, _2, _3, _4));
+
 
 
   // register modules
@@ -264,36 +269,49 @@ void DroneExecutionManager::callStackPush(DEM_CALLSTACK_ENTRY entry) {
 
 
 void DroneExecutionManager::callStackPop() {
-  if (_call.p > -1) _call.p--;
+  if (_call.p > -1) _call.p = _call.p-1;
 }
 
 
-void DroneExecutionManager::dataStackPush(uint8_t d) {
+DEM_CALLSTACK_ENTRY* DroneExecutionManager::callStackPeek(uint8_t offset) {
+  int p = _call.p - offset;
+  if ( p >-1) {
+    return &_call.stack[p];
+  } else {
+    return NULL;
+  }
+}
+
+
+void DroneExecutionManager::dataStackPush(uint32_t d, DEM_INSTRUCTION_COMPILED* owner) {
   if (_data.p < DEM_DATASTACK_SIZE-1) {
     _data.p++;
-    _data.stack[_data.p] = d;
+    _data.stack[_data.p].d = d;
+    _data.stack[_data.p].owner = owner;
   } else {
     Log.errorln(F("[DEM.dSP] Data stack full"));
   }
 }
 
-uint8_t DroneExecutionManager::dataStackPop() {
+DEM_DATASTACK_ENTRY* DroneExecutionManager::dataStackPop() {
   if (_data.p > -1) {
-    return _data.stack[_data.p];
-    _data.p--;
+    _data.p = _data.p - 1;
+    return &_data.stack[_data.p+1];
+
   }
-  return 0;
+  return NULL;
 }
 
 // peek at an item offset down from the top of the stack
-uint8_t DroneExecutionManager::dataStackPeek(uint8_t offset) {
+DEM_DATASTACK_ENTRY* DroneExecutionManager::dataStackPeek(uint8_t offset) {
   int p = _data.p - offset;
   if ( p >-1) {
-    return _data.stack[p];
+    return &_data.stack[p];
   } else {
-    return 0;
+    return NULL;
   }
 }
+
 
 
 void DroneExecutionManager::printInstruction(DEM_INSTRUCTION * instruction) {
@@ -915,11 +933,11 @@ void DroneExecutionManager::execute() {
 
   if (_safeMode) return;
 
-  //Log.errorln(F("[DEM.e]"));
+  //Log.noticeln(F("[DEM.e]"));
 
   // if we have an active macro
   if (_call.p > -1) {
-    DEM_CALLSTACK_ENTRY *cse = &_call.stack[_call.p];
+    DEM_CALLSTACK_ENTRY *cse = callStackPeek(0);
     // check valid macro pointer
     if (cse->macro) {
       // check we haven't reached the end of the macro
@@ -927,13 +945,15 @@ void DroneExecutionManager::execute() {
         // fetch the instruction
         DEM_INSTRUCTION_COMPILED ic = cse->macro->commands->get(cse->i);
 
-        Log.noticeln(F("[DEM.e] %s #%u > %s\n"), cse->macro->name, cse->i, ic.cmd);
-
-        // TODO: print when continuing
+        if (!cse->continuation)
+          Log.noticeln(F("[DEM.e] %s #%u > %s\n"), cse->macro->name, cse->i, ic.cmd);
 
         // execute the instruction
         if (ic.handler(&ic, &_call, &_data, cse->continuation)) {
+          // update cse pointer in case of push/pop
+          cse = callStackPeek(0);
           // command completed
+          cse->continuation = false; // clear now command is complete
           // increment instruction pointer
           cse->i++;
         } else {
@@ -942,11 +962,21 @@ void DroneExecutionManager::execute() {
         }
       } else {
         // pop the call stack
+        Log.noticeln(F("[DEM.e] end of macro"));
         callStackPop();
+        // get underlying cse
+        cse = callStackPeek(0);
+        if (cse) {
+          // increment instruction pointer
+          cse->i++;
+        }
       }
+    } else {
+      // should never happen
+      Log.errorln(F("[DEM.e] macro null"));
     }
   }
-  //Log.errorln(F("[DEM.e] end"));
+  //Log.noticeln(F("[DEM.e] end"));
 }
 
 
@@ -1027,13 +1057,87 @@ void DroneExecutionManager::serveExecutionInfo(AsyncWebServerRequest *request) {
     response->print(F("No\n"));
   }
 
+  response->print(F("\ncallStack:\n"));
+  for (uint8_t i=0; i<=_call.p; i++) {
+    DEM_INSTRUCTION_COMPILED ic = _call.stack[i].macro->commands->get(_call.stack[i].i);
+
+    response->printf("    %u: %u %s in %s", i, _call.stack[i].i, ic.cmd, _call.stack[i].macro->name);
+    response->print(_call.stack[i].continuation ? "C\n" : "\n");
+  }
+
+
+  response->print(F("\ndataStack:\n"));
+  for (uint8_t i=0; i<=_data.p; i++) {
+
+    response->printf("    %u: %u  ", i, _data.stack[i].d);
+    /*if (_data.stack[i].owner) {
+      response->print(_data.stack[i].owner->cmd);
+    } else {
+      response->print('?');
+    }*/
+    response->print('\n');
+  }
+
   //send the response last
   request->send(response);
 }
 
 
+boolean DroneExecutionManager::core_counter(DEM_INSTRUCTION_COMPILED* instr, DEM_CALLSTACK* cs, DEM_DATASTACK* ds, boolean continuation) {
+
+  // get loop counter from top of stack
+  DEM_DATASTACK_ENTRY*dse = dataStackPeek(0);
+
+  Log.noticeln(F("[.counter] %u >= %u ?"), dse->d, instr->msg.payload.uint32[0]);
+
+  // compare with target value and push result to stack
+  dataStackPush( dse->d >= instr->msg.payload.uint32[0] ? 1 :0, instr );
+
+  return true;
+}
+
+
+boolean DroneExecutionManager::core_delay(DEM_INSTRUCTION_COMPILED* instr, DEM_CALLSTACK* cs, DEM_DATASTACK* ds, boolean continuation) {
+  if (continuation) {
+    DEM_DATASTACK_ENTRY *dse = dataStackPeek(0);
+    long dur = millis() - dse->d;
+
+    if (dur >= instr->msg.payload.uint32[0]) {
+      dataStackPop();
+      Log.noticeln(F("[.delay] done"));
+      return true;
+    } else {
+      return false;
+    }
+
+  } else {
+    dataStackPush(millis(), instr);
+    return false;
+  }
+}
+
+
+boolean DroneExecutionManager::core_do(DEM_INSTRUCTION_COMPILED* instr, DEM_CALLSTACK* cs, DEM_DATASTACK* ds, boolean continuation) {
+  Log.noticeln(F("[DEM.do]"));
+
+  DEM_CALLSTACK_ENTRY *csec = callStackPeek(0);
+  if (csec) {
+    // continue execution from here
+    DEM_CALLSTACK_ENTRY cse;
+    cse.i= csec->i;
+    cse.macro = csec->macro;
+    cse.continuation = false;
+    Log.noticeln(F("[DEM.do] next instr: %u"), cse.i);
+    callStackPush(cse);
+  }
+
+  dataStackPush(0, instr); // loop counter
+
+  return true;
+}
+
 boolean DroneExecutionManager::core_done(DEM_INSTRUCTION_COMPILED* instr, DEM_CALLSTACK* cs, DEM_DATASTACK* ds, boolean continuation) {
-  Log.noticeln(F("[DEM.d]"));
+  Log.noticeln(F("[DEM.done]"));
   dataStackPop();
   return true;
 }
@@ -1063,16 +1167,16 @@ boolean DroneExecutionManager::core_node(DEM_INSTRUCTION_COMPILED* instr, DEM_CA
 }
 
 boolean DroneExecutionManager::core_publish(DEM_INSTRUCTION_COMPILED* instr, DEM_CALLSTACK* cs, DEM_DATASTACK* ds, boolean continuation) {
-  uint8_t module = dataStackPeek(0);
+  DEM_DATASTACK_ENTRY *dse = dataStackPeek(0);
 
   char buffer[DRONE_LINK_MSG_MAX_PAYLOAD+1];
   uint8_t len = (instr->msg.paramTypeLength & 0xF)+1;
   memcpy(buffer, instr->msg.payload.c, len);
   buffer[len] = 0;
 
-  Log.noticeln(F("[.pub] Publishing %s on module %u"), buffer, module);
+  Log.noticeln(F("[.pub] Publishing %s on module %u"), buffer, dse->d);
   // get param address by name from module
-  DroneModule* mod = _dmm->getModuleById(module);
+  DroneModule* mod = _dmm->getModuleById(dse->d);
   if (mod != NULL) {
     DRONE_PARAM_ENTRY* p = mod->getParamEntryByName(buffer);
     if (p != NULL) {
@@ -1102,7 +1206,7 @@ boolean DroneExecutionManager::core_run(DEM_INSTRUCTION_COMPILED* instr, DEM_CAL
 
   if (len > 1) {
     DEM_CALLSTACK_ENTRY cse;
-    cse.i=0;
+    cse.i=-1; // so we start at 0 once pointer auto-incremented
     cse.macro = getMacro(buffer);
     cse.continuation = false;
     if (cse.macro != NULL) {
@@ -1125,7 +1229,8 @@ boolean DroneExecutionManager::core_send(DEM_INSTRUCTION_COMPILED* instr, DEM_CA
   // check for address rewrites
   if (instr->msg.node == 0) instr->msg.node = _dlm->node();
   // see if we can get module context
-  if (instr->msg.channel == 0) instr->msg.channel = dataStackPeek(0);
+  DEM_DATASTACK_ENTRY *dse = dataStackPeek(0);
+  if (instr->msg.channel == 0 && dse) instr->msg.channel = dse->d;
   DroneLinkMsg temp(&instr->msg);
   if (instr->msg.channel > 0 && instr->msg.param > 0) {
     instr->msg.source = instr->msg.node;
@@ -1145,6 +1250,54 @@ boolean DroneExecutionManager::core_setup(DEM_INSTRUCTION_COMPILED* instr, DEM_C
   setBootStatus(DEM_BOOT_SUCCESS);
 
   Log.noticeln(F("[.s] Setup complete"));
+  return true;
+}
+
+
+boolean DroneExecutionManager::core_until(DEM_INSTRUCTION_COMPILED* instr, DEM_CALLSTACK* cs, DEM_DATASTACK* ds, boolean continuation) {
+  Log.noticeln(F("[DEM.until]"));
+  DEM_CALLSTACK_ENTRY *csec;
+
+  // test exit condition
+  DEM_DATASTACK_ENTRY *dse = dataStackPop();
+  boolean exitLoop = (dse && (dse->d > 0));
+
+  // update the loop counter
+  dse = dataStackPeek(0);
+  if (dse) dse->d = dse->d + 1;
+
+  if (exitLoop) {
+    Log.noticeln(F("[DEM.until] exitLoop"));
+    // exit condition met
+    // we need to resume execution from here
+    // get the current instruction pointer
+    int i = 0;
+    csec = callStackPeek(0);
+    if (csec) {
+      i = csec->i;
+    }
+    // remove the DO cse
+    callStackPop();
+    // rewrite the old instruction pointer to resume from here
+    csec = callStackPeek(0);
+    if (csec) {
+      csec->i = i;
+    }
+    Log.noticeln(F("[DEM.until] resuming from %u"), i);
+
+    // pop the loop counter
+    dataStackPop();
+  } else {
+    // exit condition not met
+    // rewrite instruction pointer to DO
+    DEM_CALLSTACK_ENTRY *cseOld = callStackPeek(1);
+    csec = callStackPeek(0); // get current cse
+    if(cseOld && csec) {
+      Log.noticeln(F("[DEM.until] repeat from %u"), csec->i);
+      csec->i = cseOld->i; // will cause execution to resume from instruction after DO
+    }
+  }
+
   return true;
 }
 
@@ -1188,7 +1341,7 @@ boolean DroneExecutionManager::mod_constructor(DEM_INSTRUCTION_COMPILED* instr, 
 
     if ( newMod ) {
       // push id onto data stack for use by param and publish commands
-      dataStackPush(id);
+      dataStackPush(id, instr);
     }
     Log.noticeln(F("[.c] done"));
   } else {
@@ -1199,7 +1352,8 @@ boolean DroneExecutionManager::mod_constructor(DEM_INSTRUCTION_COMPILED* instr, 
 
 
 boolean DroneExecutionManager::mod_param(DEM_INSTRUCTION_COMPILED* instr, DEM_CALLSTACK* cs, DEM_DATASTACK* ds, boolean continuation) {
-  uint8_t module = dataStackPeek(0);
+  DEM_DATASTACK_ENTRY *dse = dataStackPeek(0);
+  uint8_t module = (dse) ? dse->d : 0;
   Log.noticeln(F("[.p] Setting param %s on module %u"), instr->cmd, module);
   // get param address by name from module
   DroneModule* mod = _dmm->getModuleById(module);
@@ -1229,7 +1383,8 @@ boolean DroneExecutionManager::mod_param(DEM_INSTRUCTION_COMPILED* instr, DEM_CA
 
 
 boolean DroneExecutionManager::mod_subAddr(DEM_INSTRUCTION_COMPILED* instr, DEM_CALLSTACK* cs, DEM_DATASTACK* ds, boolean continuation) {
-  uint8_t module = dataStackPeek(0);
+  DEM_DATASTACK_ENTRY *dse = dataStackPeek(0);
+  uint8_t module = dse ? dse->d : 0;
   Log.noticeln(F("[.p] Setting address for %s on module %u"), instr->cmd, module);
   // get sub by name from module
   DroneModule* mod = _dmm->getModuleById(module);
@@ -1256,7 +1411,8 @@ boolean DroneExecutionManager::mod_subAddr(DEM_INSTRUCTION_COMPILED* instr, DEM_
 
 
 boolean DroneExecutionManager::core_sub(DEM_INSTRUCTION_COMPILED* instr, DEM_CALLSTACK* cs, DEM_DATASTACK* ds, boolean continuation) {
-  uint8_t module = dataStackPeek(0);
+  DEM_DATASTACK_ENTRY *dse = dataStackPeek(0);
+  uint8_t module = dse ? dse->d : 0;
   DRONE_LINK_ADDR *addr = &instr->msg.payload.addr[0];
 
   if (addr->node == 0) addr->node = _dlm->node();
