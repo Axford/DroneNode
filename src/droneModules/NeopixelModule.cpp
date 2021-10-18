@@ -69,7 +69,7 @@ void NeopixelModule::registerParams(DEM_NAMESPACE* ns, DroneExecutionManager *de
 
 
 void NeopixelModule::initScene(NEOPIXEL_SCENE *scene) {
-  scene->brightness = 50;
+  scene->brightness = 10;
   scene->effect = NEOPIXEL_SOLID;
   scene->p1 = 0;
   scene->p2 = 0;

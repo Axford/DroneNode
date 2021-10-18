@@ -236,17 +236,17 @@ void DroneExecutionManager::registerCommand(DEM_NAMESPACE* ns, const char* comma
 
 DEM_COMMAND DroneExecutionManager::getCommand(DEM_NAMESPACE* ns, const char* command) {
   DEM_COMMAND cmd;
-  Log.noticeln(F("[DEM.gC] Find handler for %s in %s\n"), command, ns->name);
+  //Log.noticeln(F("[DEM.gC] Find handler for %s in %s\n"), command, ns->name);
   if (ns != NULL) {
     for(int i = 0; i < ns->commands->size(); i++){
       cmd = ns->commands->get(i);
       if (strcmp(cmd.str, command) == 0) {
-        Log.noticeln(F("[DEM.gC] Found matching handler for %s\n"), command);
+        //Log.noticeln(F("[DEM.gC] Found matching handler for %s\n"), command);
         return cmd;
       }
     }
   }
-  Log.errorln(F("[DEM.gC] No handler found"));
+  Log.errorln(F("[DEM.gC] No handler found for %s in %s"), command, ns->name);
   cmd.handler = NULL;
   cmd.str = NULL;
   return cmd;
@@ -669,7 +669,7 @@ boolean DroneExecutionManager::compileLine(const char * line, DEM_INSTRUCTION_CO
               }
               inAddr = false;
               inAddrP = false;
-              DroneLinkMsg::printAddress(&tempAddr);  Serial.print('\n');
+              //DroneLinkMsg::printAddress(&tempAddr);  Serial.print('\n');
 
               //Serial.print("_P_");
             } else {
@@ -679,7 +679,7 @@ boolean DroneExecutionManager::compileLine(const char * line, DEM_INSTRUCTION_CO
           }
           // namespace
           else if (eon) {
-            Serial.print("_NS_");
+            //Serial.print("_NS_");
             if (tokenLen == 0) {
               _instruction.ns = getNamespace("core");
             } else
@@ -688,7 +688,7 @@ boolean DroneExecutionManager::compileLine(const char * line, DEM_INSTRUCTION_CO
           }
           // string
           else if (eos) {
-            Serial.print("_STR_");
+            //Serial.print("_STR_");
             eos = false;
             if (_instruction.numTokens ==0) {
               for (uint8_t i=0; i<tokenLen; i++) {

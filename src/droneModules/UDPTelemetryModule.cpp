@@ -71,8 +71,8 @@ void UDPTelemetryModule::handleLinkMessage(DroneLinkMsg *msg) {
     _params[UDP_PARAM_BROADCAST_E].data.uint8[3]
   );
 
-  Log.notice("UDP -> ");
-  msg->print();
+  //Log.notice("UDP -> ");
+  //msg->print();
 
   // only send messages that originate on this node
   boolean sendPacket = (msg->source() == _dlm->node());

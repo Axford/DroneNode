@@ -111,43 +111,10 @@ void HMC5883LModule::doReset() {
 }
 
 
-void HMC5883LModule::loadConfiguration(JsonObject &obj) {
-  I2CBaseModule::loadConfiguration(obj);
-
-  // instantiate sensor object, now _params[I2CBASE_PARAM_ADDR_E].data.uint8[0] is known
-
-/*
-  // read default declination
-  if (obj.containsKey(STRING_DECLINATION)) {
-    _params[HMC5883L_PARAM_CALIB_X_E].data.f[0] = obj[STRING_DECLINATION];
-  }
-
-  // read calibration values
-  if (obj.containsKey(STRING_CALIB_X)) {
-    Log.noticeln(STRING_CALIB_X);
-    JsonArray array = obj[STRING_CALIB_X].as<JsonArray>();
-    if (array.size()==2) {
-      _params[HMC5883L_PARAM_CALIB_X_E].data.f[0] = array[0];
-      _params[HMC5883L_PARAM_CALIB_X_E].data.f[2] = array[1];
-    }
-  }
-
-  if (obj.containsKey(STRING_CALIB_Y)) {
-    Log.noticeln(STRING_CALIB_Y);
-    JsonArray array = obj[STRING_CALIB_Y].as<JsonArray>();
-    if (array.size()==2) {
-      _params[HMC5883L_PARAM_CALIB_Y_E].data.f[0] = array[0];
-      _params[HMC5883L_PARAM_CALIB_Y_E].data.f[2] = array[1];
-    }
-  }
-  */
-}
-
-
 void HMC5883LModule::setup() {
   I2CBaseModule::setup();
 
-  _sensor = new Adafruit_HMC5883_Unified(_id);
+  _sensor = new Adafruit_HMC5883_Unified(_params[I2CBASE_PARAM_ADDR_E].data.uint8[0]);
 }
 
 void HMC5883LModule::update() {

@@ -61,7 +61,7 @@ boolean I2CBaseModule::isAlive() {
   // if already in error state, then assume dead
   //if (_error > 0) return false;
   // poll sensor to see if we're alive
-  if (!_setupDone || _params[I2CBASE_PARAM_ADDR_E].data.uint8[0]) return false;
+  if (!_setupDone || _params[I2CBASE_PARAM_ADDR_E].data.uint8[0]==0) return true; // avoid false resets
 
   DroneWire::selectChannel(_params[I2CBASE_PARAM_BUS_E].data.uint8[0]);
 

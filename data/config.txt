@@ -1,0 +1,129 @@
+// D-Code Config Script
+
+// Setup the node
+node 1
+hostname "Paddle"
+
+// Init modules
+Management.new 1
+  name "Management"
+  status true
+  interval 1000
+
+  // publish
+  .publish "hostname"
+  .publish "build"
+.done
+
+UDPTelemetry.new 2
+  name "UDPT"
+  port 8007
+  broadcast 255 255 255 255
+  .sub [@>0.0]
+.done
+
+RFM69Telemetry.new 3
+  name "RFM69"
+  .sub [@>0.0]
+  .publish "RSSI"
+.done
+
+INA219.new 4
+  name "Power"
+  bus 7
+  addr 64
+  interval 1000
+  cells 3
+  threshold 11.2
+  .publish "current"
+  .publish "power"
+  .publish "loadV"
+.done
+
+NMEA.new 5
+  name "GPS"
+  interval 1000
+  port 1
+  baud 9600
+  .publish "location"
+  .publish "satellites"
+  .publish "HDOP"
+.done
+
+HMC5883L.new 6
+  name "Compass"
+  interval 1000
+  // default location
+  calibX -32.8 0 49
+  calibY -101.8 0 -16.7
+  location -1.8 52 100
+  //$location [@>GPS.location]
+  $location [@>5.8]
+  .publish "heading"
+.done
+
+
+Nav.new 7
+  name "Nav"
+  $location [@>5.8]
+  target (u8) -1.8 51 100
+  .publish "target"
+  .publish "heading"
+  .publish "distance"
+.done
+
+TurnRate.new 8
+  name "TurnRate"
+  $target [@>7.8]
+  $heading [@>6.11]
+.done
+
+TankSteer.new 10
+  name "TankSteer"
+  interval 50
+  trim 0
+  .publish "left"
+  .publish "right"
+  .publish "turnRate"
+  .publish "speed"
+  .publish "trim"
+.done
+
+
+Motor.new 11
+  name "LeftMotor"
+  interval 50
+  pins OUT0_0 OUT0_1 DAC0_0
+  PWMChannel 15
+  limits -1 1
+  deadband 0.3
+  $speed [@>10.8]
+
+  // publish
+  .publish "speed"
+.done
+
+Motor.new 12
+  name "RightMotor"
+  interval 50
+  pins OUT1_0 OUT1_1 DAC0_1
+  PWMChannel 14
+  limits -1 1
+  deadband 0.3
+  $speed [@>10.9]
+
+  // publish
+  .publish "speed"
+.done
+
+Neopixel.new 20
+  name "Neopixel"
+  interval 50
+  pins OUT2_1
+  numPixels 16
+  .publish "scene"
+.done
+
+
+// finish setup
+.setup

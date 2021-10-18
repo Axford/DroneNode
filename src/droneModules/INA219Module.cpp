@@ -152,7 +152,7 @@ void INA219Module::loop() {
   updateAndPublishParam(&_params[INA219_PARAM_ALARM_E], (uint8_t*)&temp8, sizeof(temp8));
 
   // error check
-  if (isnan(_params[INA219_PARAM_SHUNTV_E].data.f[0])) {
+  if (isnan(_params[INA219_PARAM_LOADV_E].data.f[0])) {
     setError(1);  // will be cleared by next watchdog
   }
 

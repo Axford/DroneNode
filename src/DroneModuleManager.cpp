@@ -18,8 +18,7 @@ DroneModuleManager::DroneModuleManager(DroneLinkManager* dlm):
   _lastDiscoveryIndex = 0;
   _node = 1;
   _doDiscovery = true;
-
-
+  _lastDiscovery = 0;
 };
 
 // called by DroneModule constructor to self register on instantiation
@@ -121,6 +120,7 @@ void DroneModuleManager::loopModules() {
       //Serial.println(" N");
     }
   }
+
 
   // discovery broadcast?
   if (_doDiscovery) {

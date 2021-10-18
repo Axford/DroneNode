@@ -90,9 +90,8 @@ void ManagementModule::registerParams(DEM_NAMESPACE* ns, DroneExecutionManager *
   // writable mgmt params
   DEMCommandHandler ph = std::bind(&DroneExecutionManager::mod_param, dem, _1, _2, _3, _4);
 
-  dem->registerCommand(ns, STRING_RESET, DRONE_LINK_MSG_TYPE_CHAR, ph);
-  dem->registerCommand(ns, STRING_DISCOVERY, DRONE_LINK_MSG_TYPE_CHAR, ph);
-  //dem->registerCommand(ns, STRING_, DRONE_LINK_MSG_TYPE_CHAR, ph);
+  dem->registerCommand(ns, STRING_RESET, DRONE_LINK_MSG_TYPE_UINT8_T, ph);
+  dem->registerCommand(ns, STRING_DISCOVERY, DRONE_LINK_MSG_TYPE_UINT8_T, ph);
 }
 
 void ManagementModule::onParamWrite(DRONE_PARAM_ENTRY *param) {
