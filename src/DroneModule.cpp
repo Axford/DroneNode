@@ -32,6 +32,8 @@ _id(id) {
   _discoveryState = DRONE_MODULE_DISCOVERY_PENDING;
   _discoveryIndex = 0;
   _setupDone = false;
+  hLMDuration = 0;
+  loopDuration = 0;
 
   // alloc for mgmt params
   _mgmtParams = (DRONE_PARAM_ENTRY*)malloc( sizeof(DRONE_PARAM_ENTRY) * DRONE_MGMT_PARAM_ENTRIES);
@@ -488,7 +490,7 @@ boolean DroneModule::handleManagementMessage(DroneLinkMsg *msg) {
 
 
 void DroneModule::handleLinkMessage(DroneLinkMsg *msg) {
-
+  unsigned long start = millis();
   //Log.noticeln("[DM.hLM]");
   //msg->print();
 
@@ -540,6 +542,7 @@ void DroneModule::handleLinkMessage(DroneLinkMsg *msg) {
   }
 
   //Log.noticeln("[DM.hLM] end");
+  hLMDuration = millis() - start;
 }
 
 void DroneModule::setError(uint8_t error) {
@@ -692,7 +695,12 @@ void DroneModule::restartDiscovery() {
 void DroneModule::respondWithInfo(AsyncResponseStream *response) {
   DRONE_PARAM_ENTRY *p;
 
-  response->print(F("  Mgmt Params:\n"));
+  response->print(F("  Stats:\n"));
+  response->print("    HLM Dur: "); response->print(hLMDuration);
+  response->print("\n    Loop Dur: ");  response->print(loopDuration);
+  response->print("\n");
+
+  response->print(F("\n  Mgmt Params:\n"));
   for (uint8_t i=0; i<DRONE_MGMT_PARAM_ENTRIES; i++) {
     p = &_mgmtParams[i];
 

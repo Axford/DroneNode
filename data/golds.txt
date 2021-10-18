@@ -1,0 +1,24 @@
+// simple navigation path around Damian's close
+
+// wait until we're at the start location as a safety feature
+do
+  // flash LEDs RED whilst were waiting
+  send 1>20.8 (u8) 50 0 0 0  255 0 0  255 0 0  255 0 0  255 0 0
+  delay 1000
+  send 1>20.8 (u8) 0 0 0 0  255 0 0  255 0 0  255 0 0  255 0 0
+  delay 1000
+
+  _Nav.inRadius -1.8294640591 51.56219047 5
+.until
+
+send 1>20.8 (u8) 50 0 0 0  0 255 0  0 255 0  0 255 0  0 255 0
+
+// head to the end of the street
+_Nav.goto -1.82988067695 51.561868818 5
+
+send 1>20.8 (u8) 50 0 0 0  0 255 255  0 255 255  0 255 255  0 255 255
+
+// and back
+_Nav.goto -1.8294640591 51.56219047 5
+
+send 1>20.8 (u8) 0 0 0 0  255 0 0  255 0 0  255 0 0  255 0 0

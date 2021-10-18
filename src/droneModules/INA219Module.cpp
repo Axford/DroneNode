@@ -116,13 +116,16 @@ void INA219Module::loadConfiguration(JsonObject &obj) {
 void INA219Module::setup() {
   I2CBaseModule::setup();
   // instantiate sensor object, now _params[I2CBASE_PARAM_ADDR_E].data.uint8[0] is known
-  _sensor = new Adafruit_INA219(_params[I2CBASE_PARAM_ADDR_E].data.uint8[0]);
+  if (!_sensor)
+    _sensor = new Adafruit_INA219(_params[I2CBASE_PARAM_ADDR_E].data.uint8[0]);
 }
 
 
 void INA219Module::loop() {
   I2CBaseModule::loop();
 
+  Serial.print("Selecting bus: ");
+  Serial.println(_params[I2CBASE_PARAM_BUS_E].data.uint8[0]);
   DroneWire::selectChannel(_params[I2CBASE_PARAM_BUS_E].data.uint8[0]);
 
   // get sensor values
@@ -146,6 +149,8 @@ void INA219Module::loop() {
   // calculate cell voltage
   tempf = _params[INA219_PARAM_LOADV_E].data.f[0] / _params[INA219_PARAM_CELLS_E].data.uint8[0];
   updateAndPublishParam(&_params[INA219_PARAM_CELLV_E], (uint8_t*)&tempf, sizeof(tempf));
+  Serial.print("loadV: ");
+  Serial.println(tempf);
 
   // check voltage vs threshold and set alarm
   uint8_t temp8 = (_params[INA219_PARAM_LOADV_E].data.f[0] < _params[INA219_PARAM_THRESHOLD_E].data.f[0]) ? 1 : 0;

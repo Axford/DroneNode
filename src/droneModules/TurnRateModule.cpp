@@ -108,7 +108,8 @@ void TurnRateModule::update() {
   if (err > 90) err = 90;
   if (err < -90) err = -90;
 
-  _params[TURN_RATE_PARAM_TURN_RATE_E].data.f[0] = err * _subs[TURN_RATE_SUB_PID_E].param.data.f[0];
-
-  publishParamEntry(&_params[TURN_RATE_PARAM_TURN_RATE_E]);
+  //_params[TURN_RATE_PARAM_TURN_RATE_E].data.f[0] = err * _subs[TURN_RATE_SUB_PID_E].param.data.f[0];
+  float tr = err * _subs[TURN_RATE_SUB_PID_E].param.data.f[0];
+  updateAndPublishParam(&_params[TURN_RATE_PARAM_TURN_RATE_E], (uint8_t*)&tr, sizeof(tr));
+  //publishParamEntry(&_params[TURN_RATE_PARAM_TURN_RATE_E]);
 }

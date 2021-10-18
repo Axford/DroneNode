@@ -113,6 +113,9 @@ protected:
   boolean _setupDone;
 
 public:
+  long hLMDuration;
+  long loopDuration;
+
   DroneModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm, DroneExecutionManager* dem);
   ~DroneModule();
 

@@ -259,7 +259,7 @@ public:
         switch(ty) {
           case DRONE_LINK_MSG_TYPE_UINT8_T: response->print(payload->uint8[i]); break;
           case DRONE_LINK_MSG_TYPE_UINT32_T: response->print(payload->uint32[i]); break;
-          case DRONE_LINK_MSG_TYPE_FLOAT: response->print(payload->f[i]); break;
+          case DRONE_LINK_MSG_TYPE_FLOAT: response->print(payload->f[i], 8); break;
           case DRONE_LINK_MSG_TYPE_CHAR: response->print(char(payload->c[i])); break;
           case DRONE_LINK_MSG_TYPE_ADDR: printAddress(&payload->addr[i], response); break;
         }

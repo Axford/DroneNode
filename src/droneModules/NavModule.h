@@ -38,7 +38,7 @@ Waypoint navigation:
 static const char NAV_STR_NAV[] PROGMEM = "Nav";
 
 enum NAV_MODE {
-  NAV_TO,
+  NAV_GOTO,
   NAV_FOLLOW,
   NAV_ABSCOURSE,
   NAV_RELCOURSE,
@@ -48,7 +48,6 @@ enum NAV_MODE {
 
 class NavModule:  public DroneModule {
 protected:
-  boolean _updateNeeded;
 
 public:
 
@@ -62,6 +61,11 @@ public:
   void loop();
 
   void update();
+
+  float getDistanceTo(float lon2, float lat2);
+
+  boolean nav_inRadius(DEM_INSTRUCTION_COMPILED* instr, DEM_CALLSTACK* cs, DEM_DATASTACK* ds, boolean continuation);
+  boolean nav_goto(DEM_INSTRUCTION_COMPILED* instr, DEM_CALLSTACK* cs, DEM_DATASTACK* ds, boolean continuation);
 };
 
 #endif

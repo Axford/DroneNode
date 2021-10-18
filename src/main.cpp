@@ -214,7 +214,7 @@ void setup() {
 
   EEPROM.begin(DEM_EEPROM_SIZE);
 
-  Log.begin(LOG_LEVEL_WARNING, &Serial);
+  Log.begin(LOG_LEVEL_VERBOSE, &Serial);
 
   delay(2500); // to allow serial to reconnect after programming
 

@@ -112,6 +112,7 @@ void DroneModuleManager::loopModules() {
   for(int i = 0; i < _modules.size(); i++) {
     m = _modules.get(i);
     //Serial.print(m->getName());
+    unsigned long start= millis();
     if (m->readyToLoop()) {
       //Serial.println(" Y");
       //Log.noticeln(F("[DMM.lM] %s"), m->getName());
@@ -119,6 +120,7 @@ void DroneModuleManager::loopModules() {
     } else {
       //Serial.println(" N");
     }
+    m->loopDuration = millis()-start;
   }
 
 

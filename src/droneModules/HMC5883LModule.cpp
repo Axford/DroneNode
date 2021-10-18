@@ -114,11 +114,15 @@ void HMC5883LModule::doReset() {
 void HMC5883LModule::setup() {
   I2CBaseModule::setup();
 
-  _sensor = new Adafruit_HMC5883_Unified(_params[I2CBASE_PARAM_ADDR_E].data.uint8[0]);
+  if (!_sensor) {
+    _sensor = new Adafruit_HMC5883_Unified(_params[I2CBASE_PARAM_ADDR_E].data.uint8[0]);
+  }
 }
 
 void HMC5883LModule::update() {
   if (!_setupDone) return;
+
+  // called when a param is updated by handleLinkMessage
 
   // see if location has changed
   int newLon = round(_subs[HMC5883L_SUB_LOCATION_E].param.data.f[0]);
@@ -156,6 +160,8 @@ void HMC5883LModule::loop() {
 
   //Log.noticeln("HMC5883L.loop");
 
+  Serial.print("Selecting bus: ");
+  Serial.println(_params[I2CBASE_PARAM_BUS_E].data.uint8[0]);
   DroneWire::selectChannel(_params[I2CBASE_PARAM_BUS_E].data.uint8[0]);
 
 
@@ -197,6 +203,14 @@ void HMC5883LModule::loop() {
   float headingDegrees = heading * 180.0f / PI;
 
   _params[HMC5883L_PARAM_HEADING_E].data.f[0] = headingDegrees;
+
+
+  Serial.print("Mag: ");
+  Serial.print(event.magnetic.x);
+  Serial.print(", ");
+  Serial.print(event.magnetic.y);
+  Serial.print(" = ");
+  Serial.println(heading);
 
 
   // error check

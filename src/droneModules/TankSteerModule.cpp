@@ -102,7 +102,7 @@ void TankSteerModule::update() {
   // limit turnRate
   if (x > 1) x = 1;
   if (x < -1) x = -1;
-  
+
   float y = _subs[TANK_STEER_SUB_SPEED_E].param.data.f[0];
   // limit speed
   if (y > 1) y = 1;
@@ -124,8 +124,10 @@ void TankSteerModule::update() {
   if (left > 1) left = 1;
   if (left < -1) left = -1;
 
-  _params[TANK_STEER_PARAM_LEFT_E].data.f[0] = left;
-  _params[TANK_STEER_PARAM_RIGHT_E].data.f[0] = right;
+  //_params[TANK_STEER_PARAM_LEFT_E].data.f[0] = left;
+  updateAndPublishParam(&_params[TANK_STEER_PARAM_LEFT_E], (uint8_t*)&left, sizeof(left));
 
-  publishParamEntries();
+  //_params[TANK_STEER_PARAM_RIGHT_E].data.f[0] = right;
+  updateAndPublishParam(&_params[TANK_STEER_PARAM_RIGHT_E], (uint8_t*)&right, sizeof(right));
+
 }

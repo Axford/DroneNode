@@ -91,6 +91,9 @@ DroneExecutionManager::DroneExecutionManager(DroneModuleManager *dmm, DroneLinkM
   _nodeContext = 0;
   _multiLineComment = false;
 
+  _maxExecutionTime = 0;
+  _slowestInstruction = "?";
+
   // register core commands
   DEM_NAMESPACE *core = createNamespace(PSTR("core"), 0, false);
 
@@ -104,6 +107,7 @@ DroneExecutionManager::DroneExecutionManager(DroneModuleManager *dmm, DroneLinkM
   registerCommand(core, PSTR("done"), DEM_DATATYPE_NONE, std::bind(&DroneExecutionManager::core_done, this, _1, _2, _3, _4));
   registerCommand(core, PSTR("do"), DEM_DATATYPE_NONE, std::bind(&DroneExecutionManager::core_do, this, _1, _2, _3, _4));
   registerCommand(core, PSTR("load"), DRONE_LINK_MSG_TYPE_CHAR, std::bind(&DroneExecutionManager::core_load, this, _1, _2, _3, _4));
+  registerCommand(core, PSTR("module"), DRONE_LINK_MSG_TYPE_UINT8_T, std::bind(&DroneExecutionManager::core_module, this, _1, _2, _3, _4));
   registerCommand(core, PSTR("node"), DRONE_LINK_MSG_TYPE_UINT8_T, std::bind(&DroneExecutionManager::core_node, this, _1, _2, _3, _4));
   registerCommand(core, PSTR("publish"), DRONE_LINK_MSG_TYPE_UINT8_T, std::bind(&DroneExecutionManager::core_publish, this, _1, _2, _3, _4));
   registerCommand(core, PSTR("restart"),DEM_DATATYPE_NONE, std::bind(&DroneExecutionManager::core_restart, this, _1, _2, _3, _4));
@@ -111,6 +115,7 @@ DroneExecutionManager::DroneExecutionManager(DroneModuleManager *dmm, DroneLinkM
   registerCommand(core, PSTR("send"), 255, std::bind(&DroneExecutionManager::core_send, this, _1, _2, _3, _4));
   registerCommand(core, PSTR("setup"), DEM_DATATYPE_NONE, std::bind(&DroneExecutionManager::core_setup, this, _1, _2, _3, _4));
   registerCommand(core, PSTR("sub"), DRONE_LINK_MSG_TYPE_ADDR, std::bind(&DroneExecutionManager::core_sub, this, _1, _2, _3, _4));
+  registerCommand(core, PSTR("swap"), DEM_DATATYPE_NONE, std::bind(&DroneExecutionManager::core_swap, this, _1, _2, _3, _4));
   registerCommand(core, PSTR("until"), DEM_DATATYPE_NONE, std::bind(&DroneExecutionManager::core_until, this, _1, _2, _3, _4));
 
 
@@ -910,7 +915,7 @@ boolean DroneExecutionManager::compileLine(const char * line, DEM_INSTRUCTION_CO
         } else {
           valid = false;
           error = true;
-          Log.errorln(F("[DEM.cL] Compiled message exceeds 16 bytes"));
+          Log.errorln(F("[DEM.cL] Compiled message exceeds 16 bytes, %u"), byteLen);
         }
       } else {
         valid = false;
@@ -949,6 +954,7 @@ void DroneExecutionManager::execute() {
           Log.noticeln(F("[DEM.e] %s #%u > %s\n"), cse->macro->name, cse->i, ic.cmd);
 
         // execute the instruction
+        unsigned long start = millis();
         if (ic.handler(&ic, &_call, &_data, cse->continuation)) {
           // update cse pointer in case of push/pop
           cse = callStackPeek(0);
@@ -959,6 +965,11 @@ void DroneExecutionManager::execute() {
         } else {
           // command is still busy executing
           cse->continuation = true;
+        }
+        long duration = millis() - start;
+        if (duration > _maxExecutionTime) {
+            _maxExecutionTime = duration;
+            _slowestInstruction = String(ic.cmd);
         }
       } else {
         // pop the call stack
@@ -1050,7 +1061,12 @@ void DroneExecutionManager::serveExecutionInfo(AsyncWebServerRequest *request) {
   response->addHeader("Server","ESP Async Web Server");
   response->print(F("Execution state: \n"));
 
-  response->print(F("safeMode = "));
+  response->print(F("maxExecutionTime = "));
+  response->print(_maxExecutionTime);
+  response->print(F("\nslowestInstruction = "));
+  response->print(_slowestInstruction);
+
+  response->print(F("\nsafeMode = "));
   if (_safeMode) {
     response->print(F("Yes\n"));
   } else {
@@ -1155,6 +1171,12 @@ boolean DroneExecutionManager::core_load(DEM_INSTRUCTION_COMPILED* instr, DEM_CA
   return true;
 }
 
+boolean DroneExecutionManager::core_module(DEM_INSTRUCTION_COMPILED* instr, DEM_CALLSTACK* cs, DEM_DATASTACK* ds, boolean continuation) {
+  uint8_t id = instr->msg.payload.uint8[0];
+  dataStackPush(id, instr);
+  return true;
+}
+
 boolean DroneExecutionManager::core_node(DEM_INSTRUCTION_COMPILED* instr, DEM_CALLSTACK* cs, DEM_DATASTACK* ds, boolean continuation) {
   uint8_t id = instr->msg.payload.uint8[0];
   Log.noticeln(F("[.n] %u"), id);
@@ -1250,6 +1272,22 @@ boolean DroneExecutionManager::core_setup(DEM_INSTRUCTION_COMPILED* instr, DEM_C
   setBootStatus(DEM_BOOT_SUCCESS);
 
   Log.noticeln(F("[.s] Setup complete"));
+  return true;
+}
+
+
+boolean DroneExecutionManager::core_swap(DEM_INSTRUCTION_COMPILED* instr, DEM_CALLSTACK* cs, DEM_DATASTACK* ds, boolean continuation) {
+  Log.noticeln(F("[DEM.swap]"));
+  DEM_DATASTACK_ENTRY *dse1 = dataStackPeek(0);
+  DEM_DATASTACK_ENTRY *dse2 = dataStackPeek(1);
+
+  if (dse1 && dse2) {
+    uint32_t temp = dse1->d;
+    dse1->d = dse2->d;
+    dse2->d = temp;
+  } else {
+    Log.errorln("[DEM.swap] Not enough stack items to swap");
+  }
   return true;
 }
 

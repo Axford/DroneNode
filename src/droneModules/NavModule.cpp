@@ -3,6 +3,11 @@
 #include "../DroneLinkManager.h"
 #include "strings.h"
 
+using std::placeholders::_1;
+using std::placeholders::_2;
+using std::placeholders::_3;
+using std::placeholders::_4;
+
 NavModule::NavModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm, DroneExecutionManager* dem):
   DroneModule ( id, dmm, dlm, dem)
  {
@@ -10,7 +15,6 @@ NavModule::NavModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm,
 
    _mgmtParams[DRONE_MODULE_PARAM_INTERVAL_E].data.uint32[0] = 1000;
 
-   _updateNeeded = true;
 
    // subs
    initSubs(NAV_SUBS);
@@ -56,7 +60,7 @@ NavModule::NavModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm,
    _params[NAV_PARAM_MODE_E].nameLen = sizeof(STRING_MODE);
    _params[NAV_PARAM_MODE_E].publish = true;
    _params[NAV_PARAM_MODE_E].paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_UINT8_T, 1);
-   _params[NAV_PARAM_MODE_E].data.uint8[0] = NAV_TO;
+   _params[NAV_PARAM_MODE_E].data.uint8[0] = NAV_GOTO;
 }
 
 NavModule::~NavModule() {
@@ -69,10 +73,6 @@ DEM_NAMESPACE* NavModule::registerNamespace(DroneExecutionManager *dem) {
 }
 
 void NavModule::registerParams(DEM_NAMESPACE* ns, DroneExecutionManager *dem) {
-  using std::placeholders::_1;
-  using std::placeholders::_2;
-  using std::placeholders::_3;
-  using std::placeholders::_4;
 
   // writable mgmt params
   DEMCommandHandler ph = std::bind(&DroneExecutionManager::mod_param, dem, _1, _2, _3, _4);
@@ -92,14 +92,22 @@ void NavModule::registerParams(DEM_NAMESPACE* ns, DroneExecutionManager *dem) {
 
 void NavModule::setup() {
   DroneModule::setup();
+
+  // register private commands
+  String nsName = "_" + String(getName());
+  DEM_NAMESPACE* ns = _dem->createNamespace(nsName.c_str(),0,true);
+
+  DEMCommandHandler gotoH = std::bind(&NavModule::nav_goto, this, _1, _2, _3, _4);
+  _dem->registerCommand(ns, PSTR("goto"), DRONE_LINK_MSG_TYPE_FLOAT, gotoH);
+
+  DEMCommandHandler inRadiusH = std::bind(&NavModule::nav_inRadius, this, _1, _2, _3, _4);
+  _dem->registerCommand(ns, PSTR("inRadius"), DRONE_LINK_MSG_TYPE_FLOAT, inRadiusH);
+
 }
 
 void NavModule::loop() {
   DroneModule::loop();
 
-  if (_updateNeeded) {
-      update();
-  }
 }
 
 
@@ -148,16 +156,76 @@ void NavModule::update() {
   float p = atan2(y, x);
   float h = fmod(p*180/PI + 360, 360); // in degrees
 
-  _params[NAV_PARAM_HEADING_E].data.f[0] = h;
-  _params[NAV_PARAM_DISTANCE_E].data.f[0] = d;
+  //_params[NAV_PARAM_HEADING_E].data.f[0] = h;
+  updateAndPublishParam(&_params[NAV_PARAM_HEADING_E], (uint8_t*)&h, sizeof(h));
+
+  //_params[NAV_PARAM_DISTANCE_E].data.f[0] = d;
+  updateAndPublishParam(&_params[NAV_PARAM_DISTANCE_E], (uint8_t*)&d, sizeof(d));
 
   // check to see if we've reached the waypoint
   // by comparing d (distance to go) to the target radius [2]
   if (d < _subs[NAV_SUB_TARGET_E].param.data.f[2]) {
     // TODO - we made it... now what?
+    // just keep going?
+    // or switch to some sort of loiter?
   }
+}
 
-  _updateNeeded = false;
 
-  publishParamEntries();
+float NavModule::getDistanceTo(float lon2, float lat2) {
+  float lat1 = _subs[NAV_SUB_LOCATION_E].param.data.f[1];
+  float lon1 = _subs[NAV_SUB_LOCATION_E].param.data.f[0];
+
+  float R = 6371e3; // metres
+  float lat1r = lat1 * PI/180; // φ, λ in radians
+  float lat2r = lat2 * PI/180;
+  float lon1r = lon1 * PI/180; // φ, λ in radians
+  float lon2r = lon2 * PI/180;
+  //float dlat = (lat2-lat1) * PI/180;
+  //float dlon = (lon2-lon1) * PI/180;
+
+  /*
+  const x = (λ2-λ1) * Math.cos((φ1+φ2)/2);
+  const y = (φ2-φ1);
+  const d = Math.sqrt(x*x + y*y) * R;
+  */
+  float x = (lon2r-lon1r) * cos((lat1r+lat2r)/2);
+  float y = (lat2r-lat1r);
+  float d = sqrt(x*x + y*y) * R;
+
+  return d;
+}
+
+
+
+boolean NavModule::nav_inRadius(DEM_INSTRUCTION_COMPILED* instr, DEM_CALLSTACK* cs, DEM_DATASTACK* ds, boolean continuation) {
+  Log.noticeln("[Nav.inRadius]");
+
+  float d =  getDistanceTo(instr->msg.payload.f[0], instr->msg.payload.f[1]);
+
+  _dem->dataStackPush( d <= instr->msg.payload.f[2] ? 1 : 0 , instr);
+
+  return true;
+}
+
+
+boolean NavModule::nav_goto(DEM_INSTRUCTION_COMPILED* instr, DEM_CALLSTACK* cs, DEM_DATASTACK* ds, boolean continuation) {
+  if (continuation) {
+    float d =  getDistanceTo(instr->msg.payload.f[0], instr->msg.payload.f[1]);
+    if (d <= instr->msg.payload.f[2]) {
+      // made it, this command is done
+      return true;
+    } else {
+      // still on our way
+      return false;
+    }
+
+  } else {
+    Log.noticeln("[Nav.goto]");
+    memcpy(&_subs[NAV_SUB_TARGET_E].param.data, &instr->msg.payload, sizeof(DRONE_LINK_PAYLOAD));
+    // ensure mode is goto
+    _params[NAV_PARAM_MODE_E].data.uint8[0] = NAV_GOTO;
+    publishParamEntries();
+    return false;
+  }
 }
