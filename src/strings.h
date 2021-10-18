@@ -52,6 +52,7 @@ static const char STRING_LIMITS[] PROGMEM = "limits";
 static const char STRING_LOADV[] PROGMEM = "loadV";
 static const char STRING_LOCATION[] PROGMEM = "location";
 static const char STRING_LOOPTO[] PROGMEM = "loopTo";
+static const char STRING_MODE[] PROGMEM = "mode";
 static const char STRING_NAME[] PROGMEM = "name";
 static const char STR_NEW[] PROGMEM = "new";
 static const char STRING_NUMPIXELS[] PROGMEM = "numPixels";

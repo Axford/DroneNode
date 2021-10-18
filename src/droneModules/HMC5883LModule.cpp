@@ -51,11 +51,17 @@ HMC5883LModule::HMC5883LModule(uint8_t id, DroneModuleManager* dmm, DroneLinkMan
    _params[HMC5883L_PARAM_CALIB_X_E].name = FPSTR(STRING_CALIB_X);
    _params[HMC5883L_PARAM_CALIB_X_E].nameLen = sizeof(STRING_CALIB_X);
    _params[HMC5883L_PARAM_CALIB_X_E].paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_FLOAT, 12);
+   _params[HMC5883L_PARAM_CALIB_X_E].data.f[0] = -1;
+   _params[HMC5883L_PARAM_CALIB_X_E].data.f[1] = 0;
+   _params[HMC5883L_PARAM_CALIB_X_E].data.f[2] = 1;
 
    _params[HMC5883L_PARAM_CALIB_Y_E].param = HMC5883L_PARAM_CALIB_Y;
    _params[HMC5883L_PARAM_CALIB_Y_E].name = FPSTR(STRING_CALIB_Y);
    _params[HMC5883L_PARAM_CALIB_Y_E].nameLen = sizeof(STRING_CALIB_Y);
    _params[HMC5883L_PARAM_CALIB_Y_E].paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_FLOAT, 12);
+   _params[HMC5883L_PARAM_CALIB_Y_E].data.f[0] = -1;
+   _params[HMC5883L_PARAM_CALIB_Y_E].data.f[1] = 0;
+   _params[HMC5883L_PARAM_CALIB_Y_E].data.f[2] = 1;
 
 }
 
@@ -84,6 +90,9 @@ void HMC5883LModule::registerParams(DEM_NAMESPACE* ns, DroneExecutionManager *de
 
   dem->registerCommand(ns, STRING_LOCATION, DRONE_LINK_MSG_TYPE_FLOAT, ph);
   dem->registerCommand(ns, PSTR("$location"), DRONE_LINK_MSG_TYPE_FLOAT, pha);
+
+  dem->registerCommand(ns, STRING_CALIB_X, DRONE_LINK_MSG_TYPE_FLOAT, ph);
+  dem->registerCommand(ns, STRING_CALIB_Y, DRONE_LINK_MSG_TYPE_FLOAT, ph);
 }
 
 void HMC5883LModule::doReset() {

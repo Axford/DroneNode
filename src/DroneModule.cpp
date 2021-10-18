@@ -695,6 +695,7 @@ void DroneModule::respondWithInfo(AsyncResponseStream *response) {
     p = &_mgmtParams[i];
 
     response->printf("    %u: %s ",p->param,(PGM_P)p->name);
+    if (p->publish) response->print('*');
     DroneLinkMsg::printPayload(&p->data, p->paramTypeLength, response);
   }
 
@@ -702,6 +703,7 @@ void DroneModule::respondWithInfo(AsyncResponseStream *response) {
   for (uint8_t i=0; i<_numParamEntries; i++) {
     p = &_params[i];
     response->printf("    %u: %s ",p->param,(PGM_P)(p->name));
+    if (p->publish) response->print('*');
     DroneLinkMsg::printPayload(&p->data, p->paramTypeLength, response);
   }
 
@@ -709,11 +711,14 @@ void DroneModule::respondWithInfo(AsyncResponseStream *response) {
   DRONE_PARAM_SUB *s;
   for (uint8_t i=0; i<_numSubs; i++) {
     s = &_subs[i];
-    response->printf("    %u: $%s [", s->addrParam, (PGM_P)s->param.name);
+    response->printf("    %u: $%s ", s->addrParam, (PGM_P)s->param.name);
+    if (s->param.publish) response->print('*');
+    response->print('[');
     DroneLinkMsg::printAddress(&s->addr, response);
     response->print("]\n");
 
     response->printf("    %u: %s ",s->param.param, (PGM_P)s->param.name);
+    if (s->param.publish) response->print('*');
     DroneLinkMsg::printPayload(&s->param.data, s->param.paramTypeLength, response);
   }
   response->print(F("\n"));

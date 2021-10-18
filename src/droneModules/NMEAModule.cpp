@@ -85,20 +85,6 @@ void NMEAModule::registerParams(DEM_NAMESPACE* ns, DroneExecutionManager *dem) {
 }
 
 
-void NMEAModule::loadConfiguration(JsonObject &obj) {
-  DroneModule::loadConfiguration(obj);
-/*
-  _portNum = obj[STRING_PORT] | _portNum;
-  switch(_portNum) {
-    case 0: setPort(&Serial); break;
-    case 1: setPort(&Serial1); break;
-    case 2: setPort(&Serial2); break;
-  }
-
-  _baud = obj[STRING_BAUD] | _baud;*/
-}
-
-
 void NMEAModule::onParamWrite(DRONE_PARAM_ENTRY *param) {
   if (param->param == NMEA_PARAM_PORT) {
     Log.noticeln(F("[NMEA.oPW] port: %u"), param->data.uint8[0]);
@@ -134,14 +120,17 @@ void NMEAModule::loop() {
   DroneModule::loop();
 
   if (!_port) {
+    Log.errorln("[NMEA.l] Undefined port");
     setError(1);
     return;
   }
 
   //Log.noticeln(F("[NMEA.l] b"));
-
-  while (_port->available()) {
+  uint8_t cc = 0;  // to limit max chars read
+  while (_port->available() && cc<20) {
     char c = _port->read();
+    cc++;
+
     //Serial.print(c);
     if (_nmea->process( c )) {
       //Log.noticeln(F("[NMEA.l] c"));

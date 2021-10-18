@@ -20,7 +20,7 @@ public:
 
   WiFiManager();
 
-  void start(DroneModuleManager &dmm);
+  void start(DroneModuleManager *dmm);
   void loadConfiguration();
 
 protected:

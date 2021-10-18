@@ -70,10 +70,9 @@ AsyncWebServer server(80);
 AsyncEventSource events("/events");
 OTAManager OTAMgr(&events);
 
-DroneLinkManager dlm;
-DroneModuleManager dmm(&dlm);
-DroneExecutionManager dem(&dmm, &dlm);
-
+DroneLinkManager *dlm;
+DroneModuleManager *dmm;
+DroneExecutionManager *dem;
 
 // HTML web page to handle 3 input fields (input1, input2, input3)
 /*
@@ -155,28 +154,28 @@ void setupWebServer() {
 
   // node info debug
   server.on("/nodeInfo", HTTP_GET, [](AsyncWebServerRequest *request){
-    dlm.serveNodeInfo(request);
+    dlm->serveNodeInfo(request);
   });
 
   // channel info debug
   server.on("/channelInfo", HTTP_GET, [](AsyncWebServerRequest *request){
-    dlm.serveChannelInfo(request);
+    dlm->serveChannelInfo(request);
   });
 
   // modules
   server.on("/modules", HTTP_GET, [](AsyncWebServerRequest *request){
-    dmm.serveModuleInfo(request);
+    dmm->serveModuleInfo(request);
   });
 
   // DEM handlers
   server.on("/macros", HTTP_GET, [](AsyncWebServerRequest *request){
-    dem.serveMacroInfo(request);
+    dem->serveMacroInfo(request);
   });
   server.on("/execution", HTTP_GET, [](AsyncWebServerRequest *request){
-    dem.serveExecutionInfo(request);
+    dem->serveExecutionInfo(request);
   });
   server.on("/commands", HTTP_GET, [](AsyncWebServerRequest *request){
-    dem.serveCommandInfo(request);
+    dem->serveCommandInfo(request);
   });
 
 
@@ -198,10 +197,10 @@ void setupWebServer() {
 
 void handleOTAEVent(OTAManagerEvent event, float progress) {
   if (event == start) {
-    dmm.shutdown();
+    dmm->shutdown();
   } else if (event == progress) {
     Serial.print(F("OTA progress: "));  Serial.println(progress*100);
-    dmm.onOTAProgress(progress);
+    dmm->onOTAProgress(progress);
   }
 }
 
@@ -233,6 +232,11 @@ void setup() {
   //Log.begin(LOG_LEVEL_VERBOSE, &logFile);
   Log.noticeln(F("[] Starting..."));
 
+  // create core objects
+  dlm = new DroneLinkManager();
+  dmm = new DroneModuleManager(dlm);
+  dem = new DroneExecutionManager(dmm, dlm);
+
   //ESP32PWM::allocateTimer(0);
 	//ESP32PWM::allocateTimer(1);
 	ESP32PWM::allocateTimer(2);
@@ -241,16 +245,16 @@ void setup() {
   DroneWire::setup();
 
   // define root macro
-  DEM_MACRO * root = dem.createMacro("root");
+  DEM_MACRO * root = dem->createMacro("root");
   DEM_INSTRUCTION_COMPILED instr;
-  if (dem.compileLine(PSTR("load \"/config.txt\""), &instr))
+  if (dem->compileLine(PSTR("load \"/config.txt\""), &instr))
     root->commands->add(instr);
-  dem.compileLine(PSTR("run \"/config.txt\""), &instr);
+  dem->compileLine(PSTR("run \"/config.txt\""), &instr);
   root->commands->add(instr);
-  dem.compileLine(PSTR("load \"/main.txt\""), &instr);
+  dem->compileLine(PSTR("load \"/main.txt\""), &instr);
   root->commands->add(instr);
   // now execute main
-  dem.compileLine(PSTR("run \"/main.txt\""), &instr);
+  dem->compileLine(PSTR("run \"/main.txt\""), &instr);
   root->commands->add(instr);
 
   // prep execution of root
@@ -258,7 +262,7 @@ void setup() {
   cse.i=0;
   cse.macro = root;
   cse.continuation = false;
-  dem.callStackPush(cse);
+  dem->callStackPush(cse);
 
   // TODO: move to DEM
   //dmm.loadConfiguration();
@@ -268,7 +272,7 @@ void setup() {
   wifiManager.start(dmm);
 
   OTAMgr.onEvent = handleOTAEVent;
-  OTAMgr.init( dmm.hostname() );
+  OTAMgr.init( dmm->hostname() );
 
   MDNS.addService("http","tcp",80);
 
@@ -302,16 +306,16 @@ uint8_t modid;
 void loop() {
   loopTime = millis();
 
-  dmm.watchdog();
+  dmm->watchdog();
 
   digitalWrite(PIN_LED, (WiFi.status() != WL_CONNECTED));
 
   if (!OTAMgr.isUpdating) {
-    dmm.loopModules();
+    dmm->loopModules();
 
-    dlm.processChannels();
+    dlm->processChannels();
 
-    dem.execute();
+    dem->execute();
   } else {
     digitalWrite(PIN_LED, HIGH);
   }

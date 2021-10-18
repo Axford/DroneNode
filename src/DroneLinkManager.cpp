@@ -262,12 +262,15 @@ void DroneLinkManager::serveChannelInfo(AsyncWebServerRequest *request) {
 
   AsyncResponseStream *response = request->beginResponseStream("text/text");
   response->addHeader("Server","ESP Async Web Server");
-  response->print(F("Channels: \n"));
+  response->print(F("Channels, queues and subscribers \n"));
 
   DroneLinkChannel* c;
   for(int i = 0; i < _channels.size(); i++){
     c = _channels.get(i);
-    response->printf("%u > %u = %u (%u)\n", c->node(), c->id(), c->size(), c->peakSize());
+    response->printf("%u>%u = %u (%u)\n", c->node(), c->id(), c->size(), c->peakSize());
+
+    c->serveChannelInfo(response);
+    response->print("\n");
   }
 
 

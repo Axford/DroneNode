@@ -71,8 +71,8 @@ void UDPTelemetryModule::handleLinkMessage(DroneLinkMsg *msg) {
     _params[UDP_PARAM_BROADCAST_E].data.uint8[3]
   );
 
-  //Log.noticeln("UDP Broadcast: ");
-  //msg->print();
+  Log.notice("UDP -> ");
+  msg->print();
 
   // only send messages that originate on this node
   boolean sendPacket = (msg->source() == _dlm->node());
@@ -90,12 +90,13 @@ void UDPTelemetryModule::handleLinkMessage(DroneLinkMsg *msg) {
 
   if (sendPacket) {
     _udp.beginPacket(broadcastIp, _params[UDP_PARAM_PORT_E].data.uint32[0]);
-    _udp.write((uint8_t*)&msg->_msg, msg->length() + sizeof(DRONE_LINK_ADDR));
+    _udp.write((uint8_t*)&msg->_msg, msg->length() + sizeof(DRONE_LINK_ADDR)+1);
     _udp.endPacket();
   }
 }
 
 void UDPTelemetryModule::setup() {
+  DroneModule::setup();
   _udp.begin(_params[UDP_PARAM_PORT_E].data.uint32[0]);
 }
 
@@ -104,9 +105,9 @@ void UDPTelemetryModule::loop() {
 
   int packetSize = _udp.parsePacket();
   if (packetSize > 0 && packetSize <= sizeof(DRONE_LINK_MSG)) {
-    //Log.noticeln("UDP Received: ");
+    //Log.noticeln("UDP <- ");
     int len = _udp.read((uint8_t*)&_receivedMsg._msg, sizeof(DRONE_LINK_MSG));
-    if (len >= sizeof(DRONE_LINK_ADDR) + 1) {
+    if (len >= sizeof(DRONE_LINK_ADDR) + 2) {
       //_receivedMsg.print();
       _dlm->publishPeer(_receivedMsg, 0, _id);
     } else if (packetSize > 0) {

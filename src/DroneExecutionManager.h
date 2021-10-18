@@ -123,7 +123,8 @@ protected:
   DroneModuleManager *_dmm;
   File _file;  // TODO - can prob remove this
 
-  uint8_t _channelContext;  // set by CP command
+  uint8_t _channelContext;  // set by module commands
+  uint8_t _nodeContext;  // set by node command
   boolean _multiLineComment; // set to true when /* encountered
   DEM_INSTRUCTION _instruction;  // newly parsed instruction
 

@@ -137,7 +137,7 @@ void NeopixelModule::setup() {
 
 void NeopixelModule::loop() {
   DroneModule::loop();
-  Log.noticeln(F("[NM.l]"));
+  //Log.noticeln(F("[NM.l]"));
 
   unsigned long loopTime = millis();
 
@@ -199,13 +199,11 @@ void NeopixelModule::loop() {
     for(uint8_t i=0; i<_params[NEOPIXEL_PARAM_NUMPIXELS_E].data.uint8[0]; i++) {
       uint8_t seg = i / pixPerSeg;
 
-
       _strip->SetPixelColor(i, RgbColor(
         segs[seg].r,
         segs[seg].g,
         segs[seg].b
       ));
-
     }
 
     _strip->Show();

@@ -14,7 +14,10 @@
 #include "droneModules/NMEAModule.h"
 #include "droneModules/RFM69TelemetryModule.h"
 #include "droneModules/TankSteerModule.h"
+#include "droneModules/TurnRateModule.h"
 #include "droneModules/UDPTelemetryModule.h"
+#include "droneModules/NavModule.h"
+
 /*
 #include "droneModules/TimerModule.h"
 #include "droneModules/ServoModule.h"
@@ -22,8 +25,6 @@
 #include "droneModules/BME280Module.h"
 #include "droneModules/MPU6050Module.h"
 #include "droneModules/BasicNavModule.h"
-#include "droneModules/WaypointNavModule.h"
-#include "droneModules/TurnRateModule.h"
 #include "droneModules/JoystickModule.h"
 #include "droneModules/OLEDModule.h"
 #include "droneModules/ControllerModule.h"
@@ -87,6 +88,7 @@ DroneExecutionManager::DroneExecutionManager(DroneModuleManager *dmm, DroneLinkM
   _instruction.numTokens = 0;
 
   _channelContext = 0;
+  _nodeContext = 0;
   _multiLineComment = false;
 
   // register core commands
@@ -122,7 +124,9 @@ DroneExecutionManager::DroneExecutionManager(DroneModuleManager *dmm, DroneLinkM
   ns = NeopixelModule::registerNamespace(this); NeopixelModule::registerParams(ns, this);
   ns = RFM69TelemetryModule::registerNamespace(this); RFM69TelemetryModule::registerParams(ns, this);
   ns = TankSteerModule::registerNamespace(this);  TankSteerModule::registerParams(ns, this);
+  ns = TurnRateModule::registerNamespace(this);  TurnRateModule::registerParams(ns, this);
   ns = UDPTelemetryModule::registerNamespace(this);  UDPTelemetryModule::registerParams(ns, this);
+  ns = NavModule::registerNamespace(this);  NavModule::registerParams(ns, this);
 
   // register constructors and mgmtParams for all module namespaces
   for (uint8_t i=0; i<_namespaces.size(); i++) {
@@ -141,9 +145,12 @@ uint8_t DroneExecutionManager::getBootStatus() {
     File f = SPIFFS.open(DEM_BOOT_FILENAME, FILE_READ);
     if (f && f.available()) {
       v = f.read();
+      Log.noticeln(F("[DEM.gBS] boot flag: %u"), v);
     }
     f.close();
-  };
+  } else {
+    Log.errorln(F("[DEM.gBS] boot.dat does not exist"));
+  }
   return v;
 }
 
@@ -377,6 +384,7 @@ boolean DroneExecutionManager::load(const char * filename) {
     // reset default namespace
     _instruction.ns = getNamespace("core");
     _multiLineComment = false;
+    _nodeContext = _dlm->node();
 
     // crete new macro
     DEM_MACRO *m = createMacro(filename);
@@ -407,7 +415,7 @@ boolean DroneExecutionManager::load(const char * filename) {
         default:
           if (rp < 126) {
             readBuffer[rp] = c;
-            Serial.print(c);
+            //Serial.print(c);
             rp++;
           } else {
             Log.errorln("[DEM.l] readBuffer full");
@@ -597,7 +605,7 @@ boolean DroneExecutionManager::compileLine(const char * line, DEM_INSTRUCTION_CO
             if (eono) {
               eono = false;
               if (token[0] == '@') {
-                tempAddr.node = _dlm->node();
+                tempAddr.node = _nodeContext;
               } else if (tokenContainsNumber(token[0])) {
                 tempAddr.node = atoi(token);
               } else {
@@ -606,9 +614,9 @@ boolean DroneExecutionManager::compileLine(const char * line, DEM_INSTRUCTION_CO
                   tempAddr.node = _dlm->node();
                 } else
                 tempAddr.node = _dlm->getNodeByName(token);
-                Serial.print("_Node lookup_");
+                //Serial.print("_Node lookup_");
               }
-              Serial.print("_N_");
+              //Serial.print("_N_");
             }
             else if (eoc) {
               eoc = false;
@@ -626,9 +634,9 @@ boolean DroneExecutionManager::compileLine(const char * line, DEM_INSTRUCTION_CO
                   Log.errorln(F("Module not found"));
                 }
 
-                Serial.print("_Channel lookup_");
+                //Serial.print("_Channel lookup_");
               }
-              Serial.print("_C_");
+              //Serial.print("_C_");
             }
             else if (eop) {
               eop = false;
@@ -648,7 +656,7 @@ boolean DroneExecutionManager::compileLine(const char * line, DEM_INSTRUCTION_CO
                   Log.errorln(F("Module not found, can't lookup param"));
                 }
                 tempAddr.param = 0;
-                Serial.print("_Param lookup_");
+                //Serial.print("_Param lookup_");
               }
 
               // copy tempAddr to relevant area
@@ -663,7 +671,7 @@ boolean DroneExecutionManager::compileLine(const char * line, DEM_INSTRUCTION_CO
               inAddrP = false;
               DroneLinkMsg::printAddress(&tempAddr);  Serial.print('\n');
 
-              Serial.print("_P_");
+              //Serial.print("_P_");
             } else {
               Log.errorln("Error decoding address");
               error = 1;
@@ -697,23 +705,23 @@ boolean DroneExecutionManager::compileLine(const char * line, DEM_INSTRUCTION_CO
           }
           // type
           else if (eoty) {
-            Serial.print("_TYPE_");
+            //Serial.print("_TYPE_");
             if (token[0] == 'f') {
-              Serial.print("_f_");
+              //Serial.print("_f_");
               _instruction.dataType = DRONE_LINK_MSG_TYPE_FLOAT;
             } else if (token[0] == 'a') {
-              Serial.print("_a_");
+              //Serial.print("_a_");
               _instruction.dataType = DRONE_LINK_MSG_TYPE_ADDR;
             } else if (token[0] == 'c') {
-              Serial.print("_c_");
+              //Serial.print("_c_");
               _instruction.dataType = DRONE_LINK_MSG_TYPE_CHAR;
             } else if (token[0] == 'u') {
               if (token[1] == '8') {
-                 Serial.print("_u8_");
+                 //Serial.print("_u8_");
                  _instruction.dataType = DRONE_LINK_MSG_TYPE_UINT8_T;
               } else {
                 // assume u32
-                Serial.print("_u32_");
+                //Serial.print("_u32_");
                 _instruction.dataType = DRONE_LINK_MSG_TYPE_UINT32_T;
               }
             }
@@ -754,7 +762,7 @@ boolean DroneExecutionManager::compileLine(const char * line, DEM_INSTRUCTION_CO
                 Log.errorln("Invalid command");
                 error = true;
               }
-              Serial.print("_CMD_");
+              //Serial.print("_CMD_");
             } else {
 
               // attempt to decode token
@@ -763,13 +771,13 @@ boolean DroneExecutionManager::compileLine(const char * line, DEM_INSTRUCTION_CO
               if (inAddr || inAddrP) {
                 // this should already have populated the msg address
                 inAddr = false;
-                Serial.print("_ADDR_");
+                //Serial.print("_ADDR_");
               }
               // numbers
               else if (tokenContainsNumber(token[0])) {
                 // appears to be a numeric value
                 float fv = atof(token);
-                Serial.print("_"); Serial.print(fv); Serial.print("_");
+                //Serial.print("_"); Serial.print(fv); Serial.print("_");
 
                 if (_instruction.numTokens < DRONE_LINK_MSG_MAX_PAYLOAD) {
                   switch (_instruction.dataType) {
@@ -801,7 +809,7 @@ boolean DroneExecutionManager::compileLine(const char * line, DEM_INSTRUCTION_CO
               }
               // names a param, enum, etc
               else {
-                Serial.print("_ENUM_");
+                //Serial.print("_ENUM_");
                 if (tokenLen <= DEM_TOKEN_LENGTH) {
                   strcpy(_instruction.tokens[_instruction.numTokens].txt, token);
                   _instruction.tokens[_instruction.numTokens].isEnum = true;
@@ -813,16 +821,16 @@ boolean DroneExecutionManager::compileLine(const char * line, DEM_INSTRUCTION_CO
             }
           }
 
-          Serial.print("[");
-          Serial.print(token);
-          Serial.println("]");
+          //Serial.print("[");
+          //Serial.print(token);
+          //Serial.println("]");
 
           tokenLen = 0;
 
         } else {
           // catch zero length namespace
           if (eon) {
-            Serial.print("_NS_");
+            //Serial.print("_NS_");
             _instruction.ns = getNamespace("core");
             eon = false;
           }
@@ -834,7 +842,7 @@ boolean DroneExecutionManager::compileLine(const char * line, DEM_INSTRUCTION_CO
       cp++;
     } while (!eol);
 
-    Serial.println("");
+    //Serial.println("");
 
     if (valid && !error) {
 
@@ -846,6 +854,12 @@ boolean DroneExecutionManager::compileLine(const char * line, DEM_INSTRUCTION_CO
 
       //Log.noticeln("Decoded instruction: (%u)", _instruction.numTokens);
       //printInstruction(&_instruction);
+
+      // intercept node x commands and store
+      if (strcmp(_instruction.command, "node")==0) {
+        _nodeContext = _instruction.tokens[0].value.uint8;
+        Log.noticeln(F("Storing node context: %u"), _nodeContext);
+      }
 
       // compile the rest of the instruction
       if (instr->handler != NULL) {
@@ -1064,9 +1078,9 @@ boolean DroneExecutionManager::core_publish(DEM_INSTRUCTION_COMPILED* instr, DEM
     if (p != NULL) {
       p->publish = true;
 
-      } else {
-        Log.errorln(F("[.r] Unknown param"));
-      }
+    } else {
+      Log.errorln(F("[.r] Unknown param"));
+    }
 
   } else {
       Log.errorln(F("[.pub] Unknown module"));
@@ -1128,8 +1142,6 @@ boolean DroneExecutionManager::core_setup(DEM_INSTRUCTION_COMPILED* instr, DEM_C
   _dmm->setupModules();
 
   // if we made it to here, can assume no crashes on startup
-  //EEPROM.write(DEM_EEPROM_SUCCESSFUL_BOOT, DEM_BOOT_SUCCESS);
-  //EEPROM.commit();
   setBootStatus(DEM_BOOT_SUCCESS);
 
   Log.noticeln(F("[.s] Setup complete"));
@@ -1164,8 +1176,12 @@ boolean DroneExecutionManager::mod_constructor(DEM_INSTRUCTION_COMPILED* instr, 
       newMod = new RFM69TelemetryModule(id, _dmm, _dlm, this);
     } else if (strcmp_P(instr->ns->name, TANK_STEER_STR_TANK_STEER) == 0) {
       newMod = new TankSteerModule(id, _dmm, _dlm, this);
+    } else if (strcmp_P(instr->ns->name, TURN_RATE_STR_TURN_RATE) == 0) {
+      newMod = new TurnRateModule(id, _dmm, _dlm, this);
     } else if (strcmp_P(instr->ns->name, UDP_TELEMETRY_STR_UDP_TELEMETRY) == 0) {
       newMod = new UDPTelemetryModule(id, _dmm, _dlm, this);
+    } else if (strcmp_P(instr->ns->name, NAV_STR_NAV) == 0) {
+      newMod = new NavModule(id, _dmm, _dlm, this);
     } else {
       Log.errorln(F("[.c] Unknown type"));
     }

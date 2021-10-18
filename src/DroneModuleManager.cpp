@@ -129,6 +129,8 @@ void DroneModuleManager::loopModules() {
       if (loopTime > _lastDiscovery + DRONE_MODULE_MANAGER_DISCOVERY_INTERVAL) {
         m = _modules.get(_lastDiscoveryIndex);
 
+        Log.noticeln(F("[DMM.lM] disco: %s"), m->getName());
+
         if (m->doDiscovery()) {
           m->restartDiscovery();
 

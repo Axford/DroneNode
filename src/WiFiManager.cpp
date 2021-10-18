@@ -72,12 +72,12 @@ void WiFiManager::loadConfiguration() {
 }
 
 //const char * ssid, const char * pwd
-void WiFiManager::start(DroneModuleManager &dmm) {
+void WiFiManager::start(DroneModuleManager *dmm) {
 
   //WiFi.disconnect();
 
   WiFi.mode(WIFI_AP_STA);
-  WiFi.softAP(dmm.hostname().c_str());
+  WiFi.softAP(dmm->hostname().c_str());
 
   vTaskDelay(2);
 

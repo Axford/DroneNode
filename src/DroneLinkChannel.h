@@ -6,6 +6,7 @@
 
 #include "DroneLinkMsg.h"
 #include "DroneModule.h"
+#include <ESPAsyncWebServer.h>
 //#include "DroneLinkSubscriber.h"
 
 #define DRONE_LINK_CHANNEL_QUEUE_LIMIT  30  // max number of queued messages
@@ -129,6 +130,16 @@ public:
       sub.module = subscriber;
       sub.param = param;
       _subs.add(sub);
+    }
+
+    void serveChannelInfo(AsyncResponseStream *response) {
+      DroneLinkChannelSubscription sub;
+      for(int i = 0; i < _subs.size(); i++) {
+        sub = _subs.get(i);
+
+        response->printf("    %u: %s\n", sub.module->id(), sub.module->getName());
+        //Log.noticeln(sub.module->getName().c_str());
+      }
     }
 /*
     void printSubscribers() {
