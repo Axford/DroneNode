@@ -110,7 +110,7 @@
             "type": "UDPTelemetry",
             "id": 8,
             "name": "UDPTelemetry",
-            "enable": true,
+            "enable": false,
             "interval": 0,
             "port": 8007,
             "broadcast": [

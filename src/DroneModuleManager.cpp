@@ -104,6 +104,7 @@ void DroneModuleManager::setupModules() {
     m = _modules.get(i);
     Log.noticeln(F("[DMM.sM] Setup: %s"), m->getName());
     m->setup();
+    yield();
   }
 }
 
@@ -120,7 +121,10 @@ void DroneModuleManager::loopModules() {
     } else {
       //Serial.println(" N");
     }
-    m->loopDuration = millis()-start;
+    yield();
+    long duration = millis()-start;
+    if (duration > m->loopDuration)
+      m->loopDuration = duration;
   }
 
 

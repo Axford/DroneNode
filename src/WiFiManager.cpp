@@ -72,10 +72,11 @@ void WiFiManager::loadConfiguration() {
 }
 
 //const char * ssid, const char * pwd
-void WiFiManager::start(DroneModuleManager *dmm) {
+void WiFiManager::start() {
 
   //WiFi.disconnect();
 
+/*
   WiFi.mode(WIFI_AP_STA);
   WiFi.softAP(dmm->hostname().c_str());
 
@@ -83,6 +84,8 @@ void WiFiManager::start(DroneModuleManager *dmm) {
 
   // speculative... on the off chance we have valid stored credentials
   WiFi.begin();
+  */
+
 
   Log.noticeln("[WIFI] Starting connection task");
 

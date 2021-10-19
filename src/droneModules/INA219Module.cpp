@@ -116,16 +116,17 @@ void INA219Module::loadConfiguration(JsonObject &obj) {
 void INA219Module::setup() {
   I2CBaseModule::setup();
   // instantiate sensor object, now _params[I2CBASE_PARAM_ADDR_E].data.uint8[0] is known
-  if (!_sensor)
+  if (!_sensor) {
+    DroneWire::selectChannel(_params[I2CBASE_PARAM_BUS_E].data.uint8[0]);
     _sensor = new Adafruit_INA219(_params[I2CBASE_PARAM_ADDR_E].data.uint8[0]);
+    _sensor->begin();
+  }
 }
 
 
 void INA219Module::loop() {
   I2CBaseModule::loop();
 
-  Serial.print("Selecting bus: ");
-  Serial.println(_params[I2CBASE_PARAM_BUS_E].data.uint8[0]);
   DroneWire::selectChannel(_params[I2CBASE_PARAM_BUS_E].data.uint8[0]);
 
   // get sensor values

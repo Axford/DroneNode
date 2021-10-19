@@ -10,8 +10,11 @@ Manages a HMC5883L I2C power monitor
 #include "../DroneWire.h"
 #include "I2CBaseModule.h"
 
-#include <Adafruit_Sensor.h>
-#include <Adafruit_HMC5883_U.h>
+//#include <Adafruit_Sensor.h>
+//#include <Adafruit_HMC5883_U.h>
+
+#include "I2Cdev.h"
+#include "HMC5883L.h"
 
 #define HMC5883L_I2C_ADDRESS  0x1E  // write address, read address is +1
 
@@ -46,7 +49,7 @@ class HMC5883LModule:  public I2CBaseModule {
 protected:
   int _location[2];  // lng, lat - rounded to whole digits
   //DRONE_LINK_ADDR _locationInput;
-  Adafruit_HMC5883_Unified *_sensor;
+  HMC5883L *_sensor;
 public:
 
   HMC5883LModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm, DroneExecutionManager* dem);
@@ -57,7 +60,7 @@ public:
 
   void doReset();
 
-  void publishEntry(uint8_t i);
+  //void publishEntry(uint8_t i);
 
   void setup();
   void update();

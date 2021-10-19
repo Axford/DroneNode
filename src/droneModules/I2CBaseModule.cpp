@@ -79,5 +79,5 @@ boolean I2CBaseModule::isAlive() {
 void I2CBaseModule::setup() {
   DroneModule::setup();
 
-  doReset();
+  //doReset();
 }

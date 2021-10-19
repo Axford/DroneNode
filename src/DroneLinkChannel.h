@@ -63,10 +63,12 @@ public:
         for (uint8_t i=0; i<_queue.size(); i++) {
           scrub = _queue.get(i);
           if (scrub->sameSignature(&msg)) {
+            /*
             Serial.print("Same sig in queue, overwriting: ");
             scrub->print();
             Serial.print( " with ");
             msg.print();
+            */
 
             sameSig = true;
             // overwrite message payload

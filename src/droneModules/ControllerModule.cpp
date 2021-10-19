@@ -54,7 +54,6 @@ ControllerModule::ControllerModule(uint8_t id, DroneModuleManager* dmm, DroneLin
   I2CBaseModule ( id, dmm, dlm, dem )
  {
    setTypeName(FPSTR(CONTROLLER_STR_CONTROLLER));
-   _params[I2CBASE_PARAM_ADDR_E].data.uint8[0] = CONTROLLER_OLED_I2C_ADDRESS;
 
    // init query msg
    _queryMsg.source(_dlm->node());
@@ -72,6 +71,7 @@ ControllerModule::ControllerModule(uint8_t id, DroneModuleManager* dmm, DroneLin
    _spinner = 0;
    _cellVoltage = 0;
    _batteryCapacity = 0;
+   _display = NULL;
 
    _RSSI = 0;
 
@@ -93,36 +93,62 @@ ControllerModule::ControllerModule(uint8_t id, DroneModuleManager* dmm, DroneLin
 
    // outputs
    initParams(CONTROLLER_PARAM_ENTRIES);
+   I2CBaseModule::initBaseParams();
+   _params[I2CBASE_PARAM_ADDR_E].data.uint8[0] = CONTROLLER_OLED_I2C_ADDRESS;
 
    DRONE_PARAM_ENTRY *param;
 
    param = &_params[CONTROLLER_PARAM_LEFT_E];
    param->param = CONTROLLER_PARAM_LEFT;
    setParamName(FPSTR(STRING_LEFT), param);
-   param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_UINT8_T, 1);
+   param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_UINT8_T, 1);
    param->data.uint8[0] = 4;
 
    param = &_params[CONTROLLER_PARAM_RIGHT_E];
    param->param = CONTROLLER_PARAM_RIGHT;
    setParamName(FPSTR(STRING_RIGHT), param);
-   param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_UINT8_T, 1);
+   param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_UINT8_T, 1);
    param->data.uint8[0] = 5;
 
    param = &_params[CONTROLLER_PARAM_TELEMETRY_E];
    param->param = CONTROLLER_PARAM_TELEMETRY;
    setParamName(FPSTR(STRING_TELEMETRY), param);
-   param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_UINT8_T, 1);
+   param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_UINT8_T, 1);
    param->data.uint8[0] = 6;
 
    param = &_params[CONTROLLER_PARAM_POWER_E];
    param->param = CONTROLLER_PARAM_POWER;
    setParamName(FPSTR(STRING_POWER), param);
-   param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_UINT8_T, 1);
+   param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_UINT8_T, 1);
    param->data.uint8[0] = 9;
 }
 
 ControllerModule::~ControllerModule() {
   if (_display) delete _display;
+}
+
+
+DEM_NAMESPACE* ControllerModule::registerNamespace(DroneExecutionManager *dem) {
+  // namespace for module type
+  return dem->createNamespace(CONTROLLER_STR_CONTROLLER,0,true);
+}
+
+void ControllerModule::registerParams(DEM_NAMESPACE* ns, DroneExecutionManager *dem) {
+
+  I2CBaseModule::registerParams(ns, dem);
+
+  using std::placeholders::_1;
+  using std::placeholders::_2;
+  using std::placeholders::_3;
+  using std::placeholders::_4;
+
+  // writable mgmt params
+  DEMCommandHandler ph = std::bind(&DroneExecutionManager::mod_param, dem, _1, _2, _3, _4);
+
+  dem->registerCommand(ns, STRING_LEFT, DRONE_LINK_MSG_TYPE_UINT8_T, ph);
+  dem->registerCommand(ns, STRING_RIGHT, DRONE_LINK_MSG_TYPE_UINT8_T, ph);
+  dem->registerCommand(ns, STRING_TELEMETRY, DRONE_LINK_MSG_TYPE_UINT8_T, ph);
+  dem->registerCommand(ns, STRING_POWER, DRONE_LINK_MSG_TYPE_UINT8_T, ph);
 }
 
 
@@ -233,9 +259,9 @@ void ControllerModule::handleLinkMessage(DroneLinkMsg *msg) {
   // left
   uint8_t axis = 255;
   if (msg->channel() == _params[CONTROLLER_PARAM_LEFT_E].data.uint8[0]) {
-    if (msg->param() >= 8 && msg->param() <= 11) {
+    if (msg->param() >= 10 && msg->param() <= 13) {
       if (msg->type() == DRONE_LINK_MSG_TYPE_FLOAT) {
-        axis = CONTROLLER_AXIS_LEFT_X + msg->param() - 8;
+        axis = CONTROLLER_AXIS_LEFT_X + msg->param() - 10;
         _axes[ axis] = msg->_msg.payload.f[0];
       }
     }
@@ -243,9 +269,9 @@ void ControllerModule::handleLinkMessage(DroneLinkMsg *msg) {
 
   // right
   if (msg->channel() == _params[CONTROLLER_PARAM_RIGHT_E].data.uint8[0]) {
-    if (msg->param() >= 8 && msg->param() <= 11) {
+    if (msg->param() >= 10 && msg->param() <= 13) {
       if (msg->type() == DRONE_LINK_MSG_TYPE_FLOAT) {
-        axis = CONTROLLER_AXIS_RIGHT_X + msg->param() - 8;
+        axis = CONTROLLER_AXIS_RIGHT_X + msg->param() - 10;
         _axes[ axis ] = msg->_msg.payload.f[0];
       }
     }
@@ -260,7 +286,7 @@ void ControllerModule::handleLinkMessage(DroneLinkMsg *msg) {
 
   // intercept voltage from INA219
   if (msg->channel() == _params[CONTROLLER_PARAM_POWER_E].data.uint8[0] &&
-      msg->param() == 9 &&  // cellV
+      msg->param() == 15 &&  // cellV
       msg->type() == DRONE_LINK_MSG_TYPE_FLOAT) {
     _cellVoltage = msg->_msg.payload.f[0];
     if (_cellVoltage < 0) _cellVoltage = 0;
@@ -410,7 +436,7 @@ void ControllerModule::handleLinkMessage(DroneLinkMsg *msg) {
   DroneModule::handleLinkMessage(msg);
 }
 
-
+/*
 void ControllerModule::loadConfiguration(JsonObject &obj) {
   I2CBaseModule::loadConfiguration(obj);
 
@@ -429,7 +455,7 @@ void ControllerModule::loadConfiguration(JsonObject &obj) {
   _dlm->subscribe(_params[CONTROLLER_PARAM_TELEMETRY_E].data.uint8[0], this, DRONE_LINK_PARAM_ALL);
   _dlm->subscribe(_params[CONTROLLER_PARAM_POWER_E].data.uint8[0], this, DRONE_LINK_PARAM_ALL);
 }
-
+*/
 
 void ControllerModule::setup() {
   DroneModule::setup();
@@ -486,9 +512,17 @@ void ControllerModule::setup() {
  _menus[CONTROLLER_MENU_CLEAR].name = (F("Binding Cleared"));
  _menus[CONTROLLER_MENU_CLEAR].backTo = CONTROLLER_MENU_MAIN;
 
+ // make sure we're subscribed to the joystick channels
+ _dlm->subscribe(_params[CONTROLLER_PARAM_LEFT_E].data.uint8[0], this, DRONE_LINK_PARAM_ALL);
+ _dlm->subscribe(_params[CONTROLLER_PARAM_RIGHT_E].data.uint8[0], this, DRONE_LINK_PARAM_ALL);
+ _dlm->subscribe(_params[CONTROLLER_PARAM_TELEMETRY_E].data.uint8[0], this, DRONE_LINK_PARAM_ALL);
+ _dlm->subscribe(_params[CONTROLLER_PARAM_POWER_E].data.uint8[0], this, DRONE_LINK_PARAM_ALL);
+
  // Init display
- if (_display) {
+ if (!_display) {
    DroneWire::selectChannel(_params[I2CBASE_PARAM_BUS_E].data.uint8[0]);
+
+   _display = new SSD1306Wire(_params[I2CBASE_PARAM_ADDR_E].data.uint8[0], SDA, SCL);
 
    if (!_display->init()) {
      Log.errorln(F("display->init()"));
@@ -970,6 +1004,8 @@ void ControllerModule::drawSpinner() {
 
 void ControllerModule::loop() {
   I2CBaseModule::loop();
+
+  if (!_display) return;
 
   //Serial.println("loop");
 

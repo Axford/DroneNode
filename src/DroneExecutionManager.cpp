@@ -6,8 +6,10 @@
 #include "DroneModule.h"
 
 // drone modules
+#include "droneModules/ControllerModule.h"
 #include "droneModules/HMC5883LModule.h"
 #include "droneModules/INA219Module.h"
+#include "droneModules/JoystickModule.h"
 #include "droneModules/ManagementModule.h"
 #include "droneModules/MotorModule.h"
 #include "droneModules/NeopixelModule.h"
@@ -25,9 +27,9 @@
 #include "droneModules/BME280Module.h"
 #include "droneModules/MPU6050Module.h"
 #include "droneModules/BasicNavModule.h"
-#include "droneModules/JoystickModule.h"
+
 #include "droneModules/OLEDModule.h"
-#include "droneModules/ControllerModule.h"
+
 #include "droneModules/NunchuckJoystickModule.h"
 
 */
@@ -76,6 +78,8 @@ DroneExecutionManager::DroneExecutionManager(DroneModuleManager *dmm, DroneLinkM
 
   // now clear the _safeMode value ready for this boot attempt
   setBootStatus(DEM_BOOT_FAIL);
+
+  //_safeMode = false;
 
   _instruction.ns = 0;
   _instruction.command[0] = '_';
@@ -126,8 +130,10 @@ DroneExecutionManager::DroneExecutionManager(DroneModuleManager *dmm, DroneLinkM
   // register namespaces
   //ns = DroneModule::registerNamespace(this);
 
+  ns = ControllerModule::registerNamespace(this); ControllerModule::registerParams(ns, this);
   ns = HMC5883LModule::registerNamespace(this); HMC5883LModule::registerParams(ns, this);
   ns = INA219Module::registerNamespace(this); INA219Module::registerParams(ns, this);
+  ns = JoystickModule::registerNamespace(this); JoystickModule::registerParams(ns, this);
   ns = ManagementModule::registerNamespace(this); ManagementModule::registerParams(ns, this);
   ns = MotorModule::registerNamespace(this);  MotorModule::registerParams(ns, this);
   ns = NMEAModule::registerNamespace(this); NMEAModule::registerParams(ns, this);
@@ -171,6 +177,9 @@ void DroneExecutionManager::setBootStatus(uint8_t v) {
   f.close();
 }
 
+boolean DroneExecutionManager::safeMode() {
+  return _safeMode;
+}
 
 // looks up macro by name, returns null if not found
 DEM_MACRO* DroneExecutionManager::getMacro(const char* name) {
@@ -431,6 +440,8 @@ boolean DroneExecutionManager::load(const char * filename) {
               // store the compiled line
               m->commands->add(instr);
             }
+
+            vTaskDelay(1);
           }
           rp = 0;
           break;
@@ -936,7 +947,7 @@ boolean DroneExecutionManager::compileLine(const char * line, DEM_INSTRUCTION_CO
 
 void DroneExecutionManager::execute() {
 
-  if (_safeMode) return;
+  //if (_safeMode) return;
 
   //Log.noticeln(F("[DEM.e]"));
 
@@ -1053,8 +1064,9 @@ void DroneExecutionManager::serveCommandInfo(AsyncWebServerRequest *request) {
 void DroneExecutionManager::serveExecutionInfo(AsyncWebServerRequest *request) {
 
   if(request->hasParam("execute")) {
-    // trigger immediate execution
-    _safeMode = false;
+    // clear safeMode and restart
+    setBootStatus(DEM_BOOT_SUCCESS);
+    _dmm->restart();
   }
 
   AsyncResponseStream *response = request->beginResponseStream("text/text");
@@ -1351,10 +1363,14 @@ boolean DroneExecutionManager::mod_constructor(DEM_INSTRUCTION_COMPILED* instr, 
   if (id > 0 && id < 255) {
     DroneModule *newMod;
 
-    if (strcmp_P(instr->ns->name, HMC5883L_STR_HMC5883L) == 0) {
+    if (strcmp_P(instr->ns->name, CONTROLLER_STR_CONTROLLER) == 0) {
+      newMod = new ControllerModule(id, _dmm, _dlm, this);
+    } else if (strcmp_P(instr->ns->name, HMC5883L_STR_HMC5883L) == 0) {
       newMod = new HMC5883LModule(id, _dmm, _dlm, this);
     } else if (strcmp_P(instr->ns->name, INA219_STR_INA219) == 0) {
       newMod = new INA219Module(id, _dmm, _dlm, this);
+    } else if (strcmp_P(instr->ns->name, JOYSTICK_STR_JOYSTICK) == 0) {
+      newMod = new JoystickModule(id, _dmm, _dlm, this);
     } else if (strcmp_P(instr->ns->name, MANAGEMENT_STR_MANAGEMENT) == 0) {
       newMod = new ManagementModule(id, _dmm, _dlm, this);
     } else if (strcmp_P(instr->ns->name, MOTOR_STR_MOTOR) == 0) {

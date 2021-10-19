@@ -39,7 +39,7 @@ static const char RFM69_TELEMETRY_STR_RFM69_TELEMETRY[] PROGMEM = "RFM69Telemetr
 
 class RFM69TelemetryModule:  public DroneModule {
 protected:
-  RFM69 _radio;
+  RFM69 *_radio;
   DroneLinkMsg _receivedMsg;
   uint32_t _packetsReceived;
   uint32_t _packetsRejected;

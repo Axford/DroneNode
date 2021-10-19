@@ -23,19 +23,19 @@ display.begin(SSD1306_SWITCHCAPVCC, 0x3C)
 // pubs
 
 
-#define CONTROLLER_PARAM_LEFT        8   // channel for left joystick
-#define CONTROLLER_PARAM_LEFT_E      0
+#define CONTROLLER_PARAM_LEFT        (I2CBASE_SUBCLASS_PARAM_START+0)  //10 - channel for left joystick
+#define CONTROLLER_PARAM_LEFT_E      (I2CBASE_PARAM_ENTRIES+0)
 
-#define CONTROLLER_PARAM_RIGHT       9   // channel for right joystick
-#define CONTROLLER_PARAM_RIGHT_E     1
+#define CONTROLLER_PARAM_RIGHT       (I2CBASE_SUBCLASS_PARAM_START+1)   // channel for right joystick
+#define CONTROLLER_PARAM_RIGHT_E     (I2CBASE_PARAM_ENTRIES+1)
 
-#define CONTROLLER_PARAM_TELEMETRY   10   // channel for telemetry module
-#define CONTROLLER_PARAM_TELEMETRY_E 2
+#define CONTROLLER_PARAM_TELEMETRY   (I2CBASE_SUBCLASS_PARAM_START+2)   // channel for telemetry module
+#define CONTROLLER_PARAM_TELEMETRY_E (I2CBASE_PARAM_ENTRIES+2)
 
-#define CONTROLLER_PARAM_POWER       11   // channel for INA219 module
-#define CONTROLLER_PARAM_POWER_E     3
+#define CONTROLLER_PARAM_POWER       (I2CBASE_SUBCLASS_PARAM_START+3)   // channel for INA219 module
+#define CONTROLLER_PARAM_POWER_E     (I2CBASE_PARAM_ENTRIES+3)
 
-#define CONTROLLER_PARAM_ENTRIES     4
+#define CONTROLLER_PARAM_ENTRIES     (I2CBASE_PARAM_ENTRIES + 4)
 
 
 // subs
@@ -174,6 +174,9 @@ public:
   ControllerModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm, DroneExecutionManager* dem);
   ~ControllerModule();
 
+  static DEM_NAMESPACE* registerNamespace(DroneExecutionManager *dem);
+  static void registerParams(DEM_NAMESPACE* ns, DroneExecutionManager *dem);
+
   void clear();
 
   void doReset();
@@ -182,7 +185,7 @@ public:
 
   void handleLinkMessage(DroneLinkMsg *msg);
 
-  void loadConfiguration(JsonObject &obj);
+  //void loadConfiguration(JsonObject &obj);
 
   void setup();
 

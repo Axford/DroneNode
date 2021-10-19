@@ -542,7 +542,8 @@ void DroneModule::handleLinkMessage(DroneLinkMsg *msg) {
   }
 
   //Log.noticeln("[DM.hLM] end");
-  hLMDuration = millis() - start;
+  long duration = millis() - start;
+  if (duration > hLMDuration) hLMDuration = duration;
 }
 
 void DroneModule::setError(uint8_t error) {

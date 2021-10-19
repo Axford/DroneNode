@@ -56,7 +56,6 @@ Steps to setup a new device:
 #include "OTAManager.h"
 #include <ESP32Servo.h>
 #include <ArduinoLog.h>
-#include <EEPROM.h>
 
 // config
 #include "pinConfig.h"
@@ -204,6 +203,34 @@ void handleOTAEVent(OTAManagerEvent event, float progress) {
   }
 }
 
+TaskHandle_t _coreTask;
+
+void coreTask( void * pvParameters ) {
+  for(;;){
+    if (!OTAMgr.isUpdating) {
+      dmm->watchdog();
+
+      yield();
+
+      //Log.noticeln("[] lM");
+      dmm->loopModules();
+
+      yield();
+
+      //Log.noticeln("[] pC");
+      dlm->processChannels();
+
+      yield();
+
+      //Log.noticeln("[] e");
+      dem->execute();
+    } else {
+      digitalWrite(PIN_LED, HIGH);
+    }
+    vTaskDelay(50);
+  }
+}
+
 
 void setup() {
   pinMode(PIN_LED, OUTPUT);
@@ -211,8 +238,6 @@ void setup() {
 
   Serial.begin(115200);
   while(!Serial) {  }
-
-  EEPROM.begin(DEM_EEPROM_SIZE);
 
   Log.begin(LOG_LEVEL_VERBOSE, &Serial);
 
@@ -232,6 +257,8 @@ void setup() {
   //Log.begin(LOG_LEVEL_VERBOSE, &logFile);
   Log.noticeln(F("[] Starting..."));
 
+  DroneWire::setup();
+
   // create core objects
   dlm = new DroneLinkManager();
   dmm = new DroneModuleManager(dlm);
@@ -242,34 +269,70 @@ void setup() {
 	ESP32PWM::allocateTimer(2);
 	ESP32PWM::allocateTimer(3);
 
-  DroneWire::setup();
+  if (dem->safeMode()) {
+    Log.warningln(F("[] Starting in SAFE mode..."));
+    // attempt to load and run safeMode script
+    // define root macro
+    DEM_MACRO * safeMode = dem->createMacro("safeMode");
+    DEM_INSTRUCTION_COMPILED instr;
+    if (dem->compileLine(PSTR("load \"/safeMode.txt\""), &instr))
+      safeMode->commands->add(instr);
+    if (dem->compileLine(PSTR("run \"/safeMode.txt\""), &instr))
+      safeMode->commands->add(instr);
 
-  // define root macro
-  DEM_MACRO * root = dem->createMacro("root");
-  DEM_INSTRUCTION_COMPILED instr;
-  if (dem->compileLine(PSTR("load \"/config.txt\""), &instr))
+    // prep execution of safeMode
+    DEM_CALLSTACK_ENTRY cse;
+    cse.i=0;
+    cse.macro = safeMode;
+    cse.continuation = false;
+    dem->callStackPush(cse);
+
+  } else {
+    Log.warningln(F("[] Starting in NORMAL mode..."));
+
+    // prep and run normal boot process
+    // define root macro
+    DEM_MACRO * root = dem->createMacro("root");
+    DEM_INSTRUCTION_COMPILED instr;
+    if (dem->compileLine(PSTR("load \"/config.txt\""), &instr))
+      root->commands->add(instr);
+    dem->compileLine(PSTR("run \"/config.txt\""), &instr);
     root->commands->add(instr);
-  dem->compileLine(PSTR("run \"/config.txt\""), &instr);
-  root->commands->add(instr);
-  dem->compileLine(PSTR("load \"/main.txt\""), &instr);
-  root->commands->add(instr);
-  // now execute main
-  dem->compileLine(PSTR("run \"/main.txt\""), &instr);
-  root->commands->add(instr);
+    dem->compileLine(PSTR("load \"/main.txt\""), &instr);
+    root->commands->add(instr);
+    // now execute main
+    dem->compileLine(PSTR("run \"/main.txt\""), &instr);
+    root->commands->add(instr);
 
-  // prep execution of root
-  DEM_CALLSTACK_ENTRY cse;
-  cse.i=0;
-  cse.macro = root;
-  cse.continuation = false;
-  dem->callStackPush(cse);
+    // prep execution of root
+    DEM_CALLSTACK_ENTRY cse;
+    cse.i=0;
+    cse.macro = root;
+    cse.continuation = false;
+    dem->callStackPush(cse);
+  }
 
-  // TODO: move to DEM
-  //dmm.loadConfiguration();
+
+
+  WiFi.mode(WIFI_AP_STA);
+
+  uint8_t mac[6];
+  WiFi.macAddress(mac);
+  String hostname = "Drone";
+  for (uint8_t i=3; i<6; i++) {
+    hostname += String(mac[i], HEX);
+  }
+
+  //WiFi.softAP(dmm->hostname().c_str());
+  WiFi.softAP(hostname.c_str());
+
+  // speculative... on the off chance we have valid stored credentials
+  WiFi.begin();
 
   // load WIFI Configuration
   wifiManager.loadConfiguration();
-  wifiManager.start(dmm);
+
+  wifiManager.start();
 
   OTAMgr.onEvent = handleOTAEVent;
   OTAMgr.init( dmm->hostname() );
@@ -283,21 +346,24 @@ void setup() {
   // scan I2C buses
   DroneWire::scanAll();
 
-  // Complete Setup of all modules
-  //TODO: implement in DEM
-  /*
-  Log.noticeln(F("[] Completing module setup..."));
-  dmm.setupModules();
-
-  Log.noticeln(F("[] Setup done"));
-  */
-
   // redirect logging to serial
   logFile.close();
   Log.begin(LOG_LEVEL_VERBOSE, &Serial);
 
+  // start core task
+  xTaskCreatePinnedToCore(
+    coreTask,        //Function to implement the task
+    "coreTask",            //Name of the task
+    16000,                   //Stack size in words
+    0,                   //Task input parameter
+    2,           //Priority of the task
+    &_coreTask,                 //Task handle.
+    1);              //Core where the task should run
+
+
   //digitalWrite(PIN_LED, LOW);
 }
+
 
 long loopTime;
 long testTimer;
@@ -306,22 +372,7 @@ uint8_t modid;
 void loop() {
   loopTime = millis();
 
-  dmm->watchdog();
-
   digitalWrite(PIN_LED, (WiFi.status() != WL_CONNECTED));
-
-  if (!OTAMgr.isUpdating) {
-    //Log.noticeln("[] lM");
-    dmm->loopModules();
-
-    //Log.noticeln("[] pC");
-    dlm->processChannels();
-
-    //Log.noticeln("[] e");
-    dem->execute();
-  } else {
-    digitalWrite(PIN_LED, HIGH);
-  }
 
   OTAMgr.loop();
 }

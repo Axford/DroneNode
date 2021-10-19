@@ -20,7 +20,7 @@ struct DEM_COMMAND;
 
 #define DEM_COMMAND_LENGTH 10  // max command length
 #define DEM_NAMESPACE_LENGTH   16
-#define DEM_TOKEN_LENGTH  16
+#define DEM_TOKEN_LENGTH  22 // to allow for long GPS coordinates
 
 #define DEM_CALLSTACK_SIZE    64  // 64 x uint32_t = 256 bytes
 #define DEM_DATASTACK_SIZE    64  // 64 x uint32_t = 256 bytes
@@ -144,6 +144,7 @@ public:
 
     uint8_t getBootStatus();
     void setBootStatus(uint8_t v);
+    boolean safeMode();  // get safeMode status
 
     // looks up macro by name, returns null if not found
     DEM_MACRO* getMacro(const char* name);

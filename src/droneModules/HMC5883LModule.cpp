@@ -98,7 +98,7 @@ void HMC5883LModule::registerParams(DEM_NAMESPACE* ns, DroneExecutionManager *de
 void HMC5883LModule::doReset() {
   Log.noticeln("[HMC.dR]");
   I2CBaseModule::doReset();
-
+/*
   DroneWire::selectChannel(_params[I2CBASE_PARAM_BUS_E].data.uint8[0]);
 
   if (_sensor) {
@@ -106,7 +106,7 @@ void HMC5883LModule::doReset() {
     if (_error) {
       Log.errorln(HMC5883L_STR_HMC5883L);
     }
-  }
+  }*/
   Log.noticeln("[HMC.dR] end");
 }
 
@@ -115,7 +115,13 @@ void HMC5883LModule::setup() {
   I2CBaseModule::setup();
 
   if (!_sensor) {
-    _sensor = new Adafruit_HMC5883_Unified(_params[I2CBASE_PARAM_ADDR_E].data.uint8[0]);
+    DroneWire::selectChannel(_params[I2CBASE_PARAM_BUS_E].data.uint8[0]);
+    /*_sensor = new Adafruit_HMC5883_Unified(_params[I2CBASE_PARAM_ADDR_E].data.uint8[0]);
+    if (!_sensor->begin() ){
+      Log.errorln("Failed to init HMC5883L");
+    }*/
+    _sensor = new HMC5883L();
+    _sensor->initialize();
   }
 }
 
@@ -160,18 +166,26 @@ void HMC5883LModule::loop() {
 
   //Log.noticeln("HMC5883L.loop");
 
-  Serial.print("Selecting bus: ");
-  Serial.println(_params[I2CBASE_PARAM_BUS_E].data.uint8[0]);
   DroneWire::selectChannel(_params[I2CBASE_PARAM_BUS_E].data.uint8[0]);
 
-
   // get sensor values
+  /*
   sensors_event_t event;
   _sensor->getEvent(&event);
+  _sensor->getEvent(&event); // get twice?
+
 
   _params[HMC5883L_PARAM_VECTOR_E].data.f[0] = event.magnetic.x;
   _params[HMC5883L_PARAM_VECTOR_E].data.f[1] = event.magnetic.y;
   _params[HMC5883L_PARAM_VECTOR_E].data.f[2] = event.magnetic.z;
+  */
+
+  int16_t mx, my, mz;
+  _sensor->getHeading(&mx, &my, &mz);
+
+  _params[HMC5883L_PARAM_VECTOR_E].data.f[0] = mx / 100.0;
+  _params[HMC5883L_PARAM_VECTOR_E].data.f[1] = my / 100.0;
+  _params[HMC5883L_PARAM_VECTOR_E].data.f[2] = mz / 100.0;
 
   // update calibration
   // X
@@ -185,8 +199,11 @@ void HMC5883LModule::loop() {
   _params[HMC5883L_PARAM_CALIB_Y_E].data.f[1] = (_params[HMC5883L_PARAM_CALIB_Y_E].data.f[0] + _params[HMC5883L_PARAM_CALIB_Y_E].data.f[2])/2;
 
 
-  float heading = atan2(event.magnetic.y - _params[HMC5883L_PARAM_CALIB_Y_E].data.f[1],
-                        event.magnetic.x - _params[HMC5883L_PARAM_CALIB_X_E].data.f[1]);
+  float heading = atan2(_params[HMC5883L_PARAM_VECTOR_E].data.f[1] - _params[HMC5883L_PARAM_CALIB_Y_E].data.f[1],
+                        _params[HMC5883L_PARAM_VECTOR_E].data.f[0] - _params[HMC5883L_PARAM_CALIB_X_E].data.f[1]);
+
+  // rotate by -90 def to account for sensor mounting orientation with y+ forward
+  heading -= PI/2;
 
   float declinationAngle = _params[HMC5883L_PARAM_DECLINATION_E].data.f[0] * PI / 180.0f; // convert to radians
   heading += declinationAngle;
@@ -206,9 +223,9 @@ void HMC5883LModule::loop() {
 
 
   Serial.print("Mag: ");
-  Serial.print(event.magnetic.x);
+  Serial.print(_params[HMC5883L_PARAM_VECTOR_E].data.f[0]);
   Serial.print(", ");
-  Serial.print(event.magnetic.y);
+  Serial.print(_params[HMC5883L_PARAM_VECTOR_E].data.f[1]);
   Serial.print(" = ");
   Serial.println(heading);
 
