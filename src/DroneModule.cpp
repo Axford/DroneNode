@@ -32,6 +32,7 @@ _id(id) {
   _discoveryState = DRONE_MODULE_DISCOVERY_PENDING;
   _discoveryIndex = 0;
   _setupDone = false;
+  _updateNeeded = false;
   hLMDuration = 0;
   loopDuration = 0;
 
@@ -425,7 +426,8 @@ void DroneModule::handleParamMessage(DroneLinkMsg *msg, DRONE_PARAM_ENTRY *param
         // trigger callback
         onParamWrite(param);
         //Log.noticeln("[DM.hPM] update");
-        update();
+        //update();
+        _updateNeeded = true;
       }
     }
 
@@ -510,7 +512,8 @@ void DroneModule::handleLinkMessage(DroneLinkMsg *msg) {
           if (_subs[i].param.publish) publishParamEntry(&_subs[i].param);
 
           // trigger an update
-          update();
+          //update();
+          _updateNeeded = true;
         }
       }
     }
@@ -583,6 +586,13 @@ void DroneModule::setup() {
     _dlm->subscribe(&_subs[i].addr, this);
   }
   _setupDone = true;
+}
+
+void DroneModule::updateIfNeeded() {
+  if (_updateNeeded && _setupDone && _enabled && _error == 0) {
+    update();
+    _updateNeeded = false;
+  }
 }
 
 void DroneModule::update() {

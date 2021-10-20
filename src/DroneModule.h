@@ -105,6 +105,7 @@ protected:
 
   uint8_t _numSubs;
   DRONE_PARAM_SUB *_subs;
+  boolean _updateNeeded;
 
   DRONE_MODULE_DISCOVERY_STATE _discoveryState;
   uint8_t _discoveryIndex;
@@ -176,6 +177,7 @@ public:
 
   virtual void setup();
 
+  void updateIfNeeded();
   virtual void update();
 
   virtual boolean readyToLoop();

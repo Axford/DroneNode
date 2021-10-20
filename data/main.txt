@@ -1,0 +1,38 @@
+// send messages
+//send 1>1.8 (u8) 1
+//send @>@.6 (u8) 2
+//send TestBoard>Management.discovery (u8) 0
+
+// enable wifi
+//wifi true
+
+// start nav
+//nav.GO -1.8 52 50
+
+/*
+do
+  send 1>20.8 (u8) 50 0 0 0  255 255 255  0 0 0  255 0 0  0 0 0
+  delay 1000
+  send 1>20.8 (u8) 10 0 0 0  255 255 255  0 0 0  0 255 0  0 0 0
+  delay 1000
+  send 1>20.8 (u8) 50 0 0 0  255 255 255  0 0 0  0 0 255  0 0 0
+  delay 1000
+  send 1>20.8 (u8) 10 0 0 0  255 255 255  0 0 0  0 255 0  0 0 0
+  delay 1000
+
+  counter 10
+until
+*/
+
+// stop motors
+.send 1>11.1 (u8) 0
+.send 1>12.1 (u8) 0
+
+// turn LEDs on
+send 1>20.8 (u8) 50 0 0 0  255 255 255  0 0 0  0 255 0  0 0 0
+
+//load "/thepit.txt"
+//run "/thepit.txt"
+
+//load "/golds.txt"
+//run "/golds.txt"

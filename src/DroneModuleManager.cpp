@@ -114,6 +114,11 @@ void DroneModuleManager::loopModules() {
     m = _modules.get(i);
     //Serial.print(m->getName());
     unsigned long start= millis();
+
+    // see if update needed
+    m->updateIfNeeded();
+    
+    // and check for main loop
     if (m->readyToLoop()) {
       //Serial.println(" Y");
       //Log.noticeln(F("[DMM.lM] %s"), m->getName());

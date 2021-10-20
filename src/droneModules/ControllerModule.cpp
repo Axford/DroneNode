@@ -300,7 +300,7 @@ void ControllerModule::handleLinkMessage(DroneLinkMsg *msg) {
     //Log.noticeln("Cell V %d, capacity %d", _cellVoltage, _batteryCapacity);
   }
 
-  if (!_isBound) {
+  if (!_isBound && (msg->node() != _dlm->node())) {
     _spinner += PI / 16.0;
   }
 

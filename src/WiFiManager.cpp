@@ -113,6 +113,10 @@ void WiFiManager::keepWiFiAlive(void *pvParameters){
       vTaskDelay(10000 / portTICK_PERIOD_MS);
       continue;
     } else if (!l_pThis->_scanActive && !l_pThis->_attemptingConnection) {
+      WiFi.disconnect();
+
+      vTaskDelay(1000 / portTICK_PERIOD_MS);
+
       Log.noticeln("[WIFI] Not connected, scanning...");
       WiFi.scanNetworks(true, false, false, 300, 0);
       //bool async = false, bool show_hidden = false, bool passive = false, uint32_t max_ms_per_chan = 300, uint8_t channel = 0
@@ -140,6 +144,8 @@ void WiFiManager::keepWiFiAlive(void *pvParameters){
         for (uint8_t i=0; i<l_pThis->_networks.size(); i++) {
           for (uint8_t j=0; j<res; j++) {
             if (l_pThis->_networks[i].ssid.equals( WiFi.SSID(j) )) {
+              WiFi.disconnect();
+              vTaskDelay(1);
               Log.noticeln("[WIFI] Match: %s", WiFi.SSID(j));
               Log.noticeln("[WIFI] Connecting with password: %s", l_pThis->_networks[i].password.c_str());
               WiFi.begin(l_pThis->_networks[i].ssid.c_str(), l_pThis->_networks[i].password.c_str());
@@ -177,7 +183,7 @@ void WiFiManager::keepWiFiAlive(void *pvParameters){
       Serial.println("[WIFI] waiting for connection");
       while (WiFi.status() != WL_CONNECTED &&
       millis() < WIFI_TIMEOUT_MS + startAttemptTime){
-        vTaskDelay(1);
+        vTaskDelay(10);
       }
 
       if (WiFi.status() != WL_CONNECTED) {

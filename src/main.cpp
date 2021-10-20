@@ -39,6 +39,7 @@ Steps to setup a new device:
 #include "SPIFFS.h"
 #include <AsyncTCP.h>
 #include <ESPmDNS.h>
+#include <SPI.h>
 
 #ifdef INC_WEB_SERVER
 #include <ESPAsyncWebServer.h>
@@ -312,7 +313,7 @@ void setup() {
     dem->callStackPush(cse);
   }
 
-
+  WiFi.disconnect();
 
   WiFi.mode(WIFI_AP_STA);
 
@@ -327,11 +328,10 @@ void setup() {
   WiFi.softAP(hostname.c_str());
 
   // speculative... on the off chance we have valid stored credentials
-  WiFi.begin();
+  //WiFi.begin();
 
   // load WIFI Configuration
   wifiManager.loadConfiguration();
-
   wifiManager.start();
 
   OTAMgr.onEvent = handleOTAEVent;
