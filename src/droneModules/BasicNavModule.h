@@ -41,8 +41,6 @@ public:
 
   void onParamWrite(DRONE_PARAM_ENTRY *param);
 
-  void loadConfiguration(JsonObject &obj);
-
   void handleLinkMessage(DroneLinkMsg *msg);
 
   void setup();

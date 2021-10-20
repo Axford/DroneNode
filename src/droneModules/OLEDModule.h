@@ -67,8 +67,6 @@ public:
 
   void handleLinkMessage(DroneLinkMsg *msg);
 
-  void loadConfiguration(JsonObject &obj);
-
   void publishEntry(uint8_t i);
 
   virtual void loop();

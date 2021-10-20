@@ -23,7 +23,7 @@ ServoModule::ServoModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* 
 }
 
 
-
+/*
 void ServoModule::loadConfiguration(JsonObject &obj) {
   DroneModule::loadConfiguration(obj);
 
@@ -42,6 +42,7 @@ void ServoModule::loadConfiguration(JsonObject &obj) {
   //TODO: fix
   //DroneModule::parsePins(obj, _pins, (uint8_t)sizeof(_pins));
 }
+*/
 
 
 void ServoModule::setup() {
@@ -72,7 +73,7 @@ void ServoModule::loop() {
 
 void ServoModule::update() {
   if (!_setupDone) return;
-  
+
   float v = _subs[SERVO_SUB_POSITION_E].param.data.f[0];
   // limit range
   if (v > 1) v = 1;

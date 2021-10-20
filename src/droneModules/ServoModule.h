@@ -28,8 +28,6 @@ public:
 
   ServoModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm, DroneExecutionManager* dem);
 
-  void loadConfiguration(JsonObject &obj);
-
   virtual void setup();
   virtual void loop();
 

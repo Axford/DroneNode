@@ -19,7 +19,7 @@ Steps to setup a new device:
 
 */
 
-#define CONFIG_ARDUINO_LOOP_STACK_SIZE 16384
+//#define CONFIG_ARDUINO_LOOP_STACK_SIZE 16384
 
 // arduino core
 #include <functional>

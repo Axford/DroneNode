@@ -108,11 +108,6 @@ void INA219Module::doReset() {
 }
 
 
-void INA219Module::loadConfiguration(JsonObject &obj) {
-  I2CBaseModule::loadConfiguration(obj);
-}
-
-
 void INA219Module::setup() {
   I2CBaseModule::setup();
   // instantiate sensor object, now _params[I2CBASE_PARAM_ADDR_E].data.uint8[0] is known

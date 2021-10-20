@@ -192,8 +192,6 @@ public:
 
   void handleLinkMessage(DroneLinkMsg *msg);
 
-  //void loadConfiguration(JsonObject &obj);
-
   void setup();
 
   CONTROLLER_PARAM_INFO* getParamInfo(CONTROLLER_CHANNEL_INFO *channel, uint8_t param);

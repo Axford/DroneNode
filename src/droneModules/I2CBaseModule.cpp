@@ -39,10 +39,6 @@ void I2CBaseModule::registerParams(DEM_NAMESPACE* ns, DroneExecutionManager *dem
   dem->registerCommand(ns, STRING_ADDR, DRONE_LINK_MSG_TYPE_UINT8_T, ph);
 }
 
-void I2CBaseModule::loadConfiguration(JsonObject &obj) {
-  DroneModule::loadConfiguration(obj);
-}
-
 
 void I2CBaseModule::doReset() {
   if (!_setupDone) return;

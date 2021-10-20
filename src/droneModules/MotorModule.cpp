@@ -74,11 +74,6 @@ void MotorModule::registerParams(DEM_NAMESPACE* ns, DroneExecutionManager *dem) 
 }
 
 
-void MotorModule::loadConfiguration(JsonObject &obj) {
-  DroneModule::loadConfiguration(obj);
-}
-
-
 void MotorModule::setup() {
   DroneModule::setup();
 

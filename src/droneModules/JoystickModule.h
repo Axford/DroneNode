@@ -47,9 +47,8 @@ public:
 
   void doReset();
 
-  //void loadConfiguration(JsonObject &obj);
   void setup();
-  
+
   void loop();
 };
 

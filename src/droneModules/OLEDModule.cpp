@@ -144,14 +144,14 @@ void OLEDModule::handleLinkMessage(DroneLinkMsg *msg) {
   DroneModule::handleLinkMessage(msg);
 }
 
-
+/*
 void OLEDModule::loadConfiguration(JsonObject &obj) {
   I2CBaseModule::loadConfiguration(obj);
 
   // instantiate sensor object, now _params[I2CBASE_PARAM_ADDR_E].data.uint8[0] is known
   _display = new SSD1306Wire(_params[I2CBASE_PARAM_ADDR_E].data.uint8[0], SDA, SCL);
 }
-
+*/
 
 void OLEDModule::loop() {
   I2CBaseModule::loop();

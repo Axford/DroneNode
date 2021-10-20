@@ -53,8 +53,6 @@ public:
 
   TelemetryModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm, DroneExecutionManager* dem);
 
-  void loadConfiguration(JsonObject &obj);
-
   virtual void handleLinkMessage(DroneLinkMsg *msg);
 
   virtual void setup();

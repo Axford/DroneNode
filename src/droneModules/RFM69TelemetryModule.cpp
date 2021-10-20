@@ -49,10 +49,6 @@ void RFM69TelemetryModule::registerParams(DEM_NAMESPACE* ns, DroneExecutionManag
 }
 
 
-void RFM69TelemetryModule::loadConfiguration(JsonObject &obj) {
-  DroneModule::loadConfiguration(obj);
-
-}
 
 void RFM69TelemetryModule::handleLinkMessage(DroneLinkMsg *msg) {
   DroneModule::handleLinkMessage(msg);

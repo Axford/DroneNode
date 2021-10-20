@@ -21,7 +21,7 @@ Manages a I2CBASE I2C power monitor
 // class
 class I2CBaseModule:  public DroneModule {
 protected:
-  
+
 public:
 
   I2CBaseModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm, DroneExecutionManager* dem);
@@ -31,8 +31,6 @@ public:
   static void registerParams(DEM_NAMESPACE* ns, DroneExecutionManager *dem);
 
   //virtual void onParamWrite(DRONE_PARAM_ENTRY *param);
-
-  virtual void loadConfiguration(JsonObject &obj);
 
   virtual void doReset();
   virtual boolean isAlive();

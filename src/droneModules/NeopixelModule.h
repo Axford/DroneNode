@@ -96,8 +96,6 @@ public:
 
   void initScene(NEOPIXEL_SCENE *scene);
 
-  void loadConfiguration(JsonObject &obj);
-
   void disable();
 
   virtual void setup();

@@ -53,7 +53,7 @@ void NunchuckJoystick::doReset() {
 }
 
 
-
+/*
 void NunchuckJoystick::loadConfiguration(JsonObject &obj) {
 
   I2CBaseModule::loadConfiguration(obj);
@@ -77,6 +77,7 @@ void NunchuckJoystick::loadConfiguration(JsonObject &obj) {
     }
   }
 }
+*/
 
 void NunchuckJoystick::setup() {
   I2CBaseModule::setup();

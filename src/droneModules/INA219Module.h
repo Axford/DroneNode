@@ -56,8 +56,6 @@ public:
 
   void doReset();
 
-  void loadConfiguration(JsonObject &obj);
-
   void publishEntry(uint8_t i);
 
   void setup();

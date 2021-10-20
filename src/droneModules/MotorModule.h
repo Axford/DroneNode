@@ -42,7 +42,7 @@ static const char MOTOR_STR_MOTOR[] PROGMEM = "Motor";
 
 class MotorModule:  public DroneModule {
 protected:
-  
+
 public:
 
   MotorModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm, DroneExecutionManager* dem);
@@ -50,8 +50,6 @@ public:
   static DEM_NAMESPACE* registerNamespace(DroneExecutionManager *dem);
   static void registerParams(DEM_NAMESPACE* ns, DroneExecutionManager *dem);
 
-
-  void loadConfiguration(JsonObject &obj);
 
   virtual void setup();
 

@@ -59,7 +59,7 @@ void BasicNavModule::onParamWrite(DRONE_PARAM_ENTRY *param) {
   }
 }
 
-
+/*
 void BasicNavModule::loadConfiguration(JsonObject &obj) {
   DroneModule::loadConfiguration(obj);
 
@@ -98,7 +98,7 @@ void BasicNavModule::handleLinkMessage(DroneLinkMsg *msg) {
     }
   }
 }
-
+*/
 
 void BasicNavModule::setup() {
   DroneModule::setup();

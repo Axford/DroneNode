@@ -49,9 +49,6 @@ void UDPTelemetryModule::registerParams(DEM_NAMESPACE* ns, DroneExecutionManager
   dem->registerCommand(ns, STRING_BROADCAST, DRONE_LINK_MSG_TYPE_UINT8_T, ph);
 }
 
-void UDPTelemetryModule::loadConfiguration(JsonObject &obj) {
-  DroneModule::loadConfiguration(obj);
-}
 
 void UDPTelemetryModule::handleLinkMessage(DroneLinkMsg *msg) {
   DroneModule::handleLinkMessage(msg);

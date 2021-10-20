@@ -82,28 +82,6 @@ void JoystickModule::doReset() {
 }
 
 
-/*
-void JoystickModule::loadConfiguration(JsonObject &obj) {
-  I2CBaseModule::loadConfiguration(obj);
-
-  // load inversion settings
-  if (obj.containsKey(STRING_INVERT)) {
-    Log.noticeln(STRING_INVERT);
-
-    if (obj[STRING_INVERT].is<JsonArray>()) {
-      JsonArray array = obj[STRING_INVERT].as<JsonArray>();
-
-      uint8_t i = 0;
-      for(JsonVariant v : array) {
-        if (i<JOYSTICK_AXES) {
-          _invert[i] = v | _invert[i];
-        }
-        i++;
-      }
-    }
-  }
-}*/
-
 void JoystickModule::setup() {
   I2CBaseModule::setup();
 

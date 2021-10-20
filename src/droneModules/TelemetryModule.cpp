@@ -17,6 +17,7 @@ TelemetryModule::TelemetryModule(uint8_t id, DroneModuleManager* dmm, DroneLinkM
    strncpy_P(_mgmtParams[DRONE_MODULE_PARAM_TYPE_E].data.c, TELEMETRY_STR_TELEMETRY, sizeof(TELEMETRY_STR_TELEMETRY));
 }
 
+/*
 void TelemetryModule::loadConfiguration(JsonObject &obj) {
   DroneModule::loadConfiguration(obj);
 
@@ -29,6 +30,7 @@ void TelemetryModule::loadConfiguration(JsonObject &obj) {
 
   _baud = obj[STRING_BAUD] | _baud;
 }
+*/
 
 void TelemetryModule::handleLinkMessage(DroneLinkMsg *msg) {
   DroneModule::handleLinkMessage(msg);
