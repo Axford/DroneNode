@@ -8,6 +8,7 @@ UDPTelemetryModule::UDPTelemetryModule(uint8_t id, DroneModuleManager* dmm, Dron
  {
    setTypeName(FPSTR(UDP_TELEMETRY_STR_UDP_TELEMETRY));
    _receivedSize = 0;
+   _started = false;
 
    // pubs
    initParams(UDP_PARAM_ENTRIES);
@@ -55,7 +56,7 @@ void UDPTelemetryModule::loadConfiguration(JsonObject &obj) {
 void UDPTelemetryModule::handleLinkMessage(DroneLinkMsg *msg) {
   DroneModule::handleLinkMessage(msg);
 
-  if (!_enabled || !_setupDone) return;
+  if (!_enabled || !_setupDone || !_started) return;
 
   // check to see if this is the same as the last message we received!
   // if so, we're getting stuck in a loop and the message should be ignored
@@ -97,24 +98,34 @@ void UDPTelemetryModule::handleLinkMessage(DroneLinkMsg *msg) {
 
 void UDPTelemetryModule::setup() {
   DroneModule::setup();
-  _udp.begin(_params[UDP_PARAM_PORT_E].data.uint32[0]);
+
+  //setup deferred
 }
 
 void UDPTelemetryModule::loop() {
   DroneModule::loop();
 
-  int packetSize = _udp.parsePacket();
-  if (packetSize > 0 && packetSize <= sizeof(DRONE_LINK_MSG)) {
-    //Log.noticeln("UDP <- ");
-    int len = _udp.read((uint8_t*)&_receivedMsg._msg, sizeof(DRONE_LINK_MSG));
-    if (len >= sizeof(DRONE_LINK_ADDR) + 2) {
-      //_receivedMsg.print();
-      _dlm->publishPeer(_receivedMsg, 0, _id);
+  // deferred initialisation to allow for lack of wifi at start
+  if (!_started && WiFi.status() == WL_CONNECTED) {
+    Serial.println("[UDP.l] .begin");
+    _udp.begin(_params[UDP_PARAM_PORT_E].data.uint32[0]);
+    _started = true;
+  }
+
+  if (_started) {
+    int packetSize = _udp.parsePacket();
+    if (packetSize > 0 && packetSize <= sizeof(DRONE_LINK_MSG)) {
+      //Log.noticeln("UDP <- ");
+      int len = _udp.read((uint8_t*)&_receivedMsg._msg, sizeof(DRONE_LINK_MSG));
+      if (len >= sizeof(DRONE_LINK_ADDR) + 2) {
+        //_receivedMsg.print();
+        _dlm->publishPeer(_receivedMsg, 0, _id);
+      } else if (packetSize > 0) {
+        // error - packet size mismatch
+        Log.errorln(F("UDPT: Packet size mismatch"));
+      }
     } else if (packetSize > 0) {
-      // error - packet size mismatch
-      Log.errorln(F("UDPT: Packet size mismatch"));
+      Log.noticeln("UDP Rec bytes: %d", packetSize);
     }
-  } else if (packetSize > 0) {
-    Log.noticeln("UDP Rec bytes: %d", packetSize);
   }
 }

@@ -185,6 +185,9 @@ public:
     // execute next instruction
     void execute();
 
+    // interrupt whatever we're doing by running a macro
+    void runMacro(const char * macroName, boolean calledFromMacro);
+
     void serveMacroInfo(AsyncWebServerRequest *request);
     void serveCommandInfo(AsyncWebServerRequest *request);
     void serveExecutionInfo(AsyncWebServerRequest *request);

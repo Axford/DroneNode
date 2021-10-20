@@ -16,7 +16,6 @@ Management.new 1
   .publish "build"
   .publish "IP"
   .publish "uptime"
-  .publish "macro"
 .done
 
 UDPTelemetry.new 2
@@ -91,7 +90,7 @@ Nav.new 7
 
 TurnRate.new 8
   name "TurnRate"
-  PID (f) 0.01 0 0
+  PID (f) 0.005 0 0
   interval 50
   $target [@>7.8]
   $heading [@>6.11]
@@ -120,7 +119,7 @@ Motor.new 11
   interval 50
   pins OUT0_0 OUT0_1 DAC0_0
   PWMChannel 15
-  limits -0.7 0.7
+  limits -1 1
   deadband 0.3
   $speed [@>10.8]
 
@@ -133,7 +132,7 @@ Motor.new 12
   interval 50
   pins OUT1_1 OUT1_0 DAC0_1
   PWMChannel 14
-  limits -0.7 0.7
+  limits -1 1
   deadband 0.3
   $speed [@>10.9]
 

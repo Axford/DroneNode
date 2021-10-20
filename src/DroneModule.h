@@ -20,7 +20,6 @@ things that would be useful for all modules
 
 #include "Arduino.h"
 #include "DroneLinkMsg.h"
-#include "ArduinoJson.h"
 #include <ArduinoLog.h>
 #include "DroneExecutionManager.h"
 #include "strings.h"
@@ -148,9 +147,6 @@ public:
   virtual void onOTAProgress(float progress);
 
   virtual boolean isAlive();  // polled by watchdog, return true if everything ok
-
-  //virtual void parsePins(JsonObject &obj, uint8_t *pins, uint8_t numPins);
-  virtual void loadConfiguration(JsonObject &obj);
 
   boolean publishParamEntry(DRONE_PARAM_ENTRY *param);
   boolean publishMgmtParamEntries();

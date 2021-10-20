@@ -221,14 +221,14 @@ void HMC5883LModule::loop() {
 
   _params[HMC5883L_PARAM_HEADING_E].data.f[0] = headingDegrees;
 
-
+/*
   Serial.print("Mag: ");
   Serial.print(_params[HMC5883L_PARAM_VECTOR_E].data.f[0]);
   Serial.print(", ");
   Serial.print(_params[HMC5883L_PARAM_VECTOR_E].data.f[1]);
   Serial.print(" = ");
   Serial.println(heading);
-
+*/
 
   // error check
   /*

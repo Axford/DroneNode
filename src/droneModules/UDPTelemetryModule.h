@@ -44,7 +44,7 @@ protected:
   DroneLinkMsg _receivedMsg;
 
   uint8_t _receivedSize;
-
+  boolean _started;
 public:
 
   UDPTelemetryModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm, DroneExecutionManager* dem);

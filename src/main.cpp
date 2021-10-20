@@ -19,6 +19,8 @@ Steps to setup a new device:
 
 */
 
+#define CONFIG_ARDUINO_LOOP_STACK_SIZE 16384
+
 // arduino core
 #include <functional>
 #include <Arduino.h>
@@ -39,7 +41,6 @@ Steps to setup a new device:
 #include "SPIFFS.h"
 #include <AsyncTCP.h>
 #include <ESPmDNS.h>
-#include <SPI.h>
 
 #ifdef INC_WEB_SERVER
 #include <ESPAsyncWebServer.h>
@@ -315,6 +316,7 @@ void setup() {
 
   WiFi.disconnect();
 
+
   WiFi.mode(WIFI_AP_STA);
 
   uint8_t mac[6];
@@ -326,9 +328,6 @@ void setup() {
 
   //WiFi.softAP(dmm->hostname().c_str());
   WiFi.softAP(hostname.c_str());
-
-  // speculative... on the off chance we have valid stored credentials
-  //WiFi.begin();
 
   // load WIFI Configuration
   wifiManager.loadConfiguration();
@@ -351,6 +350,7 @@ void setup() {
   Log.begin(LOG_LEVEL_VERBOSE, &Serial);
 
   // start core task
+  /*
   xTaskCreatePinnedToCore(
     coreTask,        //Function to implement the task
     "coreTask",            //Name of the task
@@ -359,7 +359,7 @@ void setup() {
     2,           //Priority of the task
     &_coreTask,                 //Task handle.
     1);              //Core where the task should run
-
+*/
 
   //digitalWrite(PIN_LED, LOW);
 }
@@ -368,11 +368,56 @@ void setup() {
 long loopTime;
 long testTimer;
 uint8_t modid;
+char serialCommand[30];
+uint8_t serialCommandLen = 0;
 
 void loop() {
   loopTime = millis();
 
   digitalWrite(PIN_LED, (WiFi.status() != WL_CONNECTED));
+
+  // serial command interface
+  if (Serial.available()) {
+    char c = Serial.read();
+    Serial.print(c);
+
+    if (c == '\n' || c == '\r') {
+      // null terminate
+      serialCommand[serialCommandLen] = 0;
+      Serial.print("Executing: ");
+      Serial.println(serialCommand);
+      if (strcmp(serialCommand, "execute")==0) {
+        Serial.println("restarting");
+        dem->setBootStatus(DEM_BOOT_SUCCESS);
+        dmm->restart();
+      }
+
+    } else {
+      serialCommand[serialCommandLen] = c;
+      if (serialCommandLen < 29 ) serialCommandLen++;
+    }
+  }
+
+  if (!OTAMgr.isUpdating) {
+    dmm->watchdog();
+
+    yield();
+
+    //Log.noticeln("[] lM");
+    dmm->loopModules();
+
+    yield();
+
+    //Log.noticeln("[] pC");
+    dlm->processChannels();
+
+    yield();
+
+    //Log.noticeln("[] e");
+    dem->execute();
+  } else {
+    digitalWrite(PIN_LED, HIGH);
+  }
 
   OTAMgr.loop();
 }

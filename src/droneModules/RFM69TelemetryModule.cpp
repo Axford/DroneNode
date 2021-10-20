@@ -4,6 +4,7 @@
 #include "WiFi.h"
 #include "../pinConfig.h"
 #include "strings.h"
+
 //#include "RFM69registers.h"
 
 RFM69TelemetryModule::RFM69TelemetryModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm, DroneExecutionManager* dem):
@@ -91,13 +92,13 @@ void RFM69TelemetryModule::handleLinkMessage(DroneLinkMsg *msg) {
   //Log.noticeln("[RFM.hLM] c");
 
   if (sendPacket) {
-    Serial.print("[RFM69.hLM] ");
-    msg->print();
+    //Serial.print("[RFM69.hLM] ");
+    //msg->print();
 
     // TODO - is this length right????
     uint8_t transmitLength = msg->length() + sizeof(DRONE_LINK_ADDR) + 2 + 1;
 
-    memcpy(_buffer + 1, &msg->_msg, transmitLength-1);
+    memcpy(_buffer + 1, &msg->_msg, transmitLength-2);
     _buffer[0] = RFM69_START_OF_FRAME; // ensure this is set, given we reuse the buffer
     _buffer[transmitLength-1] = _CRC8.smbus(_buffer + 1, msg->length() + sizeof(DRONE_LINK_ADDR)+1);
 
@@ -105,8 +106,8 @@ void RFM69TelemetryModule::handleLinkMessage(DroneLinkMsg *msg) {
 
     //_radio->send(255, (uint8_t*)_buffer, transmitLength);
     _radio->send(_buffer, transmitLength);
-    //_radio->waitPacketSent();
-    Serial.print("[RFM69.hLM] ok");
+    _radio->waitPacketSent(100);
+    //Serial.println("[RFM69.hLM] ok");
   } else {
     //Serial.print("RFM69: Filtered: ");
     //msg->print();
@@ -122,11 +123,10 @@ void RFM69TelemetryModule::setup() {
   //pinMode(PIN_IN0_0, INPUT);
 
   if (!_radio) {
-    _radio = new RH_RF69(PIN_SD_6, PIN_IN0_0);   // CS, INT
+    _spi.setPins(19, 23, 18);  // MISO, MOSI, CLK
+    _radio = new RH_RF69(PIN_SD_6, PIN_IN0_0, _spi);   // CS, INT
   }
 
-
-  //_radio->setIrq(PIN_IN0_0);
   if (!_radio->init()) {
     Log.errorln(F("Failed to init RFM69 radio"));
     setError(1);
@@ -139,9 +139,6 @@ void RFM69TelemetryModule::setup() {
     _radio->setTxPower(14, true);
     //_radio->spyMode(true);
     _radio->setEncryptionKey(_encryptKey);
-
-    // enable whitening
-    // ????
 
     Log.noticeln(F("RFM69 initialised"));
   }
@@ -165,6 +162,15 @@ void RFM69TelemetryModule::loop() {
         // calc CRC on what we received
         uint8_t crc = _CRC8.smbus((uint8_t*)&_receivedMsg._msg, _receivedMsg.length() + sizeof(DRONE_LINK_ADDR)+1);
 
+        /*
+        Serial.print("[RFM.l] recevied: ");  Serial.println(len);
+        for (uint8_t i=0; i<len; i++) {
+          Serial.print(_buffer[i], HEX);
+          Serial.print(" ");
+        }
+        Serial.println("");
+        */
+
         // valid packet if CRC match and decoded length matches
         if ( (crc == _buffer[len-1])  &&
              (len == _receivedMsg.length() + sizeof(DRONE_LINK_ADDR) + 3) ){
@@ -172,7 +178,7 @@ void RFM69TelemetryModule::loop() {
           // valid packet
           _packetsReceived++;
 
-          //Serial.print("RFM69 Receveived: ");
+          //Serial.print("[RFM.l]: ");
           //_receivedMsg.print();
           int16_t RSSI = -_radio->lastRssi();
 

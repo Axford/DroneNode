@@ -902,6 +902,10 @@ boolean DroneExecutionManager::compileLine(const char * line, DEM_INSTRUCTION_CO
         instr->msg.param = _instruction.addr.param;
         uint8_t byteLen = DRONE_LINK_MSG_TYPE_SIZES[_instruction.dataType] * _instruction.numTokens;
         instr->msg.payload.c[0] = 0; // safety
+        // zero all bytes in instr first (to null term strings in particular)
+        for(uint8_t i=0; i<DRONE_LINK_MSG_MAX_PAYLOAD; i++) {
+          instr->msg.payload.uint8[i] = 0;
+        }
         if (byteLen <= DRONE_LINK_MSG_MAX_PAYLOAD) {
           instr->msg.paramTypeLength = DRONE_LINK_MSG_WRITABLE | ((_instruction.dataType & 0x7) << 4) | (byteLen-1);
           for(uint8_t i=0; i<_instruction.numTokens; i++) {
@@ -999,6 +1003,25 @@ void DroneExecutionManager::execute() {
     }
   }
   //Log.noticeln(F("[DEM.e] end"));
+}
+
+
+void DroneExecutionManager::runMacro(const char * macroName, boolean calledFromMacro) {
+  DEM_CALLSTACK_ENTRY cse;
+  cse.i= calledFromMacro ? -1 : 0;
+  cse.macro = getMacro(macroName);
+  cse.continuation = false;
+  if (cse.macro != NULL) {
+    Log.noticeln(F("[.r] Executing macro %s\n"), macroName);
+    if (cse.macro->commands->size() > 0) {
+      callStackPush(cse);
+    } else {
+      Log.errorln(F("[.r] Macro has no compiled commands"));
+    }
+
+  } else {
+    Log.errorln(F("[.r] Unknown macro %s"), macroName);
+  }
 }
 
 
@@ -1239,21 +1262,7 @@ boolean DroneExecutionManager::core_run(DEM_INSTRUCTION_COMPILED* instr, DEM_CAL
   buffer[len] = 0;
 
   if (len > 1) {
-    DEM_CALLSTACK_ENTRY cse;
-    cse.i=-1; // so we start at 0 once pointer auto-incremented
-    cse.macro = getMacro(buffer);
-    cse.continuation = false;
-    if (cse.macro != NULL) {
-      Log.noticeln(F("[.r] Executing macro %s\n"), buffer);
-      if (cse.macro->commands->size() > 0) {
-        callStackPush(cse);
-      } else {
-        Log.errorln(F("[.r] Macro has no compiled commands"));
-      }
-
-    } else {
-      Log.errorln(F("[.r] Unknown macro %s"), instr->msg.payload.c);
-    }
+    runMacro(buffer, true);
   }
   return true;
 }

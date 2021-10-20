@@ -20,6 +20,8 @@ display.begin(SSD1306_SWITCHCAPVCC, 0x3C)
 
 #define CONTROLLER_OLED_I2C_ADDRESS  0x3c
 
+#define CONTROLLER_ARM_BUTTON  PIN_OUT0_0
+
 // pubs
 
 
@@ -157,6 +159,8 @@ protected:
   float _cellVoltage;  // cell battery voltage measured from INA219
   float _batteryCapacity; // 0..1 as approx battery %
 
+  boolean _armed;  // true if we are sending control data and overriding local navigation
+
   // track modules for binding
   boolean _channelInfoChanged;
   unsigned long _lastDiscovery;
@@ -182,6 +186,9 @@ public:
   void doReset();
 
   void doShutdown();
+
+  void arm();
+  void disarm();
 
   void handleLinkMessage(DroneLinkMsg *msg);
 

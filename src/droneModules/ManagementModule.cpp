@@ -74,6 +74,12 @@ ManagementModule::ManagementModule(uint8_t id, DroneModuleManager* dmm, DroneLin
    _params[MANAGEMENT_PARAM_DISCOVERY_E].nameLen = sizeof(STRING_DISCOVERY);
    _params[MANAGEMENT_PARAM_DISCOVERY_E].paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_UINT8_T, 1);
    _params[MANAGEMENT_PARAM_DISCOVERY_E].data.uint8[0] = _dmm->discovery() ? 1 : 0;
+
+   _params[MANAGEMENT_PARAM_MACRO_E].param = MANAGEMENT_PARAM_MACRO;
+   _params[MANAGEMENT_PARAM_MACRO_E].name = FPSTR(STRING_MACRO);
+   _params[MANAGEMENT_PARAM_MACRO_E].nameLen = sizeof(STRING_MACRO);
+   _params[MANAGEMENT_PARAM_MACRO_E].paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_CHAR, 1);
+   _params[MANAGEMENT_PARAM_MACRO_E].data.c[0] = 0;
 }
 
 DEM_NAMESPACE* ManagementModule::registerNamespace(DroneExecutionManager *dem) {
@@ -109,6 +115,15 @@ void ManagementModule::onParamWrite(DRONE_PARAM_ENTRY *param) {
     // update discovery state
     Log.noticeln("Changing discovery mode to: %u", _params[MANAGEMENT_PARAM_DISCOVERY_E].data.uint8[0]);
     _dmm->discovery( _params[MANAGEMENT_PARAM_DISCOVERY_E].data.uint8[0] > 0 );
+  }
+
+  if (param->param == MANAGEMENT_PARAM_MACRO) {
+    // attempt to execute the macro requested
+    // null terminate to be safe
+    uint8_t len = min(DRONE_LINK_MSG_MAX_PAYLOAD-1, (_params[MANAGEMENT_PARAM_MACRO_E].paramTypeLength & 0xF) + 1   );
+    _params[MANAGEMENT_PARAM_MACRO_E].data.c[len] = 0;
+    Log.noticeln(F("[MM.oPW] macro... "));
+    _dem->runMacro(_params[MANAGEMENT_PARAM_MACRO_E].data.c, false);
   }
 }
 

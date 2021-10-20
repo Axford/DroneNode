@@ -150,9 +150,10 @@ void INA219Module::loop() {
   // calculate cell voltage
   tempf = _params[INA219_PARAM_LOADV_E].data.f[0] / _params[INA219_PARAM_CELLS_E].data.uint8[0];
   updateAndPublishParam(&_params[INA219_PARAM_CELLV_E], (uint8_t*)&tempf, sizeof(tempf));
+  /*
   Serial.print("loadV: ");
   Serial.println(tempf);
-
+*/
   // check voltage vs threshold and set alarm
   uint8_t temp8 = (_params[INA219_PARAM_LOADV_E].data.f[0] < _params[INA219_PARAM_THRESHOLD_E].data.f[0]) ? 1 : 0;
   updateAndPublishParam(&_params[INA219_PARAM_ALARM_E], (uint8_t*)&temp8, sizeof(temp8));

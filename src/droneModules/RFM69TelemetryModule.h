@@ -15,6 +15,7 @@ Handles packet framing, sync, etc
 #include <SPI.h>
 #include <RH_RF69.h>
 //#include <RFM69.h>
+#include <RHSoftwareSPI.h>
 
 #include <FastCRC.h>
 /*
@@ -42,11 +43,12 @@ static const char RFM69_TELEMETRY_STR_RFM69_TELEMETRY[] PROGMEM = "RFM69Telemetr
 class RFM69TelemetryModule:  public DroneModule {
 protected:
   RH_RF69 *_radio;
+  RHSoftwareSPI _spi;
   DroneLinkMsg _receivedMsg;
   uint32_t _packetsReceived;
   uint32_t _packetsRejected;
   FastCRC8 _CRC8;
-  uint8_t _encryptKey[8];
+  uint8_t _encryptKey[16];
   uint8_t _buffer[RH_RF69_MAX_MESSAGE_LEN];
 public:
 

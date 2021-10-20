@@ -24,6 +24,7 @@ TODO:
 #define MANAGEMENT_PARAM_PUBLISHRATE   14 // rate of messages published per second
 #define MANAGEMENT_PARAM_CHOKED        15 // number of times a channel queue has choked (rejected a msg becuse full)
 #define MANAGEMENT_PARAM_DISCOVERY     16 // enable/disable node discovery
+#define MANAGEMENT_PARAM_MACRO         17 // run a macro
 
 #define MANAGEMENT_PARAM_HOSTNAME_E     0
 #define MANAGEMENT_PARAM_BUILD_E        1
@@ -34,8 +35,9 @@ TODO:
 #define MANAGEMENT_PARAM_PUBLISHRATE_E  6
 #define MANAGEMENT_PARAM_CHOKED_E       7
 #define MANAGEMENT_PARAM_DISCOVERY_E    8
+#define MANAGEMENT_PARAM_MACRO_E        9
 
-#define MANAGEMENT_PARAM_ENTRIES        9
+#define MANAGEMENT_PARAM_ENTRIES        10
 
 
 // strings

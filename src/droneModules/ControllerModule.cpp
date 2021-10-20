@@ -175,7 +175,9 @@ void ControllerModule::clear() {
     _info[i].param(255);
     _info[i].length(1);
     _info[i].type(DRONE_LINK_MSG_TYPE_CHAR);
-    _info[i].setUint8_t('?');
+    _info[i]._msg.payload.c[0] = '?';
+    for (uint8_t j=1; j<DRONE_LINK_MSG_MAX_PAYLOAD; j++)
+      _info[i]._msg.payload.c[j] = 0;
     _infoLabels[i] = "";
   }
 
@@ -232,6 +234,38 @@ void ControllerModule::doShutdown() {
   }
 }
 
+void ControllerModule::arm() {
+  // attempt to run the arm script on the bound node
+  if (_isBound) {
+    Serial.println("[CM.a] Arming...");
+    _sendMsg.node(_binding);
+    _sendMsg.channel(1); // mgmt
+    _sendMsg.param(17); // macro
+    strcpy(_sendMsg._msg.payload.c, "/arm.txt");
+    _sendMsg.length(8);
+    _sendMsg.type(DRONE_LINK_MSG_TYPE_CHAR);
+    _dlm->publish(_sendMsg);
+  }
+  _armed = true;
+}
+
+
+void ControllerModule::disarm() {
+  // attempt to run the disarm script on the bound node
+  if (_isBound) {
+    Serial.println("[CM.d] Disarming...");
+    _sendMsg.node(_binding);
+    _sendMsg.channel(1); // mgmt
+    _sendMsg.param(17); // macro
+    strcpy(_sendMsg._msg.payload.c, "/disarm.txt");
+    _sendMsg.length(11);
+    _sendMsg.type(DRONE_LINK_MSG_TYPE_CHAR);
+    _dlm->publish(_sendMsg);
+  }
+  _armed = false;
+}
+
+
 CONTROLLER_PARAM_INFO* ControllerModule::getParamInfo(CONTROLLER_CHANNEL_INFO *channel, uint8_t param) {
   // find param
   for (uint8_t i = 0; i<channel->params->size(); i++) {
@@ -254,51 +288,56 @@ CONTROLLER_CHANNEL_INFO* ControllerModule::getChannelInfo(uint8_t channel) {
 }
 
 void ControllerModule::handleLinkMessage(DroneLinkMsg *msg) {
-  // intercept values for joysticks
 
-  // left
-  uint8_t axis = 255;
-  if (msg->channel() == _params[CONTROLLER_PARAM_LEFT_E].data.uint8[0]) {
-    if (msg->param() >= 10 && msg->param() <= 13) {
-      if (msg->type() == DRONE_LINK_MSG_TYPE_FLOAT) {
-        axis = CONTROLLER_AXIS_LEFT_X + msg->param() - 10;
-        _axes[ axis] = msg->_msg.payload.f[0];
+  // intercept local values
+  if (msg->node() == _dlm->node()) {
+    // intercept values for joysticks
+
+    // left
+    uint8_t axis = 255;
+    if (msg->channel() == _params[CONTROLLER_PARAM_LEFT_E].data.uint8[0]) {
+      if (msg->param() >= 10 && msg->param() <= 13) {
+        if (msg->type() == DRONE_LINK_MSG_TYPE_FLOAT) {
+          axis = CONTROLLER_AXIS_LEFT_X + msg->param() - 10;
+          _axes[ axis] = msg->_msg.payload.f[0];
+        }
       }
+    }
+
+    // right
+    if (msg->channel() == _params[CONTROLLER_PARAM_RIGHT_E].data.uint8[0]) {
+      if (msg->param() >= 10 && msg->param() <= 13) {
+        if (msg->type() == DRONE_LINK_MSG_TYPE_FLOAT) {
+          axis = CONTROLLER_AXIS_RIGHT_X + msg->param() - 10;
+          _axes[ axis ] = msg->_msg.payload.f[0];
+        }
+      }
+    }
+
+    // intercept RSSI for telemetry
+    if (msg->channel() == _params[CONTROLLER_PARAM_TELEMETRY_E].data.uint8[0] &&
+        msg->param() == 8 &&
+        msg->type() == DRONE_LINK_MSG_TYPE_FLOAT) {
+      _RSSI = msg->_msg.payload.f[0];
+    }
+
+    // intercept voltage from INA219
+    if (msg->channel() == _params[CONTROLLER_PARAM_POWER_E].data.uint8[0] &&
+        msg->param() == 15 &&  // cellV
+        msg->type() == DRONE_LINK_MSG_TYPE_FLOAT) {
+      _cellVoltage = msg->_msg.payload.f[0];
+      if (_cellVoltage < 0) _cellVoltage = 0;
+      if (_cellVoltage > 100) _cellVoltage = 100;
+
+      // map into range 0..1
+      // TODO: account for nonlinearity!
+      _batteryCapacity = (_cellVoltage - LIPO_MIN_V) / (LIPO_MAX_V - LIPO_MIN_V);
+      if (_batteryCapacity > 1) _batteryCapacity = 1;
+      if (_batteryCapacity < 0) _batteryCapacity = 0;
+      //Log.noticeln("Cell V %d, capacity %d", _cellVoltage, _batteryCapacity);
     }
   }
 
-  // right
-  if (msg->channel() == _params[CONTROLLER_PARAM_RIGHT_E].data.uint8[0]) {
-    if (msg->param() >= 10 && msg->param() <= 13) {
-      if (msg->type() == DRONE_LINK_MSG_TYPE_FLOAT) {
-        axis = CONTROLLER_AXIS_RIGHT_X + msg->param() - 10;
-        _axes[ axis ] = msg->_msg.payload.f[0];
-      }
-    }
-  }
-
-  // intercept RSSI for telemetry
-  if (msg->channel() == _params[CONTROLLER_PARAM_TELEMETRY_E].data.uint8[0] &&
-      msg->param() == 8 &&
-      msg->type() == DRONE_LINK_MSG_TYPE_FLOAT) {
-    _RSSI = msg->_msg.payload.f[0];
-  }
-
-  // intercept voltage from INA219
-  if (msg->channel() == _params[CONTROLLER_PARAM_POWER_E].data.uint8[0] &&
-      msg->param() == 15 &&  // cellV
-      msg->type() == DRONE_LINK_MSG_TYPE_FLOAT) {
-    _cellVoltage = msg->_msg.payload.f[0];
-    if (_cellVoltage < 0) _cellVoltage = 0;
-    if (_cellVoltage > 100) _cellVoltage = 100;
-
-    // map into range 0..1
-    // TODO: account for nonlinearity!
-    _batteryCapacity = (_cellVoltage - LIPO_MIN_V) / (LIPO_MAX_V - LIPO_MIN_V);
-    if (_batteryCapacity > 1) _batteryCapacity = 1;
-    if (_batteryCapacity < 0) _batteryCapacity = 0;
-    //Log.noticeln("Cell V %d, capacity %d", _cellVoltage, _batteryCapacity);
-  }
 
   if (!_isBound && (msg->node() != _dlm->node())) {
     _spinner += PI / 16.0;
@@ -343,6 +382,9 @@ void ControllerModule::handleLinkMessage(DroneLinkMsg *msg) {
         _info[i]._msg.paramTypeLength = msg->_msg.paramTypeLength;
         uint8_t len = msg->length();
         memcpy(_info[i]._msg.payload.c, msg->_msg.payload.c, len);
+        if (len < DRONE_LINK_MSG_MAX_PAYLOAD) {
+          _info[i]._msg.payload.c[len] = 0;
+        }
       }
     }
 
@@ -436,29 +478,13 @@ void ControllerModule::handleLinkMessage(DroneLinkMsg *msg) {
   DroneModule::handleLinkMessage(msg);
 }
 
-/*
-void ControllerModule::loadConfiguration(JsonObject &obj) {
-  I2CBaseModule::loadConfiguration(obj);
-
-  // instantiate sensor object, now _params[I2CBASE_PARAM_ADDR_E].data.uint8[0] is known
-  DroneWire::selectChannel(_params[I2CBASE_PARAM_BUS_E].data.uint8[0]);
-
-  _display = new SSD1306Wire(_params[I2CBASE_PARAM_ADDR_E].data.uint8[0], SDA, SCL);
-
-  // read joystick channels
-  _params[CONTROLLER_PARAM_LEFT_E].data.uint8[0] = obj[STRING_LEFT] | _params[CONTROLLER_PARAM_LEFT_E].data.uint8[0];
-  _params[CONTROLLER_PARAM_RIGHT_E].data.uint8[0] = obj[STRING_RIGHT] | _params[CONTROLLER_PARAM_RIGHT_E].data.uint8[0];
-
-  // make sure we're subscribed to the joystick channels
-  _dlm->subscribe(_params[CONTROLLER_PARAM_LEFT_E].data.uint8[0], this, DRONE_LINK_PARAM_ALL);
-  _dlm->subscribe(_params[CONTROLLER_PARAM_RIGHT_E].data.uint8[0], this, DRONE_LINK_PARAM_ALL);
-  _dlm->subscribe(_params[CONTROLLER_PARAM_TELEMETRY_E].data.uint8[0], this, DRONE_LINK_PARAM_ALL);
-  _dlm->subscribe(_params[CONTROLLER_PARAM_POWER_E].data.uint8[0], this, DRONE_LINK_PARAM_ALL);
-}
-*/
 
 void ControllerModule::setup() {
   DroneModule::setup();
+
+  // arm pin setup
+  pinMode(CONTROLLER_ARM_BUTTON, INPUT_PULLUP);
+  _armed = false;
 
  _menus[CONTROLLER_MENU_ROOT].name = (F("Root"));
  _menus[CONTROLLER_MENU_ROOT].backTo = CONTROLLER_MENU_ROOT;
@@ -687,6 +713,11 @@ void ControllerModule::manageCreate(boolean syncMenu) {
     // make sure we're subscribed to the bound node and all its channels/params
     Log.noticeln("Subscribing Controller to: %u", _binding);
     _dlm->subscribe(_binding, 0, this, 0);
+    // also subscribe the UDPT module, so the server can see what's happening
+    char udpt[] = "UDPT";
+    _dlm->subscribe(_binding, 0, _dmm->getModuleByName(udpt), 0);
+    // and subscribe the RFM module so we can transmit changes to the bound node
+    _dlm->subscribe(_binding, 0, _dmm->getModuleById(_params[CONTROLLER_PARAM_TELEMETRY_E].data.uint8[0]), 0);
   }
 
   _display->setColor(WHITE);
@@ -1011,6 +1042,15 @@ void ControllerModule::loop() {
 
   DroneWire::selectChannel(_params[I2CBASE_PARAM_BUS_E].data.uint8[0]);
 
+  // see if we're armed?
+  boolean newArm = !digitalRead(CONTROLLER_ARM_BUTTON);
+  if (newArm && !_armed) {
+    // just armed
+    arm();
+  } else if (!newArm && _armed) {
+    // just disarmed
+    disarm();
+  }
 
   // do we have an active binding to send to?
   // in which case keep spamming values to allow for any packet loss
@@ -1060,6 +1100,7 @@ void ControllerModule::loop() {
   if (_axes[CONTROLLER_AXIS_LEFT_B] > 0 &&  _neutral[CONTROLLER_AXIS_LEFT_B]) {
     // left button pressed
     // go back
+    //Serial.print("Back: ");  Serial.println(_axes[CONTROLLER_AXIS_LEFT_B]);
     _menu = _menus[_menu].backTo;
     _neutral[CONTROLLER_AXIS_LEFT_B] = false;
   }
@@ -1132,8 +1173,12 @@ void ControllerModule::loop() {
   _display->fillRect(124,1,2,(10.0f * (1-_batteryCapacity)));
 
 
-  // battery indicator
-  // TODO
+  // ARM indicator
+  if (_armed) {
+    _display->setFont(ArialMT_Plain_10);
+    _display->setTextAlignment(TEXT_ALIGN_RIGHT);
+    _display->drawString(111, 1, "A");
+  }
 
   // draw menu size for debugging
   /*
