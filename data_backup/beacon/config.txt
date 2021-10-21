@@ -18,6 +18,14 @@ Management.new 1
   .publish "uptime"
 .done
 
+UDPTelemetry.new 2
+  name "UDPT"
+  status 1
+  port 8007
+  broadcast 255 255 255 255
+  .sub [@>0.0]
+.done
+
 RFM69Telemetry.new 3
   name "RFM69"
   status 1  // enable

@@ -1,0 +1,59 @@
+// simple navigation path in Plaums pit
+
+// stop motors
+.send 1>11.1 (u8) 0
+.send 1>12.1 (u8) 0
+
+// front LEDs blue
+.send 1>20.8 (u8) 50 0 0 0  0 0 255  0 0 0  0 0 0  0 0 0
+
+_Nav.goto -1.8039332444 51.575142282 100
+
+// start at the landing point
+// wait until we're at the start location as a safety feature
+.do
+  // flash LEDs RED whilst were waiting
+  .send 1>20.8 (u8) 50 0 0 0  255 0 0  255 0 0  255 0 0  255 0 0
+  .delay 1000
+  .send 1>20.8 (u8) 0 0 0 0  255 0 0  255 0 0  255 0 0  255 0 0
+  .delay 1000
+
+  _Nav.inRadius -1.8039332444 51.575142282 5
+.until
+
+// start motors
+.send 1>11.1 (u8) 1
+.send 1>12.1 (u8) 1
+
+// green
+.send 1>20.8 (u8) 50 0 0 0  0 255 0  0 255 0  0 255 0  0 255 0
+
+// head to the middle ish
+_Nav.goto -1.8041223792 51.575584888 5
+
+// purple
+.send 1>20.8 (u8) 50 0 0 0  0 255 255  0 255 255  0 255 255  0 255 255
+/*
+// top left
+_Nav.goto -1.80469436473 51.5757275179 5
+
+// purple
+.send 1>20.8 (u8) 50 1 10 5  0 255 255  0 255 255  0 255 255  0 255 255
+
+// bottom left
+_Nav.goto -1.80468363590 51.5755141493 5
+
+// purple
+.send 1>20.8 (u8) 50 0 0 0  0 255 255  0 255 255  0 255 255  0 255 255
+
+// bottom right
+_Nav.goto -1.80399967260 51.57534912133 5
+
+// purple
+.send 1>20.8 (u8) 50 1 10 5  0 255 255  0 255 255  0 255 255  0 255 255
+*/
+// and back
+_Nav.goto -1.803916422650 51.575132959 5
+
+// front white
+.send 1>20.8 (u8) 50 0 0 0  255 255 255  0 0 0  0 0 0  0 0 0
