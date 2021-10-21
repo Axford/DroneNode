@@ -19,6 +19,8 @@ Steps to setup a new device:
 
 */
 
+//#define CONFIG_ARDUINO_LOOP_STACK_SIZE 16384
+
 // arduino core
 #include <functional>
 #include <Arduino.h>
@@ -30,17 +32,25 @@ Steps to setup a new device:
 #include "DroneModule.h"
 #include "DroneModuleManager.h"
 #include "DroneWire.h"
+#include "DroneExecutionManager.h"
 
 #define INC_WEB_SERVER
-#define INC_SPIFFS_EDITOR
+//#define INC_SPIFFS_EDITOR
 
 // other libraries
-#include "SPIFFS.h"
+//#include "SPIFFS.h"
+
+#include "FS.h"
+#include <LITTLEFS.h>
+
+#define FORMAT_LITTLEFS_IF_FAILED true
+
 #include <AsyncTCP.h>
 #include <ESPmDNS.h>
 
 #ifdef INC_WEB_SERVER
 #include <ESPAsyncWebServer.h>
+#include "WebFSEditor.h"
 #endif
 
 //#include <AsyncJson.h>
@@ -63,30 +73,15 @@ WiFiManager wifiManager;
 
 #ifdef INC_WEB_SERVER
 AsyncWebServer server(80);
+WebFSEditor fsEditor(LITTLEFS);
 #endif
 
 AsyncEventSource events("/events");
 OTAManager OTAMgr(&events);
 
-DroneLinkManager dlm;
-DroneModuleManager dmm(&dlm);
-
-
-// HTML web page to handle 3 input fields (input1, input2, input3)
-/*
-const char wifi_html[] PROGMEM = R"rawliteral(
-<!DOCTYPE HTML><html><head>
-  </head><body>
-    <h1>DroneModule Wifi Settings</h1>
-  <form action="/savewifi">
-    APMode: <input type="checkbox" name="APMode"><br/>
-    SSID: <input typ e="text" name="ssid"><br/>
-    Password: <input type="text" name="password"><br/>
-    <input type="submit" value="Save">
-  </form>
-</body></html>
-)rawliteral";
-*/
+DroneLinkManager *dlm;
+DroneModuleManager *dmm;
+DroneExecutionManager *dem;
 
 const char* QUERY_PARAM_APMODE = "APMode";
 const char* QUERY_PARAM_SSID = "ssid";
@@ -101,63 +96,30 @@ void setupWebServer() {
   });
   server.addHandler(&events);
 
-  // setup wifi settings form
-  /*
-  server.on("/wifi", HTTP_GET, [](AsyncWebServerRequest *request){
-    request->send_P(200, "text/html", wifi_html);
-  });
-  */
-
-
-  // Save new wifi settings <ESP_IP>/savewifi?xxx
-  /*
-  server.on("/savewifi", HTTP_GET, [] (AsyncWebServerRequest *request) {
-
-    if (request->hasParam(QUERY_PARAM_APMODE)) {
-      APMode = (request->getParam(QUERY_PARAM_APMODE)->value() == "on");
-    } else {
-      APMode = false;
-    }
-
-    if (request->hasParam(QUERY_PARAM_SSID)) {
-      ssid = request->getParam(QUERY_PARAM_SSID)->value();
-    }
-
-    if (request->hasParam(QUERY_PARAM_PASSWORD)) {
-      password = request->getParam(QUERY_PARAM_PASSWORD)->value();
-    }
-
-    // build into new json file and save to SPIFFS
-    File file = SPIFFS.open(F("/wifi.json"), FILE_WRITE);
-    file.println("{");
-      file.print(F("\"APMode\":"));
-      file.print(APMode ? "true" : "false");
-      file.print(",\n");
-
-      file.print(F("\"ssid\":\""));
-      file.print(ssid);
-      file.print("\",\n");
-
-      file.print(F("\"password\":\""));
-      file.print(password);
-      file.print("\"\n");
-    file.println("}");
-    file.close();
-
-    request->send(200, "text/html", F("Settings saved - rebooting"));
-    ESP.restart();
-  });
-  */
-
-
   // node info debug
   server.on("/nodeInfo", HTTP_GET, [](AsyncWebServerRequest *request){
-    dlm.serveNodeInfo(request);
+    dlm->serveNodeInfo(request);
   });
 
   // channel info debug
   server.on("/channelInfo", HTTP_GET, [](AsyncWebServerRequest *request){
-    dlm.serveChannelInfo(request);
+    dlm->serveChannelInfo(request);
+  });
+
+  // modules
+  server.on("/modules", HTTP_GET, [](AsyncWebServerRequest *request){
+    dmm->serveModuleInfo(request);
+  });
+
+  // DEM handlers
+  server.on("/macros", HTTP_GET, [](AsyncWebServerRequest *request){
+    dem->serveMacroInfo(request);
+  });
+  server.on("/execution", HTTP_GET, [](AsyncWebServerRequest *request){
+    dem->serveExecutionInfo(request);
+  });
+  server.on("/commands", HTTP_GET, [](AsyncWebServerRequest *request){
+    dem->serveCommandInfo(request);
   });
 
 
@@ -165,12 +127,20 @@ void setupWebServer() {
   server.addHandler(new SPIFFSEditor(SPIFFS));
   #endif
 
+  /*
   server.onNotFound([](AsyncWebServerRequest *request){
     request->send(404);
   });
+  */
+
+  fsEditor.httpuser = "admin";
+  fsEditor.httppassword = "admin";
+  fsEditor.configureWebServer(server);
+
   DefaultHeaders::Instance().addHeader("Access-Control-Allow-Origin", "*");
 
-  server.serveStatic("/", SPIFFS, "/").setDefaultFile("index.htm");
+  //server.serveStatic("/", SPIFFS, "/").setDefaultFile("index.htm");
+  server.serveStatic("/", LITTLEFS, "/").setDefaultFile("index.htm");
 
   server.begin();
 }
@@ -179,11 +149,88 @@ void setupWebServer() {
 
 void handleOTAEVent(OTAManagerEvent event, float progress) {
   if (event == start) {
-    dmm.shutdown();
+    dmm->shutdown();
   } else if (event == progress) {
     Serial.print(F("OTA progress: "));  Serial.println(progress*100);
-    dmm.onOTAProgress(progress);
+    dmm->onOTAProgress(progress);
   }
+}
+
+TaskHandle_t _coreTask;
+
+void coreTask( void * pvParameters ) {
+  for(;;){
+    if (!OTAMgr.isUpdating) {
+      dmm->watchdog();
+
+      yield();
+
+      //Log.noticeln("[] lM");
+      dmm->loopModules();
+
+      yield();
+
+      //Log.noticeln("[] pC");
+      dlm->processChannels();
+
+      yield();
+
+      //Log.noticeln("[] e");
+      dem->execute();
+    } else {
+      digitalWrite(PIN_LED, HIGH);
+    }
+    vTaskDelay(50);
+  }
+}
+
+
+void listDir(fs::FS &fs, const char * dirname, uint8_t levels){
+    Serial.printf("Listing directory: %s\r\n", dirname);
+
+    File root = fs.open(dirname);
+    if(!root){
+        Serial.println("- failed to open directory");
+        return;
+    }
+    if(!root.isDirectory()){
+        Serial.println(" - not a directory");
+        return;
+    }
+
+    File file = root.openNextFile();
+    while(file){
+        if(file.isDirectory()){
+            Serial.print("  DIR : ");
+
+#ifdef CONFIG_LITTLEFS_FOR_IDF_3_2
+            Serial.println(file.name());
+#else
+            Serial.print(file.name());
+            time_t t= file.getLastWrite();
+            struct tm * tmstruct = localtime(&t);
+            Serial.printf("  LAST WRITE: %d-%02d-%02d %02d:%02d:%02d\n",(tmstruct->tm_year)+1900,( tmstruct->tm_mon)+1, tmstruct->tm_mday,tmstruct->tm_hour , tmstruct->tm_min, tmstruct->tm_sec);
+#endif
+
+            if(levels){
+                listDir(fs, file.name(), levels -1);
+            }
+        } else {
+            Serial.print("  FILE: ");
+            Serial.print(file.name());
+            Serial.print("  SIZE: ");
+
+#ifdef CONFIG_LITTLEFS_FOR_IDF_3_2
+            Serial.println(file.size());
+#else
+            Serial.print(file.size());
+            time_t t= file.getLastWrite();
+            struct tm * tmstruct = localtime(&t);
+            Serial.printf("  LAST WRITE: %d-%02d-%02d %02d:%02d:%02d\n",(tmstruct->tm_year)+1900,( tmstruct->tm_mon)+1, tmstruct->tm_mday,tmstruct->tm_hour , tmstruct->tm_min, tmstruct->tm_sec);
+#endif
+        }
+        file = root.openNextFile();
+    }
 }
 
 
@@ -194,10 +241,11 @@ void setup() {
   Serial.begin(115200);
   while(!Serial) {  }
 
-  delay(2500); // to allow serial to reconnect after programming
-
   Log.begin(LOG_LEVEL_VERBOSE, &Serial);
 
+  delay(2500); // to allow serial to reconnect after programming
+
+  /*
   // direct log output to file in SPIFFS
   Log.noticeln(F("[] Starting SPIFFS"));
   if (!SPIFFS.begin(true)) { // formatonfail=true
@@ -207,27 +255,101 @@ void setup() {
   Log.noticeln(F("  usedBytes %d"), SPIFFS.usedBytes());
 
   File logFile = SPIFFS.open("/startup.log", FILE_WRITE);
+  */
+
+  if(!LITTLEFS.begin(FORMAT_LITTLEFS_IF_FAILED)){
+    Log.errorln("[] LITTLEFS Mount Failed");
+    delay(1000);
+    // Should be formatted and working after a reboot
+    ESP.restart();
+  }
+
+  // list filesystem
+  listDir(LITTLEFS, "/", 0);
+
+
+  File logFile = LITTLEFS.open("/startup.log", FILE_WRITE);
 
   // switch to logging to startup.log file on spiffs
   //Log.begin(LOG_LEVEL_VERBOSE, &logFile);
   Log.noticeln(F("[] Starting..."));
+
+  DroneWire::setup();
+
+  // create core objects
+  dlm = new DroneLinkManager();
+  dmm = new DroneModuleManager(dlm);
+  dem = new DroneExecutionManager(dmm, dlm, LITTLEFS);
 
   //ESP32PWM::allocateTimer(0);
 	//ESP32PWM::allocateTimer(1);
 	ESP32PWM::allocateTimer(2);
 	ESP32PWM::allocateTimer(3);
 
-  DroneWire::setup();
+  if (dem->safeMode()) {
+    Log.warningln(F("[] Starting in SAFE mode..."));
+    // attempt to load and run safeMode script
+    // define root macro
+    DEM_MACRO * safeMode = dem->createMacro("safeMode");
+    DEM_INSTRUCTION_COMPILED instr;
+    if (dem->compileLine(PSTR("load \"/safeMode.txt\""), &instr))
+      safeMode->commands->add(instr);
+    if (dem->compileLine(PSTR("run \"/safeMode.txt\""), &instr))
+      safeMode->commands->add(instr);
 
-  dmm.loadConfiguration();
+    // prep execution of safeMode
+    DEM_CALLSTACK_ENTRY cse;
+    cse.i=0;
+    cse.macro = safeMode;
+    cse.continuation = false;
+    dem->callStackPush(cse);
+
+  } else {
+    Log.warningln(F("[] Starting in NORMAL mode..."));
+
+    // prep and run normal boot process
+    // define root macro
+    DEM_MACRO * root = dem->createMacro("root");
+    DEM_INSTRUCTION_COMPILED instr;
+    if (dem->compileLine(PSTR("load \"/config.txt\""), &instr))
+      root->commands->add(instr);
+    dem->compileLine(PSTR("run \"/config.txt\""), &instr);
+    root->commands->add(instr);
+    dem->compileLine(PSTR("load \"/main.txt\""), &instr);
+    root->commands->add(instr);
+    // now execute main
+    dem->compileLine(PSTR("run \"/main.txt\""), &instr);
+    root->commands->add(instr);
+
+    // prep execution of root
+    DEM_CALLSTACK_ENTRY cse;
+    cse.i=0;
+    cse.macro = root;
+    cse.continuation = false;
+    dem->callStackPush(cse);
+  }
+
+  WiFi.disconnect();
+
+
+  WiFi.mode(WIFI_AP_STA);
+
+  uint8_t mac[6];
+  WiFi.macAddress(mac);
+  String hostname = "Drone";
+  for (uint8_t i=3; i<6; i++) {
+    hostname += String(mac[i], HEX);
+  }
+
+  //WiFi.softAP(dmm->hostname().c_str());
+  WiFi.softAP(hostname.c_str());
 
   // load WIFI Configuration
-  wifiManager.loadConfiguration();
-  wifiManager.start(dmm);
+  wifiManager.loadConfiguration(LITTLEFS);
+  wifiManager.start();
 
-
-  OTAMgr.init( dmm.hostname() );
   OTAMgr.onEvent = handleOTAEVent;
+  OTAMgr.init( dmm->hostname() );
 
   MDNS.addService("http","tcp",80);
 
@@ -238,34 +360,76 @@ void setup() {
   // scan I2C buses
   DroneWire::scanAll();
 
-  // Complete Setup of all modules
-  Log.noticeln(F("[] Completing module setup..."));
-  dmm.setupModules();
-
-  Log.noticeln(F("[] Setup done"));
-
   // redirect logging to serial
   logFile.close();
   Log.begin(LOG_LEVEL_VERBOSE, &Serial);
 
+  // start core task
+  /*
+  xTaskCreatePinnedToCore(
+    coreTask,        //Function to implement the task
+    "coreTask",            //Name of the task
+    16000,                   //Stack size in words
+    0,                   //Task input parameter
+    2,           //Priority of the task
+    &_coreTask,                 //Task handle.
+    1);              //Core where the task should run
+*/
+
   //digitalWrite(PIN_LED, LOW);
 }
+
 
 long loopTime;
 long testTimer;
 uint8_t modid;
+char serialCommand[30];
+uint8_t serialCommandLen = 0;
 
 void loop() {
   loopTime = millis();
 
-  dmm.watchdog();
-
   digitalWrite(PIN_LED, (WiFi.status() != WL_CONNECTED));
 
-  if (!OTAMgr.isUpdating) {
-    dmm.loopModules();
+  // serial command interface
+  if (Serial.available()) {
+    char c = Serial.read();
+    Serial.print(c);
 
-    dlm.processChannels();
+    if (c == '\n' || c == '\r') {
+      // null terminate
+      serialCommand[serialCommandLen] = 0;
+      Serial.print("Executing: ");
+      Serial.println(serialCommand);
+      if (strcmp(serialCommand, "execute")==0) {
+        Serial.println("restarting");
+        dem->setBootStatus(DEM_BOOT_SUCCESS);
+        dmm->restart();
+      }
+
+    } else {
+      serialCommand[serialCommandLen] = c;
+      if (serialCommandLen < 29 ) serialCommandLen++;
+    }
+  }
+
+  if (!OTAMgr.isUpdating) {
+    dmm->watchdog();
+
+    yield();
+
+    //Log.noticeln("[] lM");
+    dmm->loopModules();
+
+    yield();
+
+    //Log.noticeln("[] pC");
+    dlm->processChannels();
+
+    yield();
+
+    //Log.noticeln("[] e");
+    dem->execute();
   } else {
     digitalWrite(PIN_LED, HIGH);
   }

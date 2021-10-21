@@ -10,29 +10,32 @@ Manages a HMC5883L I2C power monitor
 #include "../DroneWire.h"
 #include "I2CBaseModule.h"
 
-#include <Adafruit_Sensor.h>
-#include <Adafruit_HMC5883_U.h>
+//#include <Adafruit_Sensor.h>
+//#include <Adafruit_HMC5883_U.h>
+
+#include "I2Cdev.h"
+#include "HMC5883L.h"
 
 #define HMC5883L_I2C_ADDRESS  0x1E  // write address, read address is +1
 
 // pubs
-#define HMC5883L_PARAM_VECTOR          B00001000
-#define HMC5883L_PARAM_HEADING         B00010000
-#define HMC5883L_PARAM_DECLINATION     B00100000
-#define HMC5883L_PARAM_CALIB_X         B01000000
-#define HMC5883L_PARAM_CALIB_Y         B10000000
+#define HMC5883L_PARAM_VECTOR          (I2CBASE_SUBCLASS_PARAM_START+0)  //10
+#define HMC5883L_PARAM_HEADING         (I2CBASE_SUBCLASS_PARAM_START+1)  // 11
+#define HMC5883L_PARAM_DECLINATION     (I2CBASE_SUBCLASS_PARAM_START+2)
+#define HMC5883L_PARAM_CALIB_X         (I2CBASE_SUBCLASS_PARAM_START+3)
+#define HMC5883L_PARAM_CALIB_Y         (I2CBASE_SUBCLASS_PARAM_START+4)
 
-#define HMC5883L_PARAM_VECTOR_E          0
-#define HMC5883L_PARAM_HEADING_E         1
-#define HMC5883L_PARAM_DECLINATION_E     2
-#define HMC5883L_PARAM_CALIB_X_E         3
-#define HMC5883L_PARAM_CALIB_Y_E         4
+#define HMC5883L_PARAM_VECTOR_E          (I2CBASE_PARAM_ENTRIES+0)
+#define HMC5883L_PARAM_HEADING_E         (I2CBASE_PARAM_ENTRIES+1)
+#define HMC5883L_PARAM_DECLINATION_E     (I2CBASE_PARAM_ENTRIES+2)
+#define HMC5883L_PARAM_CALIB_X_E         (I2CBASE_PARAM_ENTRIES+3)
+#define HMC5883L_PARAM_CALIB_Y_E         (I2CBASE_PARAM_ENTRIES+4)
 
-#define HMC5883L_PARAM_ENTRIES           5
+#define HMC5883L_PARAM_ENTRIES           (I2CBASE_PARAM_ENTRIES + 5)
 
 // subs
-#define HMC5883L_SUB_LOCATION            9
-#define HMC5883L_SUB_LOCATION_ADDR       10
+#define HMC5883L_SUB_LOCATION            (I2CBASE_SUBCLASS_PARAM_START+5)
+#define HMC5883L_SUB_LOCATION_ADDR       (I2CBASE_SUBCLASS_PARAM_START+6)
 #define HMC5883L_SUB_LOCATION_E          0
 
 #define HMC5883L_SUBS                    1
@@ -46,20 +49,21 @@ class HMC5883LModule:  public I2CBaseModule {
 protected:
   int _location[2];  // lng, lat - rounded to whole digits
   //DRONE_LINK_ADDR _locationInput;
-  Adafruit_HMC5883_Unified *_sensor;
+  HMC5883L *_sensor;
 public:
 
-  HMC5883LModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm);
+  HMC5883LModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm, DroneExecutionManager* dem, fs::FS &fs);
   ~HMC5883LModule();
+
+  static DEM_NAMESPACE* registerNamespace(DroneExecutionManager *dem);
+  static void registerParams(DEM_NAMESPACE* ns, DroneExecutionManager *dem);
 
   void doReset();
 
-  void loadConfiguration(JsonObject &obj);
+  //void publishEntry(uint8_t i);
 
-  void publishEntry(uint8_t i);
-
+  void setup();
   void update();
-
   void loop();
 
 

@@ -1,15 +1,16 @@
 #include "NeopixelModule.h"
 #include "../DroneLinkMsg.h"
 #include "../DroneLinkManager.h"
+#include "strings.h"
 
-
-NeopixelModule::NeopixelModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm):
-  DroneModule ( id, dmm, dlm )
+NeopixelModule::NeopixelModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm, DroneExecutionManager* dem, fs::FS &fs):
+  DroneModule ( id, dmm, dlm, dem, fs)
  {
    setTypeName(FPSTR(NEOPIXEL_STR_NEOPIXEL));
-   _pins[0] = 0;
+   _strip = NULL;
+   //_pins[0] = 0;
 
-   _numPixels = 4;
+   //_numPixels = 4;
    //_colourOrder = NEO_GRB;
 
    _blackout.r = 0;
@@ -24,37 +25,51 @@ NeopixelModule::NeopixelModule(uint8_t id, DroneModuleManager* dmm, DroneLinkMan
    sub = &_subs[NEOPIXEL_SUB_SCENE_E];
    sub->addrParam = NEOPIXEL_SUB_SCENE_ADDR;
    sub->param.param = NEOPIXEL_SUB_SCENE;
-   setParamName(FPSTR(DRONE_STR_SCENE), &sub->param);
+   setParamName(FPSTR(STRING_SCENE), &sub->param);
    sub->param.paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_UINT8_T, 16);
 
    initScene((NEOPIXEL_SCENE*)&sub->param.data.c);
-
-   sub = &_subs[NEOPIXEL_SUB_ACTIVESCENE_E];
-   sub->addrParam = NEOPIXEL_SUB_ACTIVESCENE_ADDR;
-   sub->param.param = NEOPIXEL_SUB_ACTIVESCENE;
-   setParamName(FPSTR(DRONE_STR_ACTIVESCENE), &sub->param);
-   sub->param.paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_UINT8_T, 1);
-   sub->param.data.uint8[0] = 0;
 
    // pubs
    initParams(NEOPIXEL_PARAM_ENTRIES);
 
    DRONE_PARAM_ENTRY *param;
 
-   for (uint8_t i=0; i < NEOPIXEL_PARAM_ENTRIES; i++) {
-     param = &_params[NEOPIXEL_PARAM_SCENE0_E + i];
-     param->param = NEOPIXEL_PARAM_SCENE0 + i;
-     setParamName(FPSTR(DRONE_STR_SCENE), param);
-     param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_UINT8_T, 16);
-     NEOPIXEL_SCENE *scene = (NEOPIXEL_SCENE*)&param->data.c;
-     initScene(scene);
-     scene->brightness = 50 + (i*50);
-   }
+   param = &_params[NEOPIXEL_PARAM_PINS_E];
+   param->param = NEOPIXEL_PARAM_PINS;
+   setParamName(FPSTR(STRING_PINS), param);
+   param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_UINT8_T, 1);
+
+   param = &_params[NEOPIXEL_PARAM_NUMPIXELS_E];
+   param->param = NEOPIXEL_PARAM_NUMPIXELS;
+   setParamName(FPSTR(STRING_NUMPIXELS), param);
+   param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_UINT8_T, 1);
+   _params[NEOPIXEL_PARAM_NUMPIXELS_E].data.uint8[0] = 4;
+}
+
+
+DEM_NAMESPACE* NeopixelModule::registerNamespace(DroneExecutionManager *dem) {
+  // namespace for module type
+  return dem->createNamespace(NEOPIXEL_STR_NEOPIXEL,0,true);
+}
+
+void NeopixelModule::registerParams(DEM_NAMESPACE* ns, DroneExecutionManager *dem) {
+  using std::placeholders::_1;
+  using std::placeholders::_2;
+  using std::placeholders::_3;
+  using std::placeholders::_4;
+
+  // writable mgmt params
+  DEMCommandHandler ph = std::bind(&DroneExecutionManager::mod_param, dem, _1, _2, _3, _4);
+
+  dem->registerCommand(ns, STRING_PINS, DRONE_LINK_MSG_TYPE_UINT8_T, ph);
+  dem->registerCommand(ns, STRING_NUMPIXELS, DRONE_LINK_MSG_TYPE_UINT8_T, ph);
+  dem->registerCommand(ns, STRING_SCENE, DRONE_LINK_MSG_TYPE_UINT8_T, ph);
 }
 
 
 void NeopixelModule::initScene(NEOPIXEL_SCENE *scene) {
-  scene->brightness = 50;
+  scene->brightness = 10;
   scene->effect = NEOPIXEL_SOLID;
   scene->p1 = 0;
   scene->p2 = 0;
@@ -76,68 +91,40 @@ void NeopixelModule::initScene(NEOPIXEL_SCENE *scene) {
 }
 
 
-void NeopixelModule::loadConfiguration(JsonObject &obj) {
-  DroneModule::loadConfiguration(obj);
-
-  DroneModule::parsePins(obj, _pins, (uint8_t)sizeof(_pins));
-
-  _numPixels = obj[F("numPixels")] | _numPixels;
-  //_colourOrder = obj[F("colourOrder")] | _colourOrder;
-  // TODO: think about best way to define/load colour order
-
-  // load scenes
-  if (obj.containsKey(DRONE_STR_SCENES)) {
-    Log.noticeln(DRONE_STR_SCENES);
-    JsonArray array = obj[DRONE_STR_SCENES].as<JsonArray>();
-
-    uint8_t i = 0;
-    for(JsonVariant v : array) {
-      if (i < NEOPIXEL_PARAM_ENTRIES) {
-        // update scene
-        JsonArray values = v.as<JsonArray>();
-        if (values.size() <= 16) {
-          for (uint8_t j=0; j<values.size(); j++)
-          _params[i].data.uint8[j] = values[j] | _params[i].data.uint8[j];
-        }
-      }
-
-      i++;
-    }
-  }
-
-  // now instance the _strip object:
-  //_strip = new Adafruit_NeoPixel(_numPixels, _pins[0], _colourOrder + NEO_KHZ800);
-  //CRGB leds[NUM_LEDS]
-  //_strip = new CRGB(_numPixels);
-  _strip = new NeoPixelBrightnessBus<NeoGrbFeature, Neo800KbpsMethod>(_numPixels, _pins[0]);
-}
-
-
 void NeopixelModule::disable() {
-  _strip->SetBrightness(25);
-  _strip->ClearTo(RgbColor(0,0,0));
+  Log.noticeln(F("[NM.d]"));
+  if (_strip) {
+    _strip->SetBrightness(25);
+    _strip->ClearTo(RgbColor(0,0,0));
 
-  _strip->Show();
+    _strip->Show();
+  }
   DroneModule::disable();
+  Log.noticeln(F("[NM.d] end"));
 }
 
 
 void NeopixelModule::setup() {
+  //Log.noticeln(F("[NM.s]"));
   DroneModule::setup();
+  if (_params[NEOPIXEL_PARAM_PINS_E].data.uint8[0] > 0) {
+    if (_strip == NULL) {
+      _strip = new NeoPixelBrightnessBus<NeoGrbFeature, Neo800KbpsMethod>(_params[NEOPIXEL_PARAM_NUMPIXELS_E].data.uint8[0], _params[NEOPIXEL_PARAM_PINS_E].data.uint8[0]);
+    }
 
-  if (_pins[0] > 0) {
     _strip->Begin();
     _strip->Show();
     _strip->SetBrightness(25); // to be overridden by scenes
 
+
     // init blue while booting
-    for(uint8_t i=0; i<_numPixels; i++) {
+    for(uint8_t i=0; i<_params[NEOPIXEL_PARAM_NUMPIXELS_E].data.uint8[0]; i++) {
       _strip->SetPixelColor(i, RgbColor(0, 0, 255));
     }
     _strip->Show();
 
   } else {
-    Log.errorln(F("Undefined pin %d"), _pins[0]);
+    Log.errorln(F("Undefined pin %d"), _params[NEOPIXEL_PARAM_PINS_E].data.uint8[0]);
     disable();
   }
 }
@@ -145,19 +132,14 @@ void NeopixelModule::setup() {
 
 void NeopixelModule::loop() {
   DroneModule::loop();
+  //Log.noticeln(F("[NM.l]"));
 
   unsigned long loopTime = millis();
-
-  if (_subs[NEOPIXEL_SUB_ACTIVESCENE_E].param.data.uint8[0] < NEOPIXEL_PARAM_ENTRIES) {
-    uint8_t sceneIndex = NEOPIXEL_PARAM_SCENE0_E + _subs[NEOPIXEL_SUB_ACTIVESCENE_E].param.data.uint8[0];
-
-    updateAndPublishParam(&_subs[NEOPIXEL_SUB_SCENE_E].param, _params[sceneIndex].data.uint8, 16);
-  }
 
   NEOPIXEL_SCENE *scene = (NEOPIXEL_SCENE*)&_subs[NEOPIXEL_SUB_SCENE_E].param.data.c;
 
   if (_strip) {
-    uint8_t pixPerSeg = _numPixels / NEOPIXEL_NUM_SEGMENTS;
+    uint8_t pixPerSeg = _params[NEOPIXEL_PARAM_NUMPIXELS_E].data.uint8[0] / NEOPIXEL_NUM_SEGMENTS;
 
     NEOPIXEL_COLOUR segs[NEOPIXEL_NUM_SEGMENTS];
 
@@ -209,16 +191,14 @@ void NeopixelModule::loop() {
     }
 
     // update segments
-    for(uint8_t i=0; i<_numPixels; i++) {
+    for(uint8_t i=0; i<_params[NEOPIXEL_PARAM_NUMPIXELS_E].data.uint8[0]; i++) {
       uint8_t seg = i / pixPerSeg;
-
 
       _strip->SetPixelColor(i, RgbColor(
         segs[seg].r,
         segs[seg].g,
         segs[seg].b
       ));
-
     }
 
     _strip->Show();
@@ -229,5 +209,5 @@ void NeopixelModule::loop() {
 
 
 void NeopixelModule::update() {
-  //
+  if (!_setupDone) return;
 }

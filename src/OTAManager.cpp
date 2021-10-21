@@ -1,6 +1,6 @@
 #include "OTAManager.h"
 #include "Arduino.h"
-#include "SPIFFS.h"
+#include "LITTLEFS.h"
 #include <esp_task_wdt.h>
 
 OTAManager::OTAManager(AsyncEventSource * events) {
@@ -21,7 +21,7 @@ void OTAManager::init(String hostname) {
     else // U_SPIFFS
       type = "filesystem";
 
-    SPIFFS.end();
+    LITTLEFS.end();
     Serial.println("[OTA] Start updating " + type);
     isUpdating = true;
 

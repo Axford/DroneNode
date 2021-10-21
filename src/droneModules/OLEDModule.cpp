@@ -3,12 +3,18 @@
 #include "../DroneLinkManager.h"
 #include "../DroneModuleManager.h"
 #include "OLEDTomThumbFont.h"
+#include "strings.h"
 
-OLEDModule::OLEDModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm):
-  I2CBaseModule ( id, dmm, dlm )
+OLEDModule::OLEDModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm, DroneExecutionManager* dem, fs::FS &fs):
+  I2CBaseModule ( id, dmm, dlm, dem, fs )
  {
    setTypeName(FPSTR(OLED_STR_OLED));
-   _addr = OLED_I2C_ADDRESS;
+
+
+   // params
+   initParams(I2CBASE_PARAM_ENTRIES);
+   I2CBaseModule::initBaseParams();
+   _params[I2CBASE_PARAM_ADDR_E].data.uint8[0] = OLED_I2C_ADDRESS;
 
    // init sub labels
    for (uint8_t i=0; i<OLED_NUM_LABELS; i++) {
@@ -30,22 +36,22 @@ OLEDModule::OLEDModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dl
    sub = &_subs[OLED_SUB_SUB1_E];
    sub->addrParam = OLED_SUB_SUB1_ADDR;
    sub->param.param = OLED_SUB_SUB1;
-   setParamName(FPSTR(DRONE_STR_SUB1), &sub->param);
+   setParamName(FPSTR(STRING_SUB1), &sub->param);
 
    sub = &_subs[OLED_SUB_SUB2_E];
    sub->addrParam = OLED_SUB_SUB2_ADDR;
    sub->param.param = OLED_SUB_SUB2;
-   setParamName(FPSTR(DRONE_STR_SUB2), &sub->param);
+   setParamName(FPSTR(STRING_SUB2), &sub->param);
 
    sub = &_subs[OLED_SUB_SUB3_E];
    sub->addrParam = OLED_SUB_SUB3_ADDR;
    sub->param.param = OLED_SUB_SUB3;
-   setParamName(FPSTR(DRONE_STR_SUB3), &sub->param);
+   setParamName(FPSTR(STRING_SUB3), &sub->param);
 
    sub = &_subs[OLED_SUB_SUB4_E];
    sub->addrParam = OLED_SUB_SUB4_ADDR;
    sub->param.param = OLED_SUB_SUB4;
-   setParamName(FPSTR(DRONE_STR_SUB4), &sub->param);
+   setParamName(FPSTR(STRING_SUB4), &sub->param);
 }
 
 OLEDModule::~OLEDModule() {
@@ -56,7 +62,7 @@ OLEDModule::~OLEDModule() {
 void OLEDModule::doReset() {
   I2CBaseModule::doReset();
 
-  DroneWire::selectChannel(_bus);
+  DroneWire::selectChannel(_params[I2CBASE_PARAM_BUS_E].data.uint8[0]);
 
   _display->init();
   //_display->resetDisplay();
@@ -68,7 +74,7 @@ void OLEDModule::doReset() {
 
 void OLEDModule::onOTAProgress(float progress) {
   // show a progress bar
-  DroneWire::selectChannel(_bus);
+  DroneWire::selectChannel(_params[I2CBASE_PARAM_BUS_E].data.uint8[0]);
 
   // write shutdown message to screen
   // clear the display
@@ -90,7 +96,7 @@ void OLEDModule::onOTAProgress(float progress) {
 void OLEDModule::doShutdown() {
   DroneModule::doShutdown(); // disables module
 
-  DroneWire::selectChannel(_bus);
+  DroneWire::selectChannel(_params[I2CBASE_PARAM_BUS_E].data.uint8[0]);
 
   // write shutdown message to screen
   // clear the display
@@ -138,14 +144,14 @@ void OLEDModule::handleLinkMessage(DroneLinkMsg *msg) {
   DroneModule::handleLinkMessage(msg);
 }
 
-
+/*
 void OLEDModule::loadConfiguration(JsonObject &obj) {
   I2CBaseModule::loadConfiguration(obj);
 
-  // instantiate sensor object, now _addr is known
-  _display = new SSD1306Wire(_addr, SDA, SCL);
+  // instantiate sensor object, now _params[I2CBASE_PARAM_ADDR_E].data.uint8[0] is known
+  _display = new SSD1306Wire(_params[I2CBASE_PARAM_ADDR_E].data.uint8[0], SDA, SCL);
 }
-
+*/
 
 void OLEDModule::loop() {
   I2CBaseModule::loop();
@@ -159,7 +165,7 @@ void OLEDModule::loop() {
     }
   }
 
-  DroneWire::selectChannel(_bus);
+  DroneWire::selectChannel(_params[I2CBASE_PARAM_BUS_E].data.uint8[0]);
 
   // clear the display
   _display->clear();

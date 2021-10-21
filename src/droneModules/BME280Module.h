@@ -37,7 +37,7 @@ protected:
   Adafruit_BME280 _sensor;
 public:
 
-  BME280Module(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm);
+  BME280Module(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm, DroneExecutionManager* dem, fs::FS &fs);
 
   void doReset();
 

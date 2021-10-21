@@ -10,6 +10,7 @@ void DroneWire::setup() {
 
   Wire.begin(PIN_I2C_SDA, PIN_I2C_SCL);
   Wire.setClock(100000);
+  Wire.setTimeout(100);
 }
 
 void DroneWire::reset() {
@@ -25,6 +26,7 @@ void DroneWire::reset() {
 void DroneWire::selectChannel(uint8_t chan) {
   if (chan> 7 || chan == _lastChan) return;
 
+  //Log.noticeln("[DW.sC] %u", chan);
   Wire.beginTransmission(TCAADDR);
   Wire.write(1 << chan);
   Wire.endTransmission();

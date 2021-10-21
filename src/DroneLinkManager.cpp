@@ -143,6 +143,7 @@ bool DroneLinkManager::publishPeer(DroneLinkMsg &msg, int16_t RSSI, uint8_t inte
 void DroneLinkManager::processChannels() {
   DroneLinkChannel* c;
   for(int i = 0; i < _channels.size(); i++){
+    //Log.noticeln("[DLM.pC] %u", i);
     c = _channels.get(i);
     c->processQueue();
   }
@@ -180,6 +181,24 @@ uint8_t DroneLinkManager::maxPeer() {
 
 uint8_t DroneLinkManager::minPeer() {
   return _minPeer;
+}
+
+uint8_t DroneLinkManager::getNodeByName(char * name) {
+  DRONE_LINK_NODE_PAGE *page;
+  for (uint8_t i=0; i<DRONE_LINK_NODE_PAGES; i++) {
+    page = _nodePages[i];
+    if (page != NULL) {
+      for (uint8_t j=0; j<DRONE_LINK_NODE_PAGE_SIZE; j++) {
+        if (page->nodeInfo[j].name != NULL) {
+          if (strcmp(page->nodeInfo[j].name, name) ==0) {
+            uint8_t id = (i << 4) + j;
+            return id;
+          }
+        }
+      }
+    }
+  }
+  return 0;
 }
 
 DRONE_LINK_NODE_INFO* DroneLinkManager::getNodeInfo(uint8_t source) {
@@ -243,12 +262,15 @@ void DroneLinkManager::serveChannelInfo(AsyncWebServerRequest *request) {
 
   AsyncResponseStream *response = request->beginResponseStream("text/text");
   response->addHeader("Server","ESP Async Web Server");
-  response->print(F("Channels: \n"));
+  response->print(F("Channels, queues and subscribers \n"));
 
   DroneLinkChannel* c;
   for(int i = 0; i < _channels.size(); i++){
     c = _channels.get(i);
-    response->printf("%u > %u = %u (%u)\n", c->node(), c->id(), c->size(), c->peakSize());
+    response->printf("%u>%u = %u (%u)\n", c->node(), c->id(), c->size(), c->peakSize());
+
+    c->serveChannelInfo(response);
+    response->print("\n");
   }
 
 

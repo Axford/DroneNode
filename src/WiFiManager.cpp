@@ -2,7 +2,7 @@
 #include "WiFiManager.h"
 #include "WiFi.h"
 #include "esp_wifi.h"
-#include "SPIFFS.h"
+//#include "SPIFFS.h"
 
 //#include "esp_int_wdt.h"
 
@@ -31,9 +31,9 @@ WiFiManager::WiFiManager() {
 }
 
 
-void WiFiManager::loadConfiguration() {
-  if (SPIFFS.exists(F("/wifi.json"))) {
-    File file = SPIFFS.open(F("/wifi.json"), FILE_READ);
+void WiFiManager::loadConfiguration(fs::FS &fs) {
+  if (fs.exists(F("/wifi.json"))) {
+    File file = fs.open(F("/wifi.json"), FILE_READ);
 
     DynamicJsonDocument doc(1024);
 
@@ -67,17 +67,30 @@ void WiFiManager::loadConfiguration() {
     // Close the file (Curiously, File's destructor doesn't close the file)
     file.close();
   } else {
-    Log.errorln(F("[WIFI] wifi.json file does not exist"));
+    Log.errorln(F("[WIFI] wifi.json file does not exist, adding defaults"));
+    WiFiNetworkCredentials cred;
+    // add default credentials
+    cred.ssid = "Badger";
+    cred.password = "LouisVuitton";
+    _networks.add(cred);
   }
 }
 
 //const char * ssid, const char * pwd
-void WiFiManager::start(DroneModuleManager &dmm) {
+void WiFiManager::start() {
 
-  WiFi.disconnect();
+  //WiFi.disconnect();
 
+/*
   WiFi.mode(WIFI_AP_STA);
-  WiFi.softAP(dmm.hostname().c_str());
+  WiFi.softAP(dmm->hostname().c_str());
+
+  vTaskDelay(2);
+
+  // speculative... on the off chance we have valid stored credentials
+  WiFi.begin();
+  */
+
 
   Log.noticeln("[WIFI] Starting connection task");
 
@@ -105,6 +118,10 @@ void WiFiManager::keepWiFiAlive(void *pvParameters){
       vTaskDelay(10000 / portTICK_PERIOD_MS);
       continue;
     } else if (!l_pThis->_scanActive && !l_pThis->_attemptingConnection) {
+      WiFi.disconnect();
+
+      vTaskDelay(1000 / portTICK_PERIOD_MS);
+
       Log.noticeln("[WIFI] Not connected, scanning...");
       WiFi.scanNetworks(true, false, false, 300, 0);
       //bool async = false, bool show_hidden = false, bool passive = false, uint32_t max_ms_per_chan = 300, uint8_t channel = 0
@@ -132,6 +149,8 @@ void WiFiManager::keepWiFiAlive(void *pvParameters){
         for (uint8_t i=0; i<l_pThis->_networks.size(); i++) {
           for (uint8_t j=0; j<res; j++) {
             if (l_pThis->_networks[i].ssid.equals( WiFi.SSID(j) )) {
+              WiFi.disconnect();
+              vTaskDelay(1);
               Log.noticeln("[WIFI] Match: %s", WiFi.SSID(j));
               Log.noticeln("[WIFI] Connecting with password: %s", l_pThis->_networks[i].password.c_str());
               WiFi.begin(l_pThis->_networks[i].ssid.c_str(), l_pThis->_networks[i].password.c_str());
@@ -169,7 +188,7 @@ void WiFiManager::keepWiFiAlive(void *pvParameters){
       Serial.println("[WIFI] waiting for connection");
       while (WiFi.status() != WL_CONNECTED &&
       millis() < WIFI_TIMEOUT_MS + startAttemptTime){
-        vTaskDelay(1);
+        vTaskDelay(10);
       }
 
       if (WiFi.status() != WL_CONNECTED) {

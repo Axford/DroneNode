@@ -1,0 +1,9 @@
+{
+  "name": "Radiohead",
+  "dependencies":
+  [
+    {
+      "name": "SPI"
+    }
+  ]
+}

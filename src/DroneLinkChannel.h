@@ -6,6 +6,7 @@
 
 #include "DroneLinkMsg.h"
 #include "DroneModule.h"
+#include <ESPAsyncWebServer.h>
 //#include "DroneLinkSubscriber.h"
 
 #define DRONE_LINK_CHANNEL_QUEUE_LIMIT  30  // max number of queued messages
@@ -62,10 +63,12 @@ public:
         for (uint8_t i=0; i<_queue.size(); i++) {
           scrub = _queue.get(i);
           if (scrub->sameSignature(&msg)) {
+            /*
             Serial.print("Same sig in queue, overwriting: ");
             scrub->print();
             Serial.print( " with ");
             msg.print();
+            */
 
             sameSig = true;
             // overwrite message payload
@@ -103,18 +106,24 @@ public:
 
       DroneLinkMsg *tmp = _queue.shift();
 
+      //Log.noticeln("[DLC.pQ] %u>%u", _node, _id);
+
       // send msg to each subscriber
       DroneLinkChannelSubscription sub;
       for(int i = 0; i < _subs.size(); i++) {
         sub = _subs.get(i);
         // check paramMask
         //if (tmp->matchParam(sub.paramMask))
-        if (tmp->param() == sub.param || sub.param == DRONE_LINK_PARAM_ALL)
+        if (tmp->param() == sub.param || sub.param == DRONE_LINK_PARAM_ALL) {
+          //Log.noticeln("[DLC.pQ] to %s", sub.module->getName());
           sub.module->handleLinkMessage(tmp);
+        }
+
       }
 
       // delete the tmp msg
       delete tmp;
+      //Log.noticeln("[DLC.pQ] end");
     }
 
     void subscribe(DroneModule* subscriber, uint8_t param) {
@@ -127,6 +136,16 @@ public:
       sub.module = subscriber;
       sub.param = param;
       _subs.add(sub);
+    }
+
+    void serveChannelInfo(AsyncResponseStream *response) {
+      DroneLinkChannelSubscription sub;
+      for(int i = 0; i < _subs.size(); i++) {
+        sub = _subs.get(i);
+
+        response->printf("    %u: %s\n", sub.module->id(), sub.module->getName());
+        //Log.noticeln(sub.module->getName().c_str());
+      }
     }
 /*
     void printSubscribers() {

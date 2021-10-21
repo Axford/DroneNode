@@ -1,0 +1,160 @@
+// D-Code Config Script
+
+// Setup the node
+node 1
+hostname "Paddle"
+
+// Init modules
+Management.new 1
+  name "Management"
+  status true
+  interval 1000
+  discovery true
+
+  // publish
+  .publish "hostname"
+  .publish "build"
+  .publish "IP"
+  .publish "uptime"
+  .publish "macro"
+.done
+
+UDPTelemetry.new 2
+  name "UDPT"
+  port 8007
+  broadcast 255 255 255 255
+  .sub [@>0.0]
+.done
+
+INA219.new 4
+  name "Power"
+  bus 7
+  addr 64
+  interval 1000
+  cells 3
+  threshold 11.2
+  status 1
+  .publish "current"
+  .publish "power"
+  .publish "loadV"
+  .publish "alarm"
+  .publish "shuntV"
+  .publish "busV"
+.done
+
+NMEA.new 5
+  name "GPS"
+  interval 500
+  port 1
+  baud 9600
+  .publish "location"
+  .publish "satellites"
+  .publish "HDOP"
+.done
+
+HMC5883L.new 6
+  name "Compass"
+  interval 200
+  bus 0
+  status 1
+  calibX -3.5 0 2.3
+  calibY -3.6 0 1.7
+  // default location
+  location -1.8 52 100
+  //$location [@>GPS.location]
+  $location [@>5.8]
+  .publish "heading"
+  .publish "vector"
+  .publish "calibX"
+  .publish "calibY"
+.done
+
+RFM69Telemetry.new 3
+  name "RFM69"
+  status 1  // enable
+  .sub [@>0.0]
+  .publish "RSSI"
+.done
+
+
+Nav.new 7
+  name "Nav"
+  interval 50
+  $location [@>5.8]
+  target -1.82 51.56 100
+  .publish "target"
+  .publish "location"
+  .publish "heading"
+  .publish "distance"
+  .publish "mode"
+.done
+
+TurnRate.new 8
+  name "TurnRate"
+  PID (f) 0.01 0 0
+  interval 50
+  $target [@>7.8]
+  $heading [@>6.11]
+  .publish "target"
+  .publish "heading"
+  .publish "PID"
+  .publish "turnRate"
+.done
+
+TankSteer.new 10
+  name "TankSteer"
+  interval 50
+  trim 0
+  $speed [@>7.9]
+  $turnRate [@>8.16]
+  .publish "left"
+  .publish "right"
+  .publish "turnRate"
+  .publish "speed"
+  .publish "trim"
+.done
+
+
+Motor.new 11
+  name "LeftMotor"
+  interval 50
+  pins OUT0_0 OUT0_1 DAC0_0
+  PWMChannel 15
+  limits -0.7 0.7
+  deadband 0.3
+  $speed [@>10.8]
+
+  // publish
+  .publish "speed"
+.done
+
+Motor.new 12
+  name "RightMotor"
+  interval 50
+  pins OUT1_1 OUT1_0 DAC0_1
+  PWMChannel 14
+  limits -0.7 0.7
+  deadband 0.3
+  $speed [@>10.9]
+
+  // publish
+  .publish "speed"
+.done
+
+Neopixel.new 20
+  name "Neopixel"
+  interval 50
+  pins OUT2_1
+  numPixels 16
+  .publish "scene"
+.done
+
+
+// finish setup
+.setup
+
+// green flashing LEDs to show we've finished
+.send 1>20.8 (u8) 50 1 10 5  0 255 0  0 255 0  0 255 0  0 255 0
+
+// wait 10seconds
+.delay 10000

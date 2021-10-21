@@ -65,6 +65,7 @@ public:
     uint8_t maxPeer();
     uint8_t minPeer();
 
+    uint8_t getNodeByName(char * name);
     DRONE_LINK_NODE_INFO* getNodeInfo(uint8_t source);
 
     // get the interface associated with a source id

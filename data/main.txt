@@ -1,0 +1,13 @@
+
+// turn LEDs on
+send 1>20.8 (u8) 50 0 0 0  255 255 255  0 0 0  0 255 0  0 0 0
+
+// load arm and disarm macros
+load "/arm.txt"
+load "/disarm.txt"
+
+load "/thepit.txt"
+run "/thepit.txt"
+
+//load "/golds.txt"
+//run "/golds.txt"

@@ -1,10 +1,10 @@
 #include "ServoModule.h"
 #include "../DroneLinkMsg.h"
 #include "../DroneLinkManager.h"
+#include "strings.h"
 
-
-ServoModule::ServoModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm):
-  DroneModule ( id, dmm, dlm )
+ServoModule::ServoModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm, DroneExecutionManager* dem, fs::FS &fs):
+  DroneModule ( id, dmm, dlm, dem, fs )
  {
    setTypeName(FPSTR(SERVO_STR_SERVO));
    _pins[0] = 0;
@@ -19,18 +19,18 @@ ServoModule::ServoModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* 
    sub = &_subs[SERVO_SUB_POSITION_E];
    sub->addrParam = SERVO_SUB_POSITION_ADDR;
    sub->param.param = SERVO_SUB_POSITION;
-   setParamName(FPSTR(DRONE_STR_POSITION), &sub->param);
+   setParamName(FPSTR(STRING_POSITION), &sub->param);
 }
 
 
-
+/*
 void ServoModule::loadConfiguration(JsonObject &obj) {
   DroneModule::loadConfiguration(obj);
 
   // limits
-  if (obj.containsKey(DRONE_STR_LIMITS)) {
+  if (obj.containsKey(STRING_LIMITS)) {
     Log.noticeln(F("[ServoModule.loadConfiguration]  Read limits..."));
-    JsonArray array = obj[DRONE_STR_LIMITS].as<JsonArray>();
+    JsonArray array = obj[STRING_LIMITS].as<JsonArray>();
     uint8_t i=0;
     for(JsonVariant v : array) {
       if (i < sizeof(_limits))
@@ -39,8 +39,10 @@ void ServoModule::loadConfiguration(JsonObject &obj) {
     }
   }
 
-  DroneModule::parsePins(obj, _pins, (uint8_t)sizeof(_pins));
+  //TODO: fix
+  //DroneModule::parsePins(obj, _pins, (uint8_t)sizeof(_pins));
 }
+*/
 
 
 void ServoModule::setup() {
@@ -70,6 +72,8 @@ void ServoModule::loop() {
 
 
 void ServoModule::update() {
+  if (!_setupDone) return;
+
   float v = _subs[SERVO_SUB_POSITION_E].param.data.f[0];
   // limit range
   if (v > 1) v = 1;

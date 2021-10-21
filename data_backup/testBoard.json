@@ -1,0 +1,213 @@
+{
+    "hostname": "TestBoard",
+    "node": 1,
+    "modules": [
+        {
+            "type": "Management",
+            "name": "Management",
+            "id": 1,
+            "publish": [
+                "hostname",
+                "reset",
+                "uptime",
+                "heap",
+                "IP",
+                "choked",
+                "discovery"
+            ],
+            "enable": true,
+            "interval": 10000
+        },
+        {
+            "type": "RFM69Telemetry",
+            "id": 6,
+            "name": "RFM69",
+            "enable": true,
+            "interval": 0,
+            "subs": [
+                "1>0.0"
+            ],
+            "publish": [
+                "RSSI"
+            ]
+        },
+        {
+            "type": "NMEA",
+            "id": 8,
+            "name": "GPS",
+            "enable": true,
+            "interval": 1000,
+            "port": 1,
+            "baud": 38400,
+            "publish": [
+                "location",
+                "satellites",
+                "HDOP"
+            ]
+        },
+        {
+            "type": "TankSteer",
+            "id": 9,
+            "name": "TankSteer",
+            "enable": true,
+            "interval": 1000,
+            "turnRate": [
+                "",
+                [
+                    0
+                ]
+            ],
+            "speed": [
+                "",
+                [
+                    0
+                ]
+            ],
+            "publish": [
+                "left",
+                "right",
+                "turnRate",
+                "speed",
+                "trim"
+            ],
+            "trim": [
+                "",
+                [
+                    0
+                ]
+            ]
+        },
+        {
+            "type": "Motor",
+            "id": 10,
+            "name": "Motor",
+            "enable": true,
+            "interval": 100,
+            "pins": [
+                "OUT0_0",
+                "OUT0_1",
+                "OUT2_0"
+            ],
+            "deadband": [
+                0.3
+            ],
+            "speed": [
+                "",
+                [
+                    0
+                ]
+            ],
+            "publish": [
+                "speed"
+            ]
+        },
+        {
+            "type": "Servo",
+            "id": 11,
+            "name": "Servo1",
+            "enable": true,
+            "interval": 100,
+            "pins": "OUT1_0",
+            "position": [
+                "",
+                [
+                    0,
+                    1
+                ]
+            ],
+            "publish": [
+                "position"
+            ],
+            "limits": [
+                -0.7,
+                0.7
+            ]
+        },
+        {
+            "type": "UDPTelemetry",
+            "id": 12,
+            "name": "UDPTelemetry",
+            "enable": true,
+            "interval": 0,
+            "port": 8007,
+            "broadcast": [
+                255,
+                255,
+                255,
+                255
+            ],
+            "subs": [
+                "1>0.0"
+            ],
+            "publish": []
+        },
+        {
+            "type": "Servo",
+            "id": 13,
+            "name": "Servo2",
+            "enable": true,
+            "interval": 1000,
+            "pins": "DAC0_0",
+            "limits": [
+                -0.8,
+                0.8
+            ],
+            "position": [
+                "",
+                [
+                    0
+                ]
+            ],
+            "publish": [
+                "position"
+            ]
+        },
+        {
+            "type": "Neopixel",
+            "id": 14,
+            "name": "Neopixel",
+            "enable": true,
+            "interval": 10,
+            "pins": "OUT2_1",
+            "numPixels": 20,
+            "publish": [
+                "scene",
+                "activeScene"
+            ],
+            "scene": [
+                "",
+                [
+                    50,
+                    0,
+                    0,
+                    0,
+                    255,
+                    255,
+                    255,
+                    0,
+                    255,
+                    0,
+                    0,
+                    0,
+                    255,
+                    255,
+                    0,
+                    0
+                ]
+            ],
+            "activeScene": [
+                "",
+                [
+                    0
+                ]
+            ],
+            "scenes":[
+              [50,0,0,0, 255,255,255, 0,255,0, 0,0,255, 255,0,0],
+              [250,0,0,0, 255,255,255, 0,0,0, 0,0,0, 0,0,0],
+              [50,0,0,0, 255,255,255, 255,255,255, 255,255,255, 255,255,255],
+              [250,1,20,5, 255,255,255, 255,255,255, 255,255,255, 255,255,255]
+            ]
+        }
+    ],
+    "discovery": true
+}

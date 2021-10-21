@@ -7,7 +7,8 @@ Manages all active modules.  Deals with the management channel (e.g. dynamic sub
 
 #include "Arduino.h"
 #include "LinkedList.h"
-#include <ArduinoJson.h>
+#include <ESPAsyncWebServer.h>
+//#include <ArduinoJson.h>
 
 #define DRONE_MODULE_MANAGER_WATCHDOG_INTERVAL 10000
 #define DRONE_MODULE_MANAGER_DISCOVERY_INTERVAL 250
@@ -31,30 +32,22 @@ protected:
   DroneLinkManager* _dlm;
 
 public:
-  DroneModuleManager(DroneLinkManager* dlm):
-    _lastWatchdogCheck(0),
-    _modules(IvanLinkedList::LinkedList<DroneModule*>()),
-    _dlm(dlm)
-  {
-    _hostname = "set_me";
-    _buildTimestamp = BUILD_TIMESTAMP;
-    _lastDiscoveryIndex = 0;
-    _node = 1;
-    _doDiscovery = true;
-  };
-
+  DroneModuleManager(DroneLinkManager* dlm);
   void registerModule(DroneModule *m);
 
   DroneModule* getModuleById(uint8_t id);
+  DroneModule* getModuleByName(char * name);
 
+  void node(uint8_t id);
   uint8_t node();
+  void hostname(const char * name);
   String hostname();
   String buildTimestamp();
   boolean discovery(); // get discovery state
   void discovery(boolean v); // set discovery state
 
-  void loadConfiguration();
-  void loadModulesFromJSON(const JsonArray &array);
+  //void loadConfiguration();
+  //void loadModulesFromJSON(const JsonArray &array);
 
   uint8_t moduleCount();
 
@@ -67,6 +60,9 @@ public:
   void loopModules();
 
   void watchdog();
+
+  void serveModuleInfo(AsyncWebServerRequest *request);
+
 };
 
 

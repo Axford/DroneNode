@@ -51,9 +51,7 @@ protected:
 
 public:
 
-  TelemetryModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm);
-
-  void loadConfiguration(JsonObject &obj);
+  TelemetryModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm, DroneExecutionManager* dem, fs::FS &fs);
 
   virtual void handleLinkMessage(DroneLinkMsg *msg);
 

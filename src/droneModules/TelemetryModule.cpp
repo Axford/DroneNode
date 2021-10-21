@@ -1,10 +1,10 @@
 #include "TelemetryModule.h"
 #include "../DroneLinkMsg.h"
 #include "../DroneLinkManager.h"
+#include "strings.h"
 
-
-TelemetryModule::TelemetryModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm):
-  DroneModule ( id, dmm, dlm )
+TelemetryModule::TelemetryModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm, DroneExecutionManager* dem, fs::FS &fs):
+  DroneModule ( id, dmm, dlm, dem, fs )
  {
    setTypeName(FPSTR(TELEMETRY_STR_TELEMETRY));
    _buffer[0] = TELEMETRY_START_OF_FRAME;
@@ -17,18 +17,20 @@ TelemetryModule::TelemetryModule(uint8_t id, DroneModuleManager* dmm, DroneLinkM
    strncpy_P(_mgmtParams[DRONE_MODULE_PARAM_TYPE_E].data.c, TELEMETRY_STR_TELEMETRY, sizeof(TELEMETRY_STR_TELEMETRY));
 }
 
+/*
 void TelemetryModule::loadConfiguration(JsonObject &obj) {
   DroneModule::loadConfiguration(obj);
 
-  _portNum = obj[DRONE_STR_PORT] | _portNum;
+  _portNum = obj[STRING_PORT] | _portNum;
   switch(_portNum) {
     case 0: setPort(&Serial); break;
     case 1: setPort(&Serial1); break;
     case 2: setPort(&Serial2); break;
   }
 
-  _baud = obj[DRONE_STR_BAUD] | _baud;
+  _baud = obj[STRING_BAUD] | _baud;
 }
+*/
 
 void TelemetryModule::handleLinkMessage(DroneLinkMsg *msg) {
   DroneModule::handleLinkMessage(msg);

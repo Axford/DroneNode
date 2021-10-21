@@ -56,7 +56,7 @@ protected:
   DroneLinkMsg _queryMsg;
 public:
 
-  OLEDModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm);
+  OLEDModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm, DroneExecutionManager* dem, fs::FS &fs);
   ~OLEDModule();
 
   void doReset();
@@ -66,8 +66,6 @@ public:
   void doShutdown();
 
   void handleLinkMessage(DroneLinkMsg *msg);
-
-  void loadConfiguration(JsonObject &obj);
 
   void publishEntry(uint8_t i);
 
