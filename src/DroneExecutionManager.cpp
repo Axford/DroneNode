@@ -14,7 +14,9 @@
 #include "droneModules/MotorModule.h"
 #include "droneModules/NeopixelModule.h"
 #include "droneModules/NMEAModule.h"
+#include "droneModules/NunchuckJoystickModule.h"
 #include "droneModules/RFM69TelemetryModule.h"
+#include "droneModules/ServoModule.h"
 #include "droneModules/TankSteerModule.h"
 #include "droneModules/TurnRateModule.h"
 #include "droneModules/UDPTelemetryModule.h"
@@ -22,7 +24,7 @@
 
 /*
 #include "droneModules/TimerModule.h"
-#include "droneModules/ServoModule.h"
+
 #include "droneModules/TelemetryModule.h"
 #include "droneModules/BME280Module.h"
 #include "droneModules/MPU6050Module.h"
@@ -30,7 +32,7 @@
 
 #include "droneModules/OLEDModule.h"
 
-#include "droneModules/NunchuckJoystickModule.h"
+
 
 */
 
@@ -139,7 +141,9 @@ DroneExecutionManager::DroneExecutionManager(DroneModuleManager *dmm, DroneLinkM
   ns = MotorModule::registerNamespace(this);  MotorModule::registerParams(ns, this);
   ns = NMEAModule::registerNamespace(this); NMEAModule::registerParams(ns, this);
   ns = NeopixelModule::registerNamespace(this); NeopixelModule::registerParams(ns, this);
+  ns = NunchuckJoystick::registerNamespace(this); NunchuckJoystick::registerParams(ns, this);
   ns = RFM69TelemetryModule::registerNamespace(this); RFM69TelemetryModule::registerParams(ns, this);
+  ns = ServoModule::registerNamespace(this); ServoModule::registerParams(ns, this);
   ns = TankSteerModule::registerNamespace(this);  TankSteerModule::registerParams(ns, this);
   ns = TurnRateModule::registerNamespace(this);  TurnRateModule::registerParams(ns, this);
   ns = UDPTelemetryModule::registerNamespace(this);  UDPTelemetryModule::registerParams(ns, this);
@@ -1390,8 +1394,12 @@ boolean DroneExecutionManager::mod_constructor(DEM_INSTRUCTION_COMPILED* instr, 
       newMod = new NMEAModule(id, _dmm, _dlm, this, _fs);
     } else if (strcmp_P(instr->ns->name, NEOPIXEL_STR_NEOPIXEL) == 0) {
       newMod = new NeopixelModule(id, _dmm, _dlm, this, _fs);
-    }  else if (strcmp_P(instr->ns->name, RFM69_TELEMETRY_STR_RFM69_TELEMETRY) == 0) {
+    } else if (strcmp_P(instr->ns->name, NunJOYSTICK_STR_NunJOYSTICK) == 0) {
+      newMod = new NunchuckJoystick(id, _dmm, _dlm, this, _fs);
+    } else if (strcmp_P(instr->ns->name, RFM69_TELEMETRY_STR_RFM69_TELEMETRY) == 0) {
       newMod = new RFM69TelemetryModule(id, _dmm, _dlm, this, _fs);
+    } else if (strcmp_P(instr->ns->name, SERVO_STR_SERVO) == 0) {
+      newMod = new ServoModule(id, _dmm, _dlm, this, _fs);
     } else if (strcmp_P(instr->ns->name, TANK_STEER_STR_TANK_STEER) == 0) {
       newMod = new TankSteerModule(id, _dmm, _dlm, this, _fs);
     } else if (strcmp_P(instr->ns->name, TURN_RATE_STR_TURN_RATE) == 0) {

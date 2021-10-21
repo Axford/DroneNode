@@ -32,7 +32,7 @@ Manages a a Wii Nunchuk joystick Via ic2
 
 
 // strings
-static const char NunJOYSTICK_STR_NunJOYSTICK[] PROGMEM = "NunchuckJoystick";
+static const char NunJOYSTICK_STR_NunJOYSTICK[] PROGMEM = "Nunchuck";  // trying to keep strings short
 
 // class
 class NunchuckJoystick:  public I2CBaseModule {
