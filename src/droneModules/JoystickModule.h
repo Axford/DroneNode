@@ -48,7 +48,6 @@ public:
   void doReset();
 
   void setup();
-
   void loop();
 };
 

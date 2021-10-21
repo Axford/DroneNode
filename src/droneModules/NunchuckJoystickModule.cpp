@@ -9,11 +9,6 @@ NunchuckJoystick::NunchuckJoystick(uint8_t id, DroneModuleManager* dmm, DroneLin
    setTypeName(FPSTR(NunJOYSTICK_STR_NunJOYSTICK));
    //_pins[0] = 0;
 
-
-   for (uint8_t i=0; i<NunJOYSTICK_AXES; i++) {
-     _invert[i] = false;
-   }
-
    // pubs
    initParams(NunJOYSTICK_PARAM_ENTRIES);
 
@@ -42,42 +37,50 @@ NunchuckJoystick::NunchuckJoystick(uint8_t id, DroneModuleManager* dmm, DroneLin
    setParamName(FPSTR(STRING_BUTTON), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 4);
 
+   param = &_params[NunJOYSTICK_PARAM_INVERT_E];
+   param->param = NunJOYSTICK_PARAM_INVERT;
+   setParamName(FPSTR(STRING_INVERT), param);
+   param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_UINT8_T, 4);
+   _params[NunJOYSTICK_PARAM_INVERT_E].data.uint8[0] = 0;
+   _params[NunJOYSTICK_PARAM_INVERT_E].data.uint8[1] = 0;
+   _params[NunJOYSTICK_PARAM_INVERT_E].data.uint8[2] = 0;
+   _params[NunJOYSTICK_PARAM_INVERT_E].data.uint8[3] = 0;
 }
+
+
+DEM_NAMESPACE* NunchuckJoystick::registerNamespace(DroneExecutionManager *dem) {
+  // namespace for module type
+  return dem->createNamespace(NunJOYSTICK_STR_NunJOYSTICK,0,true);
+}
+
+void NunchuckJoystick::registerParams(DEM_NAMESPACE* ns, DroneExecutionManager *dem) {
+
+  I2CBaseModule::registerParams(ns, dem);
+
+  using std::placeholders::_1;
+  using std::placeholders::_2;
+  using std::placeholders::_3;
+  using std::placeholders::_4;
+
+  // writable mgmt params
+  DEMCommandHandler ph = std::bind(&DroneExecutionManager::mod_param, dem, _1, _2, _3, _4);
+
+  dem->registerCommand(ns, STRING_XAXIS, DRONE_LINK_MSG_TYPE_FLOAT, ph);
+  dem->registerCommand(ns, STRING_YAXIS, DRONE_LINK_MSG_TYPE_FLOAT, ph);
+  dem->registerCommand(ns, STRING_ZAXIS, DRONE_LINK_MSG_TYPE_FLOAT, ph);
+  dem->registerCommand(ns, STRING_BUTTON, DRONE_LINK_MSG_TYPE_FLOAT, ph);
+  dem->registerCommand(ns, STRING_INVERT, DRONE_LINK_MSG_TYPE_UINT8_T, ph);
+}
+
 
 void NunchuckJoystick::doReset() {
   I2CBaseModule::doReset();
 
-  DroneWire::selectChannel(_params[I2CBASE_PARAM_BUS_E].data.uint8[0]);
+  //DroneWire::selectChannel(_params[I2CBASE_PARAM_BUS_E].data.uint8[0]);
 
   setError(0);
 }
 
-
-/*
-void NunchuckJoystick::loadConfiguration(JsonObject &obj) {
-
-  I2CBaseModule::loadConfiguration(obj);
-
-
-
-  // load inversion settings
-  if (obj.containsKey(STRING_INVERT)) {
-    Log.noticeln(STRING_INVERT);
-
-    if (obj[STRING_INVERT].is<JsonArray>()) {
-      JsonArray array = obj[STRING_INVERT].as<JsonArray>();
-
-      uint8_t i = 0;
-      for(JsonVariant v : array) {
-        if (i<NunJOYSTICK_AXES) {
-          _invert[i] = v | _invert[i];
-        }
-        i++;
-      }
-    }
-  }
-}
-*/
 
 void NunchuckJoystick::setup() {
   I2CBaseModule::setup();
@@ -120,28 +123,28 @@ void NunchuckJoystick::loop() {
   // X
   v = nunchuck1.values[0];
   v = (v - 128) / 128.0f;   // remap to -1 .. 1
-  if (_invert[NunJOYSTICK_PARAM_X_E]) v = -v;
+  if ((_params[NunJOYSTICK_PARAM_INVERT_E].data.uint8[NunJOYSTICK_PARAM_X_E] == 1)) v = -v;
   // if changed, then publish
   updateAndPublishParam(&_params[NunJOYSTICK_PARAM_X_E], (uint8_t*)&v, sizeof(v));
 
   // Y
   v = nunchuck1.values[1];
   v = (v - 128) / 128.0f;   // remap to -1 .. 1
-  if (_invert[NunJOYSTICK_PARAM_Y_E]) v = -v;
+  if ((_params[NunJOYSTICK_PARAM_INVERT_E].data.uint8[NunJOYSTICK_PARAM_Y_E] == 1)) v = -v;
   // if changed, then publish
   updateAndPublishParam(&_params[NunJOYSTICK_PARAM_Y_E], (uint8_t*)&v, sizeof(v));
 
   // Z Button
   v = nunchuck1.values[10];
   v = (v - 128) / 128.0f;   // remap to -1 .. 1
-  if (_invert[NunJOYSTICK_PARAM_Z_E]) v = -v;
+  if ((_params[NunJOYSTICK_PARAM_INVERT_E].data.uint8[NunJOYSTICK_PARAM_Z_E] == 1)) v = -v;
   // if changed, then publish
   updateAndPublishParam(&_params[NunJOYSTICK_PARAM_Z_E], (uint8_t*)&v, sizeof(v));
 
   // C  Button
   v = nunchuck1.values[11];
   v = (v - 128) / 128.0f;   // remap to -1 .. 1
-  if (_invert[NunJOYSTICK_PARAM_BUTTON_E]) v = -v;
+  if ((_params[NunJOYSTICK_PARAM_INVERT_E].data.uint8[NunJOYSTICK_PARAM_BUTTON_E] == 1)) v = -v;
   // if changed, then publish
   updateAndPublishParam(&_params[NunJOYSTICK_PARAM_BUTTON_E], (uint8_t*)&v, sizeof(v));
     //Serial.println("");
