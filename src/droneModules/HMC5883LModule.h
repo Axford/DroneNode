@@ -52,7 +52,7 @@ protected:
   HMC5883L *_sensor;
 public:
 
-  HMC5883LModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm, DroneExecutionManager* dem);
+  HMC5883LModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm, DroneExecutionManager* dem, fs::FS &fs);
   ~HMC5883LModule();
 
   static DEM_NAMESPACE* registerNamespace(DroneExecutionManager *dem);

@@ -50,8 +50,8 @@ Root = info for active binding OR indicator that is unbound
 
 
 
-ControllerModule::ControllerModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm, DroneExecutionManager* dem):
-  I2CBaseModule ( id, dmm, dlm, dem )
+ControllerModule::ControllerModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm, DroneExecutionManager* dem, fs::FS &fs):
+  I2CBaseModule ( id, dmm, dlm, dem, fs )
  {
    setTypeName(FPSTR(CONTROLLER_STR_CONTROLLER));
 

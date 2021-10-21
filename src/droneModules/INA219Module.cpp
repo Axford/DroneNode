@@ -3,8 +3,8 @@
 #include "../DroneLinkManager.h"
 #include "strings.h"
 
-INA219Module::INA219Module(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm, DroneExecutionManager* dem):
-  I2CBaseModule ( id, dmm, dlm, dem )
+INA219Module::INA219Module(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm, DroneExecutionManager* dem, fs::FS &fs):
+  I2CBaseModule ( id, dmm, dlm, dem, fs )
  {
    setTypeName(FPSTR(INA219_STR_INA219));
    _sensor = NULL;

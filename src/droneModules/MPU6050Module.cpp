@@ -3,8 +3,8 @@
 #include "../DroneLinkManager.h"
 #include "strings.h"
 
-MPU6050Module::MPU6050Module(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm, DroneExecutionManager* dem):
-  I2CBaseModule ( id, dmm, dlm, dem )
+MPU6050Module::MPU6050Module(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm, DroneExecutionManager* dem, fs::FS &fs):
+  I2CBaseModule ( id, dmm, dlm, dem, fs )
  {
    setTypeName(FPSTR(MPU6050_STR_MPU6050));
 

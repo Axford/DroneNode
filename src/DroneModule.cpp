@@ -12,11 +12,12 @@ using std::placeholders::_3;
 using std::placeholders::_4;
 
 
-DroneModule::DroneModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm, DroneExecutionManager* dem):
+DroneModule::DroneModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm, DroneExecutionManager* dem, fs::FS &fs):
 _dlm(dlm),
 _dmm(dmm),
 _dem(dem),
-_id(id) {
+_id(id),
+_fs(fs) {
   _dmm->registerModule(this);
   _enabled = true;
   _error = 0;
@@ -322,6 +323,7 @@ void DroneModule::handleParamMessage(DroneLinkMsg *msg, DRONE_PARAM_ENTRY *param
   if (msg->type() == ((param->paramTypeLength >> 4) & 0x07)) {
     // write param
     if ((param->paramTypeLength & DRONE_LINK_MSG_WRITABLE) > 0) {
+
       uint8_t len = msg->length();
       // compare to see if anything has changed... which may including receiving our own messages after a query!!
       if (memcmp(param->data.c, msg->_msg.payload.c, len) != 0) {
@@ -340,6 +342,8 @@ void DroneModule::handleParamMessage(DroneLinkMsg *msg, DRONE_PARAM_ENTRY *param
         //update();
         _updateNeeded = true;
       }
+
+
     }
 
   } else if (msg->type() == DRONE_LINK_MSG_TYPE_QUERY) {
@@ -353,6 +357,8 @@ void DroneModule::handleParamMessage(DroneLinkMsg *msg, DRONE_PARAM_ENTRY *param
     _mgmtMsg.length(param->nameLen);
     memcpy(_mgmtMsg._msg.payload.c, param->name, param->nameLen);
     _dlm->publish(_mgmtMsg);
+  } else {
+    //Log.warningln("[DM.hPM] Attempt to write mismatching type %u > %u", msg->type(), ty );
   }
   //Log.noticeln("[DM.hPM] end");
 }

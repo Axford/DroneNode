@@ -1,0 +1,85 @@
+// D-Code Config Script
+
+// Setup the node
+node 200
+hostname "Controller"
+
+// Init modules
+Management.new 1
+  name "Management"
+  status true
+  interval 1000
+  discovery true
+
+  // publish
+  .publish "hostname"
+  .publish "build"
+  .publish "uptime"
+  .publish "IP"
+.done
+
+Joystick.new 4
+  name "LeftJoy"
+  interval 100
+  bus 3
+  invert true true true true
+  .publish "xAxis"
+  .publish "yAxis"
+  .publish "zAxis"
+  .publish "button"
+.done
+
+Joystick.new 5
+  name "RightJoy"
+  interval 100
+  bus 2
+  invert false false true true
+  .publish "xAxis"
+  .publish "yAxis"
+  .publish "zAxis"
+  .publish "button"
+.done
+
+RFM69Telemetry.new 6
+  name "RFM69"
+  status 1 // disable
+  .sub [@>0.0]
+  .publish "RSSI"
+.done
+
+Controller.new 7
+  name "Controller"
+  interval 50
+  bus 0
+  left 4
+  right 5
+  telemetry 6
+  power 9
+.done
+
+UDPTelemetry.new 2
+  name "UDPT"
+  status 1
+  port 8007
+  broadcast 255 255 255 255
+  .sub [@>0.0]
+  .sub [1>0.0]
+.done
+
+INA219.new 9
+  name "Power"
+  bus 7
+  addr 64
+  interval 1000
+  cells 3
+  threshold 11.2
+  .publish "current"
+  .publish "power"
+  .publish "loadV"
+  .publish "cellV"
+  .publish "alarm"
+.done
+
+
+// finish setup
+.setup

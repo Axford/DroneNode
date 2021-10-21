@@ -4,8 +4,8 @@
 #include "../pinConfig.h"
 #include "strings.h"
 
-NMEAModule::NMEAModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm, DroneExecutionManager* dem):
-  DroneModule ( id, dmm, dlm, dem )
+NMEAModule::NMEAModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm, DroneExecutionManager* dem, fs::FS &fs):
+  DroneModule ( id, dmm, dlm, dem, fs )
  {
    setTypeName(FPSTR(NMEA_STR_NMEA));
 

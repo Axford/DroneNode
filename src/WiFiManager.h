@@ -6,6 +6,7 @@
 #include <ArduinoJson.h>
 #include <ArduinoLog.h>
 #include "DroneModuleManager.h"
+#include "FS.h"
 
 #define WIFI_TIMEOUT_MS       10000
 #define WIFI_RECOVER_TIME_MS  10000
@@ -21,7 +22,7 @@ public:
   WiFiManager();
 
   void start();
-  void loadConfiguration();
+  void loadConfiguration(fs::FS &fs);
 
 protected:
   IvanLinkedList::LinkedList<WiFiNetworkCredentials> _networks;

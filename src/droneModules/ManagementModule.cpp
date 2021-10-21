@@ -6,8 +6,8 @@
 #include "../OTAManager.h"
 #include "strings.h"
 
-ManagementModule::ManagementModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm, DroneExecutionManager* dem):
-  DroneModule ( id, dmm, dlm, dem )
+ManagementModule::ManagementModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm, DroneExecutionManager* dem, fs::FS &fs):
+  DroneModule ( id, dmm, dlm, dem, fs )
  {
    setTypeName(FPSTR(MANAGEMENT_STR_MANAGEMENT));
 

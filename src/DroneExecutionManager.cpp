@@ -65,7 +65,8 @@ DEM_ENUM_MAPPING DRONE_PARAM_TABLE[] PROGMEM = {
 
 
 
-DroneExecutionManager::DroneExecutionManager(DroneModuleManager *dmm, DroneLinkManager *dlm) {
+DroneExecutionManager::DroneExecutionManager(DroneModuleManager *dmm, DroneLinkManager *dlm, fs::FS &fs):
+  _fs(fs) {
   _dmm = dmm;
   _dlm = dlm;
   _call.p = -1;
@@ -157,8 +158,8 @@ DroneExecutionManager::DroneExecutionManager(DroneModuleManager *dmm, DroneLinkM
 
 uint8_t DroneExecutionManager::getBootStatus() {
   uint8_t v = DEM_BOOT_FAIL;
-  if(SPIFFS.exists(DEM_BOOT_FILENAME)) {
-    File f = SPIFFS.open(DEM_BOOT_FILENAME, FILE_READ);
+  if(_fs.exists(DEM_BOOT_FILENAME)) {
+    File f = _fs.open(DEM_BOOT_FILENAME, FILE_READ);
     if (f && f.available()) {
       v = f.read();
       Log.noticeln(F("[DEM.gBS] boot flag: %u"), v);
@@ -172,7 +173,7 @@ uint8_t DroneExecutionManager::getBootStatus() {
 
 
 void DroneExecutionManager::setBootStatus(uint8_t v) {
-  File f = SPIFFS.open(DEM_BOOT_FILENAME, FILE_WRITE);
+  File f = _fs.open(DEM_BOOT_FILENAME, FILE_WRITE);
   f.write(v);
   f.close();
 }
@@ -402,10 +403,10 @@ boolean DroneExecutionManager::load(const char * filename) {
   }
 
   Log.noticeln(F("[DEM.l] %s ..."), filename);
-  if (SPIFFS.exists(filename)) {
+  if (_fs.exists(filename)) {
     uint32_t startTime = millis();
 
-    _file = SPIFFS.open(filename, FILE_READ);
+    _file = _fs.open(filename, FILE_READ);
 
     if(!_file){
         Log.errorln(F("[DEM.l] Error opening file"));
@@ -1373,31 +1374,31 @@ boolean DroneExecutionManager::mod_constructor(DEM_INSTRUCTION_COMPILED* instr, 
     DroneModule *newMod;
 
     if (strcmp_P(instr->ns->name, CONTROLLER_STR_CONTROLLER) == 0) {
-      newMod = new ControllerModule(id, _dmm, _dlm, this);
+      newMod = new ControllerModule(id, _dmm, _dlm, this, _fs);
     } else if (strcmp_P(instr->ns->name, HMC5883L_STR_HMC5883L) == 0) {
-      newMod = new HMC5883LModule(id, _dmm, _dlm, this);
+      newMod = new HMC5883LModule(id, _dmm, _dlm, this, _fs);
     } else if (strcmp_P(instr->ns->name, INA219_STR_INA219) == 0) {
-      newMod = new INA219Module(id, _dmm, _dlm, this);
+      newMod = new INA219Module(id, _dmm, _dlm, this, _fs);
     } else if (strcmp_P(instr->ns->name, JOYSTICK_STR_JOYSTICK) == 0) {
-      newMod = new JoystickModule(id, _dmm, _dlm, this);
+      newMod = new JoystickModule(id, _dmm, _dlm, this, _fs);
     } else if (strcmp_P(instr->ns->name, MANAGEMENT_STR_MANAGEMENT) == 0) {
-      newMod = new ManagementModule(id, _dmm, _dlm, this);
+      newMod = new ManagementModule(id, _dmm, _dlm, this, _fs);
     } else if (strcmp_P(instr->ns->name, MOTOR_STR_MOTOR) == 0) {
-      newMod = new MotorModule(id, _dmm, _dlm, this);
+      newMod = new MotorModule(id, _dmm, _dlm, this, _fs);
     } else if (strcmp_P(instr->ns->name, NMEA_STR_NMEA) == 0) {
-      newMod = new NMEAModule(id, _dmm, _dlm, this);
+      newMod = new NMEAModule(id, _dmm, _dlm, this, _fs);
     } else if (strcmp_P(instr->ns->name, NEOPIXEL_STR_NEOPIXEL) == 0) {
-      newMod = new NeopixelModule(id, _dmm, _dlm, this);
+      newMod = new NeopixelModule(id, _dmm, _dlm, this, _fs);
     }  else if (strcmp_P(instr->ns->name, RFM69_TELEMETRY_STR_RFM69_TELEMETRY) == 0) {
-      newMod = new RFM69TelemetryModule(id, _dmm, _dlm, this);
+      newMod = new RFM69TelemetryModule(id, _dmm, _dlm, this, _fs);
     } else if (strcmp_P(instr->ns->name, TANK_STEER_STR_TANK_STEER) == 0) {
-      newMod = new TankSteerModule(id, _dmm, _dlm, this);
+      newMod = new TankSteerModule(id, _dmm, _dlm, this, _fs);
     } else if (strcmp_P(instr->ns->name, TURN_RATE_STR_TURN_RATE) == 0) {
-      newMod = new TurnRateModule(id, _dmm, _dlm, this);
+      newMod = new TurnRateModule(id, _dmm, _dlm, this, _fs);
     } else if (strcmp_P(instr->ns->name, UDP_TELEMETRY_STR_UDP_TELEMETRY) == 0) {
-      newMod = new UDPTelemetryModule(id, _dmm, _dlm, this);
+      newMod = new UDPTelemetryModule(id, _dmm, _dlm, this, _fs);
     } else if (strcmp_P(instr->ns->name, NAV_STR_NAV) == 0) {
-      newMod = new NavModule(id, _dmm, _dlm, this);
+      newMod = new NavModule(id, _dmm, _dlm, this, _fs);
     } else {
       Log.errorln(F("[.c] Unknown type"));
     }

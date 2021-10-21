@@ -3,8 +3,8 @@
 #include "../DroneLinkManager.h"
 #include "strings.h"
 
-TankSteerModule::TankSteerModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm, DroneExecutionManager* dem):
-  DroneModule ( id, dmm, dlm , dem)
+TankSteerModule::TankSteerModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm, DroneExecutionManager* dem, fs::FS &fs):
+  DroneModule ( id, dmm, dlm , dem, fs)
  {
    // set type
    setTypeName(FPSTR(TANK_STEER_STR_TANK_STEER));

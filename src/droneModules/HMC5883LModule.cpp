@@ -5,8 +5,8 @@
 #include <SPIFFS.h>
 
 
-HMC5883LModule::HMC5883LModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm, DroneExecutionManager* dem):
-  I2CBaseModule ( id, dmm, dlm, dem )
+HMC5883LModule::HMC5883LModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm, DroneExecutionManager* dem, fs::FS &fs):
+  I2CBaseModule ( id, dmm, dlm, dem, fs )
  {
    setTypeName(FPSTR(HMC5883L_STR_HMC5883L));
    //_params[I2CBASE_PARAM_ADDR_E].data.uint8[0] = HMC5883L_I2C_ADDRESS;

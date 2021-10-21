@@ -35,15 +35,22 @@ Steps to setup a new device:
 #include "DroneExecutionManager.h"
 
 #define INC_WEB_SERVER
-#define INC_SPIFFS_EDITOR
+//#define INC_SPIFFS_EDITOR
 
 // other libraries
-#include "SPIFFS.h"
+//#include "SPIFFS.h"
+
+#include "FS.h"
+#include <LITTLEFS.h>
+
+#define FORMAT_LITTLEFS_IF_FAILED true
+
 #include <AsyncTCP.h>
 #include <ESPmDNS.h>
 
 #ifdef INC_WEB_SERVER
 #include <ESPAsyncWebServer.h>
+#include "WebFSEditor.h"
 #endif
 
 //#include <AsyncJson.h>
@@ -66,6 +73,7 @@ WiFiManager wifiManager;
 
 #ifdef INC_WEB_SERVER
 AsyncWebServer server(80);
+WebFSEditor fsEditor(LITTLEFS);
 #endif
 
 AsyncEventSource events("/events");
@@ -74,22 +82,6 @@ OTAManager OTAMgr(&events);
 DroneLinkManager *dlm;
 DroneModuleManager *dmm;
 DroneExecutionManager *dem;
-
-// HTML web page to handle 3 input fields (input1, input2, input3)
-/*
-const char wifi_html[] PROGMEM = R"rawliteral(
-<!DOCTYPE HTML><html><head>
-  </head><body>
-    <h1>DroneModule Wifi Settings</h1>
-  <form action="/savewifi">
-    APMode: <input type="checkbox" name="APMode"><br/>
-    SSID: <input typ e="text" name="ssid"><br/>
-    Password: <input type="text" name="password"><br/>
-    <input type="submit" value="Save">
-  </form>
-</body></html>
-)rawliteral";
-*/
 
 const char* QUERY_PARAM_APMODE = "APMode";
 const char* QUERY_PARAM_SSID = "ssid";
@@ -103,55 +95,6 @@ void setupWebServer() {
     client->send("hello!",NULL,millis(),1000);
   });
   server.addHandler(&events);
-
-  // setup wifi settings form
-  /*
-  server.on("/wifi", HTTP_GET, [](AsyncWebServerRequest *request){
-    request->send_P(200, "text/html", wifi_html);
-  });
-  */
-
-
-  // Save new wifi settings <ESP_IP>/savewifi?xxx
-  /*
-  server.on("/savewifi", HTTP_GET, [] (AsyncWebServerRequest *request) {
-
-    if (request->hasParam(QUERY_PARAM_APMODE)) {
-      APMode = (request->getParam(QUERY_PARAM_APMODE)->value() == "on");
-    } else {
-      APMode = false;
-    }
-
-    if (request->hasParam(QUERY_PARAM_SSID)) {
-      ssid = request->getParam(QUERY_PARAM_SSID)->value();
-    }
-
-    if (request->hasParam(QUERY_PARAM_PASSWORD)) {
-      password = request->getParam(QUERY_PARAM_PASSWORD)->value();
-    }
-
-    // build into new json file and save to SPIFFS
-    File file = SPIFFS.open(F("/wifi.json"), FILE_WRITE);
-    file.println("{");
-      file.print(F("\"APMode\":"));
-      file.print(APMode ? "true" : "false");
-      file.print(",\n");
-
-      file.print(F("\"ssid\":\""));
-      file.print(ssid);
-      file.print("\",\n");
-
-      file.print(F("\"password\":\""));
-      file.print(password);
-      file.print("\"\n");
-    file.println("}");
-    file.close();
-
-    request->send(200, "text/html", F("Settings saved - rebooting"));
-    ESP.restart();
-  });
-  */
-
 
   // node info debug
   server.on("/nodeInfo", HTTP_GET, [](AsyncWebServerRequest *request){
@@ -184,12 +127,20 @@ void setupWebServer() {
   server.addHandler(new SPIFFSEditor(SPIFFS));
   #endif
 
+  /*
   server.onNotFound([](AsyncWebServerRequest *request){
     request->send(404);
   });
+  */
+
+  fsEditor.httpuser = "admin";
+  fsEditor.httppassword = "admin";
+  fsEditor.configureWebServer(server);
+
   DefaultHeaders::Instance().addHeader("Access-Control-Allow-Origin", "*");
 
-  server.serveStatic("/", SPIFFS, "/").setDefaultFile("index.htm");
+  //server.serveStatic("/", SPIFFS, "/").setDefaultFile("index.htm");
+  server.serveStatic("/", LITTLEFS, "/").setDefaultFile("index.htm");
 
   server.begin();
 }
@@ -234,6 +185,55 @@ void coreTask( void * pvParameters ) {
 }
 
 
+void listDir(fs::FS &fs, const char * dirname, uint8_t levels){
+    Serial.printf("Listing directory: %s\r\n", dirname);
+
+    File root = fs.open(dirname);
+    if(!root){
+        Serial.println("- failed to open directory");
+        return;
+    }
+    if(!root.isDirectory()){
+        Serial.println(" - not a directory");
+        return;
+    }
+
+    File file = root.openNextFile();
+    while(file){
+        if(file.isDirectory()){
+            Serial.print("  DIR : ");
+
+#ifdef CONFIG_LITTLEFS_FOR_IDF_3_2
+            Serial.println(file.name());
+#else
+            Serial.print(file.name());
+            time_t t= file.getLastWrite();
+            struct tm * tmstruct = localtime(&t);
+            Serial.printf("  LAST WRITE: %d-%02d-%02d %02d:%02d:%02d\n",(tmstruct->tm_year)+1900,( tmstruct->tm_mon)+1, tmstruct->tm_mday,tmstruct->tm_hour , tmstruct->tm_min, tmstruct->tm_sec);
+#endif
+
+            if(levels){
+                listDir(fs, file.name(), levels -1);
+            }
+        } else {
+            Serial.print("  FILE: ");
+            Serial.print(file.name());
+            Serial.print("  SIZE: ");
+
+#ifdef CONFIG_LITTLEFS_FOR_IDF_3_2
+            Serial.println(file.size());
+#else
+            Serial.print(file.size());
+            time_t t= file.getLastWrite();
+            struct tm * tmstruct = localtime(&t);
+            Serial.printf("  LAST WRITE: %d-%02d-%02d %02d:%02d:%02d\n",(tmstruct->tm_year)+1900,( tmstruct->tm_mon)+1, tmstruct->tm_mday,tmstruct->tm_hour , tmstruct->tm_min, tmstruct->tm_sec);
+#endif
+        }
+        file = root.openNextFile();
+    }
+}
+
+
 void setup() {
   pinMode(PIN_LED, OUTPUT);
   digitalWrite(PIN_LED, HIGH);
@@ -245,6 +245,7 @@ void setup() {
 
   delay(2500); // to allow serial to reconnect after programming
 
+  /*
   // direct log output to file in SPIFFS
   Log.noticeln(F("[] Starting SPIFFS"));
   if (!SPIFFS.begin(true)) { // formatonfail=true
@@ -254,6 +255,20 @@ void setup() {
   Log.noticeln(F("  usedBytes %d"), SPIFFS.usedBytes());
 
   File logFile = SPIFFS.open("/startup.log", FILE_WRITE);
+  */
+
+  if(!LITTLEFS.begin(FORMAT_LITTLEFS_IF_FAILED)){
+    Log.errorln("[] LITTLEFS Mount Failed");
+    delay(1000);
+    // Should be formatted and working after a reboot
+    ESP.restart();
+  }
+
+  // list filesystem
+  listDir(LITTLEFS, "/", 0);
+
+
+  File logFile = LITTLEFS.open("/startup.log", FILE_WRITE);
 
   // switch to logging to startup.log file on spiffs
   //Log.begin(LOG_LEVEL_VERBOSE, &logFile);
@@ -264,7 +279,7 @@ void setup() {
   // create core objects
   dlm = new DroneLinkManager();
   dmm = new DroneModuleManager(dlm);
-  dem = new DroneExecutionManager(dmm, dlm);
+  dem = new DroneExecutionManager(dmm, dlm, LITTLEFS);
 
   //ESP32PWM::allocateTimer(0);
 	//ESP32PWM::allocateTimer(1);
@@ -330,7 +345,7 @@ void setup() {
   WiFi.softAP(hostname.c_str());
 
   // load WIFI Configuration
-  wifiManager.loadConfiguration();
+  wifiManager.loadConfiguration(LITTLEFS);
   wifiManager.start();
 
   OTAMgr.onEvent = handleOTAEVent;

@@ -3,8 +3,8 @@
 #include "../DroneLinkManager.h"
 #include "strings.h"
 
-ServoModule::ServoModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm, DroneExecutionManager* dem):
-  DroneModule ( id, dmm, dlm, dem )
+ServoModule::ServoModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm, DroneExecutionManager* dem, fs::FS &fs):
+  DroneModule ( id, dmm, dlm, dem, fs )
  {
    setTypeName(FPSTR(SERVO_STR_SERVO));
    _pins[0] = 0;

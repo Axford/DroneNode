@@ -5,9 +5,9 @@
 #include "LinkedList.h"
 
 #include "DroneLinkMsg.h"
-#include <SPIFFS.h>
 #include <ESPAsyncWebServer.h>
 #include <functional>
+#include "FS.h"
 
 // forward declarations
 class DroneModule;
@@ -126,8 +126,9 @@ protected:
 
   DroneLinkManager *_dlm;
   DroneModuleManager *_dmm;
-  File _file;  // TODO - can prob remove this
 
+  File _file;  // TODO - can prob remove this
+  fs::FS &_fs;
   uint8_t _channelContext;  // set by module commands
   uint8_t _nodeContext;  // set by node command
   boolean _multiLineComment; // set to true when /* encountered
@@ -140,7 +141,7 @@ protected:
   //DRONE_LINK_NODE_PAGE *_nodePages[DRONE_LINK_NODE_PAGES];
 
 public:
-    DroneExecutionManager(DroneModuleManager *dmm, DroneLinkManager *dlm);
+    DroneExecutionManager(DroneModuleManager *dmm, DroneLinkManager *dlm, fs::FS &fs);
 
     uint8_t getBootStatus();
     void setBootStatus(uint8_t v);

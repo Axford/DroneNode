@@ -2,7 +2,7 @@
 #include "WiFiManager.h"
 #include "WiFi.h"
 #include "esp_wifi.h"
-#include "SPIFFS.h"
+//#include "SPIFFS.h"
 
 //#include "esp_int_wdt.h"
 
@@ -31,9 +31,9 @@ WiFiManager::WiFiManager() {
 }
 
 
-void WiFiManager::loadConfiguration() {
-  if (SPIFFS.exists(F("/wifi.json"))) {
-    File file = SPIFFS.open(F("/wifi.json"), FILE_READ);
+void WiFiManager::loadConfiguration(fs::FS &fs) {
+  if (fs.exists(F("/wifi.json"))) {
+    File file = fs.open(F("/wifi.json"), FILE_READ);
 
     DynamicJsonDocument doc(1024);
 
@@ -67,7 +67,12 @@ void WiFiManager::loadConfiguration() {
     // Close the file (Curiously, File's destructor doesn't close the file)
     file.close();
   } else {
-    Log.errorln(F("[WIFI] wifi.json file does not exist"));
+    Log.errorln(F("[WIFI] wifi.json file does not exist, adding defaults"));
+    WiFiNetworkCredentials cred;
+    // add default credentials
+    cred.ssid = "Badger";
+    cred.password = "LouisVuitton";
+    _networks.add(cred);
   }
 }
 

@@ -25,6 +25,7 @@ things that would be useful for all modules
 #include "strings.h"
 #include <ESPAsyncWebServer.h>
 #include <functional>
+#include "FS.h"
 
 // defines for common params
 #define DRONE_MODULE_PARAM_STATUS      1  // 0=disabled, 1=enabled, write a value of 2 or above to trigger reset
@@ -92,6 +93,7 @@ protected:
   DroneModuleManager* _dmm;
   DroneExecutionManager* _dem;
   uint8_t _id;
+  fs::FS &_fs;
   boolean _enabled;
   uint8_t _error;
   DroneLinkMsg _mgmtMsg;
@@ -116,7 +118,7 @@ public:
   long hLMDuration;
   long loopDuration;
 
-  DroneModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm, DroneExecutionManager* dem);
+  DroneModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm, DroneExecutionManager* dem, fs::FS &fs);
   ~DroneModule();
 
   uint8_t id();

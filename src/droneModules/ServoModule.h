@@ -26,7 +26,7 @@ protected:
   float _limits[2];  // min, max
 public:
 
-  ServoModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm, DroneExecutionManager* dem);
+  ServoModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm, DroneExecutionManager* dem, fs::FS &fs);
 
   virtual void setup();
   virtual void loop();

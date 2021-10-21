@@ -32,7 +32,7 @@ protected:
   Adafruit_MPU6050 _sensor;
 public:
 
-  MPU6050Module(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm, DroneExecutionManager* dem);
+  MPU6050Module(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm, DroneExecutionManager* dem, fs::FS &fs);
 
   void doReset();
 
