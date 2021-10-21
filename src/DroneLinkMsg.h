@@ -181,7 +181,6 @@ public:
       response->print(addr->param);
     }
 
-
     void print() {
       Serial.print(source());
       Serial.print(':');

@@ -1042,6 +1042,7 @@ void DroneExecutionManager::serveMacroInfo(AsyncWebServerRequest *request) {
     for (uint8_t j=0; j<m->commands->size(); j++) {
       ic = m->commands->get(j);
       response->printf("   %u: %s ", j, ic.cmd);
+      response->printf(" %u>%u.%u ", ic.msg.node, ic.msg.channel, ic.msg.param);
       DroneLinkMsg::printPayload(&ic.msg.payload, ic.msg.paramTypeLength, response);
     }
     response->print("\n");
