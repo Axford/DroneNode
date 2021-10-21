@@ -128,6 +128,11 @@ void NavModule::update() {
   float lat1 = _subs[NAV_SUB_LOCATION_E].param.data.f[1];
   float lon1 = _subs[NAV_SUB_LOCATION_E].param.data.f[0];
 
+  if (lat1 == 0 || lon1 == 0) {
+    Log.noticeln("[Nav.u] invalid location");
+    return;
+  }
+
   float lat2 = _subs[NAV_SUB_TARGET_E].param.data.f[1];
   float lon2 = _subs[NAV_SUB_TARGET_E].param.data.f[0];
 
