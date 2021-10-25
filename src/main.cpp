@@ -35,11 +35,8 @@ Steps to setup a new device:
 #include "DroneExecutionManager.h"
 
 #define INC_WEB_SERVER
-//#define INC_SPIFFS_EDITOR
 
 // other libraries
-//#include "SPIFFS.h"
-
 #include "FS.h"
 #include <LITTLEFS.h>
 
@@ -69,11 +66,13 @@ Steps to setup a new device:
 // config
 #include "pinConfig.h"
 
+boolean doLoop = true;
+
 WiFiManager wifiManager;
 
 #ifdef INC_WEB_SERVER
 AsyncWebServer server(80);
-WebFSEditor fsEditor(LITTLEFS);
+WebFSEditor fsEditor(LITTLEFS, doLoop);
 #endif
 
 AsyncEventSource events("/events");
@@ -87,7 +86,6 @@ const char* QUERY_PARAM_APMODE = "APMode";
 const char* QUERY_PARAM_SSID = "ssid";
 const char* QUERY_PARAM_PASSWORD = "password";
 
-
 #ifdef INC_WEB_SERVER
 void setupWebServer() {
   Log.noticeln(F("[] Setup web server..."));
@@ -98,34 +96,41 @@ void setupWebServer() {
 
   // node info debug
   server.on("/nodeInfo", HTTP_GET, [](AsyncWebServerRequest *request){
+    doLoop = false;
     dlm->serveNodeInfo(request);
+    doLoop = true;
   });
 
   // channel info debug
   server.on("/channelInfo", HTTP_GET, [](AsyncWebServerRequest *request){
+    doLoop = false;
     dlm->serveChannelInfo(request);
+    doLoop = true;
   });
 
   // modules
   server.on("/modules", HTTP_GET, [](AsyncWebServerRequest *request){
+    doLoop = false;
     dmm->serveModuleInfo(request);
+    doLoop = true;
   });
 
   // DEM handlers
   server.on("/macros", HTTP_GET, [](AsyncWebServerRequest *request){
+    doLoop = false;
     dem->serveMacroInfo(request);
+    doLoop = true;
   });
   server.on("/execution", HTTP_GET, [](AsyncWebServerRequest *request){
+    doLoop = false;
     dem->serveExecutionInfo(request);
+    doLoop = true;
   });
   server.on("/commands", HTTP_GET, [](AsyncWebServerRequest *request){
+    doLoop = false;
     dem->serveCommandInfo(request);
+    doLoop = true;
   });
-
-
-  #ifdef INC_SPIFFS_EDITOR
-  server.addHandler(new SPIFFSEditor(SPIFFS));
-  #endif
 
   /*
   server.onNotFound([](AsyncWebServerRequest *request){
@@ -186,51 +191,53 @@ void coreTask( void * pvParameters ) {
 
 
 void listDir(fs::FS &fs, const char * dirname, uint8_t levels){
-    Serial.printf("Listing directory: %s\r\n", dirname);
+  doLoop = false;
+  Serial.printf("Listing directory: %s\r\n", dirname);
 
-    File root = fs.open(dirname);
-    if(!root){
-        Serial.println("- failed to open directory");
-        return;
-    }
-    if(!root.isDirectory()){
-        Serial.println(" - not a directory");
-        return;
-    }
+  File root = fs.open(dirname);
+  if(!root){
+      Serial.println("- failed to open directory");
+      return;
+  }
+  if(!root.isDirectory()){
+      Serial.println(" - not a directory");
+      return;
+  }
 
-    File file = root.openNextFile();
-    while(file){
-        if(file.isDirectory()){
-            Serial.print("  DIR : ");
-
-#ifdef CONFIG_LITTLEFS_FOR_IDF_3_2
-            Serial.println(file.name());
-#else
-            Serial.print(file.name());
-            time_t t= file.getLastWrite();
-            struct tm * tmstruct = localtime(&t);
-            Serial.printf("  LAST WRITE: %d-%02d-%02d %02d:%02d:%02d\n",(tmstruct->tm_year)+1900,( tmstruct->tm_mon)+1, tmstruct->tm_mday,tmstruct->tm_hour , tmstruct->tm_min, tmstruct->tm_sec);
-#endif
-
-            if(levels){
-                listDir(fs, file.name(), levels -1);
-            }
-        } else {
-            Serial.print("  FILE: ");
-            Serial.print(file.name());
-            Serial.print("  SIZE: ");
+  File file = root.openNextFile();
+  while(file){
+      if(file.isDirectory()){
+          Serial.print("  DIR : ");
 
 #ifdef CONFIG_LITTLEFS_FOR_IDF_3_2
-            Serial.println(file.size());
+          Serial.println(file.name());
 #else
-            Serial.print(file.size());
-            time_t t= file.getLastWrite();
-            struct tm * tmstruct = localtime(&t);
-            Serial.printf("  LAST WRITE: %d-%02d-%02d %02d:%02d:%02d\n",(tmstruct->tm_year)+1900,( tmstruct->tm_mon)+1, tmstruct->tm_mday,tmstruct->tm_hour , tmstruct->tm_min, tmstruct->tm_sec);
+          Serial.print(file.name());
+          time_t t= file.getLastWrite();
+          struct tm * tmstruct = localtime(&t);
+          Serial.printf("  LAST WRITE: %d-%02d-%02d %02d:%02d:%02d\n",(tmstruct->tm_year)+1900,( tmstruct->tm_mon)+1, tmstruct->tm_mday,tmstruct->tm_hour , tmstruct->tm_min, tmstruct->tm_sec);
 #endif
-        }
-        file = root.openNextFile();
-    }
+
+          if(levels){
+              listDir(fs, file.name(), levels -1);
+          }
+      } else {
+          Serial.print("  FILE: ");
+          Serial.print(file.name());
+          Serial.print("  SIZE: ");
+
+#ifdef CONFIG_LITTLEFS_FOR_IDF_3_2
+          Serial.println(file.size());
+#else
+          Serial.print(file.size());
+          time_t t= file.getLastWrite();
+          struct tm * tmstruct = localtime(&t);
+          Serial.printf("  LAST WRITE: %d-%02d-%02d %02d:%02d:%02d\n",(tmstruct->tm_year)+1900,( tmstruct->tm_mon)+1, tmstruct->tm_mday,tmstruct->tm_hour , tmstruct->tm_min, tmstruct->tm_sec);
+#endif
+      }
+      file = root.openNextFile();
+  }
+  doLoop = true;
 }
 
 
@@ -413,7 +420,7 @@ void loop() {
     }
   }
 
-  if (!OTAMgr.isUpdating) {
+  if (!OTAMgr.isUpdating && doLoop) {
     dmm->watchdog();
 
     yield();

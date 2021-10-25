@@ -11,10 +11,11 @@ protected:
 
 public:
   fs::FS &_fs;
+  boolean &_doLoop;
   String httpuser;           // username to access web admin
   String httppassword;       // password to access web admin
 
-  WebFSEditor(fs::FS &fs);
+  WebFSEditor(fs::FS &fs, boolean &doLoop);
 
   String listFiles(bool ishtml);
 

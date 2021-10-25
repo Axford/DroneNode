@@ -121,9 +121,9 @@ const char index_html[] PROGMEM = R"rawliteral(
   function rebootButton() {
     document.getElementById("detailsheader").innerHTML = "Rebooting ...";
     var xhr = new XMLHttpRequest();
-    window.open("/execution?execute","_self");
-    //xhr.open("GET", "/reboot", true);
-    //xhr.send();
+    //window.open("/execution?execute","_self");
+    xhr.open("GET", "/execution?execute", true);
+    xhr.send();
   }
   function listFilesButton() {
     document.getElementById("info").style.display = "block";

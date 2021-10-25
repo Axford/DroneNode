@@ -2,8 +2,9 @@
 #include "WebFSEditor.h"
 #include <Arduino.h>
 
-WebFSEditor::WebFSEditor(fs::FS &fs):
-  _fs(fs) {
+WebFSEditor::WebFSEditor(fs::FS &fs, boolean &doLoop):
+  _fs(fs),
+  _doLoop(doLoop) {
 
 
 }
@@ -11,6 +12,7 @@ WebFSEditor::WebFSEditor(fs::FS &fs):
 
 // list all of the files, if ishtml=true, return html rather than simple text
 String WebFSEditor::listFiles(bool ishtml) {
+  _doLoop = false;
   String returnText = "";
   Serial.println("Listing files stored on _fs");
   File root = _fs.open("/");
@@ -33,6 +35,7 @@ String WebFSEditor::listFiles(bool ishtml) {
   }
   root.close();
   foundfile.close();
+  _doLoop = true;
   return returnText;
 }
 
@@ -80,7 +83,9 @@ void WebFSEditor::configureWebServer(AsyncWebServer &server) {
 
   // run handleUpload function when any file is uploaded
   server.onFileUpload([&](AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final) {
+    _doLoop = false;
     handleUpload(request, filename, index, data, len, final);
+    _doLoop = true;
   });
 
   // visiting this page will cause you to be logged out
@@ -144,6 +149,7 @@ void WebFSEditor::configureWebServer(AsyncWebServer &server) {
   server.on("/file", HTTP_GET, [&](AsyncWebServerRequest * request) {
     String logmessage = "Client:" + request->client()->remoteIP().toString() + " " + request->url();
     if (checkUserWebAuth(request)) {
+      _doLoop = false;
       logmessage += " Auth: Success";
       Serial.println(logmessage);
 
@@ -174,6 +180,7 @@ void WebFSEditor::configureWebServer(AsyncWebServer &server) {
       } else {
         request->send(400, "text/plain", "ERROR: name and action params required");
       }
+      _doLoop = true;
     } else {
       logmessage += " Auth: Failed";
       Serial.println(logmessage);
@@ -203,6 +210,7 @@ bool WebFSEditor::checkUserWebAuth(AsyncWebServerRequest * request) {
 void WebFSEditor::handleUpload(AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final) {
   // make sure authenticated before allowing upload
   if (checkUserWebAuth(request)) {
+    _doLoop = false;
     String logmessage = "Client:" + request->client()->remoteIP().toString() + " " + request->url();
     Serial.println(logmessage);
 
@@ -227,6 +235,8 @@ void WebFSEditor::handleUpload(AsyncWebServerRequest *request, String filename, 
       Serial.println(logmessage);
       request->redirect("/");
     }
+
+    _doLoop = true;
   } else {
     Serial.println("Auth: Failed");
     return request->requestAuthentication();
