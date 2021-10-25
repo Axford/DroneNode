@@ -321,8 +321,10 @@ void DroneModule::handleParamMessage(DroneLinkMsg *msg, DRONE_PARAM_ENTRY *param
   //Log.noticeln("[DM.hPM]");
 
   if (msg->type() == ((param->paramTypeLength >> 4) & 0x07)) {
-    // write param
-    if ((param->paramTypeLength & DRONE_LINK_MSG_WRITABLE) > 0) {
+    // write param (the writable bit must be cleared to set a value, to avoid published values writing to themselves!)
+    if ( ((param->paramTypeLength & DRONE_LINK_MSG_WRITABLE) > 0) &&
+         !msg->writable()
+       ) {
 
       uint8_t len = msg->length();
       // compare to see if anything has changed... which may including receiving our own messages after a query!!
@@ -364,7 +366,8 @@ void DroneModule::handleParamMessage(DroneLinkMsg *msg, DRONE_PARAM_ENTRY *param
 }
 
 void DroneModule::handleSubAddrMessage(DroneLinkMsg *msg, DRONE_PARAM_SUB *sub) {
-  if (msg->type() == DRONE_LINK_MSG_TYPE_ADDR) {
+  if (msg->type() == DRONE_LINK_MSG_TYPE_ADDR &&
+      !msg->writable()) {
     // write new address
     uint8_t len = msg->length();  // should always be sizeof(DRONE_LINK_ADDR) //msg->length();
     // compare to see if anything has changed... which may including receiving our own messages after a query!!

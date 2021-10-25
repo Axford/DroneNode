@@ -40,6 +40,7 @@ INA219.new 4
   .publish "alarm"
   .publish "shuntV"
   .publish "busV"
+  .publish "cellV"
 .done
 
 NMEA.new 5

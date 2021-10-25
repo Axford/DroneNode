@@ -912,7 +912,8 @@ boolean DroneExecutionManager::compileLine(const char * line, DEM_INSTRUCTION_CO
           instr->msg.payload.uint8[i] = 0;
         }
         if (byteLen <= DRONE_LINK_MSG_MAX_PAYLOAD) {
-          instr->msg.paramTypeLength = DRONE_LINK_MSG_WRITABLE | ((_instruction.dataType & 0x7) << 4) | (byteLen-1);
+          // write flag needs to be false to actually write local params!!
+          instr->msg.paramTypeLength = 0 | ((_instruction.dataType & 0x7) << 4) | (byteLen-1);
           for(uint8_t i=0; i<_instruction.numTokens; i++) {
             switch(_instruction.dataType) {
               case DRONE_LINK_MSG_TYPE_UINT8_T:
