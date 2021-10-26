@@ -9,13 +9,6 @@
 TODO
  - Save binding config
  - Load binding config
- - Create info bindings from all params
-
-
-loop
- [CM.d] Disarming...
- new param I: [DM.dis] disable 7
-
 */
 
 /*
@@ -1060,12 +1053,15 @@ void ControllerModule::loop() {
 
   // do we have an active binding to send to?
   // in which case keep spamming values to allow for any packet loss
-  if (_isBound && _menu == CONTROLLER_MENU_ROOT) {
+  // only send when not in auto (armed) mode
+  if (_isBound && _menu == CONTROLLER_MENU_ROOT && !_armed) {
     _sendMsg.node(_binding);
     for (uint8_t i=0; i<8; i++) {
       if (_bindings[i].param <255) {
         _sendMsg.channel(_bindings[i].channel);
         _sendMsg.param(_bindings[i].param);
+        _sendMsg.type(DRONE_LINK_MSG_TYPE_FLOAT);
+        _sendMsg.length(4);
         _sendMsg._msg.payload.f[0] = (_invert[i] ? -1 : 1) * _axes[i];
         _dlm->publish(_sendMsg);
       }
