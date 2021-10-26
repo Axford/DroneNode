@@ -10,6 +10,12 @@ TODO
  - Save binding config
  - Load binding config
  - Create info bindings from all params
+
+
+loop
+ [CM.d] Disarming...
+ new param I: [DM.dis] disable 7
+
 */
 
 /*
@@ -63,7 +69,7 @@ ControllerModule::ControllerModule(uint8_t id, DroneModuleManager* dmm, DroneLin
 
    _sendMsg.source(_dlm->node());
    _sendMsg.type(DRONE_LINK_MSG_TYPE_FLOAT);
-   _sendMsg.writable(true);
+   _sendMsg.writable(false);
    _sendMsg.length(4);
    _sendMsg._msg.payload.f[0] = 0;
 
@@ -392,7 +398,7 @@ void ControllerModule::handleLinkMessage(DroneLinkMsg *msg) {
     // capture all displayable parameters
     if (msg->type() <= DRONE_LINK_MSG_TYPE_CHAR) {
 
-      Log.noticeln("Received param info");
+      //Log.noticeln("Received param info");
 
       // add to list
       if (chan == NULL) {
@@ -433,7 +439,7 @@ void ControllerModule::handleLinkMessage(DroneLinkMsg *msg) {
       // assuming chan is now available
       if (chan != NULL) {
         // store the param in chan info
-        Serial.println("Storing param info");
+        //Serial.println("Storing param info");
 
         CONTROLLER_PARAM_INFO *paramInfo = getParamInfo(chan, msg->param());
 

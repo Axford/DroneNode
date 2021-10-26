@@ -439,7 +439,7 @@ void DroneModule::handleLinkMessage(DroneLinkMsg *msg) {
     }
   }
 
-  if (msg->channel() != _id) return;
+  if (msg->node() != _dlm->node() || msg->channel() != _id) return;
 
   if (!handleManagementMessage(msg)) {
 
