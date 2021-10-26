@@ -1056,12 +1056,13 @@ void ControllerModule::loop() {
   // only send when not in auto (armed) mode
   if (_isBound && _menu == CONTROLLER_MENU_ROOT && !_armed) {
     _sendMsg.node(_binding);
+    _sendMsg.type(DRONE_LINK_MSG_TYPE_FLOAT);
+    _sendMsg.length(4);
+    _sendMsg.writable(false);
     for (uint8_t i=0; i<8; i++) {
       if (_bindings[i].param <255) {
         _sendMsg.channel(_bindings[i].channel);
         _sendMsg.param(_bindings[i].param);
-        _sendMsg.type(DRONE_LINK_MSG_TYPE_FLOAT);
-        _sendMsg.length(4);
         _sendMsg._msg.payload.f[0] = (_invert[i] ? -1 : 1) * _axes[i];
         _dlm->publish(_sendMsg);
       }
