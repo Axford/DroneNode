@@ -17,6 +17,7 @@
 #include "droneModules/NunchuckJoystickModule.h"
 #include "droneModules/RFM69TelemetryModule.h"
 #include "droneModules/ServoModule.h"
+#include "droneModules/SpeedControlModule.h"
 #include "droneModules/TankSteerModule.h"
 #include "droneModules/TurnRateModule.h"
 #include "droneModules/UDPTelemetryModule.h"
@@ -144,6 +145,7 @@ DroneExecutionManager::DroneExecutionManager(DroneModuleManager *dmm, DroneLinkM
   ns = NunchuckJoystick::registerNamespace(this); NunchuckJoystick::registerParams(ns, this);
   ns = RFM69TelemetryModule::registerNamespace(this); RFM69TelemetryModule::registerParams(ns, this);
   ns = ServoModule::registerNamespace(this); ServoModule::registerParams(ns, this);
+  ns = SpeedControlModule::registerNamespace(this); SpeedControlModule::registerParams(ns, this);
   ns = TankSteerModule::registerNamespace(this);  TankSteerModule::registerParams(ns, this);
   ns = TurnRateModule::registerNamespace(this);  TurnRateModule::registerParams(ns, this);
   ns = UDPTelemetryModule::registerNamespace(this);  UDPTelemetryModule::registerParams(ns, this);
@@ -1401,6 +1403,8 @@ boolean DroneExecutionManager::mod_constructor(DEM_INSTRUCTION_COMPILED* instr, 
       newMod = new RFM69TelemetryModule(id, _dmm, _dlm, this, _fs);
     } else if (strcmp_P(instr->ns->name, SERVO_STR_SERVO) == 0) {
       newMod = new ServoModule(id, _dmm, _dlm, this, _fs);
+    } else if (strcmp_P(instr->ns->name, SPEED_CONTROL_STR_SPEED_CONTROL) == 0) {
+      newMod = new SpeedControlModule(id, _dmm, _dlm, this, _fs);
     } else if (strcmp_P(instr->ns->name, TANK_STEER_STR_TANK_STEER) == 0) {
       newMod = new TankSteerModule(id, _dmm, _dlm, this, _fs);
     } else if (strcmp_P(instr->ns->name, TURN_RATE_STR_TURN_RATE) == 0) {
