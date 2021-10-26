@@ -22,14 +22,14 @@ SpeedControlModule::SpeedControlModule(uint8_t id, DroneModuleManager* dmm, Dron
    _params[SPEED_CONTROL_PARAM_LIMITS_E].param = SPEED_CONTROL_PARAM_LIMITS;
    _params[SPEED_CONTROL_PARAM_LIMITS_E].name = FPSTR(STRING_LIMITS);
    _params[SPEED_CONTROL_PARAM_LIMITS_E].nameLen = sizeof(STRING_LIMITS);
-   _params[SPEED_CONTROL_PARAM_LIMITS_E].paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 8);
+   _params[SPEED_CONTROL_PARAM_LIMITS_E].paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_FLOAT, 8);
    _params[SPEED_CONTROL_PARAM_LIMITS_E].data.f[0] = 0.2; // just below deadband
    _params[SPEED_CONTROL_PARAM_LIMITS_E].data.f[1] = 1;
 
    _params[SPEED_CONTROL_PARAM_THRESHOLD_E].param = SPEED_CONTROL_PARAM_THRESHOLD;
    _params[SPEED_CONTROL_PARAM_THRESHOLD_E].name = FPSTR(STRING_THRESHOLD);
    _params[SPEED_CONTROL_PARAM_THRESHOLD_E].nameLen = sizeof(STRING_THRESHOLD);
-   _params[SPEED_CONTROL_PARAM_THRESHOLD_E].paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 4);
+   _params[SPEED_CONTROL_PARAM_THRESHOLD_E].paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_FLOAT, 4);
    _params[SPEED_CONTROL_PARAM_THRESHOLD_E].data.f[0] = 3;  // 3 meters
 
    _params[SPEED_CONTROL_PARAM_SPEED_E].param = SPEED_CONTROL_PARAM_SPEED;
