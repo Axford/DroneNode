@@ -61,6 +61,15 @@ NavModule::NavModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm,
    _params[NAV_PARAM_MODE_E].publish = true;
    _params[NAV_PARAM_MODE_E].paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_UINT8_T, 1);
    _params[NAV_PARAM_MODE_E].data.uint8[0] = NAV_GOTO;
+
+   _params[NAV_PARAM_LAST_E].param = NAV_PARAM_LAST;
+   _params[NAV_PARAM_LAST_E].name = FPSTR(STRING_LAST);
+   _params[NAV_PARAM_LAST_E].nameLen = sizeof(STRING_LAST);
+   _params[NAV_PARAM_LAST_E].publish = true;
+   _params[NAV_PARAM_LAST_E].paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_FLOAT, 12);
+   _params[NAV_PARAM_LAST_E].data.f[0] = 0;
+   _params[NAV_PARAM_LAST_E].data.f[1] = 0;
+   _params[NAV_PARAM_LAST_E].data.f[2] = 0;
 }
 
 NavModule::~NavModule() {
@@ -86,6 +95,7 @@ void NavModule::registerParams(DEM_NAMESPACE* ns, DroneExecutionManager *dem) {
 
   dem->registerCommand(ns, STRING_HEADING, DRONE_LINK_MSG_TYPE_FLOAT, ph);
   dem->registerCommand(ns, STRING_DISTANCE, DRONE_LINK_MSG_TYPE_FLOAT, ph);
+  dem->registerCommand(ns, STRING_LAST, DRONE_LINK_MSG_TYPE_FLOAT, ph);
 }
 
 
@@ -111,6 +121,16 @@ void NavModule::loop() {
 }
 
 
+void NavModule::updateLast(boolean fromTarget) {
+  if (fromTarget) {
+    updateAndPublishParam(&_params[NAV_PARAM_LAST_E], (uint8_t *)&_subs[NAV_SUB_TARGET_E].param.data.uint8, 12);
+  } else {
+    // from current location
+    memcpy(_params[NAV_PARAM_LAST_E].data.c, _subs[NAV_SUB_LOCATION_E].param.data.c, 8);
+    _params[NAV_PARAM_LAST_E].data.f[2] = 1; // 1m dummy origin radius
+    publishParamEntry(&_params[NAV_PARAM_LAST_E]);
+  }
+}
 
 void NavModule::update() {
   if (!_setupDone) return;
@@ -210,6 +230,10 @@ boolean NavModule::nav_inRadius(DEM_INSTRUCTION_COMPILED* instr, DEM_CALLSTACK* 
 
   _dem->dataStackPush( d <= instr->msg.payload.f[2] ? 1 : 0 , instr);
 
+  if (d <= instr->msg.payload.f[2]) {
+    updateLast(true);
+  }
+
   return true;
 }
 
@@ -219,6 +243,7 @@ boolean NavModule::nav_goto(DEM_INSTRUCTION_COMPILED* instr, DEM_CALLSTACK* cs, 
     float d =  getDistanceTo(instr->msg.payload.f[0], instr->msg.payload.f[1]);
     if (d <= instr->msg.payload.f[2]) {
       // made it, this command is done
+      updateLast(true);
       return true;
     } else {
       // still on our way
@@ -231,6 +256,12 @@ boolean NavModule::nav_goto(DEM_INSTRUCTION_COMPILED* instr, DEM_CALLSTACK* cs, 
     // ensure mode is goto
     _params[NAV_PARAM_MODE_E].data.uint8[0] = NAV_GOTO;
     publishParamEntries();
+
+    // do we need to update last for first time?
+    if (_params[NAV_PARAM_LAST_E].data.f[0] == 0) {
+      updateLast(false);
+    }
+
     return false;
   }
 }

@@ -33,7 +33,10 @@ Waypoint navigation:
 #define NAV_PARAM_MODE           14  // mode
 #define NAV_PARAM_MODE_E         2
 
-#define NAV_PARAM_ENTRIES        3
+#define NAV_PARAM_LAST           15  // last waypoint/location
+#define NAV_PARAM_LAST_E         3
+
+#define NAV_PARAM_ENTRIES        4
 
 static const char NAV_STR_NAV[] PROGMEM = "Nav";
 
@@ -59,6 +62,8 @@ public:
 
   void setup();
   void loop();
+
+  void updateLast(boolean fromTarget);
 
   void update();
 

@@ -48,6 +48,7 @@ static const char STRING_INPUT[] PROGMEM = "input";
 static const char STRING_INTERVAL[] PROGMEM = "interval";
 static const char STRING_INVERT[] PROGMEM = "invert";
 static const char STRING_IP[] PROGMEM = "IP";
+static const char STRING_LAST[] PROGMEM = "last";
 static const char STRING_LEFT[] PROGMEM = "left";
 static const char STRING_LIMITS[] PROGMEM = "limits";
 static const char STRING_LOADV[] PROGMEM = "loadV";
