@@ -6,7 +6,7 @@
 #include "DroneLinkManager.h"
 #include "DroneModule.h"
 #include "strings.h"
-
+#include <ArduinoOTA.h>
 
 DroneModuleManager::DroneModuleManager(DroneLinkManager* dlm):
   _lastWatchdogCheck(0),
@@ -54,6 +54,8 @@ uint8_t DroneModuleManager::node() {
 
 void DroneModuleManager::hostname(const char * name) {
   _hostname = name;
+  WiFi.softAP(name);
+  ArduinoOTA.setHostname(name);
 }
 
 String DroneModuleManager::hostname() {
@@ -117,7 +119,7 @@ void DroneModuleManager::loopModules() {
 
     // see if update needed
     m->updateIfNeeded();
-    
+
     // and check for main loop
     if (m->readyToLoop()) {
       //Serial.println(" Y");

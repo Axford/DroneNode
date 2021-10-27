@@ -25,7 +25,7 @@ ManagementModule::ManagementModule(uint8_t id, DroneModuleManager* dmm, DroneLin
    _params[MANAGEMENT_PARAM_HOSTNAME_E].param = MANAGEMENT_PARAM_HOSTNAME;
    _params[MANAGEMENT_PARAM_HOSTNAME_E].name = FPSTR(STRING_HOSTNAME);
    _params[MANAGEMENT_PARAM_HOSTNAME_E].nameLen = sizeof(STRING_HOSTNAME);
-   _params[MANAGEMENT_PARAM_HOSTNAME_E].paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_CHAR, _dmm->hostname().length());
+   _params[MANAGEMENT_PARAM_HOSTNAME_E].paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_CHAR, _dmm->hostname().length());
    _dmm->hostname().toCharArray(_params[MANAGEMENT_PARAM_HOSTNAME_E].data.c, 16);
 
    _params[MANAGEMENT_PARAM_BUILD_E].param = MANAGEMENT_PARAM_BUILD;
@@ -98,6 +98,7 @@ void ManagementModule::registerParams(DEM_NAMESPACE* ns, DroneExecutionManager *
 
   dem->registerCommand(ns, STRING_RESET, DRONE_LINK_MSG_TYPE_UINT8_T, ph);
   dem->registerCommand(ns, STRING_DISCOVERY, DRONE_LINK_MSG_TYPE_UINT8_T, ph);
+  dem->registerCommand(ns, STRING_HOSTNAME, DRONE_LINK_MSG_TYPE_CHAR, ph);
 }
 
 void ManagementModule::onParamWrite(DRONE_PARAM_ENTRY *param) {
@@ -124,6 +125,14 @@ void ManagementModule::onParamWrite(DRONE_PARAM_ENTRY *param) {
     _params[MANAGEMENT_PARAM_MACRO_E].data.c[len] = 0;
     Log.noticeln(F("[MM.oPW] macro... "));
     _dem->runMacro(_params[MANAGEMENT_PARAM_MACRO_E].data.c, false);
+  }
+
+  if (param->param == MANAGEMENT_PARAM_HOSTNAME) {
+    // ensure null terminated
+    uint8_t len = (_params[MANAGEMENT_PARAM_HOSTNAME_E].paramTypeLength & 0xF) + 1;
+    len = min(len, (uint8_t)15);
+    _params[MANAGEMENT_PARAM_HOSTNAME_E].data.c[len] = 0;
+    _dmm->hostname((const char*)&_params[MANAGEMENT_PARAM_HOSTNAME_E].data.c);
   }
 }
 
