@@ -12,7 +12,8 @@
 
 #include "pinConfig.h"
 
-#define TCAADDR 0x70
+#define TCAADDR_V1 0x70  // v1 motherboard
+#define TCAADDR_V2 0x77  // v2+ motherboard
 
 namespace DroneWire {
 
