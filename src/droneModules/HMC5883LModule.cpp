@@ -63,6 +63,12 @@ HMC5883LModule::HMC5883LModule(uint8_t id, DroneModuleManager* dmm, DroneLinkMan
    _params[HMC5883L_PARAM_CALIB_Y_E].data.f[1] = 0;
    _params[HMC5883L_PARAM_CALIB_Y_E].data.f[2] = 1;
 
+   _params[HMC5883L_PARAM_TRIM_E].param = HMC5883L_PARAM_TRIM;
+   _params[HMC5883L_PARAM_TRIM_E].name = FPSTR(STRING_TRIM);
+   _params[HMC5883L_PARAM_TRIM_E].nameLen = sizeof(STRING_TRIM);
+   _params[HMC5883L_PARAM_TRIM_E].paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_FLOAT, 4);
+   _params[HMC5883L_PARAM_TRIM_E].data.f[0] = 0;
+
 }
 
 HMC5883LModule::~HMC5883LModule() {
@@ -93,6 +99,7 @@ void HMC5883LModule::registerParams(DEM_NAMESPACE* ns, DroneExecutionManager *de
 
   dem->registerCommand(ns, STRING_CALIB_X, DRONE_LINK_MSG_TYPE_FLOAT, ph);
   dem->registerCommand(ns, STRING_CALIB_Y, DRONE_LINK_MSG_TYPE_FLOAT, ph);
+  dem->registerCommand(ns, STRING_TRIM, DRONE_LINK_MSG_TYPE_FLOAT, ph);
 }
 
 void HMC5883LModule::doReset() {
@@ -217,7 +224,7 @@ void HMC5883LModule::loop() {
     heading -= 2*PI;
 
   // Convert radians to degrees for readability.
-  float headingDegrees = heading * 180.0f / PI;
+  float headingDegrees = (heading * 180.0f / PI) + _params[HMC5883L_PARAM_TRIM_E].data.f[0];
 
   _params[HMC5883L_PARAM_HEADING_E].data.f[0] = headingDegrees;
 
