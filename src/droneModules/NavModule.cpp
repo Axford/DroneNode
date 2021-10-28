@@ -70,6 +70,14 @@ NavModule::NavModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm,
    _params[NAV_PARAM_LAST_E].data.f[0] = 0;
    _params[NAV_PARAM_LAST_E].data.f[1] = 0;
    _params[NAV_PARAM_LAST_E].data.f[2] = 0;
+
+   _params[NAV_PARAM_HOME_E].param = NAV_PARAM_HOME;
+   _params[NAV_PARAM_HOME_E].name = FPSTR(STRING_HOME);
+   _params[NAV_PARAM_HOME_E].nameLen = sizeof(STRING_HOME);
+   _params[NAV_PARAM_HOME_E].publish = true;
+   _params[NAV_PARAM_HOME_E].paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_FLOAT, 8);
+   _params[NAV_PARAM_HOME_E].data.f[0] = 0;
+   _params[NAV_PARAM_HOME_E].data.f[1] = 0;
 }
 
 NavModule::~NavModule() {
@@ -96,6 +104,7 @@ void NavModule::registerParams(DEM_NAMESPACE* ns, DroneExecutionManager *dem) {
   dem->registerCommand(ns, STRING_HEADING, DRONE_LINK_MSG_TYPE_FLOAT, ph);
   dem->registerCommand(ns, STRING_DISTANCE, DRONE_LINK_MSG_TYPE_FLOAT, ph);
   dem->registerCommand(ns, STRING_LAST, DRONE_LINK_MSG_TYPE_FLOAT, ph);
+  dem->registerCommand(ns, STRING_HOME, DRONE_LINK_MSG_TYPE_FLOAT, ph);
 }
 
 
@@ -113,11 +122,19 @@ void NavModule::setup() {
   DEMCommandHandler inRadiusH = std::bind(&NavModule::nav_inRadius, this, _1, _2, _3, _4);
   _dem->registerCommand(ns, PSTR("inRadius"), DRONE_LINK_MSG_TYPE_FLOAT, inRadiusH);
 
+  DEMCommandHandler goHomeH = std::bind(&NavModule::nav_goHome, this, _1, _2, _3, _4);
+  _dem->registerCommand(ns, PSTR("goHme"), DEM_DATATYPE_NONE, goHomeH);
 }
 
 void NavModule::loop() {
   DroneModule::loop();
 
+  // see if we have a valid location to set home
+  if (_params[NAV_PARAM_HOME_E].data.f[0] == 0 &&
+      _subs[NAV_SUB_LOCATION_E].param.data.f[0] != 0) {
+    memcpy(_params[NAV_PARAM_HOME_E].data.c, _subs[NAV_SUB_LOCATION_E].param.data.c, 8);
+    publishParamEntry(&_params[NAV_PARAM_HOME_E]);
+  }
 }
 
 
@@ -126,9 +143,11 @@ void NavModule::updateLast(boolean fromTarget) {
     updateAndPublishParam(&_params[NAV_PARAM_LAST_E], (uint8_t *)&_subs[NAV_SUB_TARGET_E].param.data.uint8, 12);
   } else {
     // from current location
-    memcpy(_params[NAV_PARAM_LAST_E].data.c, _subs[NAV_SUB_LOCATION_E].param.data.c, 8);
-    _params[NAV_PARAM_LAST_E].data.f[2] = 1; // 1m dummy origin radius
-    publishParamEntry(&_params[NAV_PARAM_LAST_E]);
+    if (_subs[NAV_SUB_LOCATION_E].param.data.f[0] != 0) {
+      memcpy(_params[NAV_PARAM_LAST_E].data.c, _subs[NAV_SUB_LOCATION_E].param.data.c, 8);
+      _params[NAV_PARAM_LAST_E].data.f[2] = 1; // 1m dummy origin radius
+      publishParamEntry(&_params[NAV_PARAM_LAST_E]);
+    }
   }
 }
 
@@ -222,6 +241,35 @@ float NavModule::getDistanceTo(float lon2, float lat2) {
 }
 
 
+boolean NavModule::_goto(DRONE_LINK_PAYLOAD *payload, boolean continuation) {
+  if (continuation) {
+    float d =  getDistanceTo(_subs[NAV_SUB_TARGET_E].param.data.f[0], _subs[NAV_SUB_TARGET_E].param.data.f[1]);
+    if (d <= _subs[NAV_SUB_TARGET_E].param.data.f[2]) {
+      // made it, this command is done
+      updateLast(true);
+      return true;
+    } else {
+      // still on our way
+      return false;
+    }
+
+  } else {
+    Log.noticeln("[Nav.goto]");
+    memcpy(&_subs[NAV_SUB_TARGET_E].param.data, payload, sizeof(DRONE_LINK_PAYLOAD));
+    // ensure mode is goto
+    _params[NAV_PARAM_MODE_E].data.uint8[0] = NAV_GOTO;
+    publishParamEntries();
+
+    // do we need to update last for first time?
+    if (_params[NAV_PARAM_LAST_E].data.f[0] == 0) {
+      updateLast(false);
+    }
+
+    return false;
+  }
+}
+
+
 
 boolean NavModule::nav_inRadius(DEM_INSTRUCTION_COMPILED* instr, DEM_CALLSTACK* cs, DEM_DATASTACK* ds, boolean continuation) {
   Log.noticeln("[Nav.inRadius]");
@@ -239,29 +287,10 @@ boolean NavModule::nav_inRadius(DEM_INSTRUCTION_COMPILED* instr, DEM_CALLSTACK* 
 
 
 boolean NavModule::nav_goto(DEM_INSTRUCTION_COMPILED* instr, DEM_CALLSTACK* cs, DEM_DATASTACK* ds, boolean continuation) {
-  if (continuation) {
-    float d =  getDistanceTo(instr->msg.payload.f[0], instr->msg.payload.f[1]);
-    if (d <= instr->msg.payload.f[2]) {
-      // made it, this command is done
-      updateLast(true);
-      return true;
-    } else {
-      // still on our way
-      return false;
-    }
+  return _goto(&instr->msg.payload, continuation);
+}
 
-  } else {
-    Log.noticeln("[Nav.goto]");
-    memcpy(&_subs[NAV_SUB_TARGET_E].param.data, &instr->msg.payload, sizeof(DRONE_LINK_PAYLOAD));
-    // ensure mode is goto
-    _params[NAV_PARAM_MODE_E].data.uint8[0] = NAV_GOTO;
-    publishParamEntries();
 
-    // do we need to update last for first time?
-    if (_params[NAV_PARAM_LAST_E].data.f[0] == 0) {
-      updateLast(false);
-    }
-
-    return false;
-  }
+boolean NavModule::nav_goHome(DEM_INSTRUCTION_COMPILED* instr, DEM_CALLSTACK* cs, DEM_DATASTACK* ds, boolean continuation) {
+  return _goto(&_params[NAV_PARAM_HOME_E].data, continuation);
 }

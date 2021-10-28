@@ -36,7 +36,10 @@ Waypoint navigation:
 #define NAV_PARAM_LAST           15  // last waypoint/location
 #define NAV_PARAM_LAST_E         3
 
-#define NAV_PARAM_ENTRIES        4
+#define NAV_PARAM_HOME           16  // home waypoint/location
+#define NAV_PARAM_HOME_E         4
+
+#define NAV_PARAM_ENTRIES        5
 
 static const char NAV_STR_NAV[] PROGMEM = "Nav";
 
@@ -69,8 +72,11 @@ public:
 
   float getDistanceTo(float lon2, float lat2);
 
+  boolean _goto(DRONE_LINK_PAYLOAD *payload, boolean continuation);
+
   boolean nav_inRadius(DEM_INSTRUCTION_COMPILED* instr, DEM_CALLSTACK* cs, DEM_DATASTACK* ds, boolean continuation);
   boolean nav_goto(DEM_INSTRUCTION_COMPILED* instr, DEM_CALLSTACK* cs, DEM_DATASTACK* ds, boolean continuation);
+  boolean nav_goHome(DEM_INSTRUCTION_COMPILED* instr, DEM_CALLSTACK* cs, DEM_DATASTACK* ds, boolean continuation);
 };
 
 #endif

@@ -42,6 +42,7 @@ static const char STRING_GYRO[] PROGMEM = "gyro";
 static const char STRING_HDOP[] PROGMEM = "HDOP";
 static const char STRING_HEADING[] PROGMEM = "heading";
 static const char STRING_HEAP[] PROGMEM = "heap";
+static const char STRING_HOME[] PROGMEM = "home";
 static const char STRING_HOSTNAME[] PROGMEM = "hostname";
 static const char STRING_HUMIDITY[] PROGMEM = "humidity";
 static const char STRING_INPUT[] PROGMEM = "input";
