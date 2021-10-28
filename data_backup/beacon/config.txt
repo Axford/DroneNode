@@ -33,5 +33,56 @@ RFM69Telemetry.new 3
   .publish "RSSI"
 .done
 
+Nav.new 7
+  name "Nav"
+  interval 50
+  $location [@>50.9]
+  target -1.82 51.56 100
+  .publish "target"
+  .publish "location"
+  .publish "heading"
+  .publish "distance"
+  .publish "mode"
+  .publish "last"
+  .publish "home"
+.done
+
+TurnRate.new 8
+  name "TurnRate"
+  PID (f) 0.005 0.0 0.0001
+  interval 50
+  $target [@>7.8]
+  $heading [@>50.8]
+  .publish "target"
+  .publish "heading"
+  .publish "PID"
+  .publish "turnRate"
+.done
+
+SpeedControl.new 9
+  name "Speed"
+  interval 50
+  limits 0.2 1
+  threshold 5
+  $distance [@>7.9]
+  .publish "distance"
+  .publish "limits"
+  .publish "threshold"
+  .publish "speed"
+.done
+
+TankSteer.new 10
+  name "TankSteer"
+  interval 50
+  trim 0
+  $speed [@>9.14]
+  $turnRate [@>8.16]
+  .publish "left"
+  .publish "right"
+  .publish "turnRate"
+  .publish "speed"
+  .publish "trim"
+.done
+
 // finish setup
 .setup

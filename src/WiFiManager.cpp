@@ -148,6 +148,7 @@ void WiFiManager::keepWiFiAlive(void *pvParameters){
         // see if any network matches one we have credentials for
         for (uint8_t i=0; i<l_pThis->_networks.size(); i++) {
           for (uint8_t j=0; j<res; j++) {
+            Log.noticeln("[WIFI] Checking: %s = %s", l_pThis->_networks[i].ssid, WiFi.SSID(j));
             if (l_pThis->_networks[i].ssid.equals( WiFi.SSID(j) )) {
               WiFi.disconnect();
               vTaskDelay(1);

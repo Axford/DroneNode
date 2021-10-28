@@ -278,7 +278,7 @@ void setup() {
   File logFile = LITTLEFS.open("/startup.log", FILE_WRITE);
 
   // switch to logging to startup.log file on spiffs
-  //Log.begin(LOG_LEVEL_VERBOSE, &logFile);
+  Log.begin(LOG_LEVEL_VERBOSE, &logFile);
   Log.noticeln(F("[] Starting..."));
 
   DroneWire::setup();

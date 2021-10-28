@@ -135,6 +135,13 @@ void NavModule::loop() {
     memcpy(_params[NAV_PARAM_HOME_E].data.c, _subs[NAV_SUB_LOCATION_E].param.data.c, 8);
     publishParamEntry(&_params[NAV_PARAM_HOME_E]);
   }
+
+  // see if we have a valid location to set as last
+  if (_params[NAV_PARAM_LAST_E].data.f[0] == 0 &&
+      _subs[NAV_SUB_LOCATION_E].param.data.f[0] != 0) {
+    memcpy(_params[NAV_PARAM_LAST_E].data.c, _subs[NAV_SUB_LOCATION_E].param.data.c, 8);
+    publishParamEntry(&_params[NAV_PARAM_LAST_E]);
+  }
 }
 
 
@@ -212,6 +219,8 @@ void NavModule::update() {
     // TODO - we made it... now what?
     // just keep going?
     // or switch to some sort of loiter?
+
+    updateLast( true );
   }
 }
 
@@ -246,7 +255,6 @@ boolean NavModule::_goto(DRONE_LINK_PAYLOAD *payload, boolean continuation) {
     float d =  getDistanceTo(_subs[NAV_SUB_TARGET_E].param.data.f[0], _subs[NAV_SUB_TARGET_E].param.data.f[1]);
     if (d <= _subs[NAV_SUB_TARGET_E].param.data.f[2]) {
       // made it, this command is done
-      updateLast(true);
       return true;
     } else {
       // still on our way
@@ -261,9 +269,9 @@ boolean NavModule::_goto(DRONE_LINK_PAYLOAD *payload, boolean continuation) {
     publishParamEntries();
 
     // do we need to update last for first time?
-    if (_params[NAV_PARAM_LAST_E].data.f[0] == 0) {
-      updateLast(false);
-    }
+   if (_params[NAV_PARAM_LAST_E].data.f[0] == 0) {
+     updateLast(false);
+   }
 
     return false;
   }

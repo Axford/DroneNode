@@ -39,7 +39,10 @@ static const char TURN_RATE_STR_TURN_RATE[] PROGMEM = "TurnRate";
 
 class TurnRateModule:  public DroneModule {
 protected:
-
+  unsigned long _lastUpdate;
+  float _iError;
+  float _dError;
+  float _lastError;
 public:
 
   TurnRateModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm, DroneExecutionManager* dem, fs::FS &fs);

@@ -8,6 +8,11 @@ TurnRateModule::TurnRateModule(uint8_t id, DroneModuleManager* dmm, DroneLinkMan
  {
    setTypeName(FPSTR(TURN_RATE_STR_TURN_RATE));
 
+   _lastUpdate = 0;
+   _iError = 0;
+   _dError = 0;
+   _lastError = 0;
+
    // mgmt
    _mgmtParams[DRONE_MODULE_PARAM_TYPE_E].paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_CHAR, sizeof(TURN_RATE_STR_TURN_RATE));
    strncpy_P(_mgmtParams[DRONE_MODULE_PARAM_TYPE_E].data.c, TURN_RATE_STR_TURN_RATE, sizeof(TURN_RATE_STR_TURN_RATE));
@@ -90,6 +95,10 @@ float TurnRateModule::getRotationDistance(float origin, float target){
 void TurnRateModule::update() {
   if (!_setupDone) return;
 
+  unsigned long updateTime = millis();
+  float dt = (updateTime - _lastUpdate) / 1000.0;
+
+
   // calc and publish new speeds
 
   // check we've received valid heading and target
@@ -108,8 +117,21 @@ void TurnRateModule::update() {
   if (err > 90) err = 90;
   if (err < -90) err = -90;
 
-  //_params[TURN_RATE_PARAM_TURN_RATE_E].data.f[0] = err * _subs[TURN_RATE_SUB_PID_E].param.data.f[0];
-  float tr = err * _subs[TURN_RATE_SUB_PID_E].param.data.f[0];
+  // update I and D terms
+  _iError += err * dt;
+  _dError = (err - _lastError) / dt;
+
+  // apply PID cooefficients
+  float tr =
+    err * _subs[TURN_RATE_SUB_PID_E].param.data.f[0] +
+    _iError * _subs[TURN_RATE_SUB_PID_E].param.data.f[1] +
+    _dError * _subs[TURN_RATE_SUB_PID_E].param.data.f[2];
+
+  _lastError = err;
+
+  // apply limits
+  if (tr > 10) tr = 10;
+  if (tr < -10) tr = -10;
+
   updateAndPublishParam(&_params[TURN_RATE_PARAM_TURN_RATE_E], (uint8_t*)&tr, sizeof(tr));
-  //publishParamEntry(&_params[TURN_RATE_PARAM_TURN_RATE_E]);
 }
