@@ -12,6 +12,7 @@
 #include "droneModules/JoystickModule.h"
 #include "droneModules/ManagementModule.h"
 #include "droneModules/MotorModule.h"
+#include "droneModules/MPU6050Module.h"
 #include "droneModules/NeopixelModule.h"
 #include "droneModules/NMEAModule.h"
 #include "droneModules/NunchuckJoystickModule.h"
@@ -140,6 +141,7 @@ DroneExecutionManager::DroneExecutionManager(DroneModuleManager *dmm, DroneLinkM
   ns = JoystickModule::registerNamespace(this); JoystickModule::registerParams(ns, this);
   ns = ManagementModule::registerNamespace(this); ManagementModule::registerParams(ns, this);
   ns = MotorModule::registerNamespace(this);  MotorModule::registerParams(ns, this);
+  ns = MPU6050Module::registerNamespace(this);  MPU6050Module::registerParams(ns, this);
   ns = NMEAModule::registerNamespace(this); NMEAModule::registerParams(ns, this);
   ns = NeopixelModule::registerNamespace(this); NeopixelModule::registerParams(ns, this);
   ns = NunchuckJoystick::registerNamespace(this); NunchuckJoystick::registerParams(ns, this);
@@ -1021,7 +1023,7 @@ void DroneExecutionManager::runMacro(const char * macroName, boolean calledFromM
     csep = callStackPeek(0);
     csep->i--;
   }
-  
+
   // prep new entry
   DEM_CALLSTACK_ENTRY cse;
   cse.i= calledFromMacro ? -1 : 0;
@@ -1401,6 +1403,8 @@ boolean DroneExecutionManager::mod_constructor(DEM_INSTRUCTION_COMPILED* instr, 
       newMod = new ManagementModule(id, _dmm, _dlm, this, _fs);
     } else if (strcmp_P(instr->ns->name, MOTOR_STR_MOTOR) == 0) {
       newMod = new MotorModule(id, _dmm, _dlm, this, _fs);
+    } else if (strcmp_P(instr->ns->name, MPU6050_STR_MPU6050) == 0) {
+      newMod = new MPU6050Module(id, _dmm, _dlm, this, _fs);
     } else if (strcmp_P(instr->ns->name, NMEA_STR_NMEA) == 0) {
       newMod = new NMEAModule(id, _dmm, _dlm, this, _fs);
     } else if (strcmp_P(instr->ns->name, NEOPIXEL_STR_NEOPIXEL) == 0) {

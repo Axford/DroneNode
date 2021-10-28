@@ -15,13 +15,13 @@ Manages a MPU6050 I2c temp, humidty and pressure sensor
 
 #define MPU6050_I2C_ADDRESS  0x68
 
-#define MPU6050_PARAM_ACCEL     8
-#define MPU6050_PARAM_ACCEL_E   0
+#define MPU6050_PARAM_ACCEL     (I2CBASE_SUBCLASS_PARAM_START+0) // 10
+#define MPU6050_PARAM_ACCEL_E   (I2CBASE_PARAM_ENTRIES+0)
 
-#define MPU6050_PARAM_GYRO      9
-#define MPU6050_PARAM_GYRO_E    1
+#define MPU6050_PARAM_GYRO      (I2CBASE_SUBCLASS_PARAM_START+1)
+#define MPU6050_PARAM_GYRO_E    (I2CBASE_PARAM_ENTRIES+1)
 
-#define MPU6050_PARAM_ENTRIES    2
+#define MPU6050_PARAM_ENTRIES    (I2CBASE_PARAM_ENTRIES + 2)
 
 // strings
 static const char MPU6050_STR_MPU6050[] PROGMEM = "MPU6050";
@@ -29,14 +29,19 @@ static const char MPU6050_STR_MPU6050[] PROGMEM = "MPU6050";
 // class
 class MPU6050Module:  public I2CBaseModule {
 protected:
-  Adafruit_MPU6050 _sensor;
+  Adafruit_MPU6050 *_sensor;
 public:
 
   MPU6050Module(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm, DroneExecutionManager* dem, fs::FS &fs);
+  ~MPU6050Module();
+
+  static DEM_NAMESPACE* registerNamespace(DroneExecutionManager *dem);
+  static void registerParams(DEM_NAMESPACE* ns, DroneExecutionManager *dem);
 
   void doReset();
 
-  virtual void loop();
+  void setup();
+  void loop();
 };
 
 #endif
