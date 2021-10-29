@@ -301,13 +301,6 @@ float NavModule::getCrossTrackDistance() {
   double bearing12 = radiansToDegrees(atan2(y2, x2));
   bearing12 = 360 - fmod((bearing12 + 360), 360);
 
-  //double lat1Rads = degreesToRadians(lat1);
-  //double lat3Rads = degreesToRadians(lat3);
-  //double dLon = degreesToRadians(lon3 - lon1);
-
-  //double distanceAC = acos(sin(lat1Rads) * sin(lat3Rads)+cos(lat1Rads)*cos(lat3Rads)*cos(dLon)) * RADIUS_OF_EARTH;
-  //double distanceACbyE = acos(sin(lat1Rads) * sin(lat3Rads)+cos(lat1Rads)*cos(lat3Rads)*cos(dLon));
-
   // get distance from last to current location
   double distanceACbyE = getDistanceTo(lon1, lat1) / RADIUS_OF_EARTH;
 
