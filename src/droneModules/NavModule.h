@@ -39,7 +39,13 @@ Waypoint navigation:
 #define NAV_PARAM_HOME           16  // home waypoint/location
 #define NAV_PARAM_HOME_E         4
 
-#define NAV_PARAM_ENTRIES        5
+#define NAV_PARAM_CROSSTRACK     17  // cross-track ratio
+#define NAV_PARAM_CROSSTRACK_E   5
+
+#define NAV_PARAM_CORRECTION     18  // cross-track correction factor
+#define NAV_PARAM_CORRECTION_E   6
+
+#define NAV_PARAM_ENTRIES        7
 
 static const char NAV_STR_NAV[] PROGMEM = "Nav";
 
@@ -54,6 +60,7 @@ enum NAV_MODE {
 
 class NavModule:  public DroneModule {
 protected:
+  boolean _atTarget;  // true if we've reached the current target
 
 public:
 
@@ -71,6 +78,7 @@ public:
   void update();
 
   float getDistanceTo(float lon2, float lat2);
+  float getCrossTrackDistance();
 
   boolean _goto(DRONE_LINK_PAYLOAD *payload, boolean continuation);
 

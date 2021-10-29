@@ -1,7 +1,8 @@
 #include "NavModule.h"
 #include "../DroneLinkMsg.h"
 #include "../DroneLinkManager.h"
-#include "strings.h"
+#include "../strings.h"
+#include "../navMath.h"
 
 using std::placeholders::_1;
 using std::placeholders::_2;
@@ -15,6 +16,7 @@ NavModule::NavModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm,
 
    _mgmtParams[DRONE_MODULE_PARAM_INTERVAL_E].data.uint32[0] = 1000;
 
+   _atTarget = false;
 
    // subs
    initSubs(NAV_SUBS);
@@ -46,26 +48,22 @@ NavModule::NavModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm,
    _params[NAV_PARAM_HEADING_E].param = NAV_PARAM_HEADING;
    _params[NAV_PARAM_HEADING_E].name = FPSTR(STRING_HEADING);
    _params[NAV_PARAM_HEADING_E].nameLen = sizeof(STRING_HEADING);
-   _params[NAV_PARAM_HEADING_E].publish = true;
    _params[NAV_PARAM_HEADING_E].paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 4);
 
    _params[NAV_PARAM_DISTANCE_E].param = NAV_PARAM_DISTANCE;
    _params[NAV_PARAM_DISTANCE_E].name = FPSTR(STRING_DISTANCE);
    _params[NAV_PARAM_DISTANCE_E].nameLen = sizeof(STRING_DISTANCE);
-   _params[NAV_PARAM_DISTANCE_E].publish = true;
    _params[NAV_PARAM_DISTANCE_E].paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 4);
 
    _params[NAV_PARAM_MODE_E].param = NAV_PARAM_MODE;
    _params[NAV_PARAM_MODE_E].name = FPSTR(STRING_MODE);
    _params[NAV_PARAM_MODE_E].nameLen = sizeof(STRING_MODE);
-   _params[NAV_PARAM_MODE_E].publish = true;
    _params[NAV_PARAM_MODE_E].paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_UINT8_T, 1);
    _params[NAV_PARAM_MODE_E].data.uint8[0] = NAV_GOTO;
 
    _params[NAV_PARAM_LAST_E].param = NAV_PARAM_LAST;
    _params[NAV_PARAM_LAST_E].name = FPSTR(STRING_LAST);
    _params[NAV_PARAM_LAST_E].nameLen = sizeof(STRING_LAST);
-   _params[NAV_PARAM_LAST_E].publish = true;
    _params[NAV_PARAM_LAST_E].paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_FLOAT, 12);
    _params[NAV_PARAM_LAST_E].data.f[0] = 0;
    _params[NAV_PARAM_LAST_E].data.f[1] = 0;
@@ -74,10 +72,21 @@ NavModule::NavModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm,
    _params[NAV_PARAM_HOME_E].param = NAV_PARAM_HOME;
    _params[NAV_PARAM_HOME_E].name = FPSTR(STRING_HOME);
    _params[NAV_PARAM_HOME_E].nameLen = sizeof(STRING_HOME);
-   _params[NAV_PARAM_HOME_E].publish = true;
    _params[NAV_PARAM_HOME_E].paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_FLOAT, 8);
    _params[NAV_PARAM_HOME_E].data.f[0] = 0;
    _params[NAV_PARAM_HOME_E].data.f[1] = 0;
+
+   _params[NAV_PARAM_CROSSTRACK_E].param = NAV_PARAM_CROSSTRACK;
+   _params[NAV_PARAM_CROSSTRACK_E].name = FPSTR(STRING_CROSSTRACK);
+   _params[NAV_PARAM_CROSSTRACK_E].nameLen = sizeof(STRING_CROSSTRACK);
+   _params[NAV_PARAM_CROSSTRACK_E].paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 4);
+   _params[NAV_PARAM_CROSSTRACK_E].data.f[0] = 0;
+
+   _params[NAV_PARAM_CORRECTION_E].param = NAV_PARAM_CORRECTION;
+   _params[NAV_PARAM_CORRECTION_E].name = FPSTR(STRING_CORRECTION);
+   _params[NAV_PARAM_CORRECTION_E].nameLen = sizeof(STRING_CORRECTION);
+   _params[NAV_PARAM_CORRECTION_E].paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 4);
+   _params[NAV_PARAM_CORRECTION_E].data.f[0] = 20;
 }
 
 NavModule::~NavModule() {
@@ -105,6 +114,8 @@ void NavModule::registerParams(DEM_NAMESPACE* ns, DroneExecutionManager *dem) {
   dem->registerCommand(ns, STRING_DISTANCE, DRONE_LINK_MSG_TYPE_FLOAT, ph);
   dem->registerCommand(ns, STRING_LAST, DRONE_LINK_MSG_TYPE_FLOAT, ph);
   dem->registerCommand(ns, STRING_HOME, DRONE_LINK_MSG_TYPE_FLOAT, ph);
+  dem->registerCommand(ns, STRING_CROSSTRACK, DRONE_LINK_MSG_TYPE_FLOAT, ph);
+  dem->registerCommand(ns, STRING_CORRECTION, DRONE_LINK_MSG_TYPE_FLOAT, ph);
 }
 
 
@@ -141,6 +152,13 @@ void NavModule::loop() {
       _subs[NAV_SUB_LOCATION_E].param.data.f[0] != 0) {
     memcpy(_params[NAV_PARAM_LAST_E].data.c, _subs[NAV_SUB_LOCATION_E].param.data.c, 8);
     publishParamEntry(&_params[NAV_PARAM_LAST_E]);
+  }
+
+  // update cross-track distance
+  if (!_atTarget) {
+    float d = getCrossTrackDistance();
+    if (_subs[NAV_SUB_TARGET_E].param.data.f[2] > 0) d = d / _subs[NAV_SUB_TARGET_E].param.data.f[2];
+    updateAndPublishParam(&_params[NAV_PARAM_CROSSTRACK_E], (uint8_t*)&d, sizeof(d));
   }
 }
 
@@ -183,7 +201,7 @@ void NavModule::update() {
   float lon2 = _subs[NAV_SUB_TARGET_E].param.data.f[0];
 
 
-  float R = 6371e3; // metres
+  float R = RADIUS_OF_EARTH; // metres
   float lat1r = lat1 * PI/180; // φ, λ in radians
   float lat2r = lat2 * PI/180;
   float lon1r = lon1 * PI/180; // φ, λ in radians
@@ -208,6 +226,11 @@ void NavModule::update() {
   float h = fmod(p*180/PI + 360, 360); // in degrees
 
   //_params[NAV_PARAM_HEADING_E].data.f[0] = h;
+  // modify heading based on cross-track distance
+  float crossTrackAdj = _params[NAV_PARAM_CROSSTRACK_E].data.f[0] * _params[NAV_PARAM_CORRECTION_E].data.f[0];
+  if (crossTrackAdj > 30) crossTrackAdj = 30;
+  if (crossTrackAdj < -30) crossTrackAdj = -30;
+  h += crossTrackAdj;
   updateAndPublishParam(&_params[NAV_PARAM_HEADING_E], (uint8_t*)&h, sizeof(h));
 
   //_params[NAV_PARAM_DISTANCE_E].data.f[0] = d;
@@ -219,8 +242,10 @@ void NavModule::update() {
     // TODO - we made it... now what?
     // just keep going?
     // or switch to some sort of loiter?
-
+    _atTarget = true;
     updateLast( true );
+  } else {
+    _atTarget = false;
   }
 }
 
@@ -229,7 +254,7 @@ float NavModule::getDistanceTo(float lon2, float lat2) {
   float lat1 = _subs[NAV_SUB_LOCATION_E].param.data.f[1];
   float lon1 = _subs[NAV_SUB_LOCATION_E].param.data.f[0];
 
-  float R = 6371e3; // metres
+  float R = RADIUS_OF_EARTH; // metres
   float lat1r = lat1 * PI/180; // φ, λ in radians
   float lat2r = lat2 * PI/180;
   float lon1r = lon1 * PI/180; // φ, λ in radians
@@ -250,14 +275,58 @@ float NavModule::getDistanceTo(float lon2, float lat2) {
 }
 
 
+float NavModule::getCrossTrackDistance() {
+  // calculate cross-track distance from current location to line between last waypoint and target waypoint
+  // in meters
+
+  if (_subs[NAV_SUB_TARGET_E].param.data.f[0] == 0 ||
+      _params[NAV_PARAM_LAST_E].data.f[0] == 0 ||
+    _subs[NAV_SUB_LOCATION_E].param.data.f[0] == 0) return 0;
+
+  // local shortcuts
+  double lon1 = _params[NAV_PARAM_LAST_E].data.f[0];
+  double lat1 = _params[NAV_PARAM_LAST_E].data.f[1];
+  double lon2 = _subs[NAV_SUB_TARGET_E].param.data.f[0];
+  double lat2 = _subs[NAV_SUB_TARGET_E].param.data.f[1];
+  double lon3 = _subs[NAV_SUB_LOCATION_E].param.data.f[0];
+  double lat3 = _subs[NAV_SUB_LOCATION_E].param.data.f[1];
+
+  double y = sin(lon3 - lon1) * cos(lat3);
+  double x = cos(lat1) * sin(lat3) - sin(lat1) * cos(lat3) * cos(lat3 - lat1);
+  double bearing13 = radiansToDegrees(atan2(y, x));
+  bearing13 = 360 - fmod((bearing13 + 360), 360);
+
+  double y2 = sin(lon2 - lon1) * cos(lat2);
+  double x2 = cos(lat1) * sin(lat2) - sin(lat1) * cos(lat2) * cos(lat2 - lat1);
+  double bearing12 = radiansToDegrees(atan2(y2, x2));
+  bearing12 = 360 - fmod((bearing12 + 360), 360);
+
+  //double lat1Rads = degreesToRadians(lat1);
+  //double lat3Rads = degreesToRadians(lat3);
+  //double dLon = degreesToRadians(lon3 - lon1);
+
+  //double distanceAC = acos(sin(lat1Rads) * sin(lat3Rads)+cos(lat1Rads)*cos(lat3Rads)*cos(dLon)) * RADIUS_OF_EARTH;
+  //double distanceACbyE = acos(sin(lat1Rads) * sin(lat3Rads)+cos(lat1Rads)*cos(lat3Rads)*cos(dLon));
+
+  // get distance from last to current location
+  double distanceACbyE = getDistanceTo(lon1, lat1) / RADIUS_OF_EARTH;
+
+  double d = (asin(sin(distanceACbyE)*sin(degreesToRadians(bearing13)-degreesToRadians(bearing12))) * RADIUS_OF_EARTH);
+
+  return d;
+}
+
+
 boolean NavModule::_goto(DRONE_LINK_PAYLOAD *payload, boolean continuation) {
   if (continuation) {
     float d =  getDistanceTo(_subs[NAV_SUB_TARGET_E].param.data.f[0], _subs[NAV_SUB_TARGET_E].param.data.f[1]);
     if (d <= _subs[NAV_SUB_TARGET_E].param.data.f[2]) {
       // made it, this command is done
+      _atTarget = true;
       return true;
     } else {
       // still on our way
+      _atTarget = false;
       return false;
     }
 
