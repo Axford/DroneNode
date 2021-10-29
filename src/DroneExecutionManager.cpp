@@ -17,6 +17,7 @@
 #include "droneModules/NMEAModule.h"
 #include "droneModules/NunchuckJoystickModule.h"
 #include "droneModules/RFM69TelemetryModule.h"
+#include "droneModules/SailorModule.h"
 #include "droneModules/ServoModule.h"
 #include "droneModules/SpeedControlModule.h"
 #include "droneModules/TankSteerModule.h"
@@ -146,6 +147,7 @@ DroneExecutionManager::DroneExecutionManager(DroneModuleManager *dmm, DroneLinkM
   ns = NeopixelModule::registerNamespace(this); NeopixelModule::registerParams(ns, this);
   ns = NunchuckJoystick::registerNamespace(this); NunchuckJoystick::registerParams(ns, this);
   ns = RFM69TelemetryModule::registerNamespace(this); RFM69TelemetryModule::registerParams(ns, this);
+  ns = SailorModule::registerNamespace(this); SailorModule::registerParams(ns, this);
   ns = ServoModule::registerNamespace(this); ServoModule::registerParams(ns, this);
   ns = SpeedControlModule::registerNamespace(this); SpeedControlModule::registerParams(ns, this);
   ns = TankSteerModule::registerNamespace(this);  TankSteerModule::registerParams(ns, this);
@@ -1413,6 +1415,8 @@ boolean DroneExecutionManager::mod_constructor(DEM_INSTRUCTION_COMPILED* instr, 
       newMod = new NunchuckJoystick(id, _dmm, _dlm, this, _fs);
     } else if (strcmp_P(instr->ns->name, RFM69_TELEMETRY_STR_RFM69_TELEMETRY) == 0) {
       newMod = new RFM69TelemetryModule(id, _dmm, _dlm, this, _fs);
+    } else if (strcmp_P(instr->ns->name, SAILOR_STR_SAILOR) == 0) {
+      newMod = new SailorModule(id, _dmm, _dlm, this, _fs);
     } else if (strcmp_P(instr->ns->name, SERVO_STR_SERVO) == 0) {
       newMod = new ServoModule(id, _dmm, _dlm, this, _fs);
     } else if (strcmp_P(instr->ns->name, SPEED_CONTROL_STR_SPEED_CONTROL) == 0) {

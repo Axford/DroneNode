@@ -45,13 +45,14 @@ Nav.new 7
   .publish "mode"
   .publish "last"
   .publish "home"
+  .publish "crosstrack"
 .done
 
 TurnRate.new 8
   name "TurnRate"
   PID (f) 0.005 0.0 0.0001
   interval 50
-  $target [@>7.8]
+  $target [@>12.16]
   $heading [@>50.8]
   .publish "target"
   .publish "heading"
@@ -82,6 +83,31 @@ TankSteer.new 10
   .publish "turnRate"
   .publish "speed"
   .publish "trim"
+.done
+
+MPU6050.new 11
+  name "MPU6050"
+  status 0
+  interval 1000
+  .publish "gyro"
+  .publish "accel"
+.done
+
+Sailor.new 12
+  name "Sailor"
+  interval 100
+  polar 0 0 0 200   255 255 255 250  240 230 220 210  200 150 0 0
+  wind 0
+  $target [@>7.8]
+  $heading [@>50.8]
+  $crosstrack [@>7.17]
+  .publish "target"
+  .publish "heading"
+  .publish "wind"
+  .publish "crosstrack"
+  .publish "course"
+  .publish "sheet"
+  .publish "polar"
 .done
 
 // finish setup

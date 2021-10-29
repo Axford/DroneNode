@@ -7,14 +7,11 @@
 
 #define RADIUS_OF_EARTH  6371e3  // in meters
 
-double radiansToDegrees(double r) {
-  return r * 180 / PI;
-}
+double radiansToDegrees(double r);
 
-double degreesToRadians(double r) {
-  return r * PI /  180;
-}
+double degreesToRadians(double r);
 
+float shortestSignedDistanceBetweenCircularValues(float origin, float target);
 
 
 #endif
