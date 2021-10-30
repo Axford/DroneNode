@@ -134,6 +134,7 @@ void SailorModule::update() {
 
   // local shortcuts
   float h = _subs[SAILOR_SUB_HEADING_E].param.data.f[0];
+  float w = _subs[SAILOR_SUB_WIND_E].param.data.f[0];
   float t = _subs[SAILOR_SUB_TARGET_E].param.data.f[0];
   float ct = _subs[SAILOR_SUB_CROSSTRACK_E].param.data.f[0];
 
@@ -171,8 +172,13 @@ void SailorModule::update() {
     }
   }
 
-  updateAndPublishParam(&_params[SAILOR_PARAM_COURSE_E], (uint8_t*)&c, sizeof(c));
 
+  // calc sheet based on delta between heading and wind
+  float sheet = fabs(shortestSignedDistanceBetweenCircularValues(h, w)) / 180;
+  if (sheet > 1) sheet = 1;
+
+  updateAndPublishParam(&_params[SAILOR_PARAM_SHEET_E], (uint8_t*)&sheet, sizeof(sheet));
+  updateAndPublishParam(&_params[SAILOR_PARAM_COURSE_E], (uint8_t*)&c, sizeof(c));
 }
 
 
