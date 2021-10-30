@@ -134,7 +134,7 @@ void NavModule::setup() {
   _dem->registerCommand(ns, PSTR("inRadius"), DRONE_LINK_MSG_TYPE_FLOAT, inRadiusH);
 
   DEMCommandHandler goHomeH = std::bind(&NavModule::nav_goHome, this, _1, _2, _3, _4);
-  _dem->registerCommand(ns, PSTR("goHme"), DEM_DATATYPE_NONE, goHomeH);
+  _dem->registerCommand(ns, PSTR("goHome"), DEM_DATATYPE_NONE, goHomeH);
 }
 
 void NavModule::loop() {
@@ -294,17 +294,17 @@ float NavModule::getCrossTrackDistance() {
   double y = sin(lon3 - lon1) * cos(lat3);
   double x = cos(lat1) * sin(lat3) - sin(lat1) * cos(lat3) * cos(lat3 - lat1);
   double bearing13 = radiansToDegrees(atan2(y, x));
-  bearing13 = 360 - fmod((bearing13 + 360), 360);
+  bearing13 = fmod((bearing13 + 360), 360);
 
   double y2 = sin(lon2 - lon1) * cos(lat2);
   double x2 = cos(lat1) * sin(lat2) - sin(lat1) * cos(lat2) * cos(lat2 - lat1);
   double bearing12 = radiansToDegrees(atan2(y2, x2));
-  bearing12 = 360 - fmod((bearing12 + 360), 360);
+  bearing12 = fmod((bearing12 + 360), 360);
 
   // get distance from last to current location
   double distanceACbyE = getDistanceTo(lon1, lat1) / RADIUS_OF_EARTH;
 
-  double d = (asin(sin(distanceACbyE)*sin(degreesToRadians(bearing13)-degreesToRadians(bearing12))) * RADIUS_OF_EARTH);
+  double d = -(asin(sin(distanceACbyE)*sin(degreesToRadians(bearing13)-degreesToRadians(bearing12))) * RADIUS_OF_EARTH);
 
   return d;
 }
