@@ -177,6 +177,9 @@ void SailorModule::update() {
   float sheet = fabs(shortestSignedDistanceBetweenCircularValues(h, w)) / 180;
   if (sheet > 1) sheet = 1;
 
+  // remap sheet in range -1 to 1
+  sheet = (sheet * 2) - 1;
+
   updateAndPublishParam(&_params[SAILOR_PARAM_SHEET_E], (uint8_t*)&sheet, sizeof(sheet));
   updateAndPublishParam(&_params[SAILOR_PARAM_COURSE_E], (uint8_t*)&c, sizeof(c));
 }

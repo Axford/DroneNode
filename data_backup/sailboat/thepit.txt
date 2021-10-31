@@ -1,0 +1,20 @@
+// simple navigation path in Plaums pit
+
+// green
+.send 1>20.8 (u8) 50 0 0 0  0 255 0  0 255 0  0 255 0  0 255 0
+
+do
+  // head to the middle ish
+  _Nav.goto -1.8041223792 51.575584888 5
+
+  // top left
+  _Nav.goto -1.80469436473 51.5757275179 5
+
+  counter 10
+until
+
+// head to the middle ish
+_Nav.goto -1.8041223792 51.575584888 5
+
+// head home
+_Nav.goHome

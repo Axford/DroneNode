@@ -1,0 +1,3 @@
+
+load "/thepit.txt"
+run "/thepit.txt"

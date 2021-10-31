@@ -80,6 +80,7 @@ RFM69Telemetry.new 3
 
 Nav.new 7
   name "Nav"
+  status 0
   interval 50
   $location [@>5.8]
   target -1.82 51.56 100
@@ -92,6 +93,7 @@ Nav.new 7
 
 TurnRate.new 8
   name "TurnRate"
+  status 0
   PID (f) 0.01 0 0
   interval 50
   $target [@>7.8]
@@ -102,11 +104,24 @@ TurnRate.new 8
   .publish "turnRate"
 .done
 
+SpeedControl.new 9
+  name "Speed"
+  status 0
+  interval 50
+  limits 0.2 1
+  threshold 5
+  $distance [@>7.9]
+  .publish "distance"
+  .publish "limits"
+  .publish "threshold"
+  .publish "speed"
+.done
+
 TankSteer.new 10
   name "TankSteer"
   interval 50
   trim 0
-  $speed [@>7.9]
+  $speed [@>9.14]
   $turnRate [@>8.16]
   .publish "left"
   .publish "right"
@@ -157,5 +172,5 @@ Neopixel.new 20
 // green flashing LEDs to show we've finished
 .send 1>20.8 (u8) 50 1 10 5  0 255 0  0 255 0  0 255 0  0 255 0
 
-// wait 10seconds
-.delay 10000
+// wait 1 seconds
+.delay 1000

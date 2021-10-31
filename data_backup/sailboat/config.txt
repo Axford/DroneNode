@@ -1,0 +1,154 @@
+// D-Code Config Script
+
+// Setup the node
+node 69
+
+// Init modules
+Management.new 1
+  name "Management"
+  status true
+  interval 1000
+  discovery true
+  hostname "SailBoat"
+
+  // publish
+  .publish "hostname"
+  .publish "build"
+  .publish "uptime"
+  .publish "IP"
+.done
+
+RFM69Telemetry.new 2
+  name "RFM69"
+  status 1 // disable
+  .sub [@>0.0]
+  .publish "RSSI"
+.done
+
+UDPTelemetry.new 3
+  name "UDPT"
+  status 1
+  port 8007
+  broadcast 255 255 255 255
+  .sub [@>0.0]
+.done
+
+INA219.new 4
+  name "Power"
+  bus 0
+  addr 64
+  interval 1000
+  cells 2
+  threshold 6.4
+  status 1
+  .publish "current"
+  .publish "power"
+  .publish "loadV"
+  .publish "alarm"
+  .publish "shuntV"
+  .publish "busV"
+  .publish "cellV"
+.done
+
+NMEA.new 7
+  name "GPS"
+  interval 500
+  port 2
+  baud 9600
+  .publish "location"
+  .publish "satellites"
+  .publish "HDOP"
+.done
+
+HMC5883L.new 8
+  name "Compass"
+  interval 100
+  bus 7
+  status 1
+  calibX -3.5 0 2.3
+  calibY -3.6 0 1.7
+  trim 0
+  // default location
+  location -1.8 52 100
+  $location [@>7.8]
+  .publish "heading"
+  .publish "vector"
+  .publish "calibX"
+  .publish "calibY"
+.done
+
+Nav.new 9
+  name "Nav"
+  interval 50
+  $location [@>50.9]
+  target -1.82 51.56 100
+  .publish "target"
+  .publish "location"
+  .publish "heading"
+  .publish "distance"
+  .publish "mode"
+  .publish "last"
+  .publish "home"
+  .publish "crosstrack"
+.done
+
+Sailor.new 10
+  name "Sailor"
+  interval 100
+  polar 0 0 0 200   255 255 255 250  240 230 220 210  200 150 0 0
+  wind 0
+  $target [@>9.8]
+  $heading [@>8.11]
+  $crosstrack [@>9.17]
+  .publish "target"
+  .publish "heading"
+  .publish "wind"
+  .publish "crosstrack"
+  .publish "course"
+  .publish "sheet"
+  .publish "polar"
+.done
+
+TurnRate.new 11
+  name "TurnRate"
+  PID (f) -0.01 0.0 0.0
+  interval 50
+  $target [@>10.16]
+  $heading [@>8.11]
+  .publish "target"
+  .publish "heading"
+  .publish "PID"
+  .publish "turnRate"
+.done
+
+Servo.new 12
+  position 0
+  pins OUT0_0
+  status 1
+  name "Sheet"
+  interval 100
+  $position [@>10.17]
+  .publish "position"
+.done
+
+Servo.new 13
+  position 0
+  pins OUT0_1
+  status 1
+  name "Rudder"
+  limits -0.7 0.7
+  $position [@>11.16]
+  interval 100
+  .publish "position"
+.done
+
+Neopixel.new 20
+  name "Neopixel"
+  interval 50
+  pins OUT1_0
+  numPixels 4
+  .publish "scene"
+.done
+
+// finish setup
+.setup

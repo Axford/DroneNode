@@ -7,8 +7,8 @@ load "/arm.txt"
 load "/disarm.txt"
 
 // now run our pit script
-load "/thepit.txt"
-run "/thepit.txt"
+//load "/thepit.txt"
+//run "/thepit.txt"
 
 //load "/golds.txt"
 //run "/golds.txt"
