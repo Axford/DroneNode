@@ -79,6 +79,9 @@ void WiFiManager::loadConfiguration(fs::FS &fs) {
 //const char * ssid, const char * pwd
 void WiFiManager::start() {
 
+  // speculative attempt to join first network in network list
+  WiFi.begin(_networks[0].ssid.c_str(), _networks[0].password.c_str());
+
   //WiFi.disconnect();
 
 /*
