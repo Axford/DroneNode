@@ -42,6 +42,12 @@ NavModule::NavModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm,
    _subs[NAV_SUB_TARGET_E].param.paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_FLOAT, 16);
    // target: lon lat radius duration
 
+   _subs[NAV_SUB_WIND_E].addrParam = NAV_SUB_WIND_ADDR;
+   _subs[NAV_SUB_WIND_E].param.param = NAV_SUB_WIND;
+   _subs[NAV_SUB_WIND_E].param.name = FPSTR(STRING_WIND);
+   _subs[NAV_SUB_WIND_E].param.nameLen = sizeof(STRING_WIND);
+   _subs[NAV_SUB_WIND_E].param.paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_FLOAT, 4);
+
    // pubs
    initParams(NAV_PARAM_ENTRIES);
 
@@ -87,6 +93,18 @@ NavModule::NavModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm,
    _params[NAV_PARAM_CORRECTION_E].nameLen = sizeof(STRING_CORRECTION);
    _params[NAV_PARAM_CORRECTION_E].paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 4);
    _params[NAV_PARAM_CORRECTION_E].data.f[0] = 20;
+
+   DRONE_PARAM_ENTRY *param;
+   param = &_params[NAV_PARAM_CROSSWIND_E];
+   param->param = NAV_PARAM_CROSSWIND;
+   setParamName(FPSTR(STRING_CROSSWIND), param);
+   param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_FLOAT, 4);
+   _params[NAV_PARAM_CROSSWIND_E].data.f[0] = 0.5;
+
+   param = &_params[NAV_PARAM_ADJ_HEADING_E];
+   param->param = NAV_PARAM_ADJ_HEADING;
+   setParamName(FPSTR(STRING_ADJ_HEADING), param);
+   param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 4);
 }
 
 NavModule::~NavModule() {
@@ -110,12 +128,16 @@ void NavModule::registerParams(DEM_NAMESPACE* ns, DroneExecutionManager *dem) {
   dem->registerCommand(ns, STRING_TARGET, DRONE_LINK_MSG_TYPE_FLOAT, ph);
   dem->registerCommand(ns, PSTR("$target"), DRONE_LINK_MSG_TYPE_ADDR, pha);
 
+  dem->registerCommand(ns, STRING_WIND, DRONE_LINK_MSG_TYPE_FLOAT, ph);
+  dem->registerCommand(ns, PSTR("$wind"), DRONE_LINK_MSG_TYPE_ADDR, pha);
+
   dem->registerCommand(ns, STRING_HEADING, DRONE_LINK_MSG_TYPE_FLOAT, ph);
   dem->registerCommand(ns, STRING_DISTANCE, DRONE_LINK_MSG_TYPE_FLOAT, ph);
   dem->registerCommand(ns, STRING_LAST, DRONE_LINK_MSG_TYPE_FLOAT, ph);
   dem->registerCommand(ns, STRING_HOME, DRONE_LINK_MSG_TYPE_FLOAT, ph);
   dem->registerCommand(ns, STRING_CROSSTRACK, DRONE_LINK_MSG_TYPE_FLOAT, ph);
   dem->registerCommand(ns, STRING_CORRECTION, DRONE_LINK_MSG_TYPE_FLOAT, ph);
+  dem->registerCommand(ns, STRING_CROSSWIND, DRONE_LINK_MSG_TYPE_FLOAT, ph);
 }
 
 
@@ -228,10 +250,43 @@ void NavModule::update() {
   //_params[NAV_PARAM_HEADING_E].data.f[0] = h;
   // modify heading based on cross-track distance
   float crossTrackAdj = _params[NAV_PARAM_CROSSTRACK_E].data.f[0] * _params[NAV_PARAM_CORRECTION_E].data.f[0];
-  if (crossTrackAdj > 30) crossTrackAdj = 30;
-  if (crossTrackAdj < -30) crossTrackAdj = -30;
-  h += crossTrackAdj;
+  if (crossTrackAdj > 45) crossTrackAdj = 45;
+  if (crossTrackAdj < -45) crossTrackAdj = -45;
+  float adjH = h + crossTrackAdj;
+
+  // now calculate crosswind adjustment
+  float w = _subs[NAV_SUB_WIND_E].param.data.f[0];
+  float cw = _params[NAV_PARAM_CROSSWIND_E].data.f[0];
+
+  // TODO - get wind speed and hull speed
+  float windSpeed = 1;
+  //float hullSpeed = 1;
+
+  // TODO - account for hullSpeed in direction of current heading
+
+  // -- calc adj Target for crosswind --
+  // convert wind to vector, modify wind by crosswind factor
+  float wr = degreesToRadians(w);
+  float wv[2];
+  wv[0] = cw * windSpeed * cos(wr);
+  wv[1] = cw * windSpeed * sin(wr);
+
+  // calc current heading vector
+  float tr = degreesToRadians(adjH);
+  float tv[2];
+  tv[0] =  1 * cos(tr);
+  tv[1] = 1 * sin(tr);
+
+  // calc adj vector by summing
+  float av[2];
+  av[0] = wv[0] + tv[0];
+  av[1] = wv[1] + tv[1];
+  // calc adjusted heading
+  adjH = radiansToDegrees(atan2(av[1], av[0]));
+
+
   updateAndPublishParam(&_params[NAV_PARAM_HEADING_E], (uint8_t*)&h, sizeof(h));
+  updateAndPublishParam(&_params[NAV_PARAM_ADJ_HEADING_E], (uint8_t*)&adjH, sizeof(adjH));
 
   //_params[NAV_PARAM_DISTANCE_E].data.f[0] = d;
   updateAndPublishParam(&_params[NAV_PARAM_DISTANCE_E], (uint8_t*)&d, sizeof(d));

@@ -14,6 +14,7 @@ static const char STRING_BLANK[] PROGMEM = "";
 static const char STRING_ACCEL[] PROGMEM = "accel";
 static const char STRING_ACTIVESCENE[] PROGMEM = "activeScene";
 static const char STRING_ADDR[] PROGMEM = "addr";
+static const char STRING_ADJ_HEADING[] PROGMEM = "adjHeading";
 static const char STRING_ADJ_TARGET[] PROGMEM = "adjTarget";
 static const char STRING_ALARM[] PROGMEM = "alarm";
 static const char STRING_ALTITUDE[] PROGMEM = "altitude";

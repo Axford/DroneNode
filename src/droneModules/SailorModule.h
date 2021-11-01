@@ -60,13 +60,7 @@ config (pubs)
 #define SAILOR_PARAM_SPEED2            20   // polar plot of estimated speeds by heading - 180-360
 #define SAILOR_PARAM_SPEED2_E          4
 
-#define SAILOR_PARAM_CROSSWIND         21  // how much crosswind effect to account for
-#define SAILOR_PARAM_CROSSWIND_E       5
-
-#define SAILOR_PARAM_ADJ_TARGET        22  // target adj for crosswind
-#define SAILOR_PARAM_ADJ_TARGET_E      6
-
-#define SAILOR_PARAM_ENTRIES           7
+#define SAILOR_PARAM_ENTRIES           5
 
 
 static const char SAILOR_STR_SAILOR[] PROGMEM = "Sailor";

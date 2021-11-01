@@ -67,18 +67,6 @@ SailorModule::SailorModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager
    setParamName(FPSTR(STRING_SPEED), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_UINT8_T, 16);
 
-   param = &_params[SAILOR_PARAM_CROSSWIND_E];
-   param->param = SAILOR_PARAM_CROSSWIND;
-   setParamName(FPSTR(STRING_CROSSWIND), param);
-   param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_FLOAT, 4);
-   _params[SAILOR_PARAM_CROSSWIND_E].data.f[0] = 0.5;
-
-   param = &_params[SAILOR_PARAM_ADJ_TARGET_E];
-   param->param = SAILOR_PARAM_ADJ_TARGET;
-   setParamName(FPSTR(STRING_ADJ_TARGET), param);
-   param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 4);
-
-
    update();  // set defaults
 }
 
@@ -111,7 +99,6 @@ void SailorModule::registerParams(DEM_NAMESPACE* ns, DroneExecutionManager *dem)
   dem->registerCommand(ns, PSTR("$crosstrack"), DRONE_LINK_MSG_TYPE_ADDR, pha);
 
   dem->registerCommand(ns, STRING_POLAR, DRONE_LINK_MSG_TYPE_UINT8_T, ph);
-  dem->registerCommand(ns, STRING_CROSSWIND, DRONE_LINK_MSG_TYPE_FLOAT, ph);
 }
 
 
@@ -149,33 +136,6 @@ void SailorModule::update() {
   float w = _subs[SAILOR_SUB_WIND_E].param.data.f[0];
   float t = _subs[SAILOR_SUB_TARGET_E].param.data.f[0];
   float ct = _subs[SAILOR_SUB_CROSSTRACK_E].param.data.f[0];
-  float cw = _params[SAILOR_PARAM_CROSSWIND_E].data.f[0];
-
-  // TODO - get wind speed and hull speed
-  float windSpeed = 1;
-  //float hullSpeed = 1;
-
-  // TODO - account for hullSpeed in direction of current heading
-
-  // -- calc adj Target for crosswind --
-  // convert wind to vector, modify wind by crosswind factor
-  float wr = degreesToRadians(w);
-  float wv[2];
-  wv[0] = cw * windSpeed * cos(wr);
-  wv[1] = cw * windSpeed * sin(wr);
-
-  // calc current target vector
-  float tr = degreesToRadians(t);
-  float tv[2];
-  tv[0] =  1 * cos(tr);
-  tv[1] = 1 * sin(tr);
-
-  // calc adj vector by summing
-  float av[2];
-  av[0] = wv[0] + tv[0];
-  av[1] = wv[1] + tv[1];
-  // calc adjusted target
-  float adjT = radiansToDegrees(atan2(av[1], av[0]));
 
 
   // -- algo 1 --
@@ -194,8 +154,8 @@ void SailorModule::update() {
   float c = 0;
   for (uint8_t i=0; i<32; i++) {
     float ang = (i * 360.0/32.0) + 360.0/64.0;
-    float deltaToTarget = fabs(ang - adjT);
-    // dot the polar performance into the adjusted target vector
+    float deltaToTarget = fabs(ang - t);
+    // dot the polar performance into the target vector
     float pv = cos(degreesToRadians(deltaToTarget)) * polarForAngle(ang);
     if (pv < 0) pv = 0;
     if (i < 16) {
@@ -213,6 +173,11 @@ void SailorModule::update() {
     }
   }
 
+  // if course is close to target, then just head to target
+  if (fabs(c-t) < 11) {
+    c = t;
+  }
+
 
   // calc sheet based on delta between heading and wind
   float sheet = fabs(shortestSignedDistanceBetweenCircularValues(h, w)) / 180;
@@ -221,7 +186,6 @@ void SailorModule::update() {
   // remap sheet in range -1 to 1
   sheet = (sheet * 2) - 1;
 
-  updateAndPublishParam(&_params[SAILOR_PARAM_ADJ_TARGET_E], (uint8_t*)&adjT, sizeof(adjT));
   updateAndPublishParam(&_params[SAILOR_PARAM_SHEET_E], (uint8_t*)&sheet, sizeof(sheet));
   updateAndPublishParam(&_params[SAILOR_PARAM_COURSE_E], (uint8_t*)&c, sizeof(c));
 }

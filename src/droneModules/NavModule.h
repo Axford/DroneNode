@@ -20,7 +20,11 @@ Waypoint navigation:
 #define NAV_SUB_TARGET_ADDR        13
 #define NAV_SUB_TARGET_E           1
 
-#define NAV_SUBS                   2
+#define NAV_SUB_WIND               21
+#define NAV_SUB_WIND_ADDR          22
+#define NAV_SUB_WIND_E             2
+
+#define NAV_SUBS                   3
 
 
 // pubs
@@ -45,7 +49,13 @@ Waypoint navigation:
 #define NAV_PARAM_CORRECTION     18  // cross-track correction factor
 #define NAV_PARAM_CORRECTION_E   6
 
-#define NAV_PARAM_ENTRIES        7
+#define NAV_PARAM_CROSSWIND      19  // how much crosswind effect to account for
+#define NAV_PARAM_CROSSWIND_E    7
+
+#define NAV_PARAM_ADJ_HEADING     20  // heading adj for crosswind
+#define NAV_PARAM_ADJ_HEADING_E   8
+
+#define NAV_PARAM_ENTRIES        9
 
 static const char NAV_STR_NAV[] PROGMEM = "Nav";
 
