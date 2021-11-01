@@ -148,6 +148,7 @@ void SailorModule::update() {
   boolean rightPolar = headingPolarIndex < 16;
 
   //boolean tackNeeded = rightPolar ? (ct < -1) : (ct > 1);
+  //if (fabs(ct) > 3) tackNeeded =true; // catchall
   boolean tackNeeded = fabs(ct) > 1;
 
   float maxPV = 0;
@@ -161,10 +162,12 @@ void SailorModule::update() {
     if (i < 16) {
       // penalise tacking before its needed
       if (!tackNeeded && !rightPolar) pv = pv / 5;
+      if (tackNeeded &&  ct < 0) pv = pv / 4;
       _params[SAILOR_PARAM_SPEED_E].data.uint8[i] = pv;
     } else {
       // penalise tacking before its needed
       if (!tackNeeded && rightPolar) pv = pv / 5;
+      if (tackNeeded &&  ct > 0) pv = pv / 4;
       _params[SAILOR_PARAM_SPEED2_E].data.uint8[i-16] = pv;
     }
     if (pv > maxPV) {

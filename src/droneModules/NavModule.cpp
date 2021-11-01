@@ -250,8 +250,8 @@ void NavModule::update() {
   //_params[NAV_PARAM_HEADING_E].data.f[0] = h;
   // modify heading based on cross-track distance
   float crossTrackAdj = _params[NAV_PARAM_CROSSTRACK_E].data.f[0] * _params[NAV_PARAM_CORRECTION_E].data.f[0];
-  if (crossTrackAdj > 45) crossTrackAdj = 45;
-  if (crossTrackAdj < -45) crossTrackAdj = -45;
+  if (crossTrackAdj > 90) crossTrackAdj = 90;
+  if (crossTrackAdj < -90) crossTrackAdj = -90;
   float adjH = h + crossTrackAdj;
 
   // now calculate crosswind adjustment
