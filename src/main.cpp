@@ -82,6 +82,8 @@ DroneLinkManager *dlm;
 DroneModuleManager *dmm;
 DroneExecutionManager *dem;
 
+File logFile;
+
 const char* QUERY_PARAM_APMODE = "APMode";
 const char* QUERY_PARAM_SSID = "ssid";
 const char* QUERY_PARAM_PASSWORD = "password";
@@ -275,7 +277,7 @@ void setup() {
   listDir(LITTLEFS, "/", 0);
 
 
-  File logFile = LITTLEFS.open("/startup.log", FILE_WRITE);
+  logFile = LITTLEFS.open("/startup.log", FILE_WRITE);
 
   // switch to logging to startup.log file on spiffs
   Log.begin(LOG_LEVEL_VERBOSE, &logFile);
@@ -368,6 +370,7 @@ void setup() {
   DroneWire::scanAll();
 
   // redirect logging to serial
+  logFile.flush();
   //logFile.close();
   //Log.begin(LOG_LEVEL_VERBOSE, &Serial);
 
@@ -437,6 +440,8 @@ void loop() {
 
     //Log.noticeln("[] e");
     dem->execute();
+
+    if (logFile) logFile.flush();
   } else {
     digitalWrite(PIN_LED, HIGH);
   }
