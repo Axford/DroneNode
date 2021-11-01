@@ -17,7 +17,16 @@ Manages a PWM servo channel
 #define SERVO_PARAM_LIMITS       11
 #define SERVO_PARAM_LIMITS_E     1
 
-#define SERVO_PARAM_ENTRIES      2
+#define SERVO_PARAM_MAP          12
+#define SERVO_PARAM_MAP_E        2
+
+#define SERVO_PARAM_CENTRE       13
+#define SERVO_PARAM_CENTRE_E     3
+
+#define SERVO_PARAM_OUTPUT       14
+#define SERVO_PARAM_OUTPUT_E     4
+
+#define SERVO_PARAM_ENTRIES      5
 
 
 // subs

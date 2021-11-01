@@ -38,6 +38,27 @@ ServoModule::ServoModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* 
    param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_FLOAT, 8);
    _params[SERVO_PARAM_LIMITS_E].data.f[0] = -1;
    _params[SERVO_PARAM_LIMITS_E].data.f[1] = 1;
+
+   param = &_params[SERVO_PARAM_MAP_E];
+   param->param = SERVO_PARAM_MAP;
+   setParamName(FPSTR(STRING_MAP), param);
+   param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_FLOAT, 16);
+   _params[SERVO_PARAM_MAP_E].data.f[0] = 0;
+   _params[SERVO_PARAM_MAP_E].data.f[1] = 60;
+   _params[SERVO_PARAM_MAP_E].data.f[2] = 110;
+   _params[SERVO_PARAM_MAP_E].data.f[3] = 180;
+
+   param = &_params[SERVO_PARAM_CENTRE_E];
+   param->param = SERVO_PARAM_CENTRE;
+   setParamName(FPSTR(STRING_CENTRE), param);
+   param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_FLOAT, 4);
+   _params[SERVO_PARAM_CENTRE_E].data.f[0] = 90;
+
+   param = &_params[SERVO_PARAM_OUTPUT_E];
+   param->param = SERVO_PARAM_OUTPUT;
+   setParamName(FPSTR(STRING_OUTPUT), param);
+   param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 4);
+   _params[SERVO_PARAM_OUTPUT_E].data.f[0] = 90;
 }
 
 
@@ -60,6 +81,8 @@ void ServoModule::registerParams(DEM_NAMESPACE* ns, DroneExecutionManager *dem) 
   dem->registerCommand(ns, PSTR("$position"), DRONE_LINK_MSG_TYPE_FLOAT, pha);
   dem->registerCommand(ns, STRING_PINS, DRONE_LINK_MSG_TYPE_UINT8_T, ph);
   dem->registerCommand(ns, STRING_LIMITS, DRONE_LINK_MSG_TYPE_FLOAT, ph);
+  dem->registerCommand(ns, STRING_MAP, DRONE_LINK_MSG_TYPE_FLOAT, ph);
+  dem->registerCommand(ns, STRING_CENTRE, DRONE_LINK_MSG_TYPE_FLOAT, ph);
 }
 
 
@@ -98,11 +121,26 @@ void ServoModule::update() {
   if (v< -1) v = -1;
 
   // remap -1 to 1 into _limits[0] to _limits[1]
-  v = (v + 1) * (_params[SERVO_PARAM_LIMITS_E].data.f[1] - _params[SERVO_PARAM_LIMITS_E].data.f[0]) / (2) + _params[SERVO_PARAM_LIMITS_E].data.f[0];
+  //v = (v + 1) * (_params[SERVO_PARAM_LIMITS_E].data.f[1] - _params[SERVO_PARAM_LIMITS_E].data.f[0]) / (2) + _params[SERVO_PARAM_LIMITS_E].data.f[0];
 
-  int pos = (v*90.0) + 90.0;
+  // apply bezier map curve
+  float t = (v/2) + 0.5;
+  float t2 = t * t;
+  float t3 = t2 * t;
+  float mt = 1 - t;
+  float mt2 = mt * mt;
+  float mt3 = mt2 * mt;
+  v = _params[SERVO_PARAM_MAP_E].data.f[0] * mt3 +
+      _params[SERVO_PARAM_MAP_E].data.f[1] * 3 * mt2 * t +
+      _params[SERVO_PARAM_MAP_E].data.f[2] * 3 * mt * t2 +
+      _params[SERVO_PARAM_MAP_E].data.f[3] * t3;
+
+  int pos = v + _params[SERVO_PARAM_CENTRE_E].data.f[0];
   // limits
   if (pos > 180) pos = 180;
   if (pos < 0) pos = 0;
   _servo.write(pos);
+
+  float f = pos;
+  updateAndPublishParam(&_params[SERVO_PARAM_OUTPUT_E], (uint8_t*)&f, sizeof(f));
 }
