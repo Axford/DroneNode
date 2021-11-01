@@ -129,6 +129,7 @@ protected:
 
   File _file;  // TODO - can prob remove this
   fs::FS &_fs;
+  File &_logFile;
   uint8_t _channelContext;  // set by module commands
   uint8_t _nodeContext;  // set by node command
   boolean _multiLineComment; // set to true when /* encountered
@@ -141,7 +142,7 @@ protected:
   //DRONE_LINK_NODE_PAGE *_nodePages[DRONE_LINK_NODE_PAGES];
 
 public:
-    DroneExecutionManager(DroneModuleManager *dmm, DroneLinkManager *dlm, fs::FS &fs);
+    DroneExecutionManager(DroneModuleManager *dmm, DroneLinkManager *dlm, fs::FS &fs, File &logFile);
 
     uint8_t getBootStatus();
     void setBootStatus(uint8_t v);

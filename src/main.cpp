@@ -286,7 +286,7 @@ void setup() {
   // create core objects
   dlm = new DroneLinkManager();
   dmm = new DroneModuleManager(dlm);
-  dem = new DroneExecutionManager(dmm, dlm, LITTLEFS);
+  dem = new DroneExecutionManager(dmm, dlm, LITTLEFS, logFile);
 
   //ESP32PWM::allocateTimer(0);
 	//ESP32PWM::allocateTimer(1);
@@ -368,8 +368,8 @@ void setup() {
   DroneWire::scanAll();
 
   // redirect logging to serial
-  logFile.close();
-  Log.begin(LOG_LEVEL_VERBOSE, &Serial);
+  //logFile.close();
+  //Log.begin(LOG_LEVEL_VERBOSE, &Serial);
 
   // start core task
   /*

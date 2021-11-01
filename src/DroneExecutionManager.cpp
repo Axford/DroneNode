@@ -70,8 +70,9 @@ DEM_ENUM_MAPPING DRONE_PARAM_TABLE[] PROGMEM = {
 
 
 
-DroneExecutionManager::DroneExecutionManager(DroneModuleManager *dmm, DroneLinkManager *dlm, fs::FS &fs):
-  _fs(fs) {
+DroneExecutionManager::DroneExecutionManager(DroneModuleManager *dmm, DroneLinkManager *dlm, fs::FS &fs, File &logFile):
+  _fs(fs),
+  _logFile(logFile) {
   _dmm = dmm;
   _dlm = dlm;
   _call.p = -1;
@@ -1314,6 +1315,11 @@ boolean DroneExecutionManager::core_setup(DEM_INSTRUCTION_COMPILED* instr, DEM_C
   setBootStatus(DEM_BOOT_SUCCESS);
 
   Log.noticeln(F("[.s] Setup complete"));
+
+  // redirect logging to serial
+  if (_logFile) _logFile.close();
+  Log.begin(LOG_LEVEL_VERBOSE, &Serial);
+
   return true;
 }
 
