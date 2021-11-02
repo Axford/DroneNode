@@ -31,8 +31,8 @@ ManagementModule::ManagementModule(uint8_t id, DroneModuleManager* dmm, DroneLin
    _params[MANAGEMENT_PARAM_BUILD_E].param = MANAGEMENT_PARAM_BUILD;
    _params[MANAGEMENT_PARAM_BUILD_E].name = FPSTR(STRING_BUILD);
    _params[MANAGEMENT_PARAM_BUILD_E].nameLen = sizeof(STRING_BUILD);
-   _params[MANAGEMENT_PARAM_BUILD_E].paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_CHAR, _dmm->buildTimestamp().length());
-   _dmm->buildTimestamp().toCharArray(_params[MANAGEMENT_PARAM_BUILD_E].data.c, 16);
+   _params[MANAGEMENT_PARAM_BUILD_E].paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_CHAR, _dmm->buildCommit().length());
+   _dmm->buildCommit().toCharArray(_params[MANAGEMENT_PARAM_BUILD_E].data.c, 16);
 
    _params[MANAGEMENT_PARAM_RESET_E].param = MANAGEMENT_PARAM_RESET;
    _params[MANAGEMENT_PARAM_RESET_E].name = FPSTR(STRING_RESET);

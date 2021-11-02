@@ -16,7 +16,7 @@ TODO:
 
 // published params
 #define MANAGEMENT_PARAM_HOSTNAME      8
-#define MANAGEMENT_PARAM_BUILD         9   // build timestamp
+#define MANAGEMENT_PARAM_BUILD         9   // build git commit
 #define MANAGEMENT_PARAM_RESET         10  // set to 1 to trigger reset
 #define MANAGEMENT_PARAM_HEAP          11
 #define MANAGEMENT_PARAM_IP            12

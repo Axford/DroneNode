@@ -14,7 +14,7 @@ DroneModuleManager::DroneModuleManager(DroneLinkManager* dlm):
   _dlm(dlm)
 {
   _hostname = "set_me";
-  _buildTimestamp = BUILD_TIMESTAMP;
+  _buildCommit = GIT_COMMIT;
   _lastDiscoveryIndex = 0;
   _node = 1;
   _doDiscovery = true;
@@ -70,8 +70,8 @@ void DroneModuleManager::discovery(boolean v) { // set discovery state
   _doDiscovery = v;
 }
 
-String DroneModuleManager::buildTimestamp() {
-  return _buildTimestamp;
+String DroneModuleManager::buildCommit() {
+  return _buildCommit;
 }
 
 

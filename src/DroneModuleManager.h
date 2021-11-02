@@ -23,7 +23,7 @@ class DroneModuleManager {
 protected:
   uint8_t _node;
   String _hostname;
-  String _buildTimestamp;
+  String _buildCommit;
   boolean _doDiscovery;
   unsigned long _lastWatchdogCheck;
   unsigned long _lastDiscovery;
@@ -42,7 +42,7 @@ public:
   uint8_t node();
   void hostname(const char * name);
   String hostname();
-  String buildTimestamp();
+  String buildCommit();
   boolean discovery(); // get discovery state
   void discovery(boolean v); // set discovery state
 

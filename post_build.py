@@ -6,4 +6,4 @@ print("Post build script")
 print(projenv)
 
 # Dump construction environment (for debug purpose)
-print(projenv.Dump())
+# print(projenv.Dump())
