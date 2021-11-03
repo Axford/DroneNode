@@ -12,7 +12,7 @@ Manages a a Wii Nunchuk joystick Via ic2
 #include "I2CBaseModule.h"
 #include <WiiChuck.h>
 
-#define NunJOYSTICK_I2C_ADDRESS         52
+#define NunJOYSTICK_I2C_ADDRESS         0x52
 
 #define NunJOYSTICK_PARAM_X            (I2CBASE_SUBCLASS_PARAM_START+0)  //10
 #define NunJOYSTICK_PARAM_Y             (I2CBASE_SUBCLASS_PARAM_START+1)

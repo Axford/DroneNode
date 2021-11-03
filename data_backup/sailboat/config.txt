@@ -79,9 +79,13 @@ HMC5883L.new 8
 
 Nav.new 9
   name "Nav"
+  status 1
   interval 50
-  $location [@>50.9]
-  target -1.82 51.56 100
+  $location [@>7.8]
+  target -1.7458734889 51.541622044 5
+  crosswind 0.2
+  correction 20
+  wind 0
   .publish "target"
   .publish "location"
   .publish "heading"
@@ -90,13 +94,16 @@ Nav.new 9
   .publish "last"
   .publish "home"
   .publish "crosstrack"
+  .publish "correction"
+  .publish "wind"
+  .publish "crosswind"
+  .publish "adjHeading"
 .done
 
 Sailor.new 10
   name "Sailor"
   interval 100
   polar 0 0 0 200   255 255 255 250  240 230 220 210  200 150 0 0
-  wind 0
   $target [@>9.8]
   $heading [@>8.11]
   $crosstrack [@>9.17]
@@ -127,8 +134,13 @@ Servo.new 12
   status 1
   name "Sheet"
   interval 100
+  map 0 27 125 149
+  centre 0
   $position [@>10.17]
+  .publish "map"
+  .publish "centre"
   .publish "position"
+  .publish "output"
 .done
 
 Servo.new 13
@@ -136,10 +148,14 @@ Servo.new 13
   pins OUT0_1
   status 1
   name "Rudder"
-  limits -0.7 0.7
+  map 30 70 110 150
+  centre 8
   $position [@>11.16]
   interval 100
+  .publish "map"
+  .publish "centre"
   .publish "position"
+  .publish "output"
 .done
 
 Neopixel.new 20
@@ -152,3 +168,5 @@ Neopixel.new 20
 
 // finish setup
 .setup
+
+_Nav.goto -1.7458734889 51.541622044 5

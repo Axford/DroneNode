@@ -76,14 +76,14 @@ void NunchuckJoystick::registerParams(DEM_NAMESPACE* ns, DroneExecutionManager *
 void NunchuckJoystick::doReset() {
   I2CBaseModule::doReset();
 
-  //DroneWire::selectChannel(_params[I2CBASE_PARAM_BUS_E].data.uint8[0]);
-
   setError(0);
 }
 
 
 void NunchuckJoystick::setup() {
   I2CBaseModule::setup();
+
+  DroneWire::selectChannel(_params[I2CBASE_PARAM_BUS_E].data.uint8[0]);
 
   //begin nunchuck
   nunchuck1.begin();
