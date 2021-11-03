@@ -146,7 +146,6 @@ void setupWebServer() {
 
   DefaultHeaders::Instance().addHeader("Access-Control-Allow-Origin", "*");
 
-  //server.serveStatic("/", SPIFFS, "/").setDefaultFile("index.htm");
   server.serveStatic("/", LITTLEFS, "/").setDefaultFile("index.htm");
 
   server.begin();

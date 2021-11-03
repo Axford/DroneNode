@@ -10,7 +10,7 @@ WebFSEditor::WebFSEditor(fs::FS &fs, boolean &doLoop):
 }
 
 
-// list all of the files, if ishtml=true, return html rather than simple text
+// list all of the files, if ishtml=true, return html else json
 String WebFSEditor::listFiles(bool ishtml) {
   _doLoop = false;
   String returnText = "";
@@ -19,19 +19,26 @@ String WebFSEditor::listFiles(bool ishtml) {
   File foundfile = root.openNextFile();
   if (ishtml) {
     returnText += "<table><tr><th align='left'>Name</th><th align='left'>Size</th><th></th><th></th></tr>";
+  } else {
+    returnText += "{ \"files\":[\n";
   }
+  uint8_t i=0;
   while (foundfile) {
     if (ishtml) {
       returnText += "<tr align='left'><td>" + String(foundfile.name()) + "</td><td>" + humanReadableSize(foundfile.size()) + "</td>";
       returnText += "<td><button onclick=\"downloadDeleteButton(\'" + String(foundfile.name()) + "\', \'download\')\">Edit</button>";
       returnText += "<td><button class=danger onclick=\"downloadDeleteButton(\'" + String(foundfile.name()) + "\', \'delete\')\">Delete</button></tr>";
     } else {
-      returnText += "File: " + String(foundfile.name()) + " Size: " + humanReadableSize(foundfile.size()) + "\n";
+      if (i>0) returnText += ",";
+      returnText += "{\"name\":\"" + String(foundfile.name()) + "\", \"size\":" + foundfile.size() + "}\n";
     }
+    i++;
     foundfile = root.openNextFile();
   }
   if (ishtml) {
     returnText += "</table>";
+  } else {
+    returnText += "]}";
   }
   root.close();
   foundfile.close();
@@ -138,7 +145,8 @@ void WebFSEditor::configureWebServer(AsyncWebServer &server) {
     if (checkUserWebAuth(request)) {
       logmessage += " Auth: Success";
       Serial.println(logmessage);
-      request->send(200, "text/plain", listFiles(true) );
+      boolean doHTML = !request->hasParam("json");
+      request->send(200, doHTML ? "text/plain" : "application/json", listFiles(doHTML) );
     } else {
       logmessage += " Auth: Failed";
       Serial.println(logmessage);
