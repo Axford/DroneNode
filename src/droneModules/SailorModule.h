@@ -60,13 +60,19 @@ config (pubs)
 #define SAILOR_PARAM_SPEED2            20   // polar plot of estimated speeds by heading - 180-360
 #define SAILOR_PARAM_SPEED2_E          4
 
-#define SAILOR_PARAM_ENTRIES           5
+#define SAILOR_PARAM_FLAGS            21   // polar plot of estimated speeds by heading - 180-360
+#define SAILOR_PARAM_FLAGS_E          5
+
+#define SAILOR_PARAM_ENTRIES           6
 
 
 static const char SAILOR_STR_SAILOR[] PROGMEM = "Sailor";
 
 class SailorModule:  public DroneModule {
 protected:
+  boolean _starboardTack;  // true if stardboard, false if port
+  boolean _tackLocked; // hyterisis control
+  boolean _lastCrossTrackPositive; // hysterisis control
 
 public:
 

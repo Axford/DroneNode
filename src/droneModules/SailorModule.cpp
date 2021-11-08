@@ -10,6 +10,10 @@ SailorModule::SailorModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager
    // set type
    setTypeName(FPSTR(SAILOR_STR_SAILOR));
 
+   _starboardTack = true;
+   _tackLocked = false;
+   _lastCrossTrackPositive = false;
+
    // subs
    initSubs(SAILOR_SUBS);
 
@@ -67,6 +71,12 @@ SailorModule::SailorModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager
    setParamName(FPSTR(STRING_SPEED), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_UINT8_T, 16);
 
+   param = &_params[SAILOR_PARAM_FLAGS_E];
+   param->param = SAILOR_PARAM_FLAGS;
+   param->publish = true;
+   setParamName(FPSTR(STRING_SPEED), param);
+   param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_UINT8_T, 3);
+
    update();  // set defaults
 }
 
@@ -103,9 +113,10 @@ void SailorModule::registerParams(DEM_NAMESPACE* ns, DroneExecutionManager *dem)
 
 
 uint8_t SailorModule::polarIndexForAngle(float ang) {
-  float w = _subs[SAILOR_SUB_WIND_E].param.data.f[0];
+  //float w = _subs[SAILOR_SUB_WIND_E].param.data.f[0];
 
-  float polarAng = fmod(ang - w, 360);
+  //float polarAng = fmod(ang - w, 360);
+  float polarAng = fmod(ang, 360);
   if (polarAng < 0) polarAng += 360;
   uint8_t polarIndex = polarAng / 11.25;
   if (polarIndex > 31) polarIndex -= 32;
@@ -136,7 +147,7 @@ void SailorModule::update() {
   float w = _subs[SAILOR_SUB_WIND_E].param.data.f[0];
   float t = _subs[SAILOR_SUB_TARGET_E].param.data.f[0];
   float ct = _subs[SAILOR_SUB_CROSSTRACK_E].param.data.f[0];
-
+  float c = _params[SAILOR_PARAM_COURSE_E].data.f[0];
 
   // -- algo 1 --
   // evaluate all potential course optionsl, using the polar for each
@@ -144,35 +155,77 @@ void SailorModule::update() {
   // pick the one with the largest vector magnitude
 
 
-  uint8_t headingPolarIndex = polarIndexForAngle(h); // what region are we sailing in?
-  boolean rightPolar = headingPolarIndex < 16;
+  //uint8_t coursePolarIndex = polarIndexForAngle(h); // what region are we trying to sail in?
+  //boolean rightPolar = headingPolarIndex < 16;
+
+  // calc sheet based on delta between heading and wind
+  float sheet = fabs(shortestSignedDistanceBetweenCircularValues(h, w)) / 180;
+  if (sheet > 1) sheet = 1;
+
+  if (_tackLocked && (_lastCrossTrackPositive ? ct < -1 : ct > 1)) _tackLocked = false;
+  if (fabs(ct) > 1.2) {
+    _tackLocked = false;
+  }
 
   //boolean tackNeeded = rightPolar ? (ct < -1) : (ct > 1);
   //if (fabs(ct) > 3) tackNeeded =true; // catchall
-  boolean tackNeeded = fabs(ct) > 1;
+  //boolean tackNeeded = (!_tackLocked) && fabs(ct) > 1;
+
+
+  /*
+
+  if abs(crosstrack > 1) then its time to tack
+     when evaluating potential headings, need to rule out headings that would increase cross-track
+     i.e. zero the pv values
+     if crosstrack positive, then relative headings need to be between 0 and 90 degrees
+     if crosstrack negative, then relative headings need to be between 0 and -90 degrees
+     where relative heading is shortestSignedDistanceBetweenCircularValues(target, potential heading)
+
+  */
+
 
   float maxPV = 0;
-  float c = 0;
+  float newTackIsStarboard = true;
+  // sweep around potential headings relative to wind (i.e. polar coord frame)
   for (uint8_t i=0; i<32; i++) {
     float ang = (i * 360.0/32.0) + 360.0/64.0;
-    float deltaToTarget = fabs(ang - t);
+    float deltaToTarget = fabs((ang + w) - t);
     // dot the polar performance into the target vector
     float pv = cos(degreesToRadians(deltaToTarget)) * polarForAngle(ang);
     if (pv < 0) pv = 0;
-    if (i < 16) {
+    boolean penalise = false;
+
+    if (_tackLocked) {
       // penalise tacking before its needed
-      if (!tackNeeded && !rightPolar) pv = pv / 5;
-      if (tackNeeded &&  ct < 0) pv = pv / 4;
+      if (i < 16) {
+        // port wind
+        penalise = _starboardTack;
+      } else {
+        // starboard wind
+        penalise = !_starboardTack;
+      }
+    }
+
+    if (fabs(ct) > 1) {
+      float pToT = shortestSignedDistanceBetweenCircularValues(t, ang + w);
+      if (ct > 0) {
+        penalise = (pToT < 0 || pToT > 90);
+      } else {
+        penalise = (pToT > 0 || pToT < -90);
+      }
+    }
+
+    if (penalise) pv = pv / 50;
+
+    if (i < 16) {
       _params[SAILOR_PARAM_SPEED_E].data.uint8[i] = pv;
     } else {
-      // penalise tacking before its needed
-      if (!tackNeeded && rightPolar) pv = pv / 5;
-      if (tackNeeded &&  ct > 0) pv = pv / 4;
       _params[SAILOR_PARAM_SPEED2_E].data.uint8[i-16] = pv;
     }
     if (pv > maxPV) {
       maxPV = pv;
-      c = ang;
+      c = ang + w; // put back into world frame
+      newTackIsStarboard = i > 15;
     }
   }
 
@@ -181,13 +234,36 @@ void SailorModule::update() {
     c = t;
   }
 
+  // see if we're on a rubbish tack
+  if (maxPV < 25) {
+    _tackLocked = false;
+  }
 
-  // calc sheet based on delta between heading and wind
-  float sheet = fabs(shortestSignedDistanceBetweenCircularValues(h, w)) / 180;
-  if (sheet > 1) sheet = 1;
+  // see if we need to force a tack
+  // should never happen
+  if (fabs(ct) > 1.2) {
+    _starboardTack = ct < 0;
+    _tackLocked = true;
+    _lastCrossTrackPositive = ct > 0;
+  }
+
+  // see if we're changing tack
+  //if (!_tackLocked && newTackIsStarboard != _starboardTack && fabs(ct)<1.2) {
+  if (newTackIsStarboard != _starboardTack && fabs(ct)<1.2) {
+    _starboardTack = newTackIsStarboard;
+    _tackLocked = true;
+    _lastCrossTrackPositive = ct > 0;
+  }
 
   // remap sheet in range -1 to 1
   sheet = (sheet * 2) - 1;
+
+  uint8_t flags[3];
+  flags[0] = _starboardTack ? 1 : 0;
+  flags[1] = _tackLocked ? 1 : 0;
+  flags[2] = _lastCrossTrackPositive ? 1 : 0;
+
+  updateAndPublishParam(&_params[SAILOR_PARAM_FLAGS_E], (uint8_t*)&flags, sizeof(flags));
 
   updateAndPublishParam(&_params[SAILOR_PARAM_SHEET_E], (uint8_t*)&sheet, sizeof(sheet));
   updateAndPublishParam(&_params[SAILOR_PARAM_COURSE_E], (uint8_t*)&c, sizeof(c));

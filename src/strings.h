@@ -44,6 +44,7 @@ static const char STRING_DRONE[] PROGMEM = "Drone";
 static const char STRING_ERROR[] PROGMEM = "error";
 static const char STRING_ENABLE[] PROGMEM = "enable";
 static const char STRING_FALSE[] PROGMEM = "false";
+static const char STRING_FLAGS[] PROGMEM = "flags";
 static const char STRING_GYRO[] PROGMEM = "gyro";
 static const char STRING_HDOP[] PROGMEM = "HDOP";
 static const char STRING_HEADING[] PROGMEM = "heading";
