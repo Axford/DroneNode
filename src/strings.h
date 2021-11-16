@@ -111,6 +111,7 @@ static const char STRING_VECTOR[] PROGMEM = "vector";
 static const char STRING_WAYPOINTS[] PROGMEM = "waypoints";
 static const char STRING_WAYPOINT[] PROGMEM = "waypoint";
 static const char STRING_WIND[] PROGMEM = "wind";
+static const char STRING_WING[] PROGMEM = "wing";
 static const char STRING_XAXIS[] PROGMEM = "xAxis";
 static const char STRING_YAXIS[] PROGMEM = "yAxis";
 static const char STRING_ZAXIS[] PROGMEM = "zAxis";

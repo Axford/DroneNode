@@ -17,6 +17,7 @@
 #include "droneModules/NeopixelModule.h"
 #include "droneModules/NMEAModule.h"
 #include "droneModules/NunchuckJoystickModule.h"
+#include "droneModules/ProaModule.h"
 #include "droneModules/RFM69TelemetryModule.h"
 #include "droneModules/SailorModule.h"
 #include "droneModules/ServoModule.h"
@@ -84,7 +85,7 @@ DroneExecutionManager::DroneExecutionManager(DroneModuleManager *dmm, DroneLinkM
   _safeMode = (getBootStatus() != DEM_BOOT_SUCCESS);
   // disable safeMode - cos its a pain in the ass!
   _safeMode = false;
-  
+
   Log.noticeln("[DEM.DEM] SafeMode %u", (_safeMode ? 1: 0));
 
   // now clear the _safeMode value ready for this boot attempt
@@ -152,6 +153,7 @@ DroneExecutionManager::DroneExecutionManager(DroneModuleManager *dmm, DroneLinkM
   ns = NMEAModule::registerNamespace(this); NMEAModule::registerParams(ns, this);
   ns = NeopixelModule::registerNamespace(this); NeopixelModule::registerParams(ns, this);
   ns = NunchuckJoystick::registerNamespace(this); NunchuckJoystick::registerParams(ns, this);
+  ns = ProaModule::registerNamespace(this); ProaModule::registerParams(ns, this);
   ns = RFM69TelemetryModule::registerNamespace(this); RFM69TelemetryModule::registerParams(ns, this);
   ns = SailorModule::registerNamespace(this); SailorModule::registerParams(ns, this);
   ns = ServoModule::registerNamespace(this); ServoModule::registerParams(ns, this);
@@ -1425,6 +1427,8 @@ boolean DroneExecutionManager::mod_constructor(DEM_INSTRUCTION_COMPILED* instr, 
       newMod = new NeopixelModule(id, _dmm, _dlm, this, _fs);
     } else if (strcmp_P(instr->ns->name, NunJOYSTICK_STR_NunJOYSTICK) == 0) {
       newMod = new NunchuckJoystick(id, _dmm, _dlm, this, _fs);
+    } else if (strcmp_P(instr->ns->name, PROA_STR_PROA) == 0) {
+      newMod = new ProaModule(id, _dmm, _dlm, this, _fs);
     } else if (strcmp_P(instr->ns->name, RFM69_TELEMETRY_STR_RFM69_TELEMETRY) == 0) {
       newMod = new RFM69TelemetryModule(id, _dmm, _dlm, this, _fs);
     } else if (strcmp_P(instr->ns->name, SAILOR_STR_SAILOR) == 0) {
