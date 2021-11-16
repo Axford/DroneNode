@@ -42,7 +42,11 @@ static const char SERVO_STR_SERVO[] PROGMEM = "Servo";
 class ServoModule:  public DroneModule {
 protected:
   //uint8_t _pins[1];
+  float _targetPos;
+  float _startPos;
+  float _currentPos;
   Servo _servo;
+  unsigned long _startTime;
   //float _limits[2];  // min, max
 public:
 

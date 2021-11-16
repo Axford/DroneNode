@@ -1,0 +1,154 @@
+#include "WindModule.h"
+#include "../DroneLinkMsg.h"
+#include "../DroneLinkManager.h"
+#include "strings.h"
+#include <SPIFFS.h>
+
+unsigned long _globalWindCounter;
+
+WindModule::WindModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm, DroneExecutionManager* dem, fs::FS &fs):
+  I2CBaseModule ( id, dmm, dlm, dem, fs )
+ {
+   setTypeName(FPSTR(WIND_STR_WIND));
+   //_params[I2CBASE_PARAM_ADDR_E].data.uint8[0] = WIND_I2C_ADDRESS;
+   _sensor = NULL;
+   _globalWindCounter = 0;
+   _sample = 0;
+   _lastSampleTime = 0;
+
+   for (uint8_t i=0; i<WIND_SAMPLES; i++) {
+     _samples[i] = 0;
+   }
+
+   // subs
+   initSubs(WIND_SUBS);
+
+
+   // pubs
+   initParams(WIND_PARAM_ENTRIES);
+
+   I2CBaseModule::initBaseParams();
+   _params[I2CBASE_PARAM_ADDR_E].data.uint8[0] = WIND_I2C_ADDRESS;
+
+   // init param entries
+   _params[WIND_PARAM_DIRECTION_E].param = WIND_PARAM_DIRECTION;
+   _params[WIND_PARAM_DIRECTION_E].name = FPSTR(STRING_DIRECTION);
+   _params[WIND_PARAM_DIRECTION_E].nameLen = sizeof(STRING_DIRECTION);
+   _params[WIND_PARAM_DIRECTION_E].paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 4);
+
+   _params[WIND_PARAM_SPEED_E].param = WIND_PARAM_SPEED;
+   _params[WIND_PARAM_SPEED_E].name = FPSTR(STRING_SPEED);
+   _params[WIND_PARAM_SPEED_E].nameLen = sizeof(STRING_SPEED);
+   _params[WIND_PARAM_SPEED_E].paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 4);
+
+   _params[WIND_PARAM_PINS_E].param = WIND_PARAM_PINS;
+   _params[WIND_PARAM_PINS_E].name = FPSTR(STRING_PINS);
+   _params[WIND_PARAM_PINS_E].nameLen = sizeof(STRING_PINS);
+   _params[WIND_PARAM_PINS_E].paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_UINT8_T, 1);
+
+}
+
+WindModule::~WindModule() {
+  if (_sensor) delete _sensor;
+}
+
+
+DEM_NAMESPACE* WindModule::registerNamespace(DroneExecutionManager *dem) {
+  // namespace for module type
+  return dem->createNamespace(WIND_STR_WIND,0,true);
+}
+
+void WindModule::registerParams(DEM_NAMESPACE* ns, DroneExecutionManager *dem) {
+
+  I2CBaseModule::registerParams(ns, dem);
+
+  using std::placeholders::_1;
+  using std::placeholders::_2;
+  using std::placeholders::_3;
+  using std::placeholders::_4;
+
+  // writable mgmt params
+  DEMCommandHandler ph = std::bind(&DroneExecutionManager::mod_param, dem, _1, _2, _3, _4);
+  //DEMCommandHandler pha = std::bind(&DroneExecutionManager::mod_subAddr, dem, _1, _2, _3, _4);
+
+  dem->registerCommand(ns, STRING_DIRECTION, DRONE_LINK_MSG_TYPE_FLOAT, ph);
+  dem->registerCommand(ns, STRING_SPEED, DRONE_LINK_MSG_TYPE_FLOAT, ph);
+  dem->registerCommand(ns, STRING_PINS, DRONE_LINK_MSG_TYPE_UINT8_T, ph);
+
+}
+
+void WindModule::doReset() {
+  I2CBaseModule::doReset();
+}
+
+void IRAM_ATTR WindModule::ISR() {
+  _globalWindCounter++;
+}
+
+
+void WindModule::setup() {
+  I2CBaseModule::setup();
+
+  if (!_sensor) {
+    DroneWire::selectChannel(_params[I2CBASE_PARAM_BUS_E].data.uint8[0]);
+    _sensor = new AMS_5600();
+
+    // debug output
+    Log.noticeln("[Wind.s]");
+    Log.noticeln("[Wind.s] Raw Angle: %d", _sensor->getRawAngle() );
+    Log.noticeln("[Wind.s] detectMagnet: %d", _sensor->detectMagnet() );
+    Log.noticeln("[Wind.s] getMagnetStrength: %d", _sensor->getMagnetStrength() );
+    Log.noticeln("[Wind.s] getAgc: %d", _sensor->getAgc() );
+    Log.noticeln("[Wind.s] getMagnitude: %d", _sensor->getMagnitude() );
+  }
+
+  if (_params[WIND_PARAM_PINS_E].data.uint8[0] > 0) {
+    pinMode(_params[WIND_PARAM_PINS_E].data.uint8[0], INPUT_PULLUP);
+
+    // attach interrupt
+    attachInterrupt( _params[WIND_PARAM_PINS_E].data.uint8[0], ISR, FALLING );
+
+  } else {
+    Log.errorln(F("[W.s] Undefined pins %u"), _id);
+  }
+}
+
+
+void WindModule::loop() {
+  I2CBaseModule::loop();
+
+  unsigned long loopTime = millis();
+  float dt = (loopTime - _lastSampleTime) / 1000.0;
+  _lastSampleTime = loopTime;
+
+  DroneWire::selectChannel(_params[I2CBASE_PARAM_BUS_E].data.uint8[0]);
+
+  float ang = 360 * _sensor->getRawAngle() / 4095;
+  if (ang > 360) ang = ang-360;
+
+  updateAndPublishParam(&_params[WIND_PARAM_DIRECTION_E], (uint8_t*)&ang, sizeof(ang));
+
+
+
+  _samples[_sample] = _globalWindCounter / dt;
+  _globalWindCounter = 0;
+
+  _sample++;
+  if (_sample >= WIND_SAMPLES) _sample = 0;
+
+  // add up all the windcount rates to get the average
+  float speed = 0;
+  for (uint8_t i=0; i<WIND_SAMPLES; i++) {
+    speed += _samples[i];
+  }
+  speed = speed / WIND_SAMPLES;
+
+  // convert to actual speed, based on 1.25m per revolution (count)
+  speed = speed * 1.25;
+
+  // then convert from m/s to knots
+  speed = speed * 1.94384;
+
+  updateAndPublishParam(&_params[WIND_PARAM_SPEED_E], (uint8_t*)&speed, sizeof(speed));
+
+}

@@ -1,6 +1,6 @@
 /*
 
-Manages a HMC5883L I2C power monitor
+Manages a HMC5883L I2C Compass
 
 */
 #ifndef HMC5883L_MODULE_H

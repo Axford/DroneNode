@@ -13,6 +13,10 @@ ServoModule::ServoModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* 
 
    // subs
    initSubs(SERVO_SUBS);
+   _targetPos = 90;
+   _startPos = 90;
+   _currentPos = 90;
+   _startTime = 0;
 
    DRONE_PARAM_SUB *sub;
 
@@ -36,8 +40,8 @@ ServoModule::ServoModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* 
    param->param = SERVO_PARAM_LIMITS;
    setParamName(FPSTR(STRING_LIMITS), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_FLOAT, 8);
-   _params[SERVO_PARAM_LIMITS_E].data.f[0] = -1;
-   _params[SERVO_PARAM_LIMITS_E].data.f[1] = 1;
+   _params[SERVO_PARAM_LIMITS_E].data.f[0] = 90;  // 90 degrees per second rate limit
+   _params[SERVO_PARAM_LIMITS_E].data.f[1] = 0;  // ignored
 
    param = &_params[SERVO_PARAM_MAP_E];
    param->param = SERVO_PARAM_MAP;
@@ -52,13 +56,13 @@ ServoModule::ServoModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* 
    param->param = SERVO_PARAM_CENTRE;
    setParamName(FPSTR(STRING_CENTRE), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_FLOAT, 4);
-   _params[SERVO_PARAM_CENTRE_E].data.f[0] = 90;
+   _params[SERVO_PARAM_CENTRE_E].data.f[0] = 0;
 
    param = &_params[SERVO_PARAM_OUTPUT_E];
    param->param = SERVO_PARAM_OUTPUT;
    setParamName(FPSTR(STRING_OUTPUT), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 4);
-   _params[SERVO_PARAM_OUTPUT_E].data.f[0] = 90;
+   _params[SERVO_PARAM_OUTPUT_E].data.f[0] = _targetPos;
 }
 
 
@@ -105,9 +109,33 @@ void ServoModule::setup() {
 void ServoModule::loop() {
   DroneModule::loop();
 
+  long loopTime = millis();
+
+
+  if (_currentPos != _targetPos) {
+
+    // total transition time
+    float dt = (loopTime - _startTime) / 1000.0;
+    //if (dt > 1) dt = 1;
+
+    // calc rate limit - maximum degrees we can have moved since start
+    float lim = _params[SERVO_PARAM_LIMITS_E].data.f[0] * dt;
+    //if (lim == 0) { lim = 0.1; } // ensure we don't stall in a fast update loop
+
+    // apply rate limit
+    float err = _targetPos - _startPos;
+    if (err > lim) { err = lim; }
+    if (err < -lim) { err = -lim; };
+
+    // update _currentPos
+    _currentPos = _startPos + err;
+  }
+
+  updateAndPublishParam(&_params[SERVO_PARAM_OUTPUT_E], (uint8_t*)&_currentPos, sizeof(_currentPos));
+
   // reinforce
   // TODO: this seems to be required, but no idea why
-  _servo.write(_servo.read());
+  _servo.write(_currentPos);
 }
 
 
@@ -139,8 +167,11 @@ void ServoModule::update() {
   // limits
   if (pos > 180) pos = 180;
   if (pos < 0) pos = 0;
-  _servo.write(pos);
 
-  float f = pos;
-  updateAndPublishParam(&_params[SERVO_PARAM_OUTPUT_E], (uint8_t*)&f, sizeof(f));
+  //_servo.write(pos);
+  if (pos != _targetPos) {
+    _targetPos = pos;
+    _startPos = _servo.read(); // in case we're not at the new position yet
+    _startTime = millis();
+  }
 }

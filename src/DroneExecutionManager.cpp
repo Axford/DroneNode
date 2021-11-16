@@ -13,6 +13,7 @@
 #include "droneModules/ManagementModule.h"
 #include "droneModules/MotorModule.h"
 #include "droneModules/MPU6050Module.h"
+#include "droneModules/NavModule.h"
 #include "droneModules/NeopixelModule.h"
 #include "droneModules/NMEAModule.h"
 #include "droneModules/NunchuckJoystickModule.h"
@@ -23,7 +24,7 @@
 #include "droneModules/TankSteerModule.h"
 #include "droneModules/TurnRateModule.h"
 #include "droneModules/UDPTelemetryModule.h"
-#include "droneModules/NavModule.h"
+#include "droneModules/WindModule.h"
 
 /*
 #include "droneModules/TimerModule.h"
@@ -81,6 +82,9 @@ DroneExecutionManager::DroneExecutionManager(DroneModuleManager *dmm, DroneLinkM
   // read last boot status from EEPROM
   //_safeMode
   _safeMode = (getBootStatus() != DEM_BOOT_SUCCESS);
+  // disable safeMode - cos its a pain in the ass!
+  _safeMode = false;
+  
   Log.noticeln("[DEM.DEM] SafeMode %u", (_safeMode ? 1: 0));
 
   // now clear the _safeMode value ready for this boot attempt
@@ -144,6 +148,7 @@ DroneExecutionManager::DroneExecutionManager(DroneModuleManager *dmm, DroneLinkM
   ns = ManagementModule::registerNamespace(this); ManagementModule::registerParams(ns, this);
   ns = MotorModule::registerNamespace(this);  MotorModule::registerParams(ns, this);
   ns = MPU6050Module::registerNamespace(this);  MPU6050Module::registerParams(ns, this);
+  ns = NavModule::registerNamespace(this);  NavModule::registerParams(ns, this);
   ns = NMEAModule::registerNamespace(this); NMEAModule::registerParams(ns, this);
   ns = NeopixelModule::registerNamespace(this); NeopixelModule::registerParams(ns, this);
   ns = NunchuckJoystick::registerNamespace(this); NunchuckJoystick::registerParams(ns, this);
@@ -154,7 +159,8 @@ DroneExecutionManager::DroneExecutionManager(DroneModuleManager *dmm, DroneLinkM
   ns = TankSteerModule::registerNamespace(this);  TankSteerModule::registerParams(ns, this);
   ns = TurnRateModule::registerNamespace(this);  TurnRateModule::registerParams(ns, this);
   ns = UDPTelemetryModule::registerNamespace(this);  UDPTelemetryModule::registerParams(ns, this);
-  ns = NavModule::registerNamespace(this);  NavModule::registerParams(ns, this);
+  ns = WindModule::registerNamespace(this);  WindModule::registerParams(ns, this);
+
 
   // register constructors and mgmtParams for all module namespaces
   for (uint8_t i=0; i<_namespaces.size(); i++) {
@@ -1435,6 +1441,8 @@ boolean DroneExecutionManager::mod_constructor(DEM_INSTRUCTION_COMPILED* instr, 
       newMod = new UDPTelemetryModule(id, _dmm, _dlm, this, _fs);
     } else if (strcmp_P(instr->ns->name, NAV_STR_NAV) == 0) {
       newMod = new NavModule(id, _dmm, _dlm, this, _fs);
+    } else if (strcmp_P(instr->ns->name, WIND_STR_WIND) == 0) {
+      newMod = new WindModule(id, _dmm, _dlm, this, _fs);
     } else {
       Log.errorln(F("[.c] Unknown type"));
     }
