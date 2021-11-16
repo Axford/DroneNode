@@ -23,6 +23,13 @@ WindModule::WindModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dl
    // subs
    initSubs(WIND_SUBS);
 
+   DRONE_PARAM_SUB *sub;
+
+   sub = &_subs[HMC5883L_SUB_HEADING_E];
+   sub->addrParam = HMC5883L_SUB_HEADING_ADDR;
+   sub->param.param = HMC5883L_SUB_HEADING;
+   setParamName(FPSTR(STRING_HEADING), &sub->param);
+
 
    // pubs
    initParams(WIND_PARAM_ENTRIES);
@@ -46,6 +53,16 @@ WindModule::WindModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dl
    _params[WIND_PARAM_PINS_E].nameLen = sizeof(STRING_PINS);
    _params[WIND_PARAM_PINS_E].paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_UINT8_T, 1);
 
+   _params[WIND_PARAM_CENTRE_E].param = WIND_PARAM_CENTRE;
+   _params[WIND_PARAM_CENTRE_E].name = FPSTR(STRING_CENTRE);
+   _params[WIND_PARAM_CENTRE_E].nameLen = sizeof(STRING_CENTRE);
+   _params[WIND_PARAM_CENTRE_E].paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_FLOAT, 4);
+   _params[WIND_PARAM_CENTRE_E].data.f[0] = 0;
+
+   _params[WIND_PARAM_WIND_E].param = WIND_PARAM_WIND;
+   _params[WIND_PARAM_WIND_E].name = FPSTR(STRING_WIND);
+   _params[WIND_PARAM_WIND_E].nameLen = sizeof(STRING_WIND);
+   _params[WIND_PARAM_WIND_E].paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 4);
 }
 
 WindModule::~WindModule() {
@@ -69,11 +86,15 @@ void WindModule::registerParams(DEM_NAMESPACE* ns, DroneExecutionManager *dem) {
 
   // writable mgmt params
   DEMCommandHandler ph = std::bind(&DroneExecutionManager::mod_param, dem, _1, _2, _3, _4);
-  //DEMCommandHandler pha = std::bind(&DroneExecutionManager::mod_subAddr, dem, _1, _2, _3, _4);
+  DEMCommandHandler pha = std::bind(&DroneExecutionManager::mod_subAddr, dem, _1, _2, _3, _4);
+
+  dem->registerCommand(ns, STRING_HEADING, DRONE_LINK_MSG_TYPE_FLOAT, ph);
+  dem->registerCommand(ns, PSTR("$heading"), DRONE_LINK_MSG_TYPE_FLOAT, pha);
 
   dem->registerCommand(ns, STRING_DIRECTION, DRONE_LINK_MSG_TYPE_FLOAT, ph);
   dem->registerCommand(ns, STRING_SPEED, DRONE_LINK_MSG_TYPE_FLOAT, ph);
   dem->registerCommand(ns, STRING_PINS, DRONE_LINK_MSG_TYPE_UINT8_T, ph);
+  dem->registerCommand(ns, STRING_CENTRE, DRONE_LINK_MSG_TYPE_FLOAT, ph);
 
 }
 
@@ -109,7 +130,7 @@ void WindModule::setup() {
     attachInterrupt( _params[WIND_PARAM_PINS_E].data.uint8[0], ISR, FALLING );
 
   } else {
-    Log.errorln(F("[W.s] Undefined pins %u"), _id);
+    Log.errorln(F("[W.s] Undefined speed pin %u"), _id);
   }
 }
 
@@ -124,7 +145,9 @@ void WindModule::loop() {
   DroneWire::selectChannel(_params[I2CBASE_PARAM_BUS_E].data.uint8[0]);
 
   float ang = 360 * _sensor->getRawAngle() / 4095;
-  if (ang > 360) ang = ang-360;
+  ang -= _params[WIND_PARAM_CENTRE_E].data.f[0];
+  ang = fmod(ang, 360);
+  if (ang < 0) ang += 360;
 
   updateAndPublishParam(&_params[WIND_PARAM_DIRECTION_E], (uint8_t*)&ang, sizeof(ang));
 
@@ -151,4 +174,9 @@ void WindModule::loop() {
 
   updateAndPublishParam(&_params[WIND_PARAM_SPEED_E], (uint8_t*)&speed, sizeof(speed));
 
+  // update world direction
+  float w = _subs[WIND_SUB_HEADING_E].param.data.f[0] + ang;
+  w = fmod(w, 360);
+  if (w < 0) w += 360;
+  updateAndPublishParam(&_params[WIND_PARAM_WIND_E], (uint8_t*)&w, sizeof(w));
 }
