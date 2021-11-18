@@ -29,19 +29,25 @@ Manages a Wind speed and direction sensor
 #define WIND_PARAM_CENTRE          (I2CBASE_SUBCLASS_PARAM_START+3)  // 13
 // world wind direction
 #define WIND_PARAM_WIND            (I2CBASE_SUBCLASS_PARAM_START+4)  // 14
+// mode:
+// 0 = standard
+// 1 = inverted - if using upside down as a water direction sensor
+// 2 = anemometer
+#define WIND_PARAM_MODE            (I2CBASE_SUBCLASS_PARAM_START+5)  // 15
 
 #define WIND_PARAM_DIRECTION_E     (I2CBASE_PARAM_ENTRIES+0)
 #define WIND_PARAM_SPEED_E         (I2CBASE_PARAM_ENTRIES+1)
 #define WIND_PARAM_PINS_E          (I2CBASE_PARAM_ENTRIES+2)
 #define WIND_PARAM_CENTRE_E        (I2CBASE_PARAM_ENTRIES+3)
 #define WIND_PARAM_WIND_E          (I2CBASE_PARAM_ENTRIES+4)
+#define WIND_PARAM_MODE_E          (I2CBASE_PARAM_ENTRIES+5)
 
-#define WIND_PARAM_ENTRIES         (I2CBASE_PARAM_ENTRIES + 5)
+#define WIND_PARAM_ENTRIES         (I2CBASE_PARAM_ENTRIES + 6)
 
 // subs
 // sub to compass heading to work out world wind direction
-#define WIND_SUB_HEADING            (I2CBASE_SUBCLASS_PARAM_START+5)
-#define WIND_SUB_HEADING_ADDR       (I2CBASE_SUBCLASS_PARAM_START+6)
+#define WIND_SUB_HEADING            (I2CBASE_SUBCLASS_PARAM_START+6)
+#define WIND_SUB_HEADING_ADDR       (I2CBASE_SUBCLASS_PARAM_START+7)
 #define WIND_SUB_HEADING_E          0
 
 #define WIND_SUBS                   1
@@ -50,6 +56,10 @@ Manages a Wind speed and direction sensor
 static const char WIND_STR_WIND[] PROGMEM = "Wind";
 
 #define WIND_SAMPLES  5 // moving average over 5 seconds
+
+#define WIND_MODE_STANDARD   0
+#define WIND_MODE_INVERTED   1
+#define WIND_MODE_ANEMOMETER 2
 
 // class
 class WindModule:  public I2CBaseModule {

@@ -25,9 +25,9 @@ WindModule::WindModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dl
 
    DRONE_PARAM_SUB *sub;
 
-   sub = &_subs[HMC5883L_SUB_HEADING_E];
-   sub->addrParam = HMC5883L_SUB_HEADING_ADDR;
-   sub->param.param = HMC5883L_SUB_HEADING;
+   sub = &_subs[WIND_SUB_HEADING_E];
+   sub->addrParam = WIND_SUB_HEADING_ADDR;
+   sub->param.param = WIND_SUB_HEADING;
    setParamName(FPSTR(STRING_HEADING), &sub->param);
 
 
@@ -63,6 +63,13 @@ WindModule::WindModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dl
    _params[WIND_PARAM_WIND_E].name = FPSTR(STRING_WIND);
    _params[WIND_PARAM_WIND_E].nameLen = sizeof(STRING_WIND);
    _params[WIND_PARAM_WIND_E].paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 4);
+
+   _params[WIND_PARAM_MODE_E].param = WIND_PARAM_MODE;
+   _params[WIND_PARAM_MODE_E].name = FPSTR(STRING_MODE);
+   _params[WIND_PARAM_MODE_E].nameLen = sizeof(STRING_MODE);
+   _params[WIND_PARAM_MODE_E].paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_UINT8_T, 1);
+   _params[WIND_PARAM_MODE_E].data.uint8[0] = WIND_MODE_STANDARD;
+
 }
 
 WindModule::~WindModule() {
@@ -95,6 +102,7 @@ void WindModule::registerParams(DEM_NAMESPACE* ns, DroneExecutionManager *dem) {
   dem->registerCommand(ns, STRING_SPEED, DRONE_LINK_MSG_TYPE_FLOAT, ph);
   dem->registerCommand(ns, STRING_PINS, DRONE_LINK_MSG_TYPE_UINT8_T, ph);
   dem->registerCommand(ns, STRING_CENTRE, DRONE_LINK_MSG_TYPE_FLOAT, ph);
+  dem->registerCommand(ns, STRING_MODE, DRONE_LINK_MSG_TYPE_UINT8_T, ph);
 
 }
 
@@ -145,7 +153,13 @@ void WindModule::loop() {
   DroneWire::selectChannel(_params[I2CBASE_PARAM_BUS_E].data.uint8[0]);
 
   float ang = 360 * _sensor->getRawAngle() / 4095;
+
+  if (_params[WIND_PARAM_MODE_E].data.uint8[0] == WIND_MODE_INVERTED) {
+    ang = -ang;
+  }
+
   ang -= _params[WIND_PARAM_CENTRE_E].data.f[0];
+
   ang = fmod(ang, 360);
   if (ang < 0) ang += 360;
 

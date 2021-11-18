@@ -13,7 +13,8 @@ ProaModule::ProaModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dl
    _starboardTack = true;
    _tackLocked = false;
    _lastCrossTrackPositive = false;
-   _wingAOA = 10; // angle of attack
+   //_wingAOA = 8; // optimal angle of attack for Eppler e169 profile
+   // http://airfoiltools.com/airfoil/details?airfoil=e169-il
 
    // subs
    initSubs(PROA_SUBS);
@@ -39,6 +40,11 @@ ProaModule::ProaModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dl
    sub->addrParam = PROA_SUB_CROSSTRACK_ADDR;
    sub->param.param = PROA_SUB_CROSSTRACK;
    setParamName(FPSTR(STRING_CROSSTRACK), &sub->param);
+
+   sub = &_subs[PROA_SUB_COW_E];
+   sub->addrParam = PROA_SUB_COW_ADDR;
+   sub->param.param = PROA_SUB_COW;
+   setParamName(FPSTR(STRING_COW), &sub->param);
 
    // pubs
    initParams(PROA_PARAM_ENTRIES);
@@ -88,6 +94,25 @@ ProaModule::ProaModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dl
    setParamName(FPSTR(STRING_RIGHT), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 4);
 
+   param = &_params[PROA_PARAM_PID_E];
+   param->param = PROA_PARAM_PID;
+   setParamName(FPSTR(STRING_PID), param);
+   param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_FLOAT, 12);
+   _params[PROA_PARAM_PID_E].data.f[0] = 0.5;
+   _params[PROA_PARAM_PID_E].data.f[1] = 0;
+   _params[PROA_PARAM_PID_E].data.f[2] = 0;
+
+   param = &_params[PROA_PARAM_AOA_E];
+   param->param = PROA_PARAM_AOA;
+   setParamName(FPSTR(STRING_AOA), param);
+   param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_FLOAT, 4);
+   _params[PROA_PARAM_AOA_E].data.f[0] = 8;
+
+   param = &_params[PROA_PARAM_OFFSET_E];
+   param->param = PROA_PARAM_OFFSET;
+   setParamName(FPSTR(STRING_OFFSET), param);
+   param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 4);
+
    update();  // set defaults
 }
 
@@ -119,7 +144,12 @@ void ProaModule::registerParams(DEM_NAMESPACE* ns, DroneExecutionManager *dem) {
   dem->registerCommand(ns, STRING_CROSSTRACK, DRONE_LINK_MSG_TYPE_FLOAT, ph);
   dem->registerCommand(ns, PSTR("$crosstrack"), DRONE_LINK_MSG_TYPE_ADDR, pha);
 
+  dem->registerCommand(ns, STRING_COW, DRONE_LINK_MSG_TYPE_FLOAT, ph);
+  dem->registerCommand(ns, PSTR("$COW"), DRONE_LINK_MSG_TYPE_ADDR, pha);
+
   dem->registerCommand(ns, STRING_POLAR, DRONE_LINK_MSG_TYPE_UINT8_T, ph);
+  dem->registerCommand(ns, STRING_PID, DRONE_LINK_MSG_TYPE_FLOAT, ph);
+  dem->registerCommand(ns, STRING_AOA, DRONE_LINK_MSG_TYPE_FLOAT, ph);
 }
 
 
@@ -157,6 +187,8 @@ void ProaModule::update() {
   float t = _subs[PROA_SUB_TARGET_E].param.data.f[0];
   float ct = _subs[PROA_SUB_CROSSTRACK_E].param.data.f[0];
   float c = _params[PROA_PARAM_COURSE_E].data.f[0];
+  float cow = _subs[PROA_SUB_COW_E].param.data.f[0];
+  float aoa = _params[PROA_PARAM_AOA_E].data.f[0];
 
   // -- algo 1 --
   // evaluate all potential course optionsl, using the polar for each
@@ -233,12 +265,15 @@ void ProaModule::update() {
     _tackLocked = false;
   }
 
+  boolean tackChanged = false;
+
   // see if we need to force a tack
   // should never happen
   if (fabs(ct) > 1.2) {
     _starboardTack = ct < 0;
     _tackLocked = true;
     _lastCrossTrackPositive = ct > 0;
+    tackChanged = true;
   }
 
   // see if we're changing tack
@@ -247,6 +282,7 @@ void ProaModule::update() {
     _starboardTack = newTackIsStarboard;
     _tackLocked = true;
     _lastCrossTrackPositive = ct > 0;
+    tackChanged = true;
   }
 
 
@@ -259,11 +295,8 @@ void ProaModule::update() {
 
   updateAndPublishParam(&_params[PROA_PARAM_COURSE_E], (uint8_t*)&c, sizeof(c));
 
-  // having decided the cource (c), now we need to set the pontoon positions
-
-
-
-  // and finally update the wing position based on where the wind is coming from
+  // ---------------------------------------------------------------------------
+  // update the wing position based on where the wind is coming from
   // i.e. to allow for us being in the wrong orientation, or mid tack
   float localWind = w - h;
   float wingAng = 0;
@@ -282,10 +315,10 @@ void ProaModule::update() {
     // wind over stern
     if (localWind < 180) {
       // starboard wind
-      wingAng = (localWind - 180) - _wingAOA;
+      wingAng = (localWind - 180) - aoa;
     } else {
       // port wind
-      wingAng = (localWind - 180) + _wingAOA;
+      wingAng = (localWind - 180) + aoa;
     }
   }
 
@@ -298,6 +331,90 @@ void ProaModule::update() {
   // remap wingAng to -1 to 1
   wingAng = wingAng / 90;
   updateAndPublishParam(&_params[PROA_PARAM_WING_E], (uint8_t*)&wingAng, sizeof(wingAng));
+
+  // ---------------------------------------------------------------------------
+  // if we've changed tack, need to recalculate the target frame orientation
+  // target frame orientation is an OFFSET relative to the target heading
+
+  if (tackChanged) {
+    float offset = 0;
+
+    if (_starboardTack) {
+      // frame orientation should be w - AOA + 90
+      float frameOrientation = w - aoa + 90;
+      offset = frameOrientation - c;
+    } else {
+      // frame orientation should be w - AOA + 90
+      float frameOrientation = w + aoa - 90;
+      offset = frameOrientation - c;
+    }
+
+    updateAndPublishParam(&_params[PROA_PARAM_OFFSET_E], (uint8_t*)&offset, sizeof(offset));
+  }
+
+  // ---------------------------------------------------------------------------
+  // calculate the error in orientation between current heading (h), adjusted for frame offset, and selected course (c)
+  float err = shortestSignedDistanceBetweenCircularValues(h - _params[PROA_PARAM_OFFSET_E].data.f[0], c);
+
+  // use the orientation error and COW to set the pontoon positions
+
+  // -- left -----------------------
+  float la = cow;
+
+  // left pontoon only steers for CCW turns (i.e. err < 0)
+  if (err < 0) {
+    // Left pontoon toe in if lagging, toe out if leading.
+    // lagging is when COW is 0 - 180
+    // leading is when COW is 180 - 360
+    // toe in is a positive err
+    // toe out is a negative err
+    boolean toeIn = false;
+    if (cow < 180) toeIn = true;
+
+    // PID to control angle
+    la += (toeIn ? 1 : -1) * _params[PROA_PARAM_PID_E].data.f[0] * err;
+
+    // ensure in range 0..360
+    la = fmod(la, 360);
+    // remap to +-180
+    if (la > 180) la -= 360;
+    // map -90 to 90
+    if (la > 90) la -= 180;
+    if (la < -90) la += 180;
+    // remap -1 to 1
+    la = la / 90;
+  }
+
+  updateAndPublishParam(&_params[PROA_PARAM_LEFT_E], (uint8_t*)&la, sizeof(la));
+
+  // -- right -----------------------
+  float ra = cow;
+
+  // right pontoon only steers for CW turns (i.e. err > 0)
+  if (err < 0) {
+    // Right pontoon toe in if lagging, toe out if leading.
+    // lagging is when COW is 180 - 360
+    // leading is when COW is 0 - 180
+    // toe in is a negative err
+    // toe out is a positive err
+    boolean toeIn = false;
+    if (cow > 180) toeIn = true;
+
+    // PID to control angle
+    ra += (toeIn ? -1 : 1) * _params[PROA_PARAM_PID_E].data.f[0] * err;
+
+    // ensure in range 0..360
+    ra = fmod(ra, 360);
+    // remap to +-180
+    if (ra > 180) ra -= 360;
+    // map -90 to 90
+    if (ra > 90) ra -= 180;
+    if (ra < -90) ra += 180;
+    // remap -1 to 1
+    ra = ra / 90;
+  }
+
+  updateAndPublishParam(&_params[PROA_PARAM_RIGHT_E], (uint8_t*)&ra, sizeof(ra));
 }
 
 

@@ -24,29 +24,39 @@ config (pubs)
 
 #include "../DroneModule.h"
 
-// subs
+// -------  subs ---------------------
+// target heading (from nav)
 #define PROA_SUB_TARGET              8
 #define PROA_SUB_TARGET_ADDR         9
 #define PROA_SUB_TARGET_E            0
 
-// current compass heading
+// current compass heading (from compass)
 #define PROA_SUB_HEADING             10
 #define PROA_SUB_HEADING_ADDR        11
 #define PROA_SUB_HEADING_E           1
 
-// sub to global wind direction
+// global wind direction (from wind vane)
 #define PROA_SUB_WIND                12
 #define PROA_SUB_WIND_ADDR           13
 #define PROA_SUB_WIND_E              2
 
+// crosstrack error (from nav)
 #define PROA_SUB_CROSSTRACK          14
 #define PROA_SUB_CROSSTRACK_ADDR     15
 #define PROA_SUB_CROSSTRACK_E        3
 
-#define PROA_SUBS                    4
+// course over water (from water vane sensor)
+#define PROA_SUB_COW              24
+#define PROA_SUB_COW_ADDR         25
+#define PROA_SUB_COW_E            4
+
+//
+
+#define PROA_SUBS                    5
 
 
-//pubs
+// -------  pubs ---------------------
+// current course
 #define PROA_PARAM_COURSE            16
 #define PROA_PARAM_COURSE_E          0
 
@@ -54,16 +64,20 @@ config (pubs)
 #define PROA_PARAM_WING              17
 #define PROA_PARAM_WING_E            1
 
+// polar configuration
 #define PROA_PARAM_POLAR             18
 #define PROA_PARAM_POLAR_E           2
 
-#define PROA_PARAM_SPEED             19   // polar plot of estimated speeds by heading - 0-180
+// polar plot of estimated speeds by heading - 0-180
+#define PROA_PARAM_SPEED             19
 #define PROA_PARAM_SPEED_E           3
 
-#define PROA_PARAM_SPEED2            20   // polar plot of estimated speeds by heading - 180-360
+// polar plot of estimated speeds by heading - 180-360
+#define PROA_PARAM_SPEED2            20
 #define PROA_PARAM_SPEED2_E          4
 
-#define PROA_PARAM_FLAGS             21   //
+// status flags
+#define PROA_PARAM_FLAGS             21
 #define PROA_PARAM_FLAGS_E           5
 
 // left pontoon servo angle (-1 .. 1)
@@ -74,7 +88,19 @@ config (pubs)
 #define PROA_PARAM_RIGHT             23
 #define PROA_PARAM_RIGHT_E           7
 
-#define PROA_PARAM_ENTRIES           8
+// PID values for pontoon control
+#define PROA_PARAM_PID               26
+#define PROA_PARAM_PID_E             8
+
+// Angle of attack
+#define PROA_PARAM_AOA               27
+#define PROA_PARAM_AOA_E             9
+
+// angle to offset frame relative to target heading to orient wing correctly
+#define PROA_PARAM_OFFSET            28
+#define PROA_PARAM_OFFSET_E          10
+
+#define PROA_PARAM_ENTRIES           11
 
 
 static const char PROA_STR_PROA[] PROGMEM = "Proa";
@@ -84,7 +110,7 @@ protected:
   boolean _starboardTack;  // true if stardboard, false if port
   boolean _tackLocked; // hyterisis control
   boolean _lastCrossTrackPositive; // hysterisis control
-  float _wingAOA;  // angle of attack
+  //float _wingAOA;  // angle of attack
 
 public:
 
