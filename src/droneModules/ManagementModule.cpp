@@ -80,6 +80,24 @@ ManagementModule::ManagementModule(uint8_t id, DroneModuleManager* dmm, DroneLin
    _params[MANAGEMENT_PARAM_MACRO_E].nameLen = sizeof(STRING_MACRO);
    _params[MANAGEMENT_PARAM_MACRO_E].paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_CHAR, 1);
    _params[MANAGEMENT_PARAM_MACRO_E].data.c[0] = 0;
+
+   _params[MANAGEMENT_PARAM_SLEEP_E].param = MANAGEMENT_PARAM_SLEEP;
+   _params[MANAGEMENT_PARAM_SLEEP_E].name = FPSTR(STRING_SLEEP);
+   _params[MANAGEMENT_PARAM_SLEEP_E].nameLen = sizeof(STRING_SLEEP);
+   _params[MANAGEMENT_PARAM_SLEEP_E].paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_UINT32_T, 4);
+   _params[MANAGEMENT_PARAM_SLEEP_E].data.uint32[0] = 0;
+
+   _params[MANAGEMENT_PARAM_WIFI_E].param = MANAGEMENT_PARAM_WIFI;
+   _params[MANAGEMENT_PARAM_WIFI_E].name = FPSTR(STRING_WIFI);
+   _params[MANAGEMENT_PARAM_WIFI_E].nameLen = sizeof(STRING_WIFI);
+   _params[MANAGEMENT_PARAM_WIFI_E].paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_UINT8_T, 1);
+   _params[MANAGEMENT_PARAM_WIFI_E].data.uint8[0] = 1; // 1 = enabled
+
+   _params[MANAGEMENT_PARAM_CPU_E].param = MANAGEMENT_PARAM_CPU;
+   _params[MANAGEMENT_PARAM_CPU_E].name = FPSTR(STRING_CPU);
+   _params[MANAGEMENT_PARAM_CPU_E].nameLen = sizeof(STRING_CPU);
+   _params[MANAGEMENT_PARAM_CPU_E].paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_UINT8_T, 1);
+   _params[MANAGEMENT_PARAM_CPU_E].data.uint8[0] = 240; // default high speed
 }
 
 DEM_NAMESPACE* ManagementModule::registerNamespace(DroneExecutionManager *dem) {
@@ -99,6 +117,9 @@ void ManagementModule::registerParams(DEM_NAMESPACE* ns, DroneExecutionManager *
   dem->registerCommand(ns, STRING_RESET, DRONE_LINK_MSG_TYPE_UINT8_T, ph);
   dem->registerCommand(ns, STRING_DISCOVERY, DRONE_LINK_MSG_TYPE_UINT8_T, ph);
   dem->registerCommand(ns, STRING_HOSTNAME, DRONE_LINK_MSG_TYPE_CHAR, ph);
+  dem->registerCommand(ns, STRING_WIFI, DRONE_LINK_MSG_TYPE_UINT8_T, ph);
+  dem->registerCommand(ns, STRING_SLEEP, DRONE_LINK_MSG_TYPE_UINT32_T, ph);
+  dem->registerCommand(ns, STRING_CPU, DRONE_LINK_MSG_TYPE_UINT8_T, ph);
 }
 
 void ManagementModule::onParamWrite(DRONE_PARAM_ENTRY *param) {
@@ -133,6 +154,34 @@ void ManagementModule::onParamWrite(DRONE_PARAM_ENTRY *param) {
     len = min(len, (uint8_t)15);
     _params[MANAGEMENT_PARAM_HOSTNAME_E].data.c[len] = 0;
     _dmm->hostname((const char*)&_params[MANAGEMENT_PARAM_HOSTNAME_E].data.c);
+  }
+
+  if (param->param == MANAGEMENT_PARAM_DISCOVERY) {
+    // update discovery state
+    Log.noticeln("[MM.oPW] Changing discovery mode to: %u", _params[MANAGEMENT_PARAM_DISCOVERY_E].data.uint8[0]);
+    _dmm->discovery( _params[MANAGEMENT_PARAM_DISCOVERY_E].data.uint8[0] > 0 );
+  }
+
+  if (param->param == MANAGEMENT_PARAM_WIFI) {
+    // update wifi state
+    Log.noticeln("[MM.oPW] Changing wifi mode to: %u", _params[MANAGEMENT_PARAM_WIFI_E].data.uint8[0]);
+    if (_params[MANAGEMENT_PARAM_WIFI_E].data.uint8[0] == 1) {
+      _dlm->enableWiFi();
+    } else {
+      _dlm->disableWiFi();
+    }
+  }
+
+  if (param->param == MANAGEMENT_PARAM_SLEEP) {
+    // update DMM interval
+    Log.noticeln("[MM.oPW] Changing DMM interval to: %u", _params[MANAGEMENT_PARAM_SLEEP_E].data.uint32[0]);
+    _dmm->setSleep(_params[MANAGEMENT_PARAM_SLEEP_E].data.uint32[0]);
+  }
+
+  if (param->param == MANAGEMENT_PARAM_CPU) {
+    // update DMM interval
+    Log.noticeln("[MM.oPW] Changing CPU to: %u MHz", _params[MANAGEMENT_PARAM_CPU_E].data.uint8[0]);
+    setCpuFrequencyMhz(_params[MANAGEMENT_PARAM_CPU_E].data.uint8[0]);
   }
 }
 

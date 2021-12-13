@@ -278,14 +278,29 @@ void setup() {
 
   logFile = LITTLEFS.open("/startup.log", FILE_WRITE);
 
-  // switch to logging to startup.log file on spiffs
+  // switch to logging to startup.log file on flash
+  Serial.println(F("[] Sending log to startup.log..."));
   Log.begin(LOG_LEVEL_VERBOSE, &logFile);
   Log.noticeln(F("[] Starting..."));
 
   DroneWire::setup();
 
+  //WiFi.disconnect();  // moved to WiFiManager
+  // WiFi.mode(WIFI_AP_STA); // moved to WiFiManager
+
+  // load WIFI Configuration and enable during startup
+  wifiManager.loadConfiguration(LITTLEFS);
+  wifiManager.enable();
+  wifiManager.start();
+
+  MDNS.addService("http","tcp",80);
+
+  #ifdef INC_WEB_SERVER
+  setupWebServer();
+  #endif
+
   // create core objects
-  dlm = new DroneLinkManager();
+  dlm = new DroneLinkManager(&wifiManager);
   dmm = new DroneModuleManager(dlm);
   dem = new DroneExecutionManager(dmm, dlm, LITTLEFS, logFile);
 
@@ -337,33 +352,9 @@ void setup() {
     dem->callStackPush(cse);
   }
 
-  WiFi.disconnect();
-
-
-  WiFi.mode(WIFI_AP_STA);
-
-  uint8_t mac[6];
-  WiFi.macAddress(mac);
-  String hostname = "Drone";
-  for (uint8_t i=3; i<6; i++) {
-    hostname += String(mac[i], HEX);
-  }
-
-  //WiFi.softAP(dmm->hostname().c_str());
-  WiFi.softAP(hostname.c_str());
-
-  // load WIFI Configuration
-  wifiManager.loadConfiguration(LITTLEFS);
-  wifiManager.start();
-
   OTAMgr.onEvent = handleOTAEVent;
   OTAMgr.init( dmm->hostname() );
 
-  MDNS.addService("http","tcp",80);
-
-  #ifdef INC_WEB_SERVER
-  setupWebServer();
-  #endif
 
   // scan I2C buses
   DroneWire::scanAll();
@@ -371,7 +362,9 @@ void setup() {
   // redirect logging to serial
   logFile.flush();
   //logFile.close();
-  //Log.begin(LOG_LEVEL_VERBOSE, &Serial);
+
+  Log.begin(LOG_LEVEL_VERBOSE, &Serial);
+  Log.noticeln(F("[] Startup complete"));
 
   // start core task
   /*
@@ -398,7 +391,12 @@ uint8_t serialCommandLen = 0;
 void loop() {
   loopTime = millis();
 
-  digitalWrite(PIN_LED, (WiFi.status() != WL_CONNECTED));
+  if (wifiManager.isEnabled()) {
+    digitalWrite(PIN_LED, (WiFi.status() != WL_CONNECTED));
+  } else {
+    digitalWrite(PIN_LED, LOW);
+  }
+
 
   // serial command interface
   if (Serial.available()) {

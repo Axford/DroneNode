@@ -1,7 +1,7 @@
 #include "DroneWire.h"
 
 uint8_t _lastChan;
-uint8_t _TCAADDR;
+uint8_t _TCAADDR = TCAADDR_V2;
 
 void DroneWire::setup() {
   // configure reset pin and set high to enable the chip
@@ -43,6 +43,15 @@ void DroneWire::reset() {
   //pinMode(PIN_I2C_RESET, INPUT_PULLUP);
   digitalWrite(PIN_I2C_RESET, HIGH);
   delay(1);
+
+  _lastChan = 8;  // to ensure the correct channel is reselected
+
+  // check comms to multiplexer
+  Wire.beginTransmission(_TCAADDR);
+  byte error = Wire.endTransmission();
+  if (error != 0) {
+    Log.noticeln("[DW.r] Multiplexer not responding");
+  }
 }
 
 void DroneWire::selectChannel(uint8_t chan) {

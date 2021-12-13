@@ -19,6 +19,7 @@ DroneModuleManager::DroneModuleManager(DroneLinkManager* dlm):
   _node = 1;
   _doDiscovery = true;
   _lastDiscovery = 0;
+  _sleep = 0;
 };
 
 // called by DroneModule constructor to self register on instantiation
@@ -68,6 +69,10 @@ boolean DroneModuleManager::discovery() { // get discovery state
 
 void DroneModuleManager::discovery(boolean v) { // set discovery state
   _doDiscovery = v;
+}
+
+void DroneModuleManager::setSleep(uint32_t sleep) {
+  _sleep = sleep;
 }
 
 String DroneModuleManager::buildCommit() {
@@ -156,6 +161,14 @@ void DroneModuleManager::loopModules() {
         _lastDiscovery = loopTime;
       }
     }
+  }
+
+  // sleep a while?   ... only if wifi disabled
+  if (_sleep > 0 && !_dlm->isWiFiEnabled()) {
+    delay(1);  // in case stuff needs to finish?  
+    esp_sleep_enable_timer_wakeup(_sleep * 1000);  // in uS
+    esp_light_sleep_start();
+    yield();
   }
 }
 

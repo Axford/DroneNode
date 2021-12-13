@@ -21,12 +21,18 @@ public:
 
   WiFiManager();
 
+  boolean isEnabled();
+
+  void enable();
+  void disable();
+
   void start();
   void loadConfiguration(fs::FS &fs);
 
 protected:
   IvanLinkedList::LinkedList<WiFiNetworkCredentials> _networks;
 
+  boolean _enabled;  // should WiFi be enabled or not?
   boolean _scanActive;
   boolean _attemptingConnection;
   uint8_t _activeNetwork;

@@ -30,6 +30,7 @@ protected:
   uint8_t _lastDiscoveryIndex;
   IvanLinkedList::LinkedList<DroneModule*> _modules;
   DroneLinkManager* _dlm;
+  uint32_t _sleep;
 
 public:
   DroneModuleManager(DroneLinkManager* dlm);
@@ -45,6 +46,7 @@ public:
   String buildCommit();
   boolean discovery(); // get discovery state
   void discovery(boolean v); // set discovery state
+  void setSleep(uint32_t sleep);
 
   //void loadConfiguration();
   //void loadModulesFromJSON(const JsonArray &array);

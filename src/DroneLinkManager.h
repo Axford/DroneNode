@@ -8,6 +8,8 @@
 #include "DroneLinkChannel.h"
 #include <ESPAsyncWebServer.h>
 
+// forward decl
+class WiFiManager;
 
 struct DRONE_LINK_NODE_INFO {
   unsigned long lastHeard;
@@ -29,6 +31,7 @@ struct DRONE_LINK_NODE_PAGE {
 class DroneLinkManager
 {
 protected:
+  WiFiManager *_wifiManager;
   uint8_t _node;  // local node id
   unsigned long _publishedMessages;
   IvanLinkedList::LinkedList<DroneLinkChannel*> _channels;
@@ -40,7 +43,11 @@ protected:
   DRONE_LINK_NODE_PAGE *_nodePages[DRONE_LINK_NODE_PAGES];
 
 public:
-    DroneLinkManager();
+    DroneLinkManager(WiFiManager *wifiManager);
+
+    void enableWiFi();
+    void disableWiFi();
+    boolean isWiFiEnabled();
 
     void node(uint8_t node);
     uint8_t node();

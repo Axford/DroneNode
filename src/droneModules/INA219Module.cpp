@@ -99,7 +99,7 @@ void INA219Module::doReset() {
   DroneWire::selectChannel(_params[I2CBASE_PARAM_BUS_E].data.uint8[0]);
 
   if (_sensor) {
-    setError( _sensor->begin() ? 0 : 1 );
+    setError( _sensor->begin() ? 1 : 0 );
     if (_error) {
       Log.errorln(INA219_STR_INA219);
     }

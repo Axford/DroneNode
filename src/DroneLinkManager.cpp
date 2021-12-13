@@ -1,7 +1,9 @@
 #include "Arduino.h"
 #include "DroneLinkManager.h"
+#include "WiFiManager.h"
 
-DroneLinkManager::DroneLinkManager():
+DroneLinkManager::DroneLinkManager(WiFiManager *wifiManager):
+  _wifiManager(wifiManager),
   _node(0),
   _channels(IvanLinkedList::LinkedList<DroneLinkChannel*>())
 {
@@ -14,6 +16,17 @@ DroneLinkManager::DroneLinkManager():
   }
 }
 
+void DroneLinkManager::enableWiFi() {
+  _wifiManager->enable();
+}
+
+void DroneLinkManager::disableWiFi() {
+  _wifiManager->disable();
+}
+
+boolean DroneLinkManager::isWiFiEnabled() {
+  return _wifiManager->isEnabled();
+}
 
 void DroneLinkManager::node(uint8_t node) {
   _node = node;
