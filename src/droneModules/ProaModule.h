@@ -100,7 +100,11 @@ config (pubs)
 #define PROA_PARAM_OFFSET            28
 #define PROA_PARAM_OFFSET_E          10
 
-#define PROA_PARAM_ENTRIES           11
+// mode
+#define PROA_PARAM_MODE              29
+#define PROA_PARAM_MODE_E            11
+
+#define PROA_PARAM_ENTRIES           12
 
 
 static const char PROA_STR_PROA[] PROGMEM = "Proa";
@@ -110,7 +114,6 @@ protected:
   boolean _starboardTack;  // true if stardboard, false if port
   boolean _tackLocked; // hyterisis control
   boolean _lastCrossTrackPositive; // hysterisis control
-  //float _wingAOA;  // angle of attack
 
 public:
 

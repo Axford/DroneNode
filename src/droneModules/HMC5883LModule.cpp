@@ -226,6 +226,10 @@ void HMC5883LModule::loop() {
   // Convert radians to degrees for readability.
   float headingDegrees = (heading * 180.0f / PI) + _params[HMC5883L_PARAM_TRIM_E].data.f[0];
 
+  // wrap to 0..360
+  if (headingDegrees > 360) headingDegrees -= 360;
+  if (headingDegrees < 0) headingDegrees += 360;
+
   _params[HMC5883L_PARAM_HEADING_E].data.f[0] = headingDegrees;
 
 /*

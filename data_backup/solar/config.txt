@@ -1,0 +1,50 @@
+// D-Code Config Script
+
+// Setup the node
+node 3
+
+// Init modules
+Management.new 1
+  name "Mgmt"
+  status true
+  interval 1000
+  discovery true
+  hostname "SolarTest"
+
+  // publish
+  .publish "hostname"
+  .publish "build"
+  .publish "IP"
+  .publish "uptime"
+.done
+
+UDPTelemetry.new 2
+  name "UDPT"
+  status 1
+  port 8007
+  broadcast 255 255 255 255
+  .sub [@>0.0]
+.done
+
+RFM69Telemetry.new 3
+  name "RFM69"
+  status 1  // enable
+  .sub [@>0.0]
+  .publish "RSSI"
+.done
+
+INA219.new 4
+  name "SolarPwr"
+  bus 0
+  addr 64
+  interval 1000
+  cells 1
+  threshold 4.2
+  status 1
+  .publish "current"
+  .publish "power"
+  .publish "loadV"
+.done
+
+// finish setup
+.setup

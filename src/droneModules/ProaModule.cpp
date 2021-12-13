@@ -77,6 +77,10 @@ ProaModule::ProaModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dl
    param->publish = true;
    setParamName(FPSTR(STRING_SPEED), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_UINT8_T, 16);
+   for (uint8_t i=0; i<16; i++) {
+     _params[PROA_PARAM_SPEED_E].data.uint8[i] = 0;
+     _params[PROA_PARAM_SPEED2_E].data.uint8[i] = 0;
+   }
 
    param = &_params[PROA_PARAM_FLAGS_E];
    param->param = PROA_PARAM_FLAGS;
@@ -112,6 +116,12 @@ ProaModule::ProaModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dl
    param->param = PROA_PARAM_OFFSET;
    setParamName(FPSTR(STRING_OFFSET), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 4);
+
+   param = &_params[PROA_PARAM_MODE_E];
+   param->param = PROA_PARAM_MODE;
+   setParamName(FPSTR(STRING_MODE), param);
+   param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_UINT8_T, 1);
+   _params[PROA_PARAM_MODE_E].data.f[0] = 0;
 
    update();  // set defaults
 }
@@ -150,6 +160,7 @@ void ProaModule::registerParams(DEM_NAMESPACE* ns, DroneExecutionManager *dem) {
   dem->registerCommand(ns, STRING_POLAR, DRONE_LINK_MSG_TYPE_UINT8_T, ph);
   dem->registerCommand(ns, STRING_PID, DRONE_LINK_MSG_TYPE_FLOAT, ph);
   dem->registerCommand(ns, STRING_AOA, DRONE_LINK_MSG_TYPE_FLOAT, ph);
+  dem->registerCommand(ns, STRING_MODE, DRONE_LINK_MSG_TYPE_UINT8_T, ph);
 }
 
 
@@ -176,6 +187,22 @@ uint8_t ProaModule::polarForAngle(float ang) {
 void ProaModule::update() {
   DroneModule::update();
   if (!_setupDone) return;
+
+  /*
+  Mode check
+  */
+
+  if (_params[PROA_PARAM_MODE_E].data.uint8[0] == 0) {
+    // in setup/idle mode
+
+    // set all servos to centre positions
+    float tempF = 0;
+    updateAndPublishParam(&_params[PROA_PARAM_WING_E], (uint8_t*)&tempF, sizeof(tempF));
+    updateAndPublishParam(&_params[PROA_PARAM_LEFT_E], (uint8_t*)&tempF, sizeof(tempF));
+    updateAndPublishParam(&_params[PROA_PARAM_RIGHT_E], (uint8_t*)&tempF, sizeof(tempF));
+
+    return;
+  }
 
   /*
    * negative cross-track means the target is to the left, positive to the right
@@ -336,16 +363,17 @@ void ProaModule::update() {
   // if we've changed tack, need to recalculate the target frame orientation
   // target frame orientation is an OFFSET relative to the target heading
 
-  if (tackChanged) {
+  // OR course has changed... so just recalc every time
+  if (tackChanged || true) {
     float offset = 0;
 
     if (_starboardTack) {
-      // frame orientation should be w - AOA + 90
-      float frameOrientation = w - aoa + 90;
+      // frame orientation should be
+      float frameOrientation = w - 90 - aoa;
       offset = frameOrientation - c;
     } else {
-      // frame orientation should be w - AOA + 90
-      float frameOrientation = w + aoa - 90;
+      // frame orientation should be
+      float frameOrientation = w + 90 + aoa;
       offset = frameOrientation - c;
     }
 
@@ -355,6 +383,9 @@ void ProaModule::update() {
   // ---------------------------------------------------------------------------
   // calculate the error in orientation between current heading (h), adjusted for frame offset, and selected course (c)
   float err = shortestSignedDistanceBetweenCircularValues(h - _params[PROA_PARAM_OFFSET_E].data.f[0], c);
+
+  // calculate the error in COW vs intended course
+  float cowErr = shortestSignedDistanceBetweenCircularValues(cow, c);
 
   // use the orientation error and COW to set the pontoon positions
 
@@ -373,17 +404,23 @@ void ProaModule::update() {
 
     // PID to control angle
     la += (toeIn ? 1 : -1) * _params[PROA_PARAM_PID_E].data.f[0] * err;
-
-    // ensure in range 0..360
-    la = fmod(la, 360);
-    // remap to +-180
-    if (la > 180) la -= 360;
-    // map -90 to 90
-    if (la > 90) la -= 180;
-    if (la < -90) la += 180;
-    // remap -1 to 1
-    la = la / 90;
+  } else {
+    // this is the leading pontoon, so adjust its position to align COW with c
+    // negative coeErr = toe Out
+    // positive coeErr = toe In
+    // use half the "power" vs the trailing pontoon
+    la += _params[PROA_PARAM_PID_E].data.f[0] * 0.5 * cowErr;
   }
+
+  // ensure in range 0..360
+  la = fmod(la, 360);
+  // remap to +-180
+  if (la > 180) la -= 360;
+  // map -90 to 90
+  if (la > 90) la -= 180;
+  if (la < -90) la += 180;
+  // remap -1 to 1
+  la = la / 90;
 
   updateAndPublishParam(&_params[PROA_PARAM_LEFT_E], (uint8_t*)&la, sizeof(la));
 
@@ -391,7 +428,7 @@ void ProaModule::update() {
   float ra = cow;
 
   // right pontoon only steers for CW turns (i.e. err > 0)
-  if (err < 0) {
+  if (err > 0) {
     // Right pontoon toe in if lagging, toe out if leading.
     // lagging is when COW is 180 - 360
     // leading is when COW is 0 - 180
@@ -402,17 +439,23 @@ void ProaModule::update() {
 
     // PID to control angle
     ra += (toeIn ? -1 : 1) * _params[PROA_PARAM_PID_E].data.f[0] * err;
-
-    // ensure in range 0..360
-    ra = fmod(ra, 360);
-    // remap to +-180
-    if (ra > 180) ra -= 360;
-    // map -90 to 90
-    if (ra > 90) ra -= 180;
-    if (ra < -90) ra += 180;
-    // remap -1 to 1
-    ra = ra / 90;
+  } else {
+    // this is the leading pontoon, so adjust its position to align COW with c
+    // negative coeErr = toe Out
+    // positive coeErr = toe In
+    // use half the "power" vs the trailing pontoon
+    ra += _params[PROA_PARAM_PID_E].data.f[0] * 0.5 * cowErr;
   }
+
+  // ensure in range 0..360
+  ra = fmod(ra, 360);
+  // remap to +-180
+  if (ra > 180) ra -= 360;
+  // map -90 to 90
+  if (ra > 90) ra -= 180;
+  if (ra < -90) ra += 180;
+  // remap -1 to 1
+  ra = ra / 90;
 
   updateAndPublishParam(&_params[PROA_PARAM_RIGHT_E], (uint8_t*)&ra, sizeof(ra));
 }
