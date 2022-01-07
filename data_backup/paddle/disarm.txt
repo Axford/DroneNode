@@ -1,3 +1,6 @@
 // disable Nav and turnRate modules
 .send 1>7.1 (u8) 0
 .send 1>8.1 (u8) 0
+
+.send 1>10.8 (f) 0
+.send 1>11.8 (f) 0

@@ -1031,8 +1031,10 @@ void DroneExecutionManager::runMacro(const char * macroName, boolean calledFromM
   if (!calledFromMacro) {
     DEM_CALLSTACK_ENTRY *csep;
     // get current cse and decrement instruction pointer, ready for resume
-    csep = callStackPeek(0);
-    csep->i--;
+    if (csep) {
+      csep = callStackPeek(0);
+      csep->i--;
+    }
   }
 
   // prep new entry
