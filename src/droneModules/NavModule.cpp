@@ -222,6 +222,11 @@ void NavModule::update() {
   float lat2 = _subs[NAV_SUB_TARGET_E].param.data.f[1];
   float lon2 = _subs[NAV_SUB_TARGET_E].param.data.f[0];
 
+  if (lat2 == 0 || lon2 == 0) {
+    Log.noticeln("[Nav.u] invalid target");
+    return;
+  }
+
 
   float R = RADIUS_OF_EARTH; // metres
   float lat1r = lat1 * PI/180; // φ, λ in radians
