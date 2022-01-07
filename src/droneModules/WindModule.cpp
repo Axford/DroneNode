@@ -119,11 +119,18 @@ void WindModule::setup() {
   I2CBaseModule::setup();
 
   if (!_sensor) {
+    Log.noticeln("[Wind.s]");
+
     DroneWire::selectChannel(_params[I2CBASE_PARAM_BUS_E].data.uint8[0]);
     _sensor = new AMS_5600();
 
+    if (!I2CBaseModule::isAlive()) {
+      Log.errorln("[Wind.s] No sensor found");
+      return;
+    }
+
     // debug output
-    Log.noticeln("[Wind.s]");
+
     Log.noticeln("[Wind.s] Raw Angle: %d", _sensor->getRawAngle() );
     Log.noticeln("[Wind.s] detectMagnet: %d", _sensor->detectMagnet() );
     Log.noticeln("[Wind.s] getMagnetStrength: %d", _sensor->getMagnetStrength() );
