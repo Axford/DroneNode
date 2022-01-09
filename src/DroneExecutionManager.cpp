@@ -7,6 +7,7 @@
 
 // drone modules
 #include "droneModules/ControllerModule.h"
+#include "droneModules/DepthModule.h"
 #include "droneModules/HMC5883LModule.h"
 #include "droneModules/INA219Module.h"
 #include "droneModules/JoystickModule.h"
@@ -143,6 +144,7 @@ DroneExecutionManager::DroneExecutionManager(DroneModuleManager *dmm, DroneLinkM
   //ns = DroneModule::registerNamespace(this);
 
   ns = ControllerModule::registerNamespace(this); ControllerModule::registerParams(ns, this);
+  ns = DepthModule::registerNamespace(this); DepthModule::registerParams(ns, this);
   ns = HMC5883LModule::registerNamespace(this); HMC5883LModule::registerParams(ns, this);
   ns = INA219Module::registerNamespace(this); INA219Module::registerParams(ns, this);
   ns = JoystickModule::registerNamespace(this); JoystickModule::registerParams(ns, this);
@@ -1411,6 +1413,8 @@ boolean DroneExecutionManager::mod_constructor(DEM_INSTRUCTION_COMPILED* instr, 
 
     if (strcmp_P(instr->ns->name, CONTROLLER_STR_CONTROLLER) == 0) {
       newMod = new ControllerModule(id, _dmm, _dlm, this, _fs);
+    } else if (strcmp_P(instr->ns->name, DEPTH_STR_DEPTH) == 0) {
+      newMod = new DepthModule(id, _dmm, _dlm, this, _fs);
     } else if (strcmp_P(instr->ns->name, HMC5883L_STR_HMC5883L) == 0) {
       newMod = new HMC5883LModule(id, _dmm, _dlm, this, _fs);
     } else if (strcmp_P(instr->ns->name, INA219_STR_INA219) == 0) {
