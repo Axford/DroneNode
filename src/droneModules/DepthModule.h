@@ -21,13 +21,15 @@ Depth.new 30
   limits 0.25 10      // set sensor range to min=0.25m, max=10m
   speed 1480          // speed of sound in fresh water = 1480m/s
   $location [@>5.8]   // subscribe to GPS location
+  distance 5          // publish log entires every 5m
 
-  // publish
   .publish "depth"    // publish the measured depth
   .publish "log"      // publish a combined log entry containing GPS location and depth
+
   // .publish "speed"
   // .publish "pins"
-  // .publis "limits"
+  // .publish "limits"
+  // .publish "distance"
 .done
 <<<
 
@@ -60,7 +62,11 @@ Depth.new 30
 #define DEPTH_PARAM_LOG          14
 #define DEPTH_PARAM_LOG_E        4
 
-#define DEPTH_PARAM_ENTRIES      5
+// @pub 15;f;1;distance;Minimum distance between log entires.  Will only publish a fresh log entry if more than distance from last sample location.  Default 0m.
+#define DEPTH_PARAM_DISTANCE     15
+#define DEPTH_PARAM_DISTANCE_E   5
+
+#define DEPTH_PARAM_ENTRIES      6
 
 // subs
 // @sub 20;21;f;2;location;Current location from GPS
@@ -79,7 +85,7 @@ static const char DEPTH_STR_DEPTH[] PROGMEM = "Depth";
 
 class DepthModule:  public DroneModule {
 protected:
-
+  float _logPos[2];  // coordinates of last log entry
 public:
 
   DepthModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm, DroneExecutionManager* dem, fs::FS &fs);

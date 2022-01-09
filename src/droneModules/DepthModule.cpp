@@ -2,11 +2,15 @@
 #include "../DroneLinkMsg.h"
 #include "../DroneLinkManager.h"
 #include "strings.h"
+#include "../navMath.h"
 
 DepthModule::DepthModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm, DroneExecutionManager* dem, fs::FS &fs):
   DroneModule ( id, dmm, dlm, dem, fs )
  {
    setTypeName(FPSTR(DEPTH_STR_DEPTH));
+
+   _logPos[0] = 0;
+   _logPos[1] = 0;
 
    // set default interval to 1000
    _mgmtParams[DRONE_MODULE_PARAM_INTERVAL_E].data.uint32[0] = 1000;
@@ -60,6 +64,11 @@ DepthModule::DepthModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* 
    _params[DEPTH_PARAM_LOG_E].data.f[1] = 0;
    _params[DEPTH_PARAM_LOG_E].data.f[2] = 0;
 
+   param = &_params[DEPTH_PARAM_DISTANCE_E];
+   param->param = DEPTH_PARAM_DISTANCE;
+   setParamName(FPSTR(STRING_PWM_CHANNEL), param);
+   param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_FLOAT, 4);
+   _params[DEPTH_PARAM_DISTANCE_E].data.f[0] = 0;
 }
 
 DEM_NAMESPACE* DepthModule::registerNamespace(DroneExecutionManager *dem) {
@@ -125,17 +134,30 @@ void DepthModule::loop() {
   // publish new depth value
   updateAndPublishParam(&_params[DEPTH_PARAM_DEPTH_E], (uint8_t*)&d, sizeof(d));
 
-  // create composite log param
-  float log[3];
-  log[0] = _subs[DEPTH_SUB_LOCATION_E].param.data.f[0];
-  log[1] = _subs[DEPTH_SUB_LOCATION_E].param.data.f[1];
-  log[2] = d;
-  updateAndPublishParam(&_params[DEPTH_PARAM_LOG_E], (uint8_t*)&log, sizeof(log));
+
+  // check how far we've moved since last log entry
+  // _logPos
+  float dist = calculateDistanceBetweenCoordinates(
+    _logPos[0],
+    _logPos[1],
+    _subs[DEPTH_SUB_LOCATION_E].param.data.f[0],
+    _subs[DEPTH_SUB_LOCATION_E].param.data.f[1]
+  );
+
+  if (dist > _params[DEPTH_PARAM_DISTANCE_E].data.f[0]) {
+    // create composite log param
+    float log[3];
+    log[0] = _subs[DEPTH_SUB_LOCATION_E].param.data.f[0];
+    log[1] = _subs[DEPTH_SUB_LOCATION_E].param.data.f[1];
+    log[2] = d;
+    updateAndPublishParam(&_params[DEPTH_PARAM_LOG_E], (uint8_t*)&log, sizeof(log));
+  }
 
   if(duration==0){
-    Serial.println("Warning: no pulse from sensor");
+    Serial.println("[DM.l] Warning: no pulse from depth sensor");
   } else {
-    Serial.print("Depth:");
-    Serial.println(d);
+    Serial.print("[DM.l] Depth: ");
+    Serial.print(d);
+    Serial.println("m");
   }
 }
