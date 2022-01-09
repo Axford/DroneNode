@@ -1,6 +1,18 @@
 /*
 
-Manages a HMC5883L I2C Compass
+leading/trailing whitespace is trimmed
+
+@type          HMC5883L
+@inherits      I2CBaseModule
+@description   Manages a HMC5883L I2C Compass
+
+use >>> and <<< to contain multiline values, can include raw html.
+
+@guide >>>
+Explain here how the module works, key subs and pubs
+<b>html is allowed</b>
+multiple-lines are preserved
+<<<
 
 */
 #ifndef HMC5883L_MODULE_H
@@ -10,21 +22,26 @@ Manages a HMC5883L I2C Compass
 #include "../DroneWire.h"
 #include "I2CBaseModule.h"
 
-//#include <Adafruit_Sensor.h>
-//#include <Adafruit_HMC5883_U.h>
-
 #include "I2Cdev.h"
 #include "HMC5883L.h"
 
 #define HMC5883L_I2C_ADDRESS  0x1E  // write address, read address is +1
 
 // pubs
-#define HMC5883L_PARAM_VECTOR          (I2CBASE_SUBCLASS_PARAM_START+0)  //10
-#define HMC5883L_PARAM_HEADING         (I2CBASE_SUBCLASS_PARAM_START+1)  // 11
-#define HMC5883L_PARAM_DECLINATION     (I2CBASE_SUBCLASS_PARAM_START+2)
-#define HMC5883L_PARAM_CALIB_X         (I2CBASE_SUBCLASS_PARAM_START+3)
-#define HMC5883L_PARAM_CALIB_Y         (I2CBASE_SUBCLASS_PARAM_START+4)
-#define HMC5883L_PARAM_TRIM            (I2CBASE_SUBCLASS_PARAM_START+5)
+// pubs of form: <param address>;<type>;<number of values>;<name>;<description>
+
+// @pub 10;f;4;vector;Raw magnetic field vector
+#define HMC5883L_PARAM_VECTOR          (I2CBASE_SUBCLASS_PARAM_START+0)
+// @pub 11;f;1;heading;Heading adjusted for magnetic declination
+#define HMC5883L_PARAM_HEADING         (I2CBASE_SUBCLASS_PARAM_START+1)  //11
+// @pub 12;f;1;declination;Current declination value
+#define HMC5883L_PARAM_DECLINATION     (I2CBASE_SUBCLASS_PARAM_START+2)  //12
+// @pub 13;f;3;calibX;Min, center and max magnetic readings for the X axis
+#define HMC5883L_PARAM_CALIB_X         (I2CBASE_SUBCLASS_PARAM_START+3)  //13
+// @pub 14;f;3;calibY;Min, center and max magnetic readings for the Y axis
+#define HMC5883L_PARAM_CALIB_Y         (I2CBASE_SUBCLASS_PARAM_START+4)  //14
+// @pub 15;f;1;trim;Manual calibration value to adjust heading to match hull (e.g. for a misaligned physical mount)
+#define HMC5883L_PARAM_TRIM            (I2CBASE_SUBCLASS_PARAM_START+5)  //15
 
 #define HMC5883L_PARAM_VECTOR_E          (I2CBASE_PARAM_ENTRIES+0)
 #define HMC5883L_PARAM_HEADING_E         (I2CBASE_PARAM_ENTRIES+1)
@@ -36,8 +53,11 @@ Manages a HMC5883L I2C Compass
 #define HMC5883L_PARAM_ENTRIES           (I2CBASE_PARAM_ENTRIES + 6)
 
 // subs
-#define HMC5883L_SUB_LOCATION            (I2CBASE_SUBCLASS_PARAM_START+5)
-#define HMC5883L_SUB_LOCATION_ADDR       (I2CBASE_SUBCLASS_PARAM_START+6)
+// subs of form: <param address>;<addr param address>;<type>;<number of values>;<name>;description
+
+// @sub 16;17;f;2;location;Current location from GPS
+#define HMC5883L_SUB_LOCATION            (I2CBASE_SUBCLASS_PARAM_START+6) //16
+#define HMC5883L_SUB_LOCATION_ADDR       (I2CBASE_SUBCLASS_PARAM_START+7) //17
 #define HMC5883L_SUB_LOCATION_E          0
 
 #define HMC5883L_SUBS                    1
