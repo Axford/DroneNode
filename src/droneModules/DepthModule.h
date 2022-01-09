@@ -20,9 +20,11 @@ Depth.new 30
   pins OUT0_0 OUT0_1  // tigger and echo pins
   limits 0.25 10      // set sensor range to min=0.25m, max=10m
   speed 1480          // speed of sound in fresh water = 1480m/s
+  $location [@>5.8]   // subscribe to GPS location
 
   // publish
   .publish "depth"    // publish the measured depth
+  .publish "log"      // publish a combined log entry containing GPS location and depth
   // .publish "speed"
   // .publish "pins"
   // .publis "limits"
@@ -51,15 +53,22 @@ Depth.new 30
 #define DEPTH_PARAM_LIMITS_E     2
 
 // @pub 13;f;1;depth;Measured depth (or zero if unable to measure)
-#define DEPTH_PARAM_DEPTH       13
-#define DEPTH_PARAM_DEPTH_E     3
+#define DEPTH_PARAM_DEPTH        13
+#define DEPTH_PARAM_DEPTH_E      3
 
-#define DEPTH_PARAM_ENTRIES      4
+// @pub 14;f;3;log;Composite log entry combining current GPS location and depth reading into a single param
+#define DEPTH_PARAM_LOG          14
+#define DEPTH_PARAM_LOG_E        4
+
+#define DEPTH_PARAM_ENTRIES      5
 
 // subs
+// @sub 20;21;f;2;location;Current location from GPS
+#define DEPTH_SUB_LOCATION           20
+#define DEPTH_SUB_LOCATION_ADDR      21
+#define DEPTH_SUB_LOCATION_E         0
 
-
-#define DEPTH_SUBS              0
+#define DEPTH_SUBS              1
 
 // indices to the _pins array
 #define DEPTH_PIN_TRIGGER   0

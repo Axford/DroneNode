@@ -4,8 +4,19 @@
 @inherits      Drone
 @description   Manages a Motor via an H Bridge module using PWM
 
-@guide >>>
-todo
+@config >>>
+Motor.new 11
+  name "LeftMotor"
+  interval 50
+  pins OUT0_0 OUT0_1 DAC0_0
+  PWMChannel 15
+  limits -0.7 0.7
+  deadband 0.3
+  $speed [@>10.8]
+
+  // publish
+  .publish "speed"
+.done
 <<<
 
 */

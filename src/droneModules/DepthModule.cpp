@@ -14,13 +14,13 @@ DepthModule::DepthModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* 
    // subs
    initSubs(DEPTH_SUBS);
 
-/*   DRONE_PARAM_SUB *sub;
+   DRONE_PARAM_SUB *sub;
 
-   sub = &_subs[DEPTH_SUB_SPEED_E];
-   sub->addrParam = DEPTH_SUB_SPEED_ADDR;
-   sub->param.param = DEPTH_SUB_SPEED;
-   setParamName(FPSTR(STRING_SPEED), &sub->param);
-*/
+   sub = &_subs[DEPTH_SUB_LOCATION_E];
+   sub->addrParam = DEPTH_SUB_LOCATION_ADDR;
+   sub->param.param = DEPTH_SUB_LOCATION;
+   setParamName(FPSTR(STRING_LOCATION), &sub->param);
+
 
    // pubs
    initParams(DEPTH_PARAM_ENTRIES);
@@ -51,6 +51,14 @@ DepthModule::DepthModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* 
    setParamName(FPSTR(STRING_DEPTH), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 4);
    _params[DEPTH_PARAM_DEPTH_E].data.f[0] = 0;
+
+   param = &_params[DEPTH_PARAM_LOG_E];
+   param->param = DEPTH_PARAM_LOG;
+   setParamName(FPSTR(STRING_LOG), param);
+   param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 12);
+   _params[DEPTH_PARAM_LOG_E].data.f[0] = 0;
+   _params[DEPTH_PARAM_LOG_E].data.f[1] = 0;
+   _params[DEPTH_PARAM_LOG_E].data.f[2] = 0;
 
 }
 
@@ -116,6 +124,13 @@ void DepthModule::loop() {
 
   // publish new depth value
   updateAndPublishParam(&_params[DEPTH_PARAM_DEPTH_E], (uint8_t*)&d, sizeof(d));
+
+  // create composite log param
+  float log[3];
+  log[0] = _subs[DEPTH_SUB_LOCATION_E].param.data.f[0];
+  log[1] = _subs[DEPTH_SUB_LOCATION_E].param.data.f[1];
+  log[2] = d;
+  updateAndPublishParam(&_params[DEPTH_PARAM_LOG_E], (uint8_t*)&log, sizeof(log));
 
   if(duration==0){
     Serial.println("Warning: no pulse from sensor");
