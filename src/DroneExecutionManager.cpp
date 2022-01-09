@@ -85,7 +85,7 @@ DroneExecutionManager::DroneExecutionManager(DroneModuleManager *dmm, DroneLinkM
   //_safeMode
   _safeMode = (getBootStatus() != DEM_BOOT_SUCCESS);
   // disable safeMode - cos its a pain in the ass!
-  //_safeMode = false;
+  _safeMode = false;
 
   Log.noticeln("[DEM.DEM] SafeMode %u", (_safeMode ? 1: 0));
 
