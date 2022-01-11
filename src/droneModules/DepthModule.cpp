@@ -150,6 +150,10 @@ void DepthModule::loop() {
     log[0] = _subs[DEPTH_SUB_LOCATION_E].param.data.f[0];
     log[1] = _subs[DEPTH_SUB_LOCATION_E].param.data.f[1];
     log[2] = d;
+
+    _logPos[0] = log[0];
+    _logPos[1] = log[1];
+
     updateAndPublishParam(&_params[DEPTH_PARAM_LOG_E], (uint8_t*)&log, sizeof(log));
   }
 

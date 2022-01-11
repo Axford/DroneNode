@@ -4,10 +4,6 @@
 @inherits      Drone
 @description   Provides overall system management and a pub/sub interface to the DroneModuleManager
 
-@guide >>>
-todo
-<<<
-
 */
 #ifndef MANAGEMENT_MODULE_H
 #define MANAGEMENT_MODULE_H

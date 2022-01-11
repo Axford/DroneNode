@@ -1,11 +1,40 @@
 /*
 
-Waypoint navigation:
-   * Define a series of target locations (lat,lon, radius)
-   * Sub to current location
-   * Generate a target heading and est distance
+@type          Nav
+@inherits      Drone
+@description   Managen navigation between waypoints accounting for crosswind drift
+
+@guide >>>
+Target waypoints are defined in terms of Lon Lat and target Radius in meters.
+<<<
+
+@config >>>
+Nav.new 9
+  name "Nav"
+  status 1
+  interval 50
+  $location [@>7.8]
+  target -1.7458734889 51.541622044 5
+  crosswind 0.2
+  correction 20
+  wind 0
+  .publish "target"
+  .publish "location"
+  .publish "heading"
+  .publish "distance"
+  .publish "mode"
+  .publish "last"
+  .publish "home"
+  .publish "crosstrack"
+  .publish "correction"
+  .publish "wind"
+  .publish "crosswind"
+  .publish "adjHeading"
+.done
+<<<
 
 */
+
 #ifndef NAV_MODULE_H
 #define NAV_MODULE_H
 
