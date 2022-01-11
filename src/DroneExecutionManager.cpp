@@ -1015,7 +1015,7 @@ void DroneExecutionManager::execute() {
         callStackPop();
         // get underlying cse
         cse = callStackPeek(0);
-        if (cse) {
+        if (cse && !cse->continuation) {
           // increment instruction pointer
           cse->i++;
         }
