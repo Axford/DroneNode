@@ -89,6 +89,7 @@ Nav.new 9
 static const char NAV_STR_NAV[] PROGMEM = "Nav";
 
 enum NAV_MODE {
+  NAV_IDLE,
   NAV_GOTO,
   NAV_FOLLOW,
   NAV_ABSCOURSE,

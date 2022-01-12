@@ -65,7 +65,7 @@ NavModule::NavModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm,
    _params[NAV_PARAM_MODE_E].name = FPSTR(STRING_MODE);
    _params[NAV_PARAM_MODE_E].nameLen = sizeof(STRING_MODE);
    _params[NAV_PARAM_MODE_E].paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_UINT8_T, 1);
-   _params[NAV_PARAM_MODE_E].data.uint8[0] = NAV_GOTO;
+   _params[NAV_PARAM_MODE_E].data.uint8[0] = NAV_IDLE;
 
    _params[NAV_PARAM_LAST_E].param = NAV_PARAM_LAST;
    _params[NAV_PARAM_LAST_E].name = FPSTR(STRING_LAST);
@@ -200,6 +200,19 @@ void NavModule::updateLast(boolean fromTarget) {
 
 void NavModule::update() {
   if (!_setupDone) return;
+
+  if (_params[NAV_PARAM_MODE_E].data.uint8[0] == NAV_IDLE) {
+
+    float tempF = 0;
+
+    //updateAndPublishParam(&_params[NAV_PARAM_HEADING_E], (uint8_t*)&tempF, sizeof(tempF));
+    //updateAndPublishParam(&_params[NAV_PARAM_ADJ_HEADING_E], (uint8_t*)&tempF, sizeof(tempF));
+
+    // make sure distance is set to zero
+    updateAndPublishParam(&_params[NAV_PARAM_DISTANCE_E], (uint8_t*)&tempF, sizeof(tempF));
+
+    return;
+  }
 
   // formulae from: https://www.movable-type.co.uk/scripts/latlong.html
 

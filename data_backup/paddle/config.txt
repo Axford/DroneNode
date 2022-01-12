@@ -90,6 +90,7 @@ Nav.new 7
   target -1.834 51.576 100
   $target [10>5.8]
   .publish "target"
+  .publish "last"
   .publish "location"
   .publish "heading"
   .publish "distance"
