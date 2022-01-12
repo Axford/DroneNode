@@ -72,6 +72,8 @@ NMEA.new 7
 #define NMEA_SUBS                     1
 
 
+#define NMEA_HISTORY_DEPTH            10
+
 static const char NMEA_STR_NMEA[] PROGMEM = "NMEA";
 
 // class
@@ -82,6 +84,8 @@ protected:
   //uint32_t _baud;
   char _buffer[100];
   MicroNMEA *_nmea;
+  uint8_t _historyCount;
+  float _history[NMEA_HISTORY_DEPTH][3];
 public:
 
   NMEAModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm, DroneExecutionManager* dem, fs::FS &fs);

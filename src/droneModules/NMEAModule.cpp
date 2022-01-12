@@ -16,6 +16,8 @@ NMEAModule::NMEAModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dl
    _nmea = new MicroNMEA(_buffer, sizeof(_buffer));
    //nmea.setUnknownSentenceHandler(printUnknownSentence);
 
+   _historyCount = 0;
+
    // subs
    initSubs(NMEA_SUBS);
 
@@ -207,13 +209,42 @@ void NMEAModule::loop() {
 
 
           if (tempf[0] != 0 && tempf[1] != 0) {
+
+            // accumulate in history buffer
+            // shuffle back
+            for (uint8_t i=0; i<NMEA_HISTORY_DEPTH-1; i++) {
+              _history[i][0] = _history[i+1][0];
+              _history[i][1] = _history[i+1][1];
+              _history[i][2] = _history[i+1][2];
+            }
+            // add to head
+            _history[NMEA_HISTORY_DEPTH-1][0] = tempf[0];
+            _history[NMEA_HISTORY_DEPTH-1][1] = tempf[1];
+            _history[NMEA_HISTORY_DEPTH-1][2] = millis();
+            // see if buffer full
+            if (_historyCount < NMEA_HISTORY_DEPTH) {
+              _historyCount++;
+            } else {
+              // calc and publish speed/heading
+              float t = (_history[NMEA_HISTORY_DEPTH-1][2] - _history[0][2])/1000;
+              float d = calculateDistanceBetweenCoordinates(
+                _history[NMEA_HISTORY_DEPTH-1][0],
+                _history[NMEA_HISTORY_DEPTH-1][1],
+                _history[0][0],
+                _history[0][1]
+              );
+              float speed = d / t;
+              updateAndPublishParam(&_params[NMEA_PARAM_SPEED_E], (uint8_t*)&speed, 4);
+            }
+
+
             updateAndPublishParam(&_params[NMEA_PARAM_LOCATION_E], (uint8_t*)&tempf, sizeof(tempf));
           }
 
           uint8_t temp8 =  _nmea->getNumSatellites();
           updateAndPublishParam(&_params[NMEA_PARAM_SATELLITES_E], (uint8_t*)&temp8, sizeof(temp8));
 
-
+          /*
           float v = _nmea->getSpeed() / 1000.0;
           if (v >= 0) {
             updateAndPublishParam(&_params[NMEA_PARAM_SPEED_E], (uint8_t*)&v, 4);
@@ -223,6 +254,8 @@ void NMEAModule::loop() {
           if (v >= 0) {
             updateAndPublishParam(&_params[NMEA_PARAM_HEADING_E], (uint8_t*)&v, 4);
           }
+          */
+
 
           temp8 = _nmea->getHDOP();
           updateAndPublishParam(&_params[NMEA_PARAM_HDOP_E], (uint8_t*)&temp8, sizeof(temp8));
