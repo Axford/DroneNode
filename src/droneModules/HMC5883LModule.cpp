@@ -69,6 +69,15 @@ HMC5883LModule::HMC5883LModule(uint8_t id, DroneModuleManager* dmm, DroneLinkMan
    _params[HMC5883L_PARAM_TRIM_E].paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_FLOAT, 4);
    _params[HMC5883L_PARAM_TRIM_E].data.f[0] = 0;
 
+   _params[HMC5883L_PARAM_LIMITS_E].param = HMC5883L_PARAM_LIMITS;
+   _params[HMC5883L_PARAM_LIMITS_E].name = FPSTR(STRING_LIMITS);
+   _params[HMC5883L_PARAM_LIMITS_E].nameLen = sizeof(STRING_LIMITS);
+   _params[HMC5883L_PARAM_LIMITS_E].paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_FLOAT, 16);
+   _params[HMC5883L_PARAM_LIMITS_E].data.f[0] = 0;
+   _params[HMC5883L_PARAM_LIMITS_E].data.f[1] = 0;
+   _params[HMC5883L_PARAM_LIMITS_E].data.f[2] = 0;
+   _params[HMC5883L_PARAM_LIMITS_E].data.f[3] = 0;
+
 }
 
 HMC5883LModule::~HMC5883LModule() {
@@ -100,6 +109,7 @@ void HMC5883LModule::registerParams(DEM_NAMESPACE* ns, DroneExecutionManager *de
   dem->registerCommand(ns, STRING_CALIB_X, DRONE_LINK_MSG_TYPE_FLOAT, ph);
   dem->registerCommand(ns, STRING_CALIB_Y, DRONE_LINK_MSG_TYPE_FLOAT, ph);
   dem->registerCommand(ns, STRING_TRIM, DRONE_LINK_MSG_TYPE_FLOAT, ph);
+  dem->registerCommand(ns, STRING_LIMITS, DRONE_LINK_MSG_TYPE_FLOAT, ph);
 }
 
 void HMC5883LModule::doReset() {
@@ -129,6 +139,16 @@ void HMC5883LModule::setup() {
     }*/
     _sensor = new HMC5883L();
     _sensor->initialize();
+
+    // initialise limits to match calibration limits - clockwise from North
+    // y+
+    _params[HMC5883L_PARAM_LIMITS_E].data.f[0] = _params[HMC5883L_PARAM_CALIB_Y_E].data.f[2];
+    // x+
+    _params[HMC5883L_PARAM_LIMITS_E].data.f[1] = _params[HMC5883L_PARAM_CALIB_X_E].data.f[2];
+    // y-
+    _params[HMC5883L_PARAM_LIMITS_E].data.f[2] = _params[HMC5883L_PARAM_CALIB_Y_E].data.f[0];
+    // x-
+    _params[HMC5883L_PARAM_LIMITS_E].data.f[3] = _params[HMC5883L_PARAM_CALIB_X_E].data.f[0];
   }
 }
 
@@ -198,18 +218,22 @@ void HMC5883LModule::loop() {
   // X
   _params[HMC5883L_PARAM_CALIB_X_E].data.f[0] = min(_params[HMC5883L_PARAM_CALIB_X_E].data.f[0], _params[HMC5883L_PARAM_VECTOR_E].data.f[0]);
   _params[HMC5883L_PARAM_CALIB_X_E].data.f[2] = max(_params[HMC5883L_PARAM_CALIB_X_E].data.f[2], _params[HMC5883L_PARAM_VECTOR_E].data.f[0]);
-  _params[HMC5883L_PARAM_CALIB_X_E].data.f[1] = (_params[HMC5883L_PARAM_CALIB_X_E].data.f[0] + _params[HMC5883L_PARAM_CALIB_X_E].data.f[2])/2;
+
+  //_params[HMC5883L_PARAM_CALIB_X_E].data.f[1] = (_params[HMC5883L_PARAM_CALIB_X_E].data.f[0] + _params[HMC5883L_PARAM_CALIB_X_E].data.f[2])/2;
+  _params[HMC5883L_PARAM_CALIB_X_E].data.f[1] = (_params[HMC5883L_PARAM_LIMITS_E].data.f[1] + _params[HMC5883L_PARAM_LIMITS_E].data.f[3]) / 2;
 
   // Y
   _params[HMC5883L_PARAM_CALIB_Y_E].data.f[0] = min(_params[HMC5883L_PARAM_CALIB_Y_E].data.f[0], _params[HMC5883L_PARAM_VECTOR_E].data.f[1]);
   _params[HMC5883L_PARAM_CALIB_Y_E].data.f[2] = max(_params[HMC5883L_PARAM_CALIB_Y_E].data.f[2], _params[HMC5883L_PARAM_VECTOR_E].data.f[1]);
-  _params[HMC5883L_PARAM_CALIB_Y_E].data.f[1] = (_params[HMC5883L_PARAM_CALIB_Y_E].data.f[0] + _params[HMC5883L_PARAM_CALIB_Y_E].data.f[2])/2;
+
+  //_params[HMC5883L_PARAM_CALIB_Y_E].data.f[1] = (_params[HMC5883L_PARAM_CALIB_Y_E].data.f[0] + _params[HMC5883L_PARAM_CALIB_Y_E].data.f[2])/2;
+  _params[HMC5883L_PARAM_CALIB_Y_E].data.f[1] = (_params[HMC5883L_PARAM_LIMITS_E].data.f[0] + _params[HMC5883L_PARAM_LIMITS_E].data.f[2]) / 2;
 
 
   float heading = atan2(_params[HMC5883L_PARAM_VECTOR_E].data.f[1] - _params[HMC5883L_PARAM_CALIB_Y_E].data.f[1],
                         _params[HMC5883L_PARAM_VECTOR_E].data.f[0] - _params[HMC5883L_PARAM_CALIB_X_E].data.f[1]);
 
-  // rotate by -90 def to account for sensor mounting orientation with y+ forward
+  // rotate by -90 deg to account for sensor mounting orientation with y+ forward
   heading -= PI/2;
 
   float declinationAngle = _params[HMC5883L_PARAM_DECLINATION_E].data.f[0] * PI / 180.0f; // convert to radians
@@ -224,7 +248,48 @@ void HMC5883LModule::loop() {
     heading -= 2*PI;
 
   // Convert radians to degrees for readability.
-  float headingDegrees = (heading * 180.0f / PI) + _params[HMC5883L_PARAM_TRIM_E].data.f[0];
+  float headingDegrees = (heading * 180.0f / PI);
+
+  // wrap to 0..360
+  if (headingDegrees > 360) headingDegrees -= 360;
+  if (headingDegrees < 0) headingDegrees += 360;
+
+  // update limits when within +-20 degrees of quadrant
+  float samples = 20;
+  // y+
+  if (headingDegrees > -20 && headingDegrees < 20) {
+    _params[HMC5883L_PARAM_LIMITS_E].data.f[0] =
+      (_params[HMC5883L_PARAM_LIMITS_E].data.f[0] * (samples-1) +
+      _params[HMC5883L_PARAM_VECTOR_E].data.f[1]
+    ) / samples;
+  }
+
+  // y-
+  if (headingDegrees > 160 && headingDegrees < 200) {
+    _params[HMC5883L_PARAM_LIMITS_E].data.f[2] =
+      (_params[HMC5883L_PARAM_LIMITS_E].data.f[2] * (samples-1) +
+      _params[HMC5883L_PARAM_VECTOR_E].data.f[1]
+    ) / samples;
+  }
+
+  // x+
+  if (headingDegrees > 70 && headingDegrees < 110) {
+    _params[HMC5883L_PARAM_LIMITS_E].data.f[3] =
+      (_params[HMC5883L_PARAM_LIMITS_E].data.f[3] * (samples-1) +
+      _params[HMC5883L_PARAM_VECTOR_E].data.f[0]
+    ) / samples;
+  }
+
+  // x-
+  if (headingDegrees > 250 && headingDegrees < 290) {
+    _params[HMC5883L_PARAM_LIMITS_E].data.f[1] =
+      (_params[HMC5883L_PARAM_LIMITS_E].data.f[1] * (samples-1) +
+      _params[HMC5883L_PARAM_VECTOR_E].data.f[0]
+    ) / samples;
+  }
+
+  // add trim
+  headingDegrees += _params[HMC5883L_PARAM_TRIM_E].data.f[0];
 
   // wrap to 0..360
   if (headingDegrees > 360) headingDegrees -= 360;

@@ -42,6 +42,8 @@ multiple-lines are preserved
 #define HMC5883L_PARAM_CALIB_Y         (I2CBASE_SUBCLASS_PARAM_START+4)  //14
 // @pub 15;f;1;trim;Manual calibration value to adjust heading to match hull (e.g. for a misaligned physical mount)
 #define HMC5883L_PARAM_TRIM            (I2CBASE_SUBCLASS_PARAM_START+5)  //15
+// @pub 18;f;4;limits;Averaged limits at the four quadrants, used to refine the calibration onoine
+#define HMC5883L_PARAM_LIMITS            (I2CBASE_SUBCLASS_PARAM_START+8)  // 18
 
 #define HMC5883L_PARAM_VECTOR_E          (I2CBASE_PARAM_ENTRIES+0)
 #define HMC5883L_PARAM_HEADING_E         (I2CBASE_PARAM_ENTRIES+1)
@@ -49,8 +51,9 @@ multiple-lines are preserved
 #define HMC5883L_PARAM_CALIB_X_E         (I2CBASE_PARAM_ENTRIES+3)
 #define HMC5883L_PARAM_CALIB_Y_E         (I2CBASE_PARAM_ENTRIES+4)
 #define HMC5883L_PARAM_TRIM_E            (I2CBASE_PARAM_ENTRIES+5)
+#define HMC5883L_PARAM_LIMITS_E          (I2CBASE_PARAM_ENTRIES+6)
 
-#define HMC5883L_PARAM_ENTRIES           (I2CBASE_PARAM_ENTRIES + 6)
+#define HMC5883L_PARAM_ENTRIES           (I2CBASE_PARAM_ENTRIES + 7)
 
 // subs
 // subs of form: <param address>;<addr param address>;<type>;<number of values>;<name>;description
