@@ -119,12 +119,16 @@ void DepthModule::loop() {
 
   // calc timeout value in microseconds
   // 2 * 1000000 * max measurable value / speed of sound
-  unsigned long timeout = 2000000 * _params[DEPTH_PARAM_LIMITS_E].data.f[1] / _params[DEPTH_PARAM_SPEED_E].data.f[0];
+  unsigned long timeout = 10 * 2000000 * _params[DEPTH_PARAM_LIMITS_E].data.f[1] / _params[DEPTH_PARAM_SPEED_E].data.f[0];
+
+  Serial.print("[DM.l] timeout: ");
+  Serial.println(timeout);
 
   // send a pulse
   digitalWrite(_params[DEPTH_PARAM_PINS_E].data.uint8[DEPTH_PIN_TRIGGER], HIGH);
   delayMicroseconds(10);
   digitalWrite(_params[DEPTH_PARAM_PINS_E].data.uint8[DEPTH_PIN_TRIGGER], LOW);
+  delayMicroseconds(10);
 
   // wait for return echo and calcuate duration
   const unsigned long duration= pulseIn(_params[DEPTH_PARAM_PINS_E].data.uint8[DEPTH_PIN_ECHO], HIGH, timeout);
@@ -164,6 +168,7 @@ void DepthModule::loop() {
   } else {
     Serial.print("[DM.l] Depth: ");
     Serial.print(d);
-    Serial.println("m");
+    Serial.print("m, raw: ");
+    Serial.print(duration);
   }
 }

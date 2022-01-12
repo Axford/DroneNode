@@ -2,7 +2,6 @@
 
 // Setup the node
 node 1
-hostname "Paddle"
 
 // Init modules
 Management.new 1
@@ -10,6 +9,7 @@ Management.new 1
   status true
   interval 1000
   discovery true
+  hostname "PaddleOne"
 
   // publish
   .publish "hostname"
@@ -46,11 +46,14 @@ INA219.new 4
 NMEA.new 5
   name "GPS"
   interval 500
-  port 1
+  port 2
   baud 9600
+  fix -1.829613 51.562265 0
   .publish "location"
   .publish "satellites"
   .publish "HDOP"
+  .publish "fix"
+  .publish "correction"
 .done
 
 HMC5883L.new 6
@@ -58,8 +61,8 @@ HMC5883L.new 6
   interval 200
   bus 0
   status 1
-  calibX -3.5 0 2.3
-  calibY -3.6 0 1.7
+  calibX 0 0 0
+  calibY 0 0 0
   // default location
   location -1.8 52 100
   //$location [@>GPS.location]
@@ -68,6 +71,7 @@ HMC5883L.new 6
   .publish "vector"
   .publish "calibX"
   .publish "calibY"
+  .publish "limits"
 .done
 
 RFM69Telemetry.new 3
@@ -80,10 +84,11 @@ RFM69Telemetry.new 3
 
 Nav.new 7
   name "Nav"
-  status 0
+  status 1
   interval 50
   $location [@>5.8]
-  target -1.82 51.56 100
+  target -1.834 51.576 100
+  $target [10>5.8]
   .publish "target"
   .publish "location"
   .publish "heading"
@@ -136,7 +141,7 @@ Motor.new 11
   interval 50
   pins OUT0_0 OUT0_1 DAC0_0
   PWMChannel 15
-  limits -0.7 0.7
+  limits -0.8 0.8
   deadband 0.3
   $speed [@>10.8]
 
@@ -149,7 +154,7 @@ Motor.new 12
   interval 50
   pins OUT1_1 OUT1_0 DAC0_1
   PWMChannel 14
-  limits -0.7 0.7
+  limits -0.8 0.8
   deadband 0.3
   $speed [@>10.9]
 
@@ -162,12 +167,55 @@ Neopixel.new 20
   interval 50
   pins OUT2_1
   numPixels 16
+  $scene [@>21.8]
   .publish "scene"
+.done
+
+Status.new 21
+  name "Status"
+  //cell voltage
+  $sub1 [@>4.15]
+  value1 3.7
+
+  // GPS Satellites
+  $sub2 [@>5.9]
+  value2 4
+
+  // distance to next waypoint
+  $sub3 [@>7.9]
+  value3 15
+
+
+  .publish "scene"
+  .publish "sub1"
+  .publish "value1"
+  .publish "sub2"
+  .publish "value2"
+  .publish "sub3"
+  .publish "value3"
+.done
+
+Depth.new 30
+  name "Depth"
+  status true
+  interval 1000
+  pins 12 13
+  limits 0.1 10
+  speed 1480
+  $location [@>5.8]
+  distance 1
+
+  .publish "depth"
+  .publish "log"
 .done
 
 
 // finish setup
 .setup
+
+// disable
+.send 1>8.1 (u8) 0
+.send 1>9.1 (u8) 0
 
 // green flashing LEDs to show we've finished
 .send 1>20.8 (u8) 50 1 10 5  0 255 0  0 255 0  0 255 0  0 255 0

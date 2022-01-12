@@ -275,6 +275,9 @@ void setup() {
   // list filesystem
   listDir(LITTLEFS, "/", 0);
 
+  Log.noticeln(F("  totalBytes %d"), LITTLEFS.totalBytes());
+  Log.noticeln(F("  usedBytes %d"), LITTLEFS.usedBytes());
+
 
   logFile = LITTLEFS.open("/startup.log", FILE_WRITE);
 
@@ -408,9 +411,18 @@ void loop() {
       serialCommand[serialCommandLen] = 0;
       Serial.print("Executing: ");
       Serial.println(serialCommand);
+
+      // clear boot flag and restart
       if (strcmp(serialCommand, "execute")==0) {
         Serial.println("restarting");
         dem->setBootStatus(DEM_BOOT_SUCCESS);
+        dmm->restart();
+      }
+
+      // format filesystem
+      if (strcmp(serialCommand, "format")==0) {
+        Serial.println("Formatting");
+        LITTLEFS.format();
         dmm->restart();
       }
 

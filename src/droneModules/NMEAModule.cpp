@@ -3,6 +3,7 @@
 #include "../DroneLinkManager.h"
 #include "../pinConfig.h"
 #include "strings.h"
+#include "../navMath.h"
 
 NMEAModule::NMEAModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm, DroneExecutionManager* dem, fs::FS &fs):
   DroneModule ( id, dmm, dlm, dem, fs )
@@ -24,9 +25,11 @@ NMEAModule::NMEAModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dl
    sub->addrParam = NMEA_SUB_CORRECTION_ADDR;
    sub->param.param = NMEA_SUB_CORRECTION;
    setParamName(FPSTR(STRING_CORRECTION), &sub->param);
+   sub->param.paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_FLOAT, 16);
    sub->param.data.f[0] = 0;
    sub->param.data.f[1] = 0;
    sub->param.data.f[2] = 0;
+   sub->param.data.f[3] = 0;
 
    // pubs
    initParams(NMEA_PARAM_ENTRIES);
@@ -100,9 +103,15 @@ void NMEAModule::registerParams(DEM_NAMESPACE* ns, DroneExecutionManager *dem) {
 
   // writable mgmt params
   DEMCommandHandler ph = std::bind(&DroneExecutionManager::mod_param, dem, _1, _2, _3, _4);
+  DEMCommandHandler pha = std::bind(&DroneExecutionManager::mod_subAddr, dem, _1, _2, _3, _4);
+
+  dem->registerCommand(ns, STRING_CORRECTION, DRONE_LINK_MSG_TYPE_FLOAT, ph);
+  dem->registerCommand(ns, PSTR("$correction"), DRONE_LINK_MSG_TYPE_FLOAT, pha);
 
   dem->registerCommand(ns, STRING_PORT, DRONE_LINK_MSG_TYPE_UINT8_T, ph);
   dem->registerCommand(ns, STRING_BAUD, DRONE_LINK_MSG_TYPE_UINT32_T, ph);
+  dem->registerCommand(ns, STRING_FIX, DRONE_LINK_MSG_TYPE_FLOAT, ph);
+
 }
 
 void NMEAModule::setup() {
@@ -169,12 +178,25 @@ void NMEAModule::loop() {
           // do we have a known (fix) location
           if (_params[NMEA_PARAM_FIX_E].data.f[0] != 0) {
             // generate a correction factor
-            float correction[3];
+            float correction[4];
             correction[0] = _params[NMEA_PARAM_FIX_E].data.f[0] - tempf[0];
             correction[1] = _params[NMEA_PARAM_FIX_E].data.f[1] - tempf[1];
             correction[2] = _params[NMEA_PARAM_FIX_E].data.f[2] - tempf[2];
 
             updateAndPublishParam(&_subs[NMEA_SUB_CORRECTION_E].param, (uint8_t*)&correction, sizeof(correction));
+
+            // calculate magnitude of correction in meters
+            correction[3] = calculateDistanceBetweenCoordinates(
+              _params[NMEA_PARAM_FIX_E].data.f[0],
+              _params[NMEA_PARAM_FIX_E].data.f[1],
+              tempf[0],
+              tempf[1]
+            );
+
+            // now overwrite location to fixed location
+            tempf[0] = _params[NMEA_PARAM_FIX_E].data.f[0];
+            tempf[1] = _params[NMEA_PARAM_FIX_E].data.f[1];
+            tempf[2] = _params[NMEA_PARAM_FIX_E].data.f[2];
 
           } else {
             // do we have a differential correction to apply?
