@@ -1,5 +1,9 @@
 /*
-Base class for modules.
+
+@type Drone
+@description Base class for Drone modules
+
+
 At creation:
 * Passed a DroneModuleManager - stored and used to register itself
 * Passed a DroneLinkManager - stored and used to wire up subs.
@@ -8,11 +12,7 @@ By convention, the module is registered to the channel matching its id.
 
 things that would be useful for all modules
  - check if its registered
- - enabled/disabled
- - class name
- - name
  - error code or text
- - trigger a reset
 */
 
 #ifndef DRONE_MODULE_H

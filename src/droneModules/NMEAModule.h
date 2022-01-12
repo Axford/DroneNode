@@ -1,6 +1,20 @@
 /*
 
-Manages a I2CBASE I2C power monitor
+@type          NMEA
+@inherits      Drone
+@description   Manages a serial NMEA GPS device
+
+@config >>>
+NMEA.new 7
+  name "GPS"
+  interval 1000
+  port 2
+  baud 9600
+  .publish "location"
+  .publish "satellites"
+  .publish "HDOP"
+.done
+<<<
 
 */
 #ifndef NMEA_MODULE_H
@@ -9,13 +23,29 @@ Manages a I2CBASE I2C power monitor
 #include "../DroneModule.h"
 #include "MicroNMEA.h"
 
+// @pub 8;f;2;location;Current GPS location
 #define NMEA_PARAM_LOCATION           8
+
+// @pub 9;u8;1;satellites;Number of satellites used for fix
 #define NMEA_PARAM_SATELLITES         9
+
+// @pub 10;f;1;heading;Current heading over ground
 #define NMEA_PARAM_HEADING            10
+
+// @pub 11;f;1;speed;Current speed over ground
 #define NMEA_PARAM_SPEED              11
+
+// @pub 12;f;1;HDOP;Current Horizontal Dilution of Precision
 #define NMEA_PARAM_HDOP               12
+
+// @pub 13;u8;1;port;Which serial port to use (0,1 or 2)
 #define NMEA_PARAM_PORT               13
+
+// @pub 14;u32;1;baud;Baud rate to use, normally 9600
 #define NMEA_PARAM_BAUD               14
+
+// @pub 15;f;3;fix;Fix location - to use as basis for differential GPS signal
+#define NMEA_PARAM_FIX                15
 
 #define NMEA_PARAM_LOCATION_E         0
 #define NMEA_PARAM_SATELLITES_E       1
@@ -24,8 +54,23 @@ Manages a I2CBASE I2C power monitor
 #define NMEA_PARAM_HDOP_E             4
 #define NMEA_PARAM_PORT_E             5
 #define NMEA_PARAM_BAUD_E             6
+#define NMEA_PARAM_FIX_E              7
 
-#define NMEA_PARAM_ENTRIES            7
+#define NMEA_PARAM_ENTRIES            8
+
+
+// subs
+
+// correction - If fix location is set then this is the difference between live GPS and known location, for other nodes to subscribe to
+// if no known location, then this can be subbed to a base station difference param
+
+// @sub 20;21;f;3;correction;If fix location is set then this is the difference between live GPS and known location, for other nodes to subscribe to.  If no fix location, then this can be subbed to a base station correction param.
+#define NMEA_SUB_CORRECTION           20
+#define NMEA_SUB_CORRECTION_ADDR      21
+#define NMEA_SUB_CORRECTION_E         0
+
+#define NMEA_SUBS                     1
+
 
 static const char NMEA_STR_NMEA[] PROGMEM = "NMEA";
 

@@ -1,17 +1,26 @@
 /*
 
-leading/trailing whitespace is trimmed
-
 @type          HMC5883L
 @inherits      I2CBaseModule
 @description   Manages a HMC5883L I2C Compass
 
-use >>> and <<< to contain multiline values, can include raw html.
-
-@guide >>>
-Explain here how the module works, key subs and pubs
-<b>html is allowed</b>
-multiple-lines are preserved
+@config >>>
+HMC5883L.new 6
+  name "Compass"
+  interval 200
+  bus 0
+  status 1
+  calibX -3.5 0 2.3
+  calibY -3.6 0 1.7
+  // default location
+  location -1.8 52 100
+  //$location [@>GPS.location]
+  $location [@>5.8]
+  .publish "heading"
+  .publish "vector"
+  .publish "calibX"
+  .publish "calibY"
+.done
 <<<
 
 */

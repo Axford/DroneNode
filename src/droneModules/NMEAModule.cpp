@@ -15,6 +15,19 @@ NMEAModule::NMEAModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dl
    _nmea = new MicroNMEA(_buffer, sizeof(_buffer));
    //nmea.setUnknownSentenceHandler(printUnknownSentence);
 
+   // subs
+   initSubs(NMEA_SUBS);
+
+   DRONE_PARAM_SUB *sub;
+
+   sub = &_subs[NMEA_SUB_CORRECTION_E];
+   sub->addrParam = NMEA_SUB_CORRECTION_ADDR;
+   sub->param.param = NMEA_SUB_CORRECTION;
+   setParamName(FPSTR(STRING_CORRECTION), &sub->param);
+   sub->param.data.f[0] = 0;
+   sub->param.data.f[1] = 0;
+   sub->param.data.f[2] = 0;
+
    // pubs
    initParams(NMEA_PARAM_ENTRIES);
 
@@ -63,6 +76,14 @@ NMEAModule::NMEAModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dl
    setParamName(FPSTR(STRING_BAUD), param);
    _params[NMEA_PARAM_BAUD_E].paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_UINT32_T, 4);
    _params[NMEA_PARAM_BAUD_E].data.uint32[0] = 38400;
+
+   param = &_params[NMEA_PARAM_FIX_E];
+   param->param = NMEA_PARAM_FIX;
+   setParamName(FPSTR(STRING_FIX), param);
+   _params[NMEA_PARAM_FIX_E].paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_FLOAT, 12);
+   _params[NMEA_PARAM_FIX_E].data.f[0] = 0;
+   _params[NMEA_PARAM_FIX_E].data.f[1] = 0;
+   _params[NMEA_PARAM_FIX_E].data.f[2] = 0;
 }
 
 
@@ -144,6 +165,25 @@ void NMEAModule::loop() {
           long alt = 0;
           _nmea->getAltitude(alt);
           tempf[2] = alt/1000.0;
+
+          // do we have a known (fix) location
+          if (_params[NMEA_PARAM_FIX_E].data.f[0] != 0) {
+            // generate a correction factor
+            float correction[3];
+            correction[0] = _params[NMEA_PARAM_FIX_E].data.f[0] - tempf[0];
+            correction[1] = _params[NMEA_PARAM_FIX_E].data.f[1] - tempf[1];
+            correction[2] = _params[NMEA_PARAM_FIX_E].data.f[2] - tempf[2];
+
+            updateAndPublishParam(&_subs[NMEA_SUB_CORRECTION_E].param, (uint8_t*)&correction, sizeof(correction));
+
+          } else {
+            // do we have a differential correction to apply?
+            tempf[0] += _subs[NMEA_SUB_CORRECTION_E].param.data.f[0];
+            tempf[1] += _subs[NMEA_SUB_CORRECTION_E].param.data.f[1];
+            tempf[2] += _subs[NMEA_SUB_CORRECTION_E].param.data.f[2];
+          }
+
+
           if (tempf[0] != 0 && tempf[1] != 0) {
             updateAndPublishParam(&_params[NMEA_PARAM_LOCATION_E], (uint8_t*)&tempf, sizeof(tempf));
           }
