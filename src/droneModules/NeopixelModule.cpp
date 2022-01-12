@@ -61,10 +61,12 @@ void NeopixelModule::registerParams(DEM_NAMESPACE* ns, DroneExecutionManager *de
 
   // writable mgmt params
   DEMCommandHandler ph = std::bind(&DroneExecutionManager::mod_param, dem, _1, _2, _3, _4);
+  DEMCommandHandler pha = std::bind(&DroneExecutionManager::mod_subAddr, dem, _1, _2, _3, _4);
 
   dem->registerCommand(ns, STRING_PINS, DRONE_LINK_MSG_TYPE_UINT8_T, ph);
   dem->registerCommand(ns, STRING_NUMPIXELS, DRONE_LINK_MSG_TYPE_UINT8_T, ph);
   dem->registerCommand(ns, STRING_SCENE, DRONE_LINK_MSG_TYPE_UINT8_T, ph);
+  dem->registerCommand(ns, PSTR("$scene"), DRONE_LINK_MSG_TYPE_UINT8_T, pha);
 }
 
 
