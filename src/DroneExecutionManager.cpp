@@ -10,6 +10,7 @@
 #include "droneModules/DepthModule.h"
 #include "droneModules/HMC5883LModule.h"
 #include "droneModules/INA219Module.h"
+#include "droneModules/INA3221Module.h"
 #include "droneModules/JoystickModule.h"
 #include "droneModules/ManagementModule.h"
 #include "droneModules/MotorModule.h"
@@ -148,6 +149,7 @@ DroneExecutionManager::DroneExecutionManager(DroneModuleManager *dmm, DroneLinkM
   ns = DepthModule::registerNamespace(this); DepthModule::registerParams(ns, this);
   ns = HMC5883LModule::registerNamespace(this); HMC5883LModule::registerParams(ns, this);
   ns = INA219Module::registerNamespace(this); INA219Module::registerParams(ns, this);
+  ns = INA3221Module::registerNamespace(this); INA3221Module::registerParams(ns, this);
   ns = JoystickModule::registerNamespace(this); JoystickModule::registerParams(ns, this);
   ns = ManagementModule::registerNamespace(this); ManagementModule::registerParams(ns, this);
   ns = MotorModule::registerNamespace(this);  MotorModule::registerParams(ns, this);
@@ -1035,8 +1037,8 @@ void DroneExecutionManager::runMacro(const char * macroName, boolean calledFromM
   if (!calledFromMacro) {
     DEM_CALLSTACK_ENTRY *csep;
     // get current cse and decrement instruction pointer, ready for resume
+    csep = callStackPeek(0);
     if (csep) {
-      csep = callStackPeek(0);
       csep->i--;
     }
   }
@@ -1421,6 +1423,8 @@ boolean DroneExecutionManager::mod_constructor(DEM_INSTRUCTION_COMPILED* instr, 
       newMod = new HMC5883LModule(id, _dmm, _dlm, this, _fs);
     } else if (strcmp_P(instr->ns->name, INA219_STR_INA219) == 0) {
       newMod = new INA219Module(id, _dmm, _dlm, this, _fs);
+    } else if (strcmp_P(instr->ns->name, INA3221_STR_INA3221) == 0) {
+      newMod = new INA3221Module(id, _dmm, _dlm, this, _fs);
     } else if (strcmp_P(instr->ns->name, JOYSTICK_STR_JOYSTICK) == 0) {
       newMod = new JoystickModule(id, _dmm, _dlm, this, _fs);
     } else if (strcmp_P(instr->ns->name, MANAGEMENT_STR_MANAGEMENT) == 0) {
