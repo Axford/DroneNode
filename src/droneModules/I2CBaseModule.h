@@ -36,6 +36,7 @@ public:
   virtual boolean isAlive();
 
   virtual void setup();
+
 };
 
 #endif

@@ -36,6 +36,7 @@ public:
   DroneModuleManager(DroneLinkManager* dlm);
   void registerModule(DroneModule *m);
 
+  DroneModule* getModuleByIndex(uint8_t index);
   DroneModule* getModuleById(uint8_t id);
   DroneModule* getModuleByName(char * name);
 

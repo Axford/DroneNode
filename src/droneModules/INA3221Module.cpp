@@ -2,6 +2,7 @@
 #include "../DroneLinkMsg.h"
 #include "../DroneLinkManager.h"
 #include "strings.h"
+#include "OLEDTomThumbFont.h"
 
 INA3221Module::INA3221Module(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm, DroneExecutionManager* dem, fs::FS &fs):
   I2CBaseModule ( id, dmm, dlm, dem, fs )
@@ -169,4 +170,27 @@ void INA3221Module::loop() {
     temp8[i] = (_params[INA3221_PARAM_LOADV_E].data.f[i] < _params[INA3221_PARAM_THRESHOLD_E].data.f[i]) ? 1 : 0;
   }
   updateAndPublishParam(&_params[INA3221_PARAM_ALARM_E], (uint8_t*)&temp8, sizeof(temp8));
+}
+
+
+uint8_t INA3221Module::diagnosticDisplays() {
+  return 1;
+}
+
+void INA3221Module::drawDiagnosticDisplay(SSD1306Wire *display, uint8_t page) {
+  display->setTextAlignment(TEXT_ALIGN_CENTER);
+
+  uint8_t cw = 42;  // column width
+
+  for (uint8_t i=0; i<3; i++) {
+    uint8_t cx = cw * i + cw/2;
+
+    display->setFont(TomThumb4x6);
+    display->drawString(cx, 17, String(i));
+
+    display->setFont(ArialMT_Plain_10);
+    display->drawString(cx, 27, String(_params[INA3221_PARAM_LOADV_E].data.f[i]) + "v");
+    display->drawString(cx, 47, String(_params[INA3221_PARAM_CURRENT_E].data.f[i]) + "a");
+  }
+
 }

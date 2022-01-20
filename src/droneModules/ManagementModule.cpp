@@ -5,6 +5,7 @@
 #include "../DroneExecutionManager.h"
 #include "../OTAManager.h"
 #include "strings.h"
+#include "OLEDTomThumbFont.h"
 
 ManagementModule::ManagementModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm, DroneExecutionManager* dem, fs::FS &fs):
   DroneModule ( id, dmm, dlm, dem, fs )
@@ -217,5 +218,35 @@ void ManagementModule::loop() {
     _dlm->resetPublishedMessages();
 
     _lastRate = _lastLoop;
+  }
+}
+
+
+uint8_t ManagementModule::diagnosticDisplays() {
+  return 1;
+}
+
+void ManagementModule::drawDiagnosticDisplay(SSD1306Wire *display, uint8_t page) {
+  display->setTextAlignment(TEXT_ALIGN_LEFT);
+
+  if (page == 0)
+  {
+    // page 0
+    display->setFont(TomThumb4x6);
+    display->drawString(0, 17+4, "IP");
+    display->setFont(ArialMT_Plain_10);
+
+    for (uint8_t i=0; i<4; i++) {
+      display->drawString(32 + i*20, 17, String(_params[MANAGEMENT_PARAM_IP_E].data.uint8[i]));
+    }
+
+    // uptime
+    display->setFont(TomThumb4x6);
+    display->drawString(0, 34+4, "UPTIME");
+    display->setFont(ArialMT_Plain_10);
+    display->drawString(32, 34, String(millis()/1000) + "s");
+  } else {
+    // page 1
+    //display->drawString(2, 17, "page 1");
   }
 }

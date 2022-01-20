@@ -188,7 +188,7 @@ public:
   void respondWithInfo(AsyncResponseStream *response);
 
   virtual uint8_t diagnosticDisplays();
-  virtual void drawDiagnosticDisplay(SSD1306Wire *display, uint8_t page);
+  virtual void drawDiagnosticDisplay(SSD1306Wire *display);
 };
 
 

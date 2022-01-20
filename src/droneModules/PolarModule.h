@@ -65,7 +65,7 @@ Output parameters:
 
 */
 
-// @pub 8;f;5;target;Lon/Lat of target plus inner, mid and outer threshold radii
+// @pub 8;f;5;target;Lon/Lat of target
 #define POLAR_PARAM_TARGET         8
 #define POLAR_PARAM_TARGET_E       0
 
@@ -85,8 +85,11 @@ Output parameters:
 #define POLAR_PARAM_SAMPLES        12
 #define POLAR_PARAM_SAMPLES_E      4
 
+// @sub 13;f;3;radius;Inner, mid and outer target radii
+#define POLAR_PARAM_RADIUS         13
+#define POLAR_PARAM_RADIUS_E       5
 
-#define POLAR_PARAM_ENTRIES        5
+#define POLAR_PARAM_ENTRIES        6
 
 /*
 Subs
@@ -130,10 +133,12 @@ static const char POLAR_STR_POLAR[] PROGMEM = "Polar";
 class PolarModule:  public DroneModule {
 protected:
   float _polarVals[16]; // aggregated values per bin
+  float _startPos[2];   // where did we start this run
+  unsigned long _startTime;  // when we started the run
 
 public:
 
-  DepthModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm, DroneExecutionManager* dem, fs::FS &fs);
+  PolarModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm, DroneExecutionManager* dem, fs::FS &fs);
 
   static DEM_NAMESPACE* registerNamespace(DroneExecutionManager *dem);
   static void registerParams(DEM_NAMESPACE* ns, DroneExecutionManager *dem);

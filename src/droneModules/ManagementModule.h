@@ -87,6 +87,8 @@ public:
   virtual void setup();
   virtual void loop();
 
+  uint8_t diagnosticDisplays();
+  void drawDiagnosticDisplay(SSD1306Wire *display, uint8_t page);
 };
 
 #endif

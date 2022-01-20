@@ -56,6 +56,8 @@ public:
   void setup();
   void loop();
 
+  uint8_t diagnosticDisplays();
+  void drawDiagnosticDisplay(SSD1306Wire *display, uint8_t page);
 
 };
 

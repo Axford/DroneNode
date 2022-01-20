@@ -664,3 +664,12 @@ void DroneModule::respondWithInfo(AsyncResponseStream *response) {
   }
   response->print(F("\n"));
 }
+
+
+uint8_t DroneModule::diagnosticDisplays() {
+  return 0;
+}
+
+void DroneModule::drawDiagnosticDisplay(SSD1306Wire *display, uint8_t page) {
+
+}

@@ -87,6 +87,7 @@ static const char STRING_PRESSURE[] PROGMEM = "pressure";
 static const char STRING_PUBLISH[] PROGMEM = "publish";
 static const char STRING_PUBLISHRATE[] PROGMEM = "publishRate";
 static const char STRING_PWM_CHANNEL[] PROGMEM = "PWMChannel";
+static const char STRING_RADIUS[] PROGMEM = "radius";
 static const char STRING_RESET[] PROGMEM = "reset";
 static const char STRING_RESETCOUNT[] PROGMEM = "resetCount";
 static const char STRING_RIGHT[] PROGMEM = "right";

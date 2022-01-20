@@ -27,6 +27,11 @@ void DroneModuleManager::registerModule(DroneModule *m) {
   _modules.add(m);
 }
 
+DroneModule* DroneModuleManager::getModuleByIndex(uint8_t index) {
+  if (index >= _modules.size()) return NULL;
+  return _modules.get(index);
+}
+
 DroneModule* DroneModuleManager::getModuleById(uint8_t id) {
   DroneModule* m;
   for(int i = 0; i < _modules.size(); i++) {
@@ -165,7 +170,7 @@ void DroneModuleManager::loopModules() {
 
   // sleep a while?   ... only if wifi disabled
   if (_sleep > 0 && !_dlm->isWiFiEnabled()) {
-    delay(1);  // in case stuff needs to finish?  
+    delay(1);  // in case stuff needs to finish?
     esp_sleep_enable_timer_wakeup(_sleep * 1000);  // in uS
     esp_light_sleep_start();
     yield();

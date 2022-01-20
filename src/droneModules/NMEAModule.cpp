@@ -4,6 +4,7 @@
 #include "../pinConfig.h"
 #include "strings.h"
 #include "../navMath.h"
+#include "OLEDTomThumbFont.h"
 
 NMEAModule::NMEAModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm, DroneExecutionManager* dem, fs::FS &fs):
   DroneModule ( id, dmm, dlm, dem, fs )
@@ -271,4 +272,23 @@ void NMEAModule::loop() {
 
 void NMEAModule::setPort(Stream *port) {
   _port = port;
+}
+
+
+uint8_t NMEAModule::diagnosticDisplays() {
+  return 1;
+}
+
+void NMEAModule::drawDiagnosticDisplay(SSD1306Wire *display, uint8_t page) {
+  display->setTextAlignment(TEXT_ALIGN_LEFT);
+
+  // number of satellites
+  display->setFont(TomThumb4x6);
+  display->drawString(0, 17+4, "# Sat.");
+  display->setFont(ArialMT_Plain_10);
+
+  display->drawString(32, 17, String(_params[NMEA_PARAM_SATELLITES_E].data.uint8[0]));
+
+  
+
 }
