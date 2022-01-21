@@ -1,30 +1,56 @@
 /*
-
-@description  Sail polar calibration module
+@type          Polar
+@inherits      Drone
+@description   Sail polar calibration module
 
 @guide >>>
+<p>Sail on a variety of headings relative to the wind, measuring speed over ground
+relative to wind speed and aggregating results to build a polar plot of saiiing performance vs heading.</p>
 
-Sail on a variety of headings relative to the wind, measuring speed over ground
-relative to wind speed and aggregating results to build a polar plot of saiiing performance vs heading.
+<p>When in passthrough mode, will simply pass the Sailor heading onto its output (module chaining).  When active, will bypass the Sailor module and generate target headings.</p>
 
-When in passthrough mode, will simply pass the Sailor heading onto its output (module chaining).  When active, will bypass the Sailor module and generate target headings.
-
-In either mode, the Sailor module is left to generate the sheet command based on
-relative wind direction.  This may need a separate calibration process.
+<p>In either mode, the Sailor module is left to generate the sheet command based on
+relative wind direction.  This may need a separate calibration process.</p>
 
 
-Algorithm:
- - if outside the inner threshold - turn onto a heading that will orbit the target in a clockwise direction (configurable?) at distance of mid threshold, once speed over ground is over threshold, then select a new heading that goes from current location through the center of the target.
- - when crossing the inner threshold heading inward - record the start location and time.
- - when crossing the inner threshold heading outward - calculate effective heading and if close enough to target heading, then record the end location and time, compute the average speed and add to polar info.
+<p>Algorithm:</p>
+<ul>
+ <li>if outside the inner threshold - turn onto a heading that will orbit the target in a clockwise direction (configurable?) at distance of mid threshold, once speed over ground is over threshold, then select a new heading that goes from current location through the center of the target.
+ <li>when crossing the inner threshold heading inward - record the start location and time.
+ <li>when crossing the inner threshold heading outward - calculate effective heading and if close enough to target heading, then record the end location and time, compute the average speed and add to polar info.
 
- - if pass the outer threshold heading out, abort and switch to passthrough mode to allow
+ <li>if pass the outer threshold heading out, abort and switch to passthrough mode to allow
  nav/sailor modules to take over
- - if pass the outer threshold heading inward, switch to active mode
-
+ <li>if pass the outer threshold heading inward, switch to active mode
+</ul>
 <<<
 
-
+@config >>>
+Polar.new 22
+  name "Polar"
+  interval 1000
+  $location [@>50.9]
+  $wind [@>50.10]
+  windSpeed 1
+  $heading [@>12.16]
+  target -1.7454870 51.5418469
+  threshold -1 100
+  radius 10 20 50
+  mode 1
+  .publish "location"
+  .publish "SOG"
+  .publish "wind"
+  .publish "windSpeed"
+  .publish "heading"
+  .publish "adjHeading"
+  .publish "mode"
+  .publish "target"
+  .publish "threshold"
+  .publish "radius"
+  .publish "samples"
+  .publish "polar"
+.done
+<<<
 */
 
 #ifndef POLAR_MODULE_H
