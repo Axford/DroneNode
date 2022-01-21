@@ -12,25 +12,6 @@ When in passthrough mode, will simply pass the Sailor heading onto its output (m
 In either mode, the Sailor module is left to generate the sheet command based on
 relative wind direction.  This may need a separate calibration process.
 
-Subs
-- Wind speed
-- Wind angle
-- GPS location
-- GPS speed over ground
-- Heading from Sailor
-
-Input parameters:
- - Center of target region
- - Inner, mid and outer threshold radii
- - Mode - reset, passthrough, active
- - Min SOG for tack
- - Acceptable deviation from target heading
-
-Output parameters:
-- heading command
-- Polar plot (after processing)
-- Polar num samples per bin
-- Polar aggregated values
 
 Algorithm:
  - if outside the inner threshold - turn onto a heading that will orbit the target in a clockwise direction (configurable?) at distance of mid threshold, once speed over ground is over threshold, then select a new heading that goes from current location through the center of the target.
@@ -62,6 +43,7 @@ Input parameters:
 Output parameters:
 - Polar plot (after processing)
 - Polar num samples per bin
+- Adjusted heading
 
 */
 
@@ -89,7 +71,11 @@ Output parameters:
 #define POLAR_PARAM_RADIUS         13
 #define POLAR_PARAM_RADIUS_E       5
 
-#define POLAR_PARAM_ENTRIES        6
+// @sub 14;f;2;adjHeading;Adjusted heading - either passthrough of <b>Heading</b> or generated heading depending on mode
+#define POLAR_PARAM_ADJ_HEADING    14
+#define POLAR_PARAM_ADJ_HEADING_E  6
+
+#define POLAR_PARAM_ENTRIES        7
 
 /*
 Subs
@@ -120,13 +106,25 @@ Subs
 #define POLAR_SUB_WIND_SPEED_ADDR    37
 #define POLAR_SUB_WIND_SPEED_E       3
 
-// @sub 38;39;f;1;Target heading from Sailor and/or generated heading
+// @sub 38;39;f;1;Target heading from Sailor
 #define POLAR_SUB_HEADING            38
 #define POLAR_SUB_HEADING_ADDR       39
 #define POLAR_SUB_HEADING_E          4
 
 #define POLAR_SUBS                   5
 
+
+enum {
+  POLAR_MODE_PASSTHROUGH,
+  POLAR_MODE_ACTIVE,
+  POLAR_MODE_RESET
+} POLAR_MODE;
+
+enum {
+  POLAR_REGION_OUT,
+  POLAR_REGION_MID,
+  POLAR_REGION_IN
+} POLAR_REGION;
 
 static const char POLAR_STR_POLAR[] PROGMEM = "Polar";
 
@@ -135,7 +133,7 @@ protected:
   float _polarVals[16]; // aggregated values per bin
   float _startPos[2];   // where did we start this run
   unsigned long _startTime;  // when we started the run
-
+  uint8_t  _region;
 public:
 
   PolarModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm, DroneExecutionManager* dem, fs::FS &fs);
@@ -143,9 +141,16 @@ public:
   static DEM_NAMESPACE* registerNamespace(DroneExecutionManager *dem);
   static void registerParams(DEM_NAMESPACE* ns, DroneExecutionManager *dem);
 
-  virtual void setup();
+  uint8_t polarIndexForAngle(float ang);
 
+  void updatePolar();  // recalc from samples
+
+  void setup();
+  void update();
   void loop();
+
+  void loopActive();
+  void loopReset();
 
 };
 
