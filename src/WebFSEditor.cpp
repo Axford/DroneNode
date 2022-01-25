@@ -13,6 +13,7 @@ WebFSEditor::WebFSEditor(fs::FS &fs, boolean &doLoop):
 // list all of the files, if ishtml=true, return html else json
 String WebFSEditor::listFiles(bool ishtml) {
   _doLoop = false;
+  xSemaphoreTake( xSPISemaphore, portMAX_DELAY );
   String returnText = "";
   Serial.println("Listing files stored on _fs");
   File root = _fs.open("/");
@@ -43,6 +44,7 @@ String WebFSEditor::listFiles(bool ishtml) {
   }
   root.close();
   foundfile.close();
+  //xSemaphoreGive( xSPISemaphore );
   _doLoop = true;
   return returnText;
 }
@@ -91,9 +93,7 @@ void WebFSEditor::configureWebServer(AsyncWebServer &server) {
 
   // run handleUpload function when any file is uploaded
   server.onFileUpload([&](AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final) {
-    _doLoop = false;
     handleUpload(request, filename, index, data, len, final);
-    _doLoop = true;
   });
 
   // visiting this page will cause you to be logged out
@@ -159,6 +159,7 @@ void WebFSEditor::configureWebServer(AsyncWebServer &server) {
     String logmessage = "Client:" + request->client()->remoteIP().toString() + " " + request->url();
     if (checkUserWebAuth(request)) {
       _doLoop = false;
+      xSemaphoreTake( xSPISemaphore, portMAX_DELAY );
       logmessage += " Auth: Success";
       Serial.println(logmessage);
 
@@ -190,6 +191,7 @@ void WebFSEditor::configureWebServer(AsyncWebServer &server) {
         request->send(400, "text/plain", "ERROR: name and action params required");
       }
       _doLoop = true;
+      //xSemaphoreGive( xSPISemaphore );
     } else {
       logmessage += " Auth: Failed";
       Serial.println(logmessage);
@@ -222,6 +224,9 @@ void WebFSEditor::handleUpload(AsyncWebServerRequest *request, String filename, 
   // make sure authenticated before allowing upload
   if (checkUserWebAuth(request)) {
     _doLoop = false;
+    //Serial.println("take 2");
+    xSemaphoreTake( xSPISemaphore, portMAX_DELAY );
+    //Serial.println("taken 2");
     String logmessage = "Client:" + request->client()->remoteIP().toString() + " " + request->url();
     Serial.println(logmessage);
 
@@ -248,6 +253,8 @@ void WebFSEditor::handleUpload(AsyncWebServerRequest *request, String filename, 
     }
 
     _doLoop = true;
+    //Serial.println("give 2");
+    //xSemaphoreGive( xSPISemaphore );
   } else {
     Serial.println("Auth: Failed");
     return request->requestAuthentication();

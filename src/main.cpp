@@ -88,6 +88,10 @@ const char* QUERY_PARAM_APMODE = "APMode";
 const char* QUERY_PARAM_SSID = "ssid";
 const char* QUERY_PARAM_PASSWORD = "password";
 
+// semaphore used to avoid conflicts on SPI bus between filesystem and telemetry radio
+// caused by async webserver
+SemaphoreHandle_t xSPISemaphore;
+
 #ifdef INC_WEB_SERVER
 void setupWebServer() {
   Log.noticeln(F("[] Setup web server..."));
@@ -142,6 +146,7 @@ void setupWebServer() {
 
   fsEditor.httpuser = "admin";
   fsEditor.httppassword = "admin";
+  fsEditor.xSPISemaphore = xSPISemaphore;
   fsEditor.configureWebServer(server);
 
   DefaultHeaders::Instance().addHeader("Access-Control-Allow-Origin", "*");
@@ -252,6 +257,11 @@ void setup() {
   Log.begin(LOG_LEVEL_VERBOSE, &Serial);
 
   delay(2500); // to allow serial to reconnect after programming
+
+  // create and give SPI Sempahore
+  xSPISemaphore = xSemaphoreCreateBinary();
+  //xSemaphoreGive(xSPISemaphore);
+
 
   /*
   // direct log output to file in SPIFFS
@@ -433,6 +443,12 @@ void loop() {
   }
 
   if (!OTAMgr.isUpdating && doLoop) {
+
+    // take SPI semaphore
+    //Serial.println("take 1");
+    //xSemaphoreTake( xSPISemaphore, portMAX_DELAY );
+    //Serial.println("taken 1");
+
     dmm->watchdog();
 
     yield();
@@ -454,6 +470,10 @@ void loop() {
   } else {
     digitalWrite(PIN_LED, HIGH);
   }
+
+  // return SPI semaphore
+  Serial.println("give 1");
+  xSemaphoreGive( xSPISemaphore );
 
   OTAMgr.loop();
 }

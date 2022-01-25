@@ -14,6 +14,7 @@ public:
   boolean &_doLoop;
   String httpuser;           // username to access web admin
   String httppassword;       // password to access web admin
+  SemaphoreHandle_t xSPISemaphore;
 
   WebFSEditor(fs::FS &fs, boolean &doLoop);
 
