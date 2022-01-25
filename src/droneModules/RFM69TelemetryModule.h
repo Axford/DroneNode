@@ -1,5 +1,17 @@
 /*
 
+@type RFM69Telemetry
+@description Manages DroneLink telemetry using an RFM69HW radio module
+
+@config >>>
+RFM69Telemetry.new 3
+  name "RFM69"
+  status 1  // enable
+  .sub [@>0.0]  // subscribe to and transmit all traffic on this node
+  .publish "RSSI"
+.done
+<<<
+
 Publishes received messages
 Re-transmits messages it has been subscribed to
 Handles packet framing, sync, etc
@@ -26,10 +38,15 @@ byte    = value
 [0...n] = DroneLinkMsg raw data
 */
 
+// @pub 8;f;1;RSSI;RSSI of received packets
 #define RFM69_TELEMETRY_PARAM_RSSI           8
 #define RFM69_TELEMETRY_PARAM_RSSI_E         0
 
-#define RFM69_TELEMETRY_PARAM_ENTRIES        1
+// @pub 9;u32;3;packets;Packet counters for sent, received and rejected
+#define RFM69_TELEMETRY_PARAM_PACKETS        9
+#define RFM69_TELEMETRY_PARAM_PACKETS_E      1
+
+#define RFM69_TELEMETRY_PARAM_ENTRIES        2
 
 
 #define RFM69_TELEMETRY_NETWORKID     66  //the same on all nodes that talk to each other
@@ -47,6 +64,8 @@ protected:
   DroneLinkMsg _receivedMsg;
   uint32_t _packetsReceived;
   uint32_t _packetsRejected;
+  uint32_t _packetsSent;
+  unsigned long _packetsTimer;
   FastCRC8 _CRC8;
   uint8_t _encryptKey[16];
   uint8_t _buffer[RH_RF69_MAX_MESSAGE_LEN];

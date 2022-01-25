@@ -13,6 +13,9 @@ RFM69TelemetryModule::RFM69TelemetryModule(uint8_t id, DroneModuleManager* dmm, 
    setTypeName(FPSTR(RFM69_TELEMETRY_STR_RFM69_TELEMETRY));
    _packetsReceived = 0;
    _packetsRejected = 0;
+   _packetsSent = 0;
+   _packetsTimer = 0;
+
    for (uint8_t i=0; i<sizeof(_encryptKey); i++) {
      _encryptKey[i] = i + 10;
    }
@@ -29,6 +32,13 @@ RFM69TelemetryModule::RFM69TelemetryModule(uint8_t id, DroneModuleManager* dmm, 
    setParamName(FPSTR(STRING_RSSI), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 4);
 
+   param = &_params[RFM69_TELEMETRY_PARAM_PACKETS_E];
+   param->param = RFM69_TELEMETRY_PARAM_PACKETS;
+   setParamName(FPSTR(STRING_PACKETS), param);
+   param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_UINT32_T, 12);
+   param->data.uint32[0] = 0;
+   param->data.uint32[1] = 0;
+   param->data.uint32[2] = 0;
 }
 
 DEM_NAMESPACE* RFM69TelemetryModule::registerNamespace(DroneExecutionManager *dem) {
@@ -103,6 +113,8 @@ void RFM69TelemetryModule::handleLinkMessage(DroneLinkMsg *msg) {
     //_radio->send(255, (uint8_t*)_buffer, transmitLength);
     _radio->send(_buffer, transmitLength);
     _radio->waitPacketSent(100);
+
+    _packetsSent++;
     //Serial.println("[RFM69.hLM] ok");
   } else {
     //Serial.print("RFM69: Filtered: ");
@@ -201,5 +213,17 @@ void RFM69TelemetryModule::loop() {
       // receive failed
       Log.warningln("[RFM.l] Receive failed");
     }
+  }
+
+
+  // update and publish packet counters
+  if (millis() > _packetsTimer + 5000) {
+
+    _params[RFM69_TELEMETRY_PARAM_PACKETS_E].data.uint32[0] = _packetsSent;
+    _params[RFM69_TELEMETRY_PARAM_PACKETS_E].data.uint32[1] = _packetsReceived;
+    _params[RFM69_TELEMETRY_PARAM_PACKETS_E].data.uint32[2] = _packetsRejected;
+
+    publishParamEntry(&_params[RFM69_TELEMETRY_PARAM_PACKETS_E]);
+    _packetsTimer = millis();
   }
 }

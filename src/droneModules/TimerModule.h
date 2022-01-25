@@ -1,7 +1,9 @@
 /*
 
-Emits a configured message on a set interval
+@type Timer
+@description Emits a configured message on a set interval (WIP)
 
+// TODO - rework!!!
 */
 #ifndef TIMER_MODULE_H
 #define TIMER_MODULE_H

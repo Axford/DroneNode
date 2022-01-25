@@ -1,11 +1,14 @@
 /*
 
-Speed control
-   * Sub to distance (from Nav)
-   * Param for speed limits
-   * Param for distance threshold at which to start slowing down
-   * Generate speed output to feed TankSteer, etc
+@type         SpeedControl
+@description  Convert a distance value (meters) into a speed control value (0..1)
 
+@guide >>>
+   <li> Sub to distance (from Nav)
+   <li> Param for speed limits
+   <li> Param for distance threshold at which to start slowing down
+   <li> Generate speed output to feed TankSteer, etc
+<<<
 */
 #ifndef SPEED_CONTROL_MODULE_H
 #define SPEED_CONTROL_MODULE_H
