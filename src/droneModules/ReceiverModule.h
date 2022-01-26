@@ -17,6 +17,14 @@ Receiver.new 14
 .done
 <<<
 
+@guide >>>
+<p>PWM values from an RC receiver are decoded using interrupt routines, then converted
+and published as values (<b>value1, value2</b>, etc) in range -1..1 on a regular <b>interval</b>.  Output values can be subscribed to from other modules (e.g. Servo or TankSteer). </p>
+
+<p>The valid range of PWM input values (i.e. pulse timings in ms) are defined by the <b>limits</b> parameter.</p>
+
+<p>Deadman protection is triggered after 5 seconds of no valid PWM signals and all output values are set to zero.</p>
+<<<
 
 */
 #ifndef RECEIVER_MODULE_H
