@@ -2,11 +2,18 @@
 
 @type           Receiver
 @inherits       Drone
-@description    Manages a PWM servo channel
+@description    Reads PWM values from an RC receiver
 
 @config >>>
-Receiver.new 13
-  pins OUT0_0 OUT0_1
+Receiver.new 14
+  name "Receiver"
+  interval 200
+  pins IN0_0 IN0_1
+  limits 980 1020
+  //.publish "pins"
+  .publish "value1"
+  .publish "value2"
+  .publish "output"
 .done
 <<<
 
@@ -30,11 +37,15 @@ Receiver.new 13
 #define RECEIVER_PARAM_VALUE2       12
 #define RECEIVER_PARAM_VALUE2_E     2
 
+// @pub 15;u32;2;limits;The PWM timing min and max limits (default 1000 .. 2000)
+#define RECEIVER_PARAM_LIMITS       15
+#define RECEIVER_PARAM_LIMITS_E     3
+
 // @pub 20;u32;2;output;Raw PWM timing values for each channel
 #define RECEIVER_PARAM_OUTPUT       20
-#define RECEIVER_PARAM_OUTPUT_E     3
+#define RECEIVER_PARAM_OUTPUT_E     4
 
-#define RECEIVER_PARAM_ENTRIES      4
+#define RECEIVER_PARAM_ENTRIES      5
 
 
 // subs
@@ -59,6 +70,9 @@ public:
 
   void setup();
   void update();
+
+  float rawToValue(uint8_t chan);
+
   void loop();
 };
 

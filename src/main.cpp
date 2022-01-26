@@ -472,7 +472,7 @@ void loop() {
   }
 
   // return SPI semaphore
-  Serial.println("give 1");
+  //Serial.println("give 1");
   xSemaphoreGive( xSPISemaphore );
 
   OTAMgr.loop();

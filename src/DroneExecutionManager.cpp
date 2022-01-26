@@ -22,6 +22,7 @@
 #include "droneModules/NunchuckJoystickModule.h"
 #include "droneModules/PolarModule.h"
 #include "droneModules/ProaModule.h"
+#include "droneModules/ReceiverModule.h"
 #include "droneModules/RFM69TelemetryModule.h"
 #include "droneModules/SailorModule.h"
 #include "droneModules/ServoModule.h"
@@ -163,6 +164,7 @@ DroneExecutionManager::DroneExecutionManager(DroneModuleManager *dmm, DroneLinkM
   ns = NunchuckJoystick::registerNamespace(this); NunchuckJoystick::registerParams(ns, this);
   ns = PolarModule::registerNamespace(this); PolarModule::registerParams(ns, this);
   ns = ProaModule::registerNamespace(this); ProaModule::registerParams(ns, this);
+  ns = ReceiverModule::registerNamespace(this); ReceiverModule::registerParams(ns, this);
   ns = RFM69TelemetryModule::registerNamespace(this); RFM69TelemetryModule::registerParams(ns, this);
   ns = SailorModule::registerNamespace(this); SailorModule::registerParams(ns, this);
   ns = ServoModule::registerNamespace(this); ServoModule::registerParams(ns, this);
@@ -1449,6 +1451,8 @@ boolean DroneExecutionManager::mod_constructor(DEM_INSTRUCTION_COMPILED* instr, 
       newMod = new PolarModule(id, _dmm, _dlm, this, _fs);
     } else if (strcmp_P(instr->ns->name, PROA_STR_PROA) == 0) {
       newMod = new ProaModule(id, _dmm, _dlm, this, _fs);
+    } else if (strcmp_P(instr->ns->name, RECEIVER_STR_RECEIVER) == 0) {
+      newMod = new ReceiverModule(id, _dmm, _dlm, this, _fs);
     } else if (strcmp_P(instr->ns->name, RFM69_TELEMETRY_STR_RFM69_TELEMETRY) == 0) {
       newMod = new RFM69TelemetryModule(id, _dmm, _dlm, this, _fs);
     } else if (strcmp_P(instr->ns->name, SAILOR_STR_SAILOR) == 0) {
