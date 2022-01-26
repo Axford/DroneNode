@@ -6,11 +6,18 @@
 // globals for use in ISRs
 uint8_t _globalReceiverPins[2];
 unsigned long _globalReceiverRawTimers[2];
+unsigned long _globalLastReceiverSignal;
 
 ReceiverModule::ReceiverModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm, DroneExecutionManager* dem, fs::FS &fs):
   DroneModule ( id, dmm, dlm, dem, fs )
  {
    setTypeName(FPSTR(RECEIVER_STR_RECEIVER));
+
+   _globalLastReceiverSignal = 0;
+   _globalReceiverPins[0] = 0;
+   _globalReceiverPins[1] = 0;
+   _globalReceiverRawTimers[0] = 0;
+   _globalReceiverRawTimers[1] = 0;
 
    // subs
    initSubs(RECEIVER_SUBS);
@@ -84,6 +91,7 @@ void IRAM_ATTR ReceiverModule::ISR1() {
   } else {
     // falling
     _globalReceiverRawTimers[0] = micros() - _startTime;
+    _globalLastReceiverSignal = millis();
   }
 }
 
@@ -97,6 +105,7 @@ void IRAM_ATTR ReceiverModule::ISR2() {
   } else {
     // falling
     _globalReceiverRawTimers[1] = micros() - _startTime;
+    _globalLastReceiverSignal = millis();
   }
 }
 
@@ -149,15 +158,16 @@ void ReceiverModule::loop() {
 
 
   // calculate and publish new output values (in range -1..1)
-  float v;
+  float v = 0;
+  boolean validSignal = (millis() - _globalLastReceiverSignal) < 5000;
 
   // channel 1
-  v = rawToValue(0);
+  v = validSignal ? rawToValue(0) : 0;
   updateAndPublishParam(&_params[RECEIVER_PARAM_VALUE1_E], (uint8_t*)&v, sizeof(v));
 
 
   // channel 2
-  v = rawToValue(1);
+  v = validSignal ? rawToValue(1) : 0;
   updateAndPublishParam(&_params[RECEIVER_PARAM_VALUE2_E], (uint8_t*)&v, sizeof(v));
 
 

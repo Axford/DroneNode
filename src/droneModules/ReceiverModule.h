@@ -9,7 +9,7 @@ Receiver.new 14
   name "Receiver"
   interval 200
   pins IN0_0 IN0_1
-  limits 980 1020
+  limits 980 2020
   //.publish "pins"
   .publish "value1"
   .publish "value2"
@@ -57,6 +57,7 @@ static const char RECEIVER_STR_RECEIVER[] PROGMEM = "Receiver";
 
 class ReceiverModule:  public DroneModule {
 protected:
+  unsigned long _lastSignal;
 
 public:
 
