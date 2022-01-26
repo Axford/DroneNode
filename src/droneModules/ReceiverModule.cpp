@@ -4,8 +4,8 @@
 #include "strings.h"
 
 // globals for use in ISRs
-uint8_t _globalReceiverPins[2];
-unsigned long _globalReceiverRawTimers[2];
+uint8_t _globalReceiverPins[4];
+unsigned long _globalReceiverRawTimers[4];
 unsigned long _globalLastReceiverSignal;
 
 ReceiverModule::ReceiverModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm, DroneExecutionManager* dem, fs::FS &fs):
@@ -22,6 +22,34 @@ ReceiverModule::ReceiverModule(uint8_t id, DroneModuleManager* dmm, DroneLinkMan
    // subs
    initSubs(RECEIVER_SUBS);
 
+   DRONE_PARAM_SUB *sub;
+
+   sub = &_subs[RECEIVER_SUB_INPUT1_E];
+   sub->addrParam = RECEIVER_SUB_INPUT1_ADDR;
+   sub->param.param = RECEIVER_SUB_INPUT1;
+   setParamName(FPSTR(STRING_INPUT1), &sub->param);
+
+   sub = &_subs[RECEIVER_SUB_INPUT2_E];
+   sub->addrParam = RECEIVER_SUB_INPUT2_ADDR;
+   sub->param.param = RECEIVER_SUB_INPUT2;
+   setParamName(FPSTR(STRING_INPUT2), &sub->param);
+
+   sub = &_subs[RECEIVER_SUB_INPUT3_E];
+   sub->addrParam = RECEIVER_SUB_INPUT3_ADDR;
+   sub->param.param = RECEIVER_SUB_INPUT3;
+   setParamName(FPSTR(STRING_INPUT3), &sub->param);
+
+   sub = &_subs[RECEIVER_SUB_INPUT4_E];
+   sub->addrParam = RECEIVER_SUB_INPUT4_ADDR;
+   sub->param.param = RECEIVER_SUB_INPUT4;
+   setParamName(FPSTR(STRING_INPUT4), &sub->param);
+
+   sub = &_subs[RECEIVER_SUB_SWITCH_E];
+   sub->addrParam = RECEIVER_SUB_SWITCH_ADDR;
+   sub->param.param = RECEIVER_SUB_SWITCH;
+   setParamName(FPSTR(STRING_SWITCH), &sub->param);
+   sub->param.data.f[0] = 1; // default to active mode
+
 
    // pubs
    initParams(RECEIVER_PARAM_ENTRIES);
@@ -31,9 +59,11 @@ ReceiverModule::ReceiverModule(uint8_t id, DroneModuleManager* dmm, DroneLinkMan
    param = &_params[RECEIVER_PARAM_PINS_E];
    param->param = RECEIVER_PARAM_PINS;
    setParamName(FPSTR(STRING_PINS), param);
-   param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_UINT8_T, 2);
+   param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_UINT8_T, 4);
    _params[RECEIVER_PARAM_PINS_E].data.uint8[0] = 0;
    _params[RECEIVER_PARAM_PINS_E].data.uint8[1] = 0;
+   _params[RECEIVER_PARAM_PINS_E].data.uint8[2] = 0;
+   _params[RECEIVER_PARAM_PINS_E].data.uint8[3] = 0;
 
 
    param = &_params[RECEIVER_PARAM_VALUE1_E];
@@ -46,6 +76,16 @@ ReceiverModule::ReceiverModule(uint8_t id, DroneModuleManager* dmm, DroneLinkMan
    setParamName(FPSTR(STRING_VALUE2), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 4);
 
+   param = &_params[RECEIVER_PARAM_VALUE3_E];
+   param->param = RECEIVER_PARAM_VALUE3;
+   setParamName(FPSTR(STRING_VALUE3), param);
+   param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 4);
+
+   param = &_params[RECEIVER_PARAM_VALUE4_E];
+   param->param = RECEIVER_PARAM_VALUE4;
+   setParamName(FPSTR(STRING_VALUE4), param);
+   param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 4);
+
    param = &_params[RECEIVER_PARAM_LIMITS_E];
    param->param = RECEIVER_PARAM_LIMITS;
    setParamName(FPSTR(STRING_LIMITS), param);
@@ -53,10 +93,10 @@ ReceiverModule::ReceiverModule(uint8_t id, DroneModuleManager* dmm, DroneLinkMan
    param->data.uint32[0] = 1000;
    param->data.uint32[1] = 2000;
 
-   param = &_params[RECEIVER_PARAM_OUTPUT_E];
-   param->param = RECEIVER_PARAM_OUTPUT;
-   setParamName(FPSTR(STRING_OUTPUT), param);
-   param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_UINT32_T, 8);
+   param = &_params[RECEIVER_PARAM_INPUT_E];
+   param->param = RECEIVER_PARAM_INPUT;
+   setParamName(FPSTR(STRING_INPUT), param);
+   param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_UINT32_T, 16);
 
 }
 
@@ -79,6 +119,16 @@ void ReceiverModule::registerParams(DEM_NAMESPACE* ns, DroneExecutionManager *de
   dem->registerCommand(ns, STRING_PINS, DRONE_LINK_MSG_TYPE_UINT8_T, ph);
   dem->registerCommand(ns, STRING_LIMITS, DRONE_LINK_MSG_TYPE_UINT32_T, ph);
 
+  dem->registerCommand(ns, STRING_INPUT1, DRONE_LINK_MSG_TYPE_FLOAT, ph);
+  dem->registerCommand(ns, PSTR("$input1"), DRONE_LINK_MSG_TYPE_FLOAT, pha);
+  dem->registerCommand(ns, STRING_INPUT2, DRONE_LINK_MSG_TYPE_FLOAT, ph);
+  dem->registerCommand(ns, PSTR("$input2"), DRONE_LINK_MSG_TYPE_FLOAT, pha);
+  dem->registerCommand(ns, STRING_INPUT3, DRONE_LINK_MSG_TYPE_FLOAT, ph);
+  dem->registerCommand(ns, PSTR("$input3"), DRONE_LINK_MSG_TYPE_FLOAT, pha);
+  dem->registerCommand(ns, STRING_INPUT4, DRONE_LINK_MSG_TYPE_FLOAT, ph);
+  dem->registerCommand(ns, PSTR("$input4"), DRONE_LINK_MSG_TYPE_FLOAT, pha);
+  dem->registerCommand(ns, STRING_SWITCH, DRONE_LINK_MSG_TYPE_FLOAT, ph);
+  dem->registerCommand(ns, PSTR("$switch"), DRONE_LINK_MSG_TYPE_FLOAT, pha);
 }
 
 
@@ -109,6 +159,32 @@ void IRAM_ATTR ReceiverModule::ISR2() {
   }
 }
 
+void IRAM_ATTR ReceiverModule::ISR3() {
+  static unsigned long _startTime = 0;
+
+  if (digitalRead(_globalReceiverPins[2])) {
+    // rising
+    _startTime = micros();
+  } else {
+    // falling
+    _globalReceiverRawTimers[2] = micros() - _startTime;
+    _globalLastReceiverSignal = millis();
+  }
+}
+
+void IRAM_ATTR ReceiverModule::ISR4() {
+  static unsigned long _startTime = 0;
+
+  if (digitalRead(_globalReceiverPins[3])) {
+    // rising
+    _startTime = micros();
+  } else {
+    // falling
+    _globalReceiverRawTimers[3] = micros() - _startTime;
+    _globalLastReceiverSignal = millis();
+  }
+}
+
 
 void ReceiverModule::setup() {
   DroneModule::setup();
@@ -119,7 +195,7 @@ void ReceiverModule::setup() {
     pinMode(_params[RECEIVER_PARAM_PINS_E].data.uint8[0], INPUT);
     attachInterrupt(_params[RECEIVER_PARAM_PINS_E].data.uint8[0], ISR1, CHANGE);
   } else {
-    Log.errorln(F("Undefined pin 0 %d"), _params[RECEIVER_PARAM_PINS_E].data.uint8[0]);
+    //Log.errorln(F("Undefined pin 0 %d"), _params[RECEIVER_PARAM_PINS_E].data.uint8[0]);
   }
 
   if (_params[RECEIVER_PARAM_PINS_E].data.uint8[1] > 0) {
@@ -129,7 +205,23 @@ void ReceiverModule::setup() {
     attachInterrupt(_params[RECEIVER_PARAM_PINS_E].data.uint8[1], ISR2, CHANGE);
 
   } else {
-    Log.errorln(F("Undefined pin 1 %d"), _params[RECEIVER_PARAM_PINS_E].data.uint8[1]);
+    //Log.errorln(F("Undefined pin 1 %d"), _params[RECEIVER_PARAM_PINS_E].data.uint8[1]);
+  }
+
+  if (_params[RECEIVER_PARAM_PINS_E].data.uint8[2] > 0) {
+    _globalReceiverPins[2] = _params[RECEIVER_PARAM_PINS_E].data.uint8[2];
+    _globalReceiverRawTimers[2] = 0;
+    pinMode(_params[RECEIVER_PARAM_PINS_E].data.uint8[2], INPUT);
+    attachInterrupt(_params[RECEIVER_PARAM_PINS_E].data.uint8[2], ISR3, CHANGE);
+
+  }
+
+  if (_params[RECEIVER_PARAM_PINS_E].data.uint8[3] > 0) {
+    _globalReceiverPins[3] = _params[RECEIVER_PARAM_PINS_E].data.uint8[3];
+    _globalReceiverRawTimers[3] = 0;
+    pinMode(_params[RECEIVER_PARAM_PINS_E].data.uint8[3], INPUT);
+    attachInterrupt(_params[RECEIVER_PARAM_PINS_E].data.uint8[3], ISR4, CHANGE);
+
   }
 }
 
@@ -154,21 +246,48 @@ void ReceiverModule::loop() {
   DroneModule::loop();
 
   // raw values
-  updateAndPublishParam(&_params[RECEIVER_PARAM_OUTPUT_E], (uint8_t*)&_globalReceiverRawTimers, sizeof(_globalReceiverRawTimers));
+  updateAndPublishParam(&_params[RECEIVER_PARAM_INPUT_E], (uint8_t*)&_globalReceiverRawTimers, sizeof(_globalReceiverRawTimers));
 
+  boolean passthroughMode = _subs[RECEIVER_SUB_SWITCH_E].param.data.f[0] < 0.5;
 
-  // calculate and publish new output values (in range -1..1)
   float v = 0;
+
   boolean validSignal = (millis() - _globalLastReceiverSignal) < 5000;
 
+  // calculate and publish new output values (in range -1..1)
+
   // channel 1
-  v = validSignal ? rawToValue(0) : 0;
+  if (passthroughMode && _subs[RECEIVER_SUB_INPUT1_E].addr.channel > 0) {
+    v = _subs[RECEIVER_SUB_INPUT1_E].param.data.f[0];
+  } else {
+    v = validSignal ? rawToValue(0) : 0;
+  }
   updateAndPublishParam(&_params[RECEIVER_PARAM_VALUE1_E], (uint8_t*)&v, sizeof(v));
 
-
   // channel 2
-  v = validSignal ? rawToValue(1) : 0;
+  if (passthroughMode && _subs[RECEIVER_SUB_INPUT2_E].addr.channel > 0) {
+    v = _subs[RECEIVER_SUB_INPUT2_E].param.data.f[0];
+  } else {
+    v = validSignal ? rawToValue(1) : 0;
+  }
   updateAndPublishParam(&_params[RECEIVER_PARAM_VALUE2_E], (uint8_t*)&v, sizeof(v));
+
+  // channel 3
+  if (passthroughMode && _subs[RECEIVER_SUB_INPUT3_E].addr.channel > 0) {
+    v = _subs[RECEIVER_SUB_INPUT3_E].param.data.f[0];
+  } else {
+    v = validSignal ? rawToValue(2) : 0;
+  }
+  updateAndPublishParam(&_params[RECEIVER_PARAM_VALUE3_E], (uint8_t*)&v, sizeof(v));
+
+  // channel 4
+  if (passthroughMode && _subs[RECEIVER_SUB_INPUT4_E].addr.channel > 0) {
+    v = _subs[RECEIVER_SUB_INPUT4_E].param.data.f[0];
+  } else {
+    v = validSignal ? rawToValue(3) : 0;
+  }
+  updateAndPublishParam(&_params[RECEIVER_PARAM_VALUE4_E], (uint8_t*)&v, sizeof(v));
+
 
 
 }
