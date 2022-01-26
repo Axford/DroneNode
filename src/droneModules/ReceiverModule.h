@@ -76,23 +76,23 @@ and published as values (<b>value1, value2</b>, etc) in range -1..1 on a regular
 
 // subs
 
-// @sub 21;22;f;1;input1;Subscription for channel 1 (used in passthrough mode)
+// @sub 21;25;f;1;input1;Subscription for channel 1 (used in passthrough mode)
 #define RECEIVER_SUB_INPUT1            21
-#define RECEIVER_SUB_INPUT1_ADDR       22
+#define RECEIVER_SUB_INPUT1_ADDR       25
 #define RECEIVER_SUB_INPUT1_E          0
 
-// @sub 23;24;f;1;input2;Subscription for channel 2 (used in passthrough mode)
-#define RECEIVER_SUB_INPUT2            23
-#define RECEIVER_SUB_INPUT2_ADDR       24
+// @sub 22;26;f;1;input2;Subscription for channel 2 (used in passthrough mode)
+#define RECEIVER_SUB_INPUT2            22
+#define RECEIVER_SUB_INPUT2_ADDR       26
 #define RECEIVER_SUB_INPUT2_E          1
 
-// @sub 25;26;f;1;input3;Subscription for channel 3 (used in passthrough mode)
-#define RECEIVER_SUB_INPUT3            25
-#define RECEIVER_SUB_INPUT3_ADDR       26
+// @sub 23;27;f;1;input3;Subscription for channel 3 (used in passthrough mode)
+#define RECEIVER_SUB_INPUT3            23
+#define RECEIVER_SUB_INPUT3_ADDR       27
 #define RECEIVER_SUB_INPUT3_E          2
 
-// @sub 27;28;f;1;input4;Subscription for channel 4 (used in passthrough mode)
-#define RECEIVER_SUB_INPUT4            27
+// @sub 24;28;f;1;input4;Subscription for channel 4 (used in passthrough mode)
+#define RECEIVER_SUB_INPUT4            24
 #define RECEIVER_SUB_INPUT4_ADDR       28
 #define RECEIVER_SUB_INPUT4_E          3
 
