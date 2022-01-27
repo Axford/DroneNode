@@ -417,7 +417,7 @@ void DroneModule::handleLinkMessage(DroneLinkMsg *msg) {
   //msg->print();
 
   // handle subs
-  if (_enabled) {
+  if (_enabled || !_setupDone) {
     for (uint8_t i=0; i<_numSubs; i++) {
       if (msg->sameAddress(&_subs[i].addr)) {
 
@@ -443,7 +443,7 @@ void DroneModule::handleLinkMessage(DroneLinkMsg *msg) {
 
   if (!handleManagementMessage(msg)) {
 
-    if (_enabled) {
+    if (_enabled || !_setupDone) {
       // handle output params
       for (uint8_t i=0; i<_numParamEntries; i++) {
         if (msg->param() == _params[i].param) {
