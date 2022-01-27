@@ -90,6 +90,14 @@ NMEAModule::NMEAModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dl
    _params[NMEA_PARAM_FIX_E].data.f[0] = 0;
    _params[NMEA_PARAM_FIX_E].data.f[1] = 0;
    _params[NMEA_PARAM_FIX_E].data.f[2] = 0;
+
+   param = &_params[NMEA_PARAM_FOLLOWME_E];
+   param->param = NMEA_PARAM_FOLLOWME;
+   setParamName(FPSTR(STRING_FOLLOWME), param);
+   _params[NMEA_PARAM_FOLLOWME_E].paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_FLOAT, 12);
+   _params[NMEA_PARAM_FOLLOWME_E].data.f[0] = 0;
+   _params[NMEA_PARAM_FOLLOWME_E].data.f[1] = 0;
+   _params[NMEA_PARAM_FOLLOWME_E].data.f[2] = 5;
 }
 
 
@@ -114,6 +122,7 @@ void NMEAModule::registerParams(DEM_NAMESPACE* ns, DroneExecutionManager *dem) {
   dem->registerCommand(ns, STRING_PORT, DRONE_LINK_MSG_TYPE_UINT8_T, ph);
   dem->registerCommand(ns, STRING_BAUD, DRONE_LINK_MSG_TYPE_UINT32_T, ph);
   dem->registerCommand(ns, STRING_FIX, DRONE_LINK_MSG_TYPE_FLOAT, ph);
+  dem->registerCommand(ns, STRING_FOLLOWME, DRONE_LINK_MSG_TYPE_FLOAT, ph);
 
 }
 
@@ -240,6 +249,10 @@ void NMEAModule::loop() {
 
 
             updateAndPublishParam(&_params[NMEA_PARAM_LOCATION_E], (uint8_t*)&tempf, sizeof(tempf));
+
+            // update followMe
+            tempf[2] = _params[NMEA_PARAM_FOLLOWME_E].data.f[2];
+            updateAndPublishParam(&_params[NMEA_PARAM_FOLLOWME_E], (uint8_t*)&tempf, sizeof(tempf));
           }
 
           uint8_t temp8 =  _nmea->getNumSatellites();
@@ -289,6 +302,6 @@ void NMEAModule::drawDiagnosticDisplay(SSD1306Wire *display, uint8_t page) {
 
   display->drawString(32, 17, String(_params[NMEA_PARAM_SATELLITES_E].data.uint8[0]));
 
-  
+
 
 }

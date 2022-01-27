@@ -47,6 +47,9 @@ NMEA.new 7
 // @pub 15;f;3;fix;Fix location - to use as basis for differential GPS signal
 #define NMEA_PARAM_FIX                15
 
+// @pub 16;f;3;followMe;Location field with a small target radius
+#define NMEA_PARAM_FOLLOWME           16
+
 #define NMEA_PARAM_LOCATION_E         0
 #define NMEA_PARAM_SATELLITES_E       1
 #define NMEA_PARAM_HEADING_E          2
@@ -55,8 +58,9 @@ NMEA.new 7
 #define NMEA_PARAM_PORT_E             5
 #define NMEA_PARAM_BAUD_E             6
 #define NMEA_PARAM_FIX_E              7
+#define NMEA_PARAM_FOLLOWME_E         8
 
-#define NMEA_PARAM_ENTRIES            8
+#define NMEA_PARAM_ENTRIES            9
 
 
 // subs
