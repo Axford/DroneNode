@@ -2,6 +2,16 @@
 
 Manages a MPU6050 I2c temp, humidty and pressure sensor
 
+@config >>>
+MPU6050.new 11
+  name "MPU6050"
+  status 0
+  interval 1000
+  .publish "gyro"
+  .publish "accel"
+.done
+<<<
+
 */
 #ifndef MPU6050_MODULE_H
 #define MPU6050_MODULE_H
