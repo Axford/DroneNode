@@ -131,19 +131,22 @@ void StatusModule::setup() {
 
 
 boolean StatusModule::checkThreshold(uint8_t index) {
+  // check we have a valid sub address
   if (_subs[STATUS_SUB_SUB1_E + index].addr.node == 0) return false;
 
   // check length of values and sub match
   uint8_t len = (_params[STATUS_PARAM_VALUE1_E + index].paramTypeLength & 0xF);
   if ((_subs[STATUS_SUB_SUB1_E + index].param.paramTypeLength & 0xF) != len) return false;
 
-  // check all values are above threshold
-  len++;
-  for (uint8_t i=0; i<len; i++) {
-    if (_subs[STATUS_SUB_SUB1_E + index].param.data.f[i] < _params[STATUS_PARAM_VALUE1_E + index].data.f[i]) return false;
+  // check all sub values are above threshold
+  uint8_t ty = ((_subs[STATUS_SUB_SUB1_E + index].param.paramTypeLength & 0xF) >> 4) & 0x7;
+  uint8_t numValues = (len+1) / DRONE_LINK_MSG_TYPE_SIZES[ty];
+  boolean v = true;
+  for (uint8_t i=0; i<numValues; i++) {
+    v = v && (_subs[STATUS_SUB_SUB1_E + index].param.data.f[i] >= _params[STATUS_PARAM_VALUE1_E + index].data.f[i]);
   }
 
-  return true;
+  return v;
 }
 
 void StatusModule::loop() {
