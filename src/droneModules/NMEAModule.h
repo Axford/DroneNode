@@ -26,7 +26,7 @@ NMEA.new 7
 // @pub 8;f;2;location;Current GPS location
 #define NMEA_PARAM_LOCATION           8
 
-// @pub 9;u8;1;satellites;Number of satellites used for fix
+// @pub 9;f;1;satellites;Number of satellites used for fix
 #define NMEA_PARAM_SATELLITES         9
 
 // @pub 10;f;1;heading;Current heading over ground

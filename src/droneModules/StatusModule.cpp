@@ -130,6 +130,22 @@ void StatusModule::setup() {
 }
 
 
+boolean StatusModule::checkThreshold(uint8_t index) {
+  if (_subs[STATUS_SUB_SUB1_E + index].addr.node == 0) return false;
+
+  // check length of values and sub match
+  uint8_t len = (_params[STATUS_PARAM_VALUE1_E + index].paramTypeLength & 0xF);
+  if ((_subs[STATUS_SUB_SUB1_E + index].param.paramTypeLength & 0xF) != len) return false;
+
+  // check all values are above threshold
+  len++;
+  for (uint8_t i=0; i<len; i++) {
+    if (_subs[STATUS_SUB_SUB1_E + index].param.data.f[i] < _params[STATUS_PARAM_VALUE1_E + index].data.f[i]) return false;
+  }
+
+  return true;
+}
+
 void StatusModule::loop() {
   DroneModule::loop();
 
@@ -139,56 +155,51 @@ void StatusModule::loop() {
   }
 
   // sub1
-  if (_subs[STATUS_SUB_SUB1_E].addr.node > 0) {
-    if (_subs[STATUS_SUB_SUB1_E].param.data.f[0] >= _params[STATUS_PARAM_VALUE1_E].data.f[0]) {
-      newScene[4] = 0;
-      newScene[5] = 255;
-      newScene[6] = 0;
-    } else {
-      newScene[4] = 255;
-      newScene[5] = 0;
-      newScene[6] = 0;
-    }
+  if (checkThreshold(0)) {
+    newScene[4] = 0;
+    newScene[5] = 255;
+    newScene[6] = 0;
+  } else {
+    newScene[4] = 255;
+    newScene[5] = 0;
+    newScene[6] = 0;
   }
+
 
 
   // sub2
-  if (_subs[STATUS_SUB_SUB2_E].addr.node > 0) {
-    if (_subs[STATUS_SUB_SUB2_E].param.data.f[0] >= _params[STATUS_PARAM_VALUE2_E].data.f[0]) {
-      newScene[7] = 0;
-      newScene[8] = 255;
-      newScene[9] = 0;
-    } else {
-      newScene[7] = 255;
-      newScene[8] = 0;
-      newScene[9] = 0;
-    }
+  if (checkThreshold(1)) {
+    newScene[7] = 0;
+    newScene[8] = 255;
+    newScene[9] = 0;
+  } else {
+    newScene[7] = 255;
+    newScene[8] = 0;
+    newScene[9] = 0;
   }
+
 
   // sub3
-  if (_subs[STATUS_SUB_SUB3_E].addr.node > 0) {
-    if (_subs[STATUS_SUB_SUB3_E].param.data.f[0] >= _params[STATUS_PARAM_VALUE3_E].data.f[0]) {
-      newScene[10] = 0;
-      newScene[11] = 255;
-      newScene[12] = 0;
-    } else {
-      newScene[10] = 255;
-      newScene[11] = 0;
-      newScene[12] = 0;
-    }
+  if (checkThreshold(2)) {
+    newScene[10] = 0;
+    newScene[11] = 255;
+    newScene[12] = 0;
+  } else {
+    newScene[10] = 255;
+    newScene[11] = 0;
+    newScene[12] = 0;
   }
 
+
   // sub4
-  if (_subs[STATUS_SUB_SUB4_E].addr.node > 0) {
-    if (_subs[STATUS_SUB_SUB4_E].param.data.f[0] >= _params[STATUS_PARAM_VALUE4_E].data.f[0]) {
-      newScene[13] = 0;
-      newScene[14] = 255;
-      newScene[15] = 0;
-    } else {
-      newScene[13] = 255;
-      newScene[14] = 0;
-      newScene[15] = 0;
-    }
+  if (checkThreshold(3)) {
+    newScene[13] = 0;
+    newScene[14] = 255;
+    newScene[15] = 0;
+  } else {
+    newScene[13] = 255;
+    newScene[14] = 0;
+    newScene[15] = 0;
   }
 
 

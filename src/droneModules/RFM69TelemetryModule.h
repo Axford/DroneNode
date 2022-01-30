@@ -46,7 +46,11 @@ byte    = value
 #define RFM69_TELEMETRY_PARAM_PACKETS        9
 #define RFM69_TELEMETRY_PARAM_PACKETS_E      1
 
-#define RFM69_TELEMETRY_PARAM_ENTRIES        2
+// @pub 10;f;3;speed;Packet rates per second for sent, received and rejected
+#define RFM69_TELEMETRY_PARAM_SPEED          10
+#define RFM69_TELEMETRY_PARAM_SPEED_E        2
+
+#define RFM69_TELEMETRY_PARAM_ENTRIES        3
 
 
 #define RFM69_TELEMETRY_NETWORKID     66  //the same on all nodes that talk to each other

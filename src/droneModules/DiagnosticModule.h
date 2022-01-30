@@ -5,7 +5,7 @@
 @description   Manages a Diagnostic 128x64 I2C display (1306 driver)
 
 @config >>>
-DIAGNOSTIC.new 6
+Diagnostic.new 6
   name "Diagnostic"
   interval 200
   bus 0

@@ -39,6 +39,14 @@ RFM69TelemetryModule::RFM69TelemetryModule(uint8_t id, DroneModuleManager* dmm, 
    param->data.uint32[0] = 0;
    param->data.uint32[1] = 0;
    param->data.uint32[2] = 0;
+
+   param = &_params[RFM69_TELEMETRY_PARAM_SPEED_E];
+   param->param = RFM69_TELEMETRY_PARAM_SPEED;
+   setParamName(FPSTR(STRING_SPEED), param);
+   param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 12);
+   param->data.f[0] = 0;
+   param->data.f[1] = 0;
+   param->data.f[2] = 0;
 }
 
 DEM_NAMESPACE* RFM69TelemetryModule::registerNamespace(DroneExecutionManager *dem) {
@@ -219,11 +227,24 @@ void RFM69TelemetryModule::loop() {
   // update and publish packet counters
   if (millis() > _packetsTimer + 5000) {
 
+    uint32_t delta[3];
+    delta[0] = _packetsSent - _params[RFM69_TELEMETRY_PARAM_PACKETS_E].data.uint32[0];
+    delta[1] = _packetsReceived - _params[RFM69_TELEMETRY_PARAM_PACKETS_E].data.uint32[1];
+    delta[2] = _packetsRejected - _params[RFM69_TELEMETRY_PARAM_PACKETS_E].data.uint32[2];
+
+
     _params[RFM69_TELEMETRY_PARAM_PACKETS_E].data.uint32[0] = _packetsSent;
     _params[RFM69_TELEMETRY_PARAM_PACKETS_E].data.uint32[1] = _packetsReceived;
     _params[RFM69_TELEMETRY_PARAM_PACKETS_E].data.uint32[2] = _packetsRejected;
 
     publishParamEntry(&_params[RFM69_TELEMETRY_PARAM_PACKETS_E]);
+
+    float dur = (millis() - _packetsTimer)/1000.0;
+    for (uint8_t i=0; i<3; i++) {
+      _params[RFM69_TELEMETRY_PARAM_SPEED_E].data.f[i] = delta[i] / dur;
+    }
+    publishParamEntry(&_params[RFM69_TELEMETRY_PARAM_SPEED_E]);
+
     _packetsTimer = millis();
   }
 }

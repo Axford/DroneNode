@@ -50,8 +50,8 @@ NMEAModule::NMEAModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dl
    param = &_params[NMEA_PARAM_SATELLITES_E];
    param->param = NMEA_PARAM_SATELLITES;
    setParamName(FPSTR(STRING_SATELLITES), param);
-   _params[NMEA_PARAM_SATELLITES_E].paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_UINT8_T, 1);
-   _params[NMEA_PARAM_SATELLITES_E].data.uint8[0] = 0;
+   _params[NMEA_PARAM_SATELLITES_E].paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 4);
+   _params[NMEA_PARAM_SATELLITES_E].data.f[0] = 0;
 
    param = &_params[NMEA_PARAM_HEADING_E];
    param->param = NMEA_PARAM_HEADING;
@@ -255,8 +255,8 @@ void NMEAModule::loop() {
             updateAndPublishParam(&_params[NMEA_PARAM_FOLLOWME_E], (uint8_t*)&tempf, sizeof(tempf));
           }
 
-          uint8_t temp8 =  _nmea->getNumSatellites();
-          updateAndPublishParam(&_params[NMEA_PARAM_SATELLITES_E], (uint8_t*)&temp8, sizeof(temp8));
+          float n =  _nmea->getNumSatellites();
+          updateAndPublishParam(&_params[NMEA_PARAM_SATELLITES_E], (uint8_t*)&n, sizeof(n));
 
           /*
           float v = _nmea->getSpeed() / 1000.0;
@@ -271,7 +271,7 @@ void NMEAModule::loop() {
           */
 
 
-          temp8 = _nmea->getHDOP();
+          uint8_t temp8 = _nmea->getHDOP();
           updateAndPublishParam(&_params[NMEA_PARAM_HDOP_E], (uint8_t*)&temp8, sizeof(temp8));
         } else {
           //Log.errorln(F("Invalid NMEA sentence"));
@@ -300,7 +300,7 @@ void NMEAModule::drawDiagnosticDisplay(SSD1306Wire *display, uint8_t page) {
   display->drawString(0, 17+4, "# Sat.");
   display->setFont(ArialMT_Plain_10);
 
-  display->drawString(32, 17, String(_params[NMEA_PARAM_SATELLITES_E].data.uint8[0]));
+  display->drawString(32, 17, String(_params[NMEA_PARAM_SATELLITES_E].data.f[0]));
 
 
 

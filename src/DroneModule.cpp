@@ -428,6 +428,9 @@ void DroneModule::handleLinkMessage(DroneLinkMsg *msg) {
 
           _subs[i].received = true;
 
+          // match the param length
+          _subs[i].param.paramTypeLength = (_subs[i].param.paramTypeLength & 0xF0) | (msg->length()-1);
+
           // publish the change to this param
           if (_subs[i].param.publish) publishParamEntry(&_subs[i].param);
 
