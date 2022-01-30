@@ -139,7 +139,7 @@ uint8_t StatusModule::checkThreshold(uint8_t index) {
   if ((_subs[STATUS_SUB_SUB1_E + index].param.paramTypeLength & 0xF) != len) return 0;
 
   // check all sub values are above threshold
-  uint8_t ty = (_subs[STATUS_SUB_SUB1_E + index].param.paramTypeLength >> 4) & 0x7;
+  uint8_t ty = (_params[STATUS_PARAM_VALUE1_E + index].paramTypeLength >> 4) & 0x7;
   uint8_t numValues = (len+1) / DRONE_LINK_MSG_TYPE_SIZES[ty];
   boolean v = true;
   for (uint8_t i=0; i<numValues; i++) {
