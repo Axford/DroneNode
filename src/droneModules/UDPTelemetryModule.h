@@ -1,5 +1,18 @@
 /*
 
+@type UDPTelemetry
+@description Manages DroneLink telemetry using UDP broadcast over WiFi
+
+@config >>>
+UDPTelemetry.new 2
+  name "UDPT"
+  status 1 // enable
+  port 8007
+  broadcast 255 255 255 255
+  .sub [@>0.0]
+.done
+<<<
+
 Publishes received messages
 Re-transmits messages it has been subscribed to
 Handles packet framing, sync, etc
@@ -27,7 +40,15 @@ byte    = value
 #define UDP_PARAM_PORT_E             0
 #define UDP_PARAM_BROADCAST_E        1
 
-#define UDP_PARAM_ENTRIES            2
+// @pub 10;u32;3;packets;Packet counters for sent, received and rejected
+#define UDP_TELEMETRY_PARAM_PACKETS        10
+#define UDP_TELEMETRY_PARAM_PACKETS_E      2
+
+// @pub 11;f;3;speed;Packet rates per second for sent, received and rejected
+#define UDP_TELEMETRY_PARAM_SPEED          11
+#define UDP_TELEMETRY_PARAM_SPEED_E        3
+
+#define UDP_PARAM_ENTRIES                  4
 
 
 #define UDP_TELEMETRY_PORT   8007
@@ -45,6 +66,11 @@ protected:
 
   uint8_t _receivedSize;
   boolean _started;
+
+  uint32_t _packetsReceived;
+  uint32_t _packetsRejected;
+  uint32_t _packetsSent;
+  unsigned long _packetsTimer;
 public:
 
   UDPTelemetryModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm, DroneExecutionManager* dem, fs::FS &fs);

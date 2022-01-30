@@ -75,7 +75,7 @@ public:
 
   virtual void setup();
 
-  boolean checkThreshold(uint8_t index);
+  uint8_t checkThreshold(uint8_t index);
 
   void loop();
 

@@ -130,13 +130,13 @@ void StatusModule::setup() {
 }
 
 
-boolean StatusModule::checkThreshold(uint8_t index) {
+uint8_t StatusModule::checkThreshold(uint8_t index) {
   // check we have a valid sub address
-  if (_subs[STATUS_SUB_SUB1_E + index].addr.node == 0) return false;
+  if (_subs[STATUS_SUB_SUB1_E + index].addr.node == 0) return 0;
 
   // check length of values and sub match
   uint8_t len = (_params[STATUS_PARAM_VALUE1_E + index].paramTypeLength & 0xF);
-  if ((_subs[STATUS_SUB_SUB1_E + index].param.paramTypeLength & 0xF) != len) return false;
+  if ((_subs[STATUS_SUB_SUB1_E + index].param.paramTypeLength & 0xF) != len) return 0;
 
   // check all sub values are above threshold
   uint8_t ty = (_subs[STATUS_SUB_SUB1_E + index].param.paramTypeLength >> 4) & 0x7;
@@ -146,7 +146,7 @@ boolean StatusModule::checkThreshold(uint8_t index) {
     v = v && (_subs[STATUS_SUB_SUB1_E + index].param.data.f[i] >= _params[STATUS_PARAM_VALUE1_E + index].data.f[i]);
   }
 
-  return v;
+  return v ? 2 : 1;
 }
 
 void StatusModule::loop() {
@@ -157,53 +157,24 @@ void StatusModule::loop() {
     newScene[i] = _params[STATUS_PARAM_SCENE_E].data.uint8[i];
   }
 
-  // sub1
-  if (checkThreshold(0)) {
-    newScene[4] = 0;
-    newScene[5] = 255;
-    newScene[6] = 0;
-  } else {
-    newScene[4] = 255;
-    newScene[5] = 0;
-    newScene[6] = 0;
+  // check thresholds
+  for (uint8_t i=0; i<4; i++) {
+    uint8_t threshold = checkThreshold(i);
+    if (threshold == 2) {
+      newScene[4 + i*3] = 0;
+      newScene[5 + i*3] = 255;
+      newScene[6 + i*3] = 0;
+    } else if (threshold == 1) {
+      newScene[4 + i*3] = 255;
+      newScene[5 + i*3] = 0;
+      newScene[6 + i*3] = 0;
+    } else {
+      newScene[4 + i*3] = 0;
+      newScene[5 + i*3] = 0;
+      newScene[6 + i*3] = 0;
+    }
   }
 
-
-
-  // sub2
-  if (checkThreshold(1)) {
-    newScene[7] = 0;
-    newScene[8] = 255;
-    newScene[9] = 0;
-  } else {
-    newScene[7] = 255;
-    newScene[8] = 0;
-    newScene[9] = 0;
-  }
-
-
-  // sub3
-  if (checkThreshold(2)) {
-    newScene[10] = 0;
-    newScene[11] = 255;
-    newScene[12] = 0;
-  } else {
-    newScene[10] = 255;
-    newScene[11] = 0;
-    newScene[12] = 0;
-  }
-
-
-  // sub4
-  if (checkThreshold(3)) {
-    newScene[13] = 0;
-    newScene[14] = 255;
-    newScene[15] = 0;
-  } else {
-    newScene[13] = 255;
-    newScene[14] = 0;
-    newScene[15] = 0;
-  }
 
 
   updateAndPublishParam(&_params[STATUS_PARAM_SCENE_E], (uint8_t*)&newScene, sizeof(newScene));
