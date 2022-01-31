@@ -112,3 +112,6 @@ dist
 .gcc-flags.json
 platformio.ini
 data/testBoard.json
+.vscode/c_cpp_properties.json
+.vscode/extensions.json
+.vscode/launch.json

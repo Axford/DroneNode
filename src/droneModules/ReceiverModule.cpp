@@ -163,7 +163,10 @@ void IRAM_ATTR ReceiverModule::ISR1() {
     } else {
       // new pulse
       if (pulseCounter < 4) {
-        _globalReceiverRawTimers[pulseCounter] = pulseTime;
+        if (pulseTime > 500 && pulseTime < 2500) {
+          // moving average of 5 samples
+        _globalReceiverRawTimers[pulseCounter] = (4 * _globalReceiverRawTimers[pulseCounter]  + pulseTime) / 5;
+        }
       }
       pulseCounter++;
     }
