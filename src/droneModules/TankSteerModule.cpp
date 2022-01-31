@@ -50,7 +50,7 @@ TankSteerModule::TankSteerModule(uint8_t id, DroneModuleManager* dmm, DroneLinkM
    param->param = TANK_STEER_PARAM_MODE;
    setParamName(FPSTR(STRING_MODE), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_UINT8_T, 1);
-   param->data.uint8[0] = TANK_STEER_MODE_MANUAL;  // default to automatic
+   param->data.uint8[0] = TANK_STEER_MODE_MANUAL;  // default to manual
 
    update();  // set defaults
 }
