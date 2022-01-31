@@ -4,6 +4,7 @@
 #include "strings.h"
 
 // globals for use in ISRs
+uint8_t _globalReceiveMode = RECEIVER_MODE_PPM;
 uint8_t _globalReceiverPins[4];
 unsigned long _globalReceiverRawTimers[4];
 unsigned long _globalLastReceiverSignal;
@@ -98,6 +99,11 @@ ReceiverModule::ReceiverModule(uint8_t id, DroneModuleManager* dmm, DroneLinkMan
    setParamName(FPSTR(STRING_INPUT), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_UINT32_T, 16);
 
+   param = &_params[RECEIVER_PARAM_MODE_E];
+   param->param = RECEIVER_PARAM_MODE;
+   setParamName(FPSTR(STRING_MODE), param);
+   param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_UINT8_T, 1);
+   param->data.uint8[0] = RECEIVER_MODE_PPM;
 }
 
 
@@ -118,6 +124,7 @@ void ReceiverModule::registerParams(DEM_NAMESPACE* ns, DroneExecutionManager *de
 
   dem->registerCommand(ns, STRING_PINS, DRONE_LINK_MSG_TYPE_UINT8_T, ph);
   dem->registerCommand(ns, STRING_LIMITS, DRONE_LINK_MSG_TYPE_UINT32_T, ph);
+  dem->registerCommand(ns, STRING_MODE, DRONE_LINK_MSG_TYPE_UINT8_T, ph);
 
   dem->registerCommand(ns, STRING_INPUT1, DRONE_LINK_MSG_TYPE_FLOAT, ph);
   dem->registerCommand(ns, PSTR("$input1"), DRONE_LINK_MSG_TYPE_FLOAT, pha);
@@ -135,14 +142,48 @@ void ReceiverModule::registerParams(DEM_NAMESPACE* ns, DroneExecutionManager *de
 void IRAM_ATTR ReceiverModule::ISR1() {
   static unsigned long _startTime = 0;
 
-  if (digitalRead(_globalReceiverPins[0])) {
-    // rising
-    _startTime = micros();
+  static unsigned long microsAtLastPulse = 0;
+  static uint8_t pulseCounter = 0;
+
+
+  if (_globalReceiveMode == RECEIVER_MODE_PPM) {
+    // -----------------------------------------------------------
+    // PPM MODE
+    // -----------------------------------------------------------
+
+    unsigned long previousMicros = microsAtLastPulse;
+    microsAtLastPulse = micros();
+    unsigned long pulseTime = microsAtLastPulse - previousMicros;
+
+    if (pulseTime > RECEIVER_PPM_BLANK_TIME) {
+      // end of frame (and start of a new one)
+      pulseCounter = 0;
+      _globalLastReceiverSignal = millis();
+
+    } else {
+      // new pulse
+      if (pulseCounter < 4) {
+        _globalReceiverRawTimers[pulseCounter] = pulseTime;
+      }
+      pulseCounter++;
+    }
+
+
   } else {
-    // falling
-    _globalReceiverRawTimers[0] = micros() - _startTime;
-    _globalLastReceiverSignal = millis();
+    // -----------------------------------------------------------
+    // PWM MODE
+    // -----------------------------------------------------------
+    if (digitalRead(_globalReceiverPins[0])) {
+      // rising
+      _startTime = micros();
+    } else {
+      // falling
+      _globalReceiverRawTimers[0] = micros() - _startTime;
+      _globalLastReceiverSignal = millis();
+    }
   }
+
+
 }
 
 
@@ -189,38 +230,54 @@ void IRAM_ATTR ReceiverModule::ISR4() {
 void ReceiverModule::setup() {
   DroneModule::setup();
 
-  if (_params[RECEIVER_PARAM_PINS_E].data.uint8[0] > 0) {
-    _globalReceiverPins[0] = _params[RECEIVER_PARAM_PINS_E].data.uint8[0];
-    _globalReceiverRawTimers[0] = 0;
-    pinMode(_params[RECEIVER_PARAM_PINS_E].data.uint8[0], INPUT);
-    attachInterrupt(_params[RECEIVER_PARAM_PINS_E].data.uint8[0], ISR1, CHANGE);
-  } else {
-    //Log.errorln(F("Undefined pin 0 %d"), _params[RECEIVER_PARAM_PINS_E].data.uint8[0]);
-  }
+  _globalReceiveMode = _params[RECEIVER_PARAM_MODE_E].data.uint8[0];
 
-  if (_params[RECEIVER_PARAM_PINS_E].data.uint8[1] > 0) {
-    _globalReceiverPins[1] = _params[RECEIVER_PARAM_PINS_E].data.uint8[1];
-    _globalReceiverRawTimers[1] = 0;
-    pinMode(_params[RECEIVER_PARAM_PINS_E].data.uint8[1], INPUT);
-    attachInterrupt(_params[RECEIVER_PARAM_PINS_E].data.uint8[1], ISR2, CHANGE);
+  if (_params[RECEIVER_PARAM_MODE_E].data.uint8[0] == RECEIVER_MODE_PPM) {
+
+    if (_params[RECEIVER_PARAM_PINS_E].data.uint8[0] > 0) {
+      _globalReceiverPins[0] = _params[RECEIVER_PARAM_PINS_E].data.uint8[0];
+      _globalReceiverRawTimers[0] = 0;
+      pinMode(_params[RECEIVER_PARAM_PINS_E].data.uint8[0], INPUT);
+      attachInterrupt(_params[RECEIVER_PARAM_PINS_E].data.uint8[0], ISR1, RISING);
+    }
+
 
   } else {
-    //Log.errorln(F("Undefined pin 1 %d"), _params[RECEIVER_PARAM_PINS_E].data.uint8[1]);
-  }
 
-  if (_params[RECEIVER_PARAM_PINS_E].data.uint8[2] > 0) {
-    _globalReceiverPins[2] = _params[RECEIVER_PARAM_PINS_E].data.uint8[2];
-    _globalReceiverRawTimers[2] = 0;
-    pinMode(_params[RECEIVER_PARAM_PINS_E].data.uint8[2], INPUT);
-    attachInterrupt(_params[RECEIVER_PARAM_PINS_E].data.uint8[2], ISR3, CHANGE);
+    if (_params[RECEIVER_PARAM_PINS_E].data.uint8[0] > 0) {
+      _globalReceiverPins[0] = _params[RECEIVER_PARAM_PINS_E].data.uint8[0];
+      _globalReceiverRawTimers[0] = 0;
+      pinMode(_params[RECEIVER_PARAM_PINS_E].data.uint8[0], INPUT);
+      attachInterrupt(_params[RECEIVER_PARAM_PINS_E].data.uint8[0], ISR1, CHANGE);
+    } else {
+      //Log.errorln(F("Undefined pin 0 %d"), _params[RECEIVER_PARAM_PINS_E].data.uint8[0]);
+    }
 
-  }
+    if (_params[RECEIVER_PARAM_PINS_E].data.uint8[1] > 0) {
+      _globalReceiverPins[1] = _params[RECEIVER_PARAM_PINS_E].data.uint8[1];
+      _globalReceiverRawTimers[1] = 0;
+      pinMode(_params[RECEIVER_PARAM_PINS_E].data.uint8[1], INPUT);
+      attachInterrupt(_params[RECEIVER_PARAM_PINS_E].data.uint8[1], ISR2, CHANGE);
 
-  if (_params[RECEIVER_PARAM_PINS_E].data.uint8[3] > 0) {
-    _globalReceiverPins[3] = _params[RECEIVER_PARAM_PINS_E].data.uint8[3];
-    _globalReceiverRawTimers[3] = 0;
-    pinMode(_params[RECEIVER_PARAM_PINS_E].data.uint8[3], INPUT);
-    attachInterrupt(_params[RECEIVER_PARAM_PINS_E].data.uint8[3], ISR4, CHANGE);
+    } else {
+      //Log.errorln(F("Undefined pin 1 %d"), _params[RECEIVER_PARAM_PINS_E].data.uint8[1]);
+    }
+
+    if (_params[RECEIVER_PARAM_PINS_E].data.uint8[2] > 0) {
+      _globalReceiverPins[2] = _params[RECEIVER_PARAM_PINS_E].data.uint8[2];
+      _globalReceiverRawTimers[2] = 0;
+      pinMode(_params[RECEIVER_PARAM_PINS_E].data.uint8[2], INPUT);
+      attachInterrupt(_params[RECEIVER_PARAM_PINS_E].data.uint8[2], ISR3, CHANGE);
+
+    }
+
+    if (_params[RECEIVER_PARAM_PINS_E].data.uint8[3] > 0) {
+      _globalReceiverPins[3] = _params[RECEIVER_PARAM_PINS_E].data.uint8[3];
+      _globalReceiverRawTimers[3] = 0;
+      pinMode(_params[RECEIVER_PARAM_PINS_E].data.uint8[3], INPUT);
+      attachInterrupt(_params[RECEIVER_PARAM_PINS_E].data.uint8[3], ISR4, CHANGE);
+
+    }
 
   }
 }
@@ -245,6 +302,8 @@ float ReceiverModule::rawToValue(uint8_t chan) {
 void ReceiverModule::loop() {
   DroneModule::loop();
 
+  boolean validSignal = (millis() - _globalLastReceiverSignal) < 5000;
+
   // raw values
   updateAndPublishParam(&_params[RECEIVER_PARAM_INPUT_E], (uint8_t*)&_globalReceiverRawTimers, sizeof(_globalReceiverRawTimers));
 
@@ -252,7 +311,7 @@ void ReceiverModule::loop() {
 
   float v = 0;
 
-  boolean validSignal = (millis() - _globalLastReceiverSignal) < 5000;
+
 
   // calculate and publish new output values (in range -1..1)
 

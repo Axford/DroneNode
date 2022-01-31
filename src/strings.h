@@ -31,6 +31,7 @@ static const char STRING_CALIB_Y[] PROGMEM = "calibY";
 static const char STRING_CELLS[] PROGMEM = "cells";
 static const char STRING_CELLV[] PROGMEM = "cellV";
 static const char STRING_CENTRE[] PROGMEM = "centre";
+static const char STRING_CHANNELS[] PROGMEM = "channels";
 static const char STRING_CHOKED[] PROGMEM = "choked";
 static const char STRING_CORRECTION[] PROGMEM = "correction";
 static const char STRING_COURSE[] PROGMEM = "course";

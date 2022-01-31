@@ -43,7 +43,7 @@ and published as values (<b>value1, value2</b>, etc) in range -1..1 on a regular
 #include "../DroneModule.h"
 
 // params
-// @pub 10;u8;2;pins;Receiver input pins, one per receiver channel (see <a href="pins.html">Pin Mappings</a>)
+// @pub 10;u8;2;pins;Receiver input pins, one per receiver channel (see <a href="pins.html">Pin Mappings</a>) or a single pin for PPM
 #define RECEIVER_PARAM_PINS         10
 #define RECEIVER_PARAM_PINS_E       0
 
@@ -71,7 +71,18 @@ and published as values (<b>value1, value2</b>, etc) in range -1..1 on a regular
 #define RECEIVER_PARAM_INPUT        20
 #define RECEIVER_PARAM_INPUT_E      6
 
-#define RECEIVER_PARAM_ENTRIES      7
+// @pub 31;u8;1;mode;0=PWM, 1=PPM on first defined pin (Default PPM)
+#define RECEIVER_PARAM_MODE         31
+#define RECEIVER_PARAM_MODE_E       7
+
+#define RECEIVER_PARAM_ENTRIES      8
+
+// Modes
+#define RECEIVER_MODE_PWM           0
+#define RECEIVER_MODE_PPM           1
+
+#define RECEIVER_PPM_BLANK_TIME     2100
+
 
 
 // subs
