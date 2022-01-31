@@ -30,6 +30,7 @@ TankSteerModule::TankSteerModule(uint8_t id, DroneModuleManager* dmm, DroneLinkM
    sub->param.param = TANK_STEER_SUB_TRIM;
    setParamName(FPSTR(STRING_TRIM), &sub->param);
 
+
    // pubs
    initParams(TANK_STEER_PARAM_ENTRIES);
 
@@ -44,6 +45,12 @@ TankSteerModule::TankSteerModule(uint8_t id, DroneModuleManager* dmm, DroneLinkM
    param->param = TANK_STEER_PARAM_RIGHT;
    setParamName(FPSTR(STRING_RIGHT), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 4);
+
+   param = &_params[TANK_STEER_PARAM_MODE_E];
+   param->param = TANK_STEER_PARAM_MODE;
+   setParamName(FPSTR(STRING_MODE), param);
+   param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_UINT8_T, 1);
+   param->data.uint8[0] = TANK_STEER_MODE_MANUAL;  // default to automatic
 
    update();  // set defaults
 }
@@ -72,11 +79,22 @@ void TankSteerModule::registerParams(DEM_NAMESPACE* ns, DroneExecutionManager *d
 
   dem->registerCommand(ns, STRING_TRIM, DRONE_LINK_MSG_TYPE_FLOAT, ph);
   dem->registerCommand(ns, PSTR("$trim"), DRONE_LINK_MSG_TYPE_ADDR, pha);
+
+  dem->registerCommand(ns, STRING_MODE, DRONE_LINK_MSG_TYPE_UINT8_T, ph);
 }
 
 
 void TankSteerModule::update() {
   if (!_setupDone) return;
+
+  // update mode
+  if (_params[TANK_STEER_PARAM_MODE_E].data.uint8[0] == TANK_STEER_MODE_MANUAL) {
+    _subs[TANK_STEER_SUB_TURN_RATE_E].enabled = false;
+    _subs[TANK_STEER_SUB_SPEED_E].enabled = false;
+  } else {
+    _subs[TANK_STEER_SUB_TURN_RATE_E].enabled = true;
+    _subs[TANK_STEER_SUB_SPEED_E].enabled = true;
+  }
 
   // calc and publish new speeds
 

@@ -20,6 +20,7 @@ static const char STRING_ALARM[] PROGMEM = "alarm";
 static const char STRING_ALTITUDE[] PROGMEM = "altitude";
 static const char STRING_AOA[] PROGMEM = "AOA";
 static const char STRING_BAUD[] PROGMEM = "baud";
+static const char STRING_BRIGHTNESS[] PROGMEM = "brightness";
 static const char STRING_BROADCAST[] PROGMEM = "broadcast";
 static const char STRING_BUILD[] PROGMEM = "build";
 static const char STRING_BUS[] PROGMEM = "bus";

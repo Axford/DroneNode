@@ -120,6 +120,7 @@ void DroneModule::initSubs(uint8_t numSubs) {
 
   for (uint8_t i=0; i<_numSubs; i++) {
     _subs[i].received = false;
+    _subs[i].enabled = true;
     _subs[i].addr.source = _dlm->node();
     _subs[i].addr.node = 0;
     _subs[i].addr.channel = 0;
@@ -419,7 +420,7 @@ void DroneModule::handleLinkMessage(DroneLinkMsg *msg) {
   // handle subs
   if (_enabled || !_setupDone) {
     for (uint8_t i=0; i<_numSubs; i++) {
-      if (msg->sameAddress(&_subs[i].addr)) {
+      if (_subs[i].enabled && msg->sameAddress(&_subs[i].addr)) {
 
         // check the type matches what's expected
         if (msg->type() == ((_subs[i].param.paramTypeLength >> 4) & 0x7)) {

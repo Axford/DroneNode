@@ -126,9 +126,8 @@ void DepthModule::loop() {
 
   // send a pulse
   digitalWrite(_params[DEPTH_PARAM_PINS_E].data.uint8[DEPTH_PIN_TRIGGER], HIGH);
-  delayMicroseconds(10);
+  delayMicroseconds(20);
   digitalWrite(_params[DEPTH_PARAM_PINS_E].data.uint8[DEPTH_PIN_TRIGGER], LOW);
-  delayMicroseconds(10);
 
   // wait for return echo and calcuate duration
   const unsigned long duration= pulseIn(_params[DEPTH_PARAM_PINS_E].data.uint8[DEPTH_PIN_ECHO], HIGH, timeout);

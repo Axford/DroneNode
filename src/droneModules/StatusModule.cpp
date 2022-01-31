@@ -175,7 +175,5 @@ void StatusModule::loop() {
     }
   }
 
-
-
   updateAndPublishParam(&_params[STATUS_PARAM_SCENE_E], (uint8_t*)&newScene, sizeof(newScene));
 }

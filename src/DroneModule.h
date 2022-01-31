@@ -67,6 +67,7 @@ struct DRONE_PARAM_ENTRY {
 struct DRONE_PARAM_SUB {
   uint8_t addrParam; // param address of the addr value
   boolean received;  // set to true once first value received
+  boolean enabled;  // set to false to block sub updates
   DRONE_LINK_ADDR addr;
   DRONE_PARAM_ENTRY param;
 };

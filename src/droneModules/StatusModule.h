@@ -14,7 +14,7 @@
 
 // pubs
 
-// @pub 8;u8;16;scene;Status scene for a Neopixel module to subscribe to
+// @pub 8;u8;16;scene;Status scene for a Neopixel module to subscribe to.  Set an initial value for scene to configure brightness, etc
 #define STATUS_PARAM_SCENE         8
 #define STATUS_PARAM_SCENE_E       0
 
@@ -34,7 +34,7 @@
 #define STATUS_PARAM_VALUE4        13
 #define STATUS_PARAM_VALUE4_E      4
 
-#define STATUS_PARAM_ENTRIES       5
+#define STATUS_PARAM_ENTRIES       6
 
 // subs
 // @sub 20;21;f;2;sub1;First parameter to monitor for status
