@@ -459,7 +459,7 @@ void loop() {
     yield();
 
     //Log.noticeln("[] pC");
-    dlm->processChannels();
+    dlm->loop();
 
     yield();
 

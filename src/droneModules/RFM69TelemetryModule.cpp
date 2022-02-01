@@ -71,6 +71,8 @@ void RFM69TelemetryModule::registerParams(DEM_NAMESPACE* ns, DroneExecutionManag
 void RFM69TelemetryModule::handleLinkMessage(DroneLinkMsg *msg) {
   DroneModule::handleLinkMessage(msg);
 
+  /*
+
   if (!_radio) return;
 
   //Log.noticeln("[RFM.hLM] a");
@@ -129,6 +131,7 @@ void RFM69TelemetryModule::handleLinkMessage(DroneLinkMsg *msg) {
     //msg->print();
     //Log.noticeln("[RFM.hLM] e");
   }
+  */
 }
 
 void RFM69TelemetryModule::setup() {
@@ -166,6 +169,7 @@ void RFM69TelemetryModule::loop() {
   if (!_radio) return;
 
   //check if something was received (could be an interrupt from the radio)
+  /*
   if (_radio->available())
   {
     uint8_t len = sizeof(_buffer);
@@ -177,15 +181,6 @@ void RFM69TelemetryModule::loop() {
 
         // calc CRC on what we received
         uint8_t crc = _CRC8.smbus((uint8_t*)&_receivedMsg._msg, _receivedMsg.length() + sizeof(DRONE_LINK_ADDR)+1);
-
-        /*
-        Serial.print("[RFM.l] recevied: ");  Serial.println(len);
-        for (uint8_t i=0; i<len; i++) {
-          Serial.print(_buffer[i], HEX);
-          Serial.print(" ");
-        }
-        Serial.println("");
-        */
 
         // valid packet if CRC match and decoded length matches
         if ( (crc == _buffer[len-1])  &&
@@ -222,7 +217,7 @@ void RFM69TelemetryModule::loop() {
       Log.warningln("[RFM.l] Receive failed");
     }
   }
-
+  */
 
   // update and publish packet counters
   if (millis() > _packetsTimer + 5000) {

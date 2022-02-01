@@ -5,7 +5,8 @@
 DroneLinkManager::DroneLinkManager(WiFiManager *wifiManager):
   _wifiManager(wifiManager),
   _node(0),
-  _channels(IvanLinkedList::LinkedList<DroneLinkChannel*>())
+  _channels(IvanLinkedList::LinkedList<DroneLinkChannel*>()),
+  _interfaces(IvanLinkedList::LinkedList<NetworkInterfaceModule*>())
 {
   _publishedMessages = 0;
   _peerNodes = 0;
@@ -163,6 +164,15 @@ void DroneLinkManager::processChannels() {
 }
 
 
+void DroneLinkManager::loop() {
+  // generate Hello messages
+  generateHelloMessages();
+
+  // process local channel messages
+  processChannels();
+}
+
+
 DroneLinkChannel* DroneLinkManager::findChannel(uint8_t node, uint8_t chan) {
   DroneLinkChannel* c;
   for(int i = 0; i < _channels.size(); i++){
@@ -289,4 +299,31 @@ void DroneLinkManager::serveChannelInfo(AsyncWebServerRequest *request) {
 
   //send the response last
   request->send(response);
+}
+
+
+// -----------------------------------------------------------------------------
+// mesh methods
+// -----------------------------------------------------------------------------
+
+void DroneLinkManager::generateHelloMessages() {
+  NetworkInterfaceModule* interface;
+  for(int i = 0; i < _interfaces.size(); i++){
+    interface = _interfaces.get(i);
+
+    interface->generateHello();
+  }
+}
+
+
+void DroneLinkManager::registerInterface(NetworkInterfaceModule *interface) {
+  _interfaces.add(interface);
+}
+
+
+void DroneLinkManager::receivePacket(uint8_t *buffer, uint8_t metric) {
+  // this is the meaty stuff...
+  // need to validate packet
+  // then do something appropriate with it depending on its routing mode, type, etc
+
 }

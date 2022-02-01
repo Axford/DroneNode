@@ -190,6 +190,7 @@ public:
 
   virtual uint8_t diagnosticDisplays();
   virtual void drawDiagnosticDisplay(SSD1306Wire *display, uint8_t page);
+
 };
 
 

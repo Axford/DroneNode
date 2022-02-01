@@ -1,3 +1,11 @@
+/*
+
+DroneLinkManager
+
+Manages the local set of pub/sub channels
+
+
+*/
 #ifndef DRONE_LINK_MANAGER_H
 #define DRONE_LINK_MANAGER_H
 
@@ -5,8 +13,11 @@
 #include "LinkedList.h"
 
 #include "DroneLinkMsg.h"
+#include "DroneMeshMsg.h"
 #include "DroneLinkChannel.h"
 #include <ESPAsyncWebServer.h>
+
+#include "droneModules/NetworkInterfaceModule.h"
 
 // forward decl
 class WiFiManager;
@@ -42,6 +53,8 @@ protected:
   uint8_t _maxPeer;  // max id
   DRONE_LINK_NODE_PAGE *_nodePages[DRONE_LINK_NODE_PAGES];
 
+  IvanLinkedList::LinkedList<NetworkInterfaceModule*> _interfaces;
+
 public:
     DroneLinkManager(WiFiManager *wifiManager);
 
@@ -62,6 +75,7 @@ public:
     bool publishPeer(DroneLinkMsg &msg, int16_t RSSI, uint8_t interface);
 
     void processChannels();
+    void loop();
 
     DroneLinkChannel* findChannel(uint8_t node, uint8_t chan);
 
@@ -80,6 +94,12 @@ public:
 
     void serveNodeInfo(AsyncWebServerRequest *request);
     void serveChannelInfo(AsyncWebServerRequest *request);
+
+    // mesh methods
+    void generateHelloMessages();
+
+    void registerInterface(NetworkInterfaceModule *interface);
+    void receivePacket(uint8_t *buffer, uint8_t metric);
 };
 
 
