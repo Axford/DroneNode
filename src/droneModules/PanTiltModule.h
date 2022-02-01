@@ -7,16 +7,16 @@
 <<<
 
 @config >>>
-PanTilt.new 8
+PanTilt.new 21
   name "PanTilt"
   PID (f) 0.005 0.0 0.0001
   interval 50
-  $target [@>22.14]
-  $heading [@>50.8]
+  $target [@>20.8]
+  $heading [@>6.11]
   .publish "target"
   .publish "heading"
   .publish "PID"
-  .publish "turnRate"
+  .publish "pan"
 .done
 <<<
 
@@ -47,8 +47,8 @@ PanTilt.new 8
 #define PAN_TILT_PARAM_PID_E         0
 
 // @pub 15;f;2;limits;Limits of servo travel in degrees (default -90 90)
-#define PAN_TILT_PARAM_LIMITS           15
-#define PAN_TILT_PARAM_LIMITS_E         1
+#define PAN_TILT_PARAM_LIMITS        15
+#define PAN_TILT_PARAM_LIMITS_E      1
 
 // @pub 16;f;1;pan;Pan output in range -1..1, to be fed to servo
 #define PAN_TILT_PARAM_PAN           16
@@ -62,6 +62,7 @@ static const char PAN_TILT_STR_PAN_TILT[] PROGMEM = "PanTilt";
 class PanTiltModule:  public DroneModule {
 protected:
   unsigned long _lastUpdate;
+  float _lastTarget;
   float _iError;
   float _dError;
   float _lastError;

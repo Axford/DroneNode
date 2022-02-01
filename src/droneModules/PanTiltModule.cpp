@@ -13,6 +13,7 @@ PanTiltModule::PanTiltModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManag
    _iError = 0;
    _dError = 0;
    _lastError = 0;
+   _lastTarget = 0;
 
    // set default interval to 1000
    _mgmtParams[DRONE_MODULE_PARAM_INTERVAL_E].data.uint32[0] = 1000;
@@ -127,7 +128,7 @@ void PanTiltModule::update() {
   // limit range
   panTarget = constrain(panTarget, _params[PAN_TILT_PARAM_LIMITS_E].data.f[0], _params[PAN_TILT_PARAM_LIMITS_E].data.f[1]);
 
-  float err =
+  float err = panTarget - _lastTarget;
 
   // update I and D terms
   _iError += err * dt;
@@ -142,16 +143,21 @@ void PanTiltModule::update() {
   _lastError = err;
 
   // rate limit to 30 degrees/second
-  delta = constrain(delta, -30*dt, 30*dt);
+  //delta = constrain(delta, -30*dt, 30*dt);
 
   // update target
-  panTarget = _params[PAN_TILT_PARAM_PAN_E].data.f[0] + delta;
+  //panTarget = _lastTarget + delta;
+
+  // moving average
+  panTarget = (_lastTarget * 7 + panTarget) / 8;
+
+  _lastTarget = panTarget;
 
   // map to range -1 to 1
-  float pan = mapF(delta, _params[PAN_TILT_PARAM_LIMITS_E].data.f[0], _params[PAN_TILT_PARAM_LIMITS_E].data.f[1], -1, 1);
+  float pan = mapF(panTarget, _params[PAN_TILT_PARAM_LIMITS_E].data.f[0], _params[PAN_TILT_PARAM_LIMITS_E].data.f[1], -1, 1);
 
   // limit range (again, just to be sure)
   pan = constrain(pan, -1, 1);
 
-  updateAndPublishParam(&_params[PAN_TILT_PARAM_PAN_E], (uint8_t*)&pan, sizeof(pan));
+  updateAndPublishParam(&_params[PAN_TILT_PARAM_PAN_E], (uint8_t*)&panTarget, sizeof(panTarget));
 }
