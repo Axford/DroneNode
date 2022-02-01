@@ -85,6 +85,7 @@ static const char STRING_NUMPIXELS[] PROGMEM = "numPixels";
 static const char STRING_OFFSET[] PROGMEM = "offset";
 static const char STRING_OUTPUT[] PROGMEM = "output";
 static const char STRING_PACKETS[] PROGMEM = "packets";
+static const char STRING_PAN[] PROGMEM = "pan";
 static const char STRING_PID[] PROGMEM = "PID";
 static const char STRING_PINS[] PROGMEM = "pins";
 static const char STRING_POLAR[] PROGMEM = "polar";

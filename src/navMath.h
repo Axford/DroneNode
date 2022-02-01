@@ -16,6 +16,8 @@ double radiansToDegrees(double r);
 
 double degreesToRadians(double r);
 
+float mapF(float x, float in_min, float in_max, float out_min, float out_max);
+
 float shortestSignedDistanceBetweenCircularValues(float origin, float target);
 
 float calculateDistanceBetweenCoordinates(float lon1, float lat1, float lon2, float lat2);

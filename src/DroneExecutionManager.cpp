@@ -20,6 +20,7 @@
 #include "droneModules/NeopixelModule.h"
 #include "droneModules/NMEAModule.h"
 #include "droneModules/NunchuckJoystickModule.h"
+#include "droneModules/PanTiltModule.h"
 #include "droneModules/PolarModule.h"
 #include "droneModules/ProaModule.h"
 #include "droneModules/ReceiverModule.h"
@@ -162,6 +163,7 @@ DroneExecutionManager::DroneExecutionManager(DroneModuleManager *dmm, DroneLinkM
   ns = NMEAModule::registerNamespace(this); NMEAModule::registerParams(ns, this);
   ns = NeopixelModule::registerNamespace(this); NeopixelModule::registerParams(ns, this);
   ns = NunchuckJoystick::registerNamespace(this); NunchuckJoystick::registerParams(ns, this);
+  ns = PanTiltModule::registerNamespace(this); PanTiltModule::registerParams(ns, this);
   ns = PolarModule::registerNamespace(this); PolarModule::registerParams(ns, this);
   ns = ProaModule::registerNamespace(this); ProaModule::registerParams(ns, this);
   ns = ReceiverModule::registerNamespace(this); ReceiverModule::registerParams(ns, this);
@@ -1447,6 +1449,8 @@ boolean DroneExecutionManager::mod_constructor(DEM_INSTRUCTION_COMPILED* instr, 
       newMod = new NeopixelModule(id, _dmm, _dlm, this, _fs);
     } else if (strcmp_P(instr->ns->name, NunJOYSTICK_STR_NunJOYSTICK) == 0) {
       newMod = new NunchuckJoystick(id, _dmm, _dlm, this, _fs);
+    } else if (strcmp_P(instr->ns->name, PAN_TILT_STR_PAN_TILT) == 0) {
+      newMod = new PanTiltModule(id, _dmm, _dlm, this, _fs);
     } else if (strcmp_P(instr->ns->name, POLAR_STR_POLAR) == 0) {
       newMod = new PolarModule(id, _dmm, _dlm, this, _fs);
     } else if (strcmp_P(instr->ns->name, PROA_STR_PROA) == 0) {
