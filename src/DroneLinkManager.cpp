@@ -190,13 +190,58 @@ void DroneLinkManager::processExternalSubscriptions() {
 }
 
 
+void DroneLinkManager::removeRoute(uint8_t node) {
+  DRONE_LINK_NODE_INFO* nodeInfo = getNodeInfo(node, false);
+  if (nodeInfo && nodeInfo->heard) {
+    Log.noticeln("[DLM.rR] Removing route to %u", node);
+    nodeInfo->heard = false;
+
+    // udpate state for any associated ext subs
+    DroneLinkChannel* c;
+    for(int i = 0; i < _channels.size(); i++){
+      c = _channels.get(i);
+      c->removeExternalSubscriptions(node);
+    }
+  }
+}
+
+
+void DroneLinkManager::checkForOldRoutes() {
+  DRONE_LINK_NODE_PAGE *page;
+  for (uint8_t i=0; i<DRONE_LINK_NODE_PAGES; i++) {
+    page = _nodePages[i];
+    if (page != NULL) {
+      for (uint8_t j=0; j<DRONE_LINK_NODE_PAGE_SIZE; j++) {
+        if (page->nodeInfo[j].heard) {
+          uint8_t n = i*DRONE_LINK_NODE_PAGE_SIZE + j;
+
+          // check age
+          if (millis() - page->nodeInfo[j].lastHeard > DRONE_LINK_MANAGER_MAX_ROUTE_AGE) {
+            // remove route
+            removeRoute(n);
+          }
+        }
+      }
+    }
+  }
+}
+
+
 void DroneLinkManager::loop() {
+  static uint32_t processTimer = 0;
+  uint32_t loopTime = millis();
 
   // process local channel messages
   processChannels();
 
-  // process ext subs
-  processExternalSubscriptions();
+  if (loopTime > processTimer + 1000) {
+    // process ext subs
+    processExternalSubscriptions();
+
+    checkForOldRoutes();
+
+    processTimer = loopTime;
+  }
 }
 
 
@@ -376,10 +421,17 @@ void DroneLinkManager::receivePacket(NetworkInterfaceModule *interface, uint8_t 
   // do something appropriate with it depending on its routing mode, type, etc
   uint8_t type = getDroneMeshMsgType(buffer);
 
+  // update lastHeard for txNode
+  DRONE_MESH_MSG_HEADER *header = (DRONE_MESH_MSG_HEADER*)buffer;
+  DRONE_LINK_NODE_INFO* txNodeInfo = getNodeInfo(header->txNode, false);
+  if (txNodeInfo) txNodeInfo->lastHeard = millis();
+
+  // pass to receive handler
   switch (type) {
     case DRONE_MESH_MSG_TYPE_HELLO: receiveHello(interface, buffer, metric); break;
     case DRONE_MESH_MSG_TYPE_SUBSCRIPTION: receiveSubscription(interface, buffer, metric); break;
     case DRONE_MESH_MSG_TYPE_DRONELINKMSG: receiveDroneLinkMsg(interface, buffer, metric); break;
+    case DRONE_MESH_MSG_TYPE_TRACEROUTE: receiveTraceroute(interface, buffer, metric); break;
   }
 }
 
@@ -481,10 +533,11 @@ void DroneLinkManager::receiveSubscription(NetworkInterfaceModule *interface, ui
 
     // check if we are the destination... otherwise ignore it
     if (header->destNode == _node) {
+
       // find matching sub channel and update state
       DroneLinkChannel* c = findChannel(header->srcNode, subBuffer->channel);
       if (c) {
-
+        c->confirmExternalSubscription(subBuffer->param);
       }
 
     } else {
@@ -525,6 +578,61 @@ void DroneLinkManager::receiveDroneLinkMsg(NetworkInterfaceModule *interface, ui
 }
 
 
+void DroneLinkManager::receiveTraceroute(NetworkInterfaceModule *interface, uint8_t *buffer, uint8_t metric) {
+  DRONE_MESH_MSG_HEADER *header = (DRONE_MESH_MSG_HEADER*)buffer;
+
+  Log.noticeln("[DLM.rT] Traceroute from %u to %u", header->srcNode, header->destNode);
+
+  if (getDroneMeshMsgDirection(buffer) == DRONE_MESH_MSG_REQUEST) {
+    // check if we are the nextNode... otherwise ignore it
+    if (header->nextNode == _node) {
+
+      // tweak buffer to add our traceroute info
+      uint8_t payloadLen = getDroneMeshMsgPayloadSize(buffer);
+
+      if (payloadLen < DRONE_MESH_MSG_MAX_PAYLOAD_SIZE-2) {
+        // calc index of insertion point
+        uint8_t p = sizeof(DRONE_MESH_MSG_HEADER) + payloadLen;
+
+        // add our info
+        buffer[p] = _node;
+        buffer[p+1] = metric;
+
+        // update payload size
+        setDroneMeshMsgPayloadSize(buffer, payloadLen+2);
+
+        // no need to recalc CRC, as that will be dealt with by generateResponse or hopAlong
+      }
+
+      // are we the destination?
+      if (header->destNode == _node) {
+        Log.noticeln("  Reached destination");
+
+        // generate a response
+        generateResponse(buffer);
+
+      } else {
+        Log.noticeln("  Intermediate hop");
+
+        hopAlong(buffer);
+      }
+    }
+
+  } else {
+    // response
+    Log.noticeln("  Response:");
+
+    // check if we are the destination... otherwise ignore it
+    if (header->destNode == _node) {
+      Log.noticeln("  Traceroute received");
+
+    } else {
+      hopAlong(buffer);
+    }
+  }
+}
+
+
 void DroneLinkManager::hopAlong(uint8_t *buffer) {
   DRONE_MESH_MSG_HEADER *header = (DRONE_MESH_MSG_HEADER*)buffer;
 
@@ -541,7 +649,7 @@ void DroneLinkManager::hopAlong(uint8_t *buffer) {
 
       // get next hop
       DRONE_LINK_NODE_INFO* nodeInfo = getNodeInfo(header->destNode, false);
-      if (nodeInfo) {
+      if (nodeInfo && nodeInfo->heard) {
         // hand to interface to manage the next hop
         if (nodeInfo->interface) {
           if (nodeInfo->interface->generateNextHop(buffer, nodeInfo->nextHop)) {
@@ -586,7 +694,7 @@ void DroneLinkManager::generateResponse(uint8_t *buffer) {
 boolean DroneLinkManager::sendDroneLinkMessage(uint8_t extNode, DroneLinkMsg *msg) {
   // see if we have a valid route to the target node
   DRONE_LINK_NODE_INFO* nodeInfo = getNodeInfo(extNode, false);
-  if (nodeInfo) {
+  if (nodeInfo && nodeInfo->heard) {
     // generate a subscription request on the relevant interface
     if (nodeInfo->interface)
       return nodeInfo->interface->sendDroneLinkMessage(extNode, nodeInfo->nextHop, msg);
@@ -600,12 +708,17 @@ boolean DroneLinkManager::generateSubscriptionRequest(uint8_t extNode, uint8_t c
 
   // see if we have a valid route to the target node
   DRONE_LINK_NODE_INFO* nodeInfo = getNodeInfo(extNode, false);
-  if (nodeInfo) {
+  if (nodeInfo && nodeInfo->heard) {
     // generate a subscription request on the relevant interface
     if (nodeInfo->interface &&
         nodeInfo->interface->generateSubscriptionRequest(_node, nodeInfo->nextHop, extNode, channel, param)) {
       return true;
+    } else {
+      Log.warningln("[DLM.gSR] failed to generate sub request %u", extNode);
     }
+  } else {
+    // no valid route
+    Log.warningln("[DLM.gSR] no valid route to %u", extNode);
   }
 
   return false;

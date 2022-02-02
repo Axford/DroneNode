@@ -11,12 +11,17 @@
 
 #define DRONE_LINK_CHANNEL_QUEUE_LIMIT  30  // max number of queued messages
 
+#define DRONE_LINK_CHANNEL_SUB_PENDING_RETRY_INTERVAL  1000
+#define DRONE_LINK_CHANNEL_SUB_REQUESTED_RETRY_INTERVAL  5000
+
+
 // subs are either internal modules or external (via the mesh)
 struct DroneLinkChannelSubscription {
   uint8_t extNode;  // to indicate external subs
   DroneModule* module;  // the subscribing module, or NULL for external
   uint8_t param; // target param or ALL
   uint8_t state; // for external subscriptions
+  uint32_t timer; // for external sub retries, etc
 };
 
 // external subscription states
@@ -59,7 +64,8 @@ public:
     void subscribe(uint8_t extNode, DroneModule* subscriber, uint8_t param);
 
     void processExternalSubscriptions();
-    void confirmExternalSubscription(uint8_t extNode, uint8_t param);
+    void confirmExternalSubscription(uint8_t param);
+    void removeExternalSubscriptions(uint8_t node);
 
     void serveChannelInfo(AsyncResponseStream *response);
 };

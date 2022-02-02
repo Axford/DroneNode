@@ -42,6 +42,8 @@ struct DRONE_LINK_NODE_PAGE {
 #define DRONE_LINK_NODE_PAGES  (256 / DRONE_LINK_NODE_PAGE_SIZE)
 
 
+#define DRONE_LINK_MANAGER_MAX_ROUTE_AGE    60000  // 60 sec
+
 
 class DroneLinkManager
 {
@@ -83,6 +85,10 @@ public:
 
     void processChannels();
     void processExternalSubscriptions();
+
+    void removeRoute(uint8_t node);
+
+    void checkForOldRoutes();
     void loop();
 
     DroneLinkChannel* findChannel(uint8_t node, uint8_t chan);
@@ -110,6 +116,7 @@ public:
     void receiveHello(NetworkInterfaceModule *interface, uint8_t *buffer, uint8_t metric);
     void receiveSubscription(NetworkInterfaceModule *interface, uint8_t *buffer, uint8_t metric);
     void receiveDroneLinkMsg(NetworkInterfaceModule *interface, uint8_t *buffer, uint8_t metric);
+    void receiveTraceroute(NetworkInterfaceModule *interface, uint8_t *buffer, uint8_t metric);
 
     // standard forwarding mechanic for unicast packets
     virtual void hopAlong(uint8_t *buffer);

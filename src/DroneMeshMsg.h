@@ -59,6 +59,7 @@ struct DRONE_MESH_MSG_BUFFER {
 uint8_t getDroneMeshMsgMode(uint8_t *buffer);
 
 uint8_t getDroneMeshMsgPayloadSize(uint8_t *buffer);
+void setDroneMeshMsgPayloadSize(uint8_t *buffer, uint8_t size);
 uint8_t getDroneMeshMsgTotalSize(uint8_t *buffer);
 
 boolean isDroneMeshMsgGuaranteed(uint8_t *buffer);

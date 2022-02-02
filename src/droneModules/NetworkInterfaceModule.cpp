@@ -29,7 +29,7 @@ void NetworkInterfaceModule::loop() {
 
 
 boolean NetworkInterfaceModule::getInterfaceState() {
-  return _interfaceState;
+  return _interfaceState && _enabled;
 }
 
 
@@ -40,6 +40,8 @@ uint8_t NetworkInterfaceModule::getTxQueueSize() {
 
 DRONE_MESH_MSG_BUFFER* NetworkInterfaceModule::getTransmitBuffer() {
   DRONE_MESH_MSG_BUFFER *buffer = NULL;
+
+  if (!getInterfaceState()) return NULL;
 
   // see if we have an empty transmit buffer than can be used
   for (uint8_t i=0; i<_txQueue.size(); i++) {
@@ -73,7 +75,9 @@ void NetworkInterfaceModule::processTransmitQueue() {
       if (sendPacket(b->data)) {
         // if this is guaranteed, then wait for a reply
         if (isDroneMeshMsgGuaranteed(b->data)) {
-          b->state = DRONE_MESH_MSG_BUFFER_STATE_WAITING;
+          //b->state = DRONE_MESH_MSG_BUFFER_STATE_WAITING;
+          // TODO - actually implement guaranteed delivery
+          b->state = DRONE_MESH_MSG_BUFFER_STATE_EMPTY;
         } else {
           // otherwise set to empty
           b->state = DRONE_MESH_MSG_BUFFER_STATE_EMPTY;
@@ -88,10 +92,10 @@ void NetworkInterfaceModule::processTransmitQueue() {
 
 
 boolean NetworkInterfaceModule::generateNextHop(uint8_t *pbuffer, uint8_t nextHop) {
+  if (!getInterfaceState()) return false;
+
   // request a new buffer in the transmit queue
   DRONE_MESH_MSG_BUFFER *buffer = getTransmitBuffer();
-
-  if (!getInterfaceState()) return false;
 
   // if successful
   if (buffer) {
@@ -133,6 +137,8 @@ void NetworkInterfaceModule::generateHello() {
 
 
 boolean NetworkInterfaceModule::generateHello(uint8_t src, uint8_t seq, uint8_t metric) {
+  if (!getInterfaceState()) return false;
+
   // request a new buffer in the transmit queue
   DRONE_MESH_MSG_BUFFER *buffer = getTransmitBuffer();
 
@@ -161,6 +167,8 @@ boolean NetworkInterfaceModule::generateHello(uint8_t src, uint8_t seq, uint8_t 
 
 
 boolean NetworkInterfaceModule::generateSubscriptionRequest(uint8_t src, uint8_t next, uint8_t dest, uint8_t channel, uint8_t param) {
+  if (!getInterfaceState()) return false;
+
   // request a new buffer in the transmit queue
   DRONE_MESH_MSG_BUFFER *buffer = getTransmitBuffer();
 
@@ -180,7 +188,7 @@ boolean NetworkInterfaceModule::generateSubscriptionRequest(uint8_t src, uint8_t
     subBuffer->param = param;
 
     // calc CRC
-    subBuffer->crc = _CRC8.smbus((uint8_t*)subBuffer, sizeof(DRONE_MESH_MSG_HELLO)-1);
+    subBuffer->crc = _CRC8.smbus((uint8_t*)subBuffer, sizeof(DRONE_MESH_MSG_SUBCSRIPTION)-1);
 
     return true;
   }
@@ -190,6 +198,8 @@ boolean NetworkInterfaceModule::generateSubscriptionRequest(uint8_t src, uint8_t
 
 
 boolean NetworkInterfaceModule::sendDroneLinkMessage(uint8_t destNode, uint8_t nextNode, DroneLinkMsg *msg) {
+  if (!getInterfaceState()) return false;
+
   // request a new buffer in the transmit queue
   DRONE_MESH_MSG_BUFFER *buffer = getTransmitBuffer();
 
@@ -237,9 +247,9 @@ void NetworkInterfaceModule::receivePacket(uint8_t *buffer, uint8_t metric) {
     return;
   }
 
-  Log.noticeln("[NIM.rP] Rec %u bytes with metric %u", len, metric);
-  Log.noticeln("  Interface: %s", getName());
+  Log.noticeln("[NIM.rP] Rec %u bytes with metric %u on int: ", len, metric, getName());
 
+  /*
   // decode packet header
   Log.noticeln("  Mode: %u", getDroneMeshMsgMode(buffer));
   Log.noticeln("  Guaranteed: %b", isDroneMeshMsgGuaranteed(buffer));
@@ -251,6 +261,7 @@ void NetworkInterfaceModule::receivePacket(uint8_t *buffer, uint8_t metric) {
   Log.noticeln("  seq: %u", getDroneMeshMsgSeq(buffer));
   Log.noticeln("  Type: %u", getDroneMeshMsgType(buffer));
   Log.noticeln("  Direction: %u", getDroneMeshMsgDirection(buffer));
+*/
 
   // see if this is an acknowledgement of a guaranteed delivery
   // TODO

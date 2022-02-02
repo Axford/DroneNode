@@ -133,6 +133,7 @@ void DroneLinkChannel::subscribe(uint8_t extNode, DroneModule* subscriber, uint8
   sub->module = subscriber;
   sub->param = param;
   sub->state = DRONE_LINK_CHANNEL_SUBSCRIPTION_PENDING;
+  sub->timer = millis();
   _subs.add(sub);
 }
 
@@ -141,15 +142,35 @@ void DroneLinkChannel::processExternalSubscriptions() {
   // not relevant if we represent a local channel
   if (_node == _dlm->node()) return;
 
+  uint32_t loopTime = millis();
+
   // check all subs for pending external subs
   DroneLinkChannelSubscription *sub;
   for(int i = 0; i < _subs.size(); i++) {
     sub = _subs.get(i);
-    if (sub->module != NULL &&
-        sub->state == DRONE_LINK_CHANNEL_SUBSCRIPTION_PENDING) {
-      // ask DLM to generate a subscription request
-      if (_dlm->generateSubscriptionRequest(_node, _id, sub->param)) {
-        sub->state =DRONE_LINK_CHANNEL_SUBSCRIPTION_REQUESTED;
+    if (sub->module != NULL) {
+      if (sub->state == DRONE_LINK_CHANNEL_SUBSCRIPTION_PENDING) {
+        // check timer
+        if (loopTime > sub->timer + DRONE_LINK_CHANNEL_SUB_PENDING_RETRY_INTERVAL) {
+          Log.noticeln("[DLC.pES] generating sub request");
+          // ask DLM to generate a subscription request
+          if (_dlm->generateSubscriptionRequest(_node, _id, sub->param)) {
+            sub->state =DRONE_LINK_CHANNEL_SUBSCRIPTION_REQUESTED;
+          }
+
+          sub->timer = loopTime;
+        }
+      } else if (sub->state == DRONE_LINK_CHANNEL_SUBSCRIPTION_REQUESTED) {
+        // check timer
+        if (loopTime > sub->timer + DRONE_LINK_CHANNEL_SUB_REQUESTED_RETRY_INTERVAL) {
+          Log.noticeln("[DLC.pES] retrying sub request");
+          // ask DLM to generate a subscription request
+          if (_dlm->generateSubscriptionRequest(_node, _id, sub->param)) {
+            sub->state =DRONE_LINK_CHANNEL_SUBSCRIPTION_REQUESTED;
+          }
+
+          sub->timer = loopTime;
+        }
       }
     }
   }
@@ -157,16 +178,42 @@ void DroneLinkChannel::processExternalSubscriptions() {
 }
 
 
-void DroneLinkChannel::confirmExternalSubscription(uint8_t extNode, uint8_t param) {
+void DroneLinkChannel::confirmExternalSubscription(uint8_t param) {
   DroneLinkChannelSubscription *sub;
   for(int i = 0; i < _subs.size(); i++) {
     sub = _subs.get(i);
-    if (sub->extNode == extNode &&
-        sub->module == NULL &&
+    if (sub->module != NULL &&
         sub->param == param) {
-      //
+
       sub->state = DRONE_LINK_CHANNEL_SUBSCRIPTION_CONFIRMED;
       return;
+    }
+  }
+}
+
+
+void DroneLinkChannel::removeExternalSubscriptions(uint8_t node) {
+
+  // does this channel represent an external subscription?
+  if (_node == node) {
+    DroneLinkChannelSubscription *sub;
+    // reset all subscription states
+    for(int i = 0; i < _subs.size(); i++) {
+      sub = _subs.get(i);
+      sub->state = DRONE_LINK_CHANNEL_SUBSCRIPTION_PENDING;
+    }
+  } else {
+    // perhaps the node that we've lost a route to was subscribed to us?
+    DroneLinkChannelSubscription *sub;
+    // reset all subscription states
+    for(int i = 0; i < _subs.size(); i++) {
+      sub = _subs.get(i);
+      if (sub->module == NULL &&
+          sub->extNode == node) {
+        // need to remove the sub
+        _subs.remove(i);
+        // TODO - is this robust?
+      }
     }
   }
 }
@@ -178,9 +225,14 @@ void DroneLinkChannel::serveChannelInfo(AsyncResponseStream *response) {
     sub = _subs.get(i);
 
     if (sub->module) {
-      response->printf("    module: %u: %s\n", sub->module->id(), sub->module->getName());
+      if (_node != _dlm->node()) {
+        response->printf("    module: %u: %s, state:%u\n", sub->module->id(), sub->module->getName(), sub->state);
+      } else {
+        response->printf("    module: %u: %s \n", sub->module->id(), sub->module->getName());
+      }
+
     } else {
-      response->printf("    node: %u, state:%u\n", sub->extNode, sub->state);
+      response->printf("    node: %u\n", sub->extNode);
     }
   }
 }
