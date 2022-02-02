@@ -379,6 +379,7 @@ void DroneLinkManager::receivePacket(NetworkInterfaceModule *interface, uint8_t 
   switch (type) {
     case DRONE_MESH_MSG_TYPE_HELLO: receiveHello(interface, buffer, metric); break;
     case DRONE_MESH_MSG_TYPE_SUBSCRIPTION: receiveSubscription(interface, buffer, metric); break;
+    case DRONE_MESH_MSG_TYPE_DRONELINKMSG: receiveDroneLinkMsg(interface, buffer, metric); break;
   }
 }
 
@@ -489,6 +490,37 @@ void DroneLinkManager::receiveSubscription(NetworkInterfaceModule *interface, ui
     } else {
       hopAlong(buffer);
     }
+  }
+}
+
+
+void DroneLinkManager::receiveDroneLinkMsg(NetworkInterfaceModule *interface, uint8_t *buffer, uint8_t metric) {
+  DRONE_MESH_MSG_HEADER *header = (DRONE_MESH_MSG_HEADER*)buffer;
+
+  Log.noticeln("[DLM.rDlM] DLM from %u to %u", header->srcNode, header->destNode);
+
+  if (getDroneMeshMsgDirection(buffer) == DRONE_MESH_MSG_REQUEST) {
+    // check if we are the nextNode... otherwise ignore it
+    if (header->nextNode == _node) {
+      // are we the destination?
+      if (header->destNode == _node) {
+        Log.noticeln("[DLM.rDlM] Reached destination");
+
+        // upwrap contained msg
+        uint8_t payloadSize = getDroneMeshMsgPayloadSize(buffer);
+
+        memcpy((uint8_t*)&_receivedMsg._msg, &buffer[sizeof(DRONE_MESH_MSG_HEADER)], payloadSize);
+
+        // publish contained message on local bus
+        publish(_receivedMsg);
+
+      } else {
+        Log.noticeln("[DLM.rDlM] Intermediate hop");
+
+        hopAlong(buffer);
+      }
+    }
+
   }
 }
 

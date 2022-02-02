@@ -50,6 +50,7 @@ protected:
   uint8_t _node;  // local node id
   unsigned long _publishedMessages;
   IvanLinkedList::LinkedList<DroneLinkChannel*> _channels;
+  DroneLinkMsg _receivedMsg;
 
   // routing table
   uint8_t _peerNodes;  // how many peer nodes have we heard
@@ -108,6 +109,7 @@ public:
 
     void receiveHello(NetworkInterfaceModule *interface, uint8_t *buffer, uint8_t metric);
     void receiveSubscription(NetworkInterfaceModule *interface, uint8_t *buffer, uint8_t metric);
+    void receiveDroneLinkMsg(NetworkInterfaceModule *interface, uint8_t *buffer, uint8_t metric);
 
     // standard forwarding mechanic for unicast packets
     virtual void hopAlong(uint8_t *buffer);
