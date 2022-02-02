@@ -9,9 +9,11 @@
 
 #include "../DroneModule.h"
 #include "../DroneMeshMsg.h"
+#include <FastCRC.h>
 
 #define NETWORK_INTERFACE_MAX_TX_QUEUE    8
 
+#define NETWORK_INTERFACE_HELLO_INTERVAL  2000
 
 // class
 class NetworkInterfaceModule:  public DroneModule {
@@ -19,6 +21,8 @@ protected:
   boolean _interfaceState;
   uint8_t _helloSeq;
   IvanLinkedList::LinkedList<DRONE_MESH_MSG_BUFFER*> _txQueue;
+  FastCRC8 _CRC8;
+  uint32_t _helloTimer;
 public:
 
   NetworkInterfaceModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm, DroneExecutionManager* dem, fs::FS &fs);
@@ -30,9 +34,11 @@ public:
   void processTransmitQueue();
 
   void generateHello();
+  boolean generateHello(uint8_t src, uint8_t seq, uint8_t metric);
 
   // inherited by network interface implementations
   virtual boolean sendPacket(uint8_t *buffer);
+  virtual void receivePacket(uint8_t *buffer, uint8_t metric);
 };
 
 #endif

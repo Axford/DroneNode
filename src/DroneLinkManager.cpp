@@ -103,6 +103,7 @@ bool DroneLinkManager::publish(DroneLinkMsg &msg) {
   return f;
 }
 
+/*
 bool DroneLinkManager::publishPeer(DroneLinkMsg &msg, int16_t RSSI, uint8_t interface) {
 
   // update nodeInfo map
@@ -153,6 +154,7 @@ bool DroneLinkManager::publishPeer(DroneLinkMsg &msg, int16_t RSSI, uint8_t inte
 
   return publish(msg);
 }
+*/
 
 void DroneLinkManager::processChannels() {
   DroneLinkChannel* c;
@@ -165,8 +167,6 @@ void DroneLinkManager::processChannels() {
 
 
 void DroneLinkManager::loop() {
-  // generate Hello messages
-  generateHelloMessages();
 
   // process local channel messages
   processChannels();
@@ -224,29 +224,50 @@ uint8_t DroneLinkManager::getNodeByName(char * name) {
   return 0;
 }
 
-DRONE_LINK_NODE_INFO* DroneLinkManager::getNodeInfo(uint8_t source) {
+DRONE_LINK_NODE_INFO* DroneLinkManager::getNodeInfo(uint8_t source, boolean heard) {
   // get page
   uint8_t pageIndex = source >> 4;  // div by 16
   uint8_t nodeIndex = source & 0xF;
 
   // see if page exists
   DRONE_LINK_NODE_PAGE* page = _nodePages[pageIndex];
+
+  if (page == NULL && heard) {
+    // create page
+    _nodePages[pageIndex] = (DRONE_LINK_NODE_PAGE*)malloc(sizeof(DRONE_LINK_NODE_PAGE));
+    page = _nodePages[pageIndex];
+
+    // init
+    for (uint8_t i=0; i<DRONE_LINK_NODE_PAGE_SIZE; i++) {
+      page->nodeInfo[i].heard = false;
+      page->nodeInfo[i].seq = 0;
+      page->nodeInfo[i].metric = 255;
+      page->nodeInfo[i].name = NULL;
+      page->nodeInfo[i].interface = NULL;
+      page->nodeInfo[i].nextHop = 0;
+    }
+  }
+
   if (page != NULL) {
-    if (page->nodeInfo[nodeIndex].heard) {
-      return &page->nodeInfo[nodeIndex];
-    } else
-      return NULL;
+
+    if (heard) {
+      if (!page->nodeInfo[nodeIndex].heard) {
+        _peerNodes++;
+        page->nodeInfo[nodeIndex].heard = true;
+      }
+      page->nodeInfo[nodeIndex].lastHeard = millis();
+    }
+
+    return &page->nodeInfo[nodeIndex];
   } else
     return NULL;
 }
 
-uint8_t DroneLinkManager::getSourceInterface(uint8_t source) {
-  DRONE_LINK_NODE_INFO* nodeInfo = getNodeInfo(source);
+NetworkInterfaceModule* DroneLinkManager::getSourceInterface(uint8_t source) {
+  DRONE_LINK_NODE_INFO* nodeInfo = getNodeInfo(source, false);
 
-  if (nodeInfo == NULL) {
-    return 0;
-  } else
-    return nodeInfo->interface;
+  if (nodeInfo == NULL) return NULL;
+  return nodeInfo->interface;
 }
 
 
@@ -270,7 +291,7 @@ void DroneLinkManager::serveNodeInfo(AsyncWebServerRequest *request) {
             response->print("???");
           } else
             response->printf("%s", page->nodeInfo[j].name);
-          response->printf(", RSSI: %u, Age: %u sec, int: %u\n", page->nodeInfo[j].RSSI, age, page->nodeInfo[j].interface);
+          response->printf(", Seq: %u, Metric: %u, Next Hop: %u, Age: %u sec\n", page->nodeInfo[j].seq, page->nodeInfo[j].metric, page->nodeInfo[j].nextHop, age);
         }
       }
     }
@@ -306,24 +327,67 @@ void DroneLinkManager::serveChannelInfo(AsyncWebServerRequest *request) {
 // mesh methods
 // -----------------------------------------------------------------------------
 
-void DroneLinkManager::generateHelloMessages() {
-  NetworkInterfaceModule* interface;
-  for(int i = 0; i < _interfaces.size(); i++){
-    interface = _interfaces.get(i);
-
-    interface->generateHello();
-  }
-}
-
-
 void DroneLinkManager::registerInterface(NetworkInterfaceModule *interface) {
   _interfaces.add(interface);
 }
 
 
-void DroneLinkManager::receivePacket(uint8_t *buffer, uint8_t metric) {
+void DroneLinkManager::receivePacket(NetworkInterfaceModule *interface, uint8_t *buffer, uint8_t metric) {
   // this is the meaty stuff...
-  // need to validate packet
-  // then do something appropriate with it depending on its routing mode, type, etc
+  // do something appropriate with it depending on its routing mode, type, etc
 
+  DRONE_MESH_MSG_HEADER *header = (DRONE_MESH_MSG_HEADER*)buffer;
+
+  if (header->typeDir == (DRONE_MESH_MSG_TYPE_HELLO | DRONE_MESH_MSG_REQUEST)) {
+    Log.noticeln("[DLM.rP] Hello from %u tx by %u", header->srcNode, header->txNode);
+
+    DRONE_MESH_MSG_HELLO *hello = (DRONE_MESH_MSG_HELLO*)buffer;
+
+    // ignore it if this hello packet is from us
+    if (header->srcNode == _node) return;
+
+    // calc total metric, inc RSSI to us
+    uint32_t newMetric = constrain(hello->metric + metric, 0, 255);
+
+
+    // fetch node info (routing entry), create if needed
+    DRONE_LINK_NODE_INFO* nodeInfo = getNodeInfo(header->srcNode, true);
+
+    if (nodeInfo) {
+
+      boolean feasibleRoute = false;
+      // is this a new sequence (allow for wrap-around)
+      if ((header->seq > nodeInfo->seq) || (nodeInfo->seq > 128 && (header->seq < nodeInfo->seq - 128))) {
+        feasibleRoute = true;
+        Log.noticeln("New seq %u", header->seq);
+      }
+
+      // or is it the same, but with a better metric
+      if (header->seq == nodeInfo->seq &&
+          newMetric < nodeInfo->metric) {
+        feasibleRoute = true;
+        Log.noticeln("Better metric %u", newMetric);
+      }
+
+      if (feasibleRoute) {
+        Log.noticeln("Updating route info");
+        nodeInfo->seq = header->seq;
+        nodeInfo->metric = newMetric;
+        nodeInfo->interface = interface;
+        nodeInfo->nextHop = header->txNode;
+
+        // if metric < 255 then retransmit the Hello on all interfaces
+        if (newMetric < 255) {
+          for (uint8_t i=0; i < _interfaces.size(); i++) {
+            NetworkInterfaceModule* interface = _interfaces.get(i);
+            interface->generateHello(header->seq, header->srcNode, newMetric);
+          }
+        }
+        
+      } else {
+        Log.noticeln("New route infeasible");
+      }
+    }
+
+  }
 }

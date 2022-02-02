@@ -135,6 +135,7 @@ void UDPTelemetryModule::loop() {
   // deferred initialisation to allow for lack of wifi at start
   if (!_started && WiFi.status() == WL_CONNECTED) {
     Serial.println("[UDP.l] .begin");
+    // start UDP server
     _udp.begin(_params[UDP_PARAM_PORT_E].data.uint32[0]);
     _started = true;
   }
@@ -153,7 +154,7 @@ void UDPTelemetryModule::loop() {
         long rssi = abs(constrain(WiFi.RSSI(), -100, 0));
         uint8_t metric = map(rssi, 0, 100, 1, 15);
 
-        _dlm->receivePacket(_rBuffer, metric);
+        receivePacket(_rBuffer, metric);
         _packetsReceived++;
       } else if (packetSize > 0) {
         // error - packet size mismatch
@@ -193,6 +194,7 @@ void UDPTelemetryModule::loop() {
 
 
 boolean UDPTelemetryModule::sendPacket(uint8_t *buffer) {
+
   // can only send if WiFi connected
   boolean wifiConnected = (WiFi.status() == WL_CONNECTED) || (WiFi.softAPIP()[0] > 0);
   if (!wifiConnected) return false;

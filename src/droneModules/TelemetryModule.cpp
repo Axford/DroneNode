@@ -125,7 +125,8 @@ void TelemetryModule::loop() {
         case 3: // checking CRC
           uint8_t crc = _CRC8.smbus((uint8_t*)&_receivedMsg._msg, _receivedMsg.length() + sizeof(DRONE_LINK_ADDR));
           if (crc == b) {
-            _dlm->publishPeer(_receivedMsg, 30, _id);
+            // TODO
+            //_dlm->publishPeer(_receivedMsg, 30, _id);
           } else {
             Log.errorln("Telem CRC fail %x", crc);
           }
