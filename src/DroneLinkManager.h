@@ -126,6 +126,9 @@ public:
     boolean sendDroneLinkMessage(uint8_t extNode, DroneLinkMsg *msg);
 
     boolean generateSubscriptionRequest(uint8_t extNode, uint8_t channel, uint8_t param);
+
+    // for terminal debugging
+    void generateTraceroute(uint8_t destNode);
 };
 
 

@@ -43,6 +43,8 @@ public:
 
   boolean generateSubscriptionRequest(uint8_t src, uint8_t next, uint8_t dest, uint8_t channel, uint8_t param);
 
+  boolean generateTraceroute(uint8_t destNode, uint8_t nextNode);
+
   boolean sendDroneLinkMessage(uint8_t destNode, uint8_t nextNode, DroneLinkMsg *msg);
 
   // inherited by network interface implementations

@@ -436,6 +436,17 @@ void loop() {
         dmm->restart();
       }
 
+      // traceroute
+      if (strncmp(serialCommand, "trace", 5)==0) {
+        // read node address
+        uint8_t destNode = atoi(&serialCommand[6]);
+
+        Log.noticeln("Traceroute to %u", destNode);
+        dlm->generateTraceroute(destNode);
+      }
+
+      serialCommandLen = 0;
+
     } else {
       serialCommand[serialCommandLen] = c;
       if (serialCommandLen < 29 ) serialCommandLen++;

@@ -197,6 +197,37 @@ boolean NetworkInterfaceModule::generateSubscriptionRequest(uint8_t src, uint8_t
 }
 
 
+boolean NetworkInterfaceModule::generateTraceroute(uint8_t destNode, uint8_t nextNode) {
+  if (!getInterfaceState()) return false;
+
+  // request a new buffer in the transmit queue
+  DRONE_MESH_MSG_BUFFER *buffer = getTransmitBuffer();
+
+  // if successful
+  if (buffer) {
+    DRONE_MESH_MSG_TRACEROUTE *tBuffer = (DRONE_MESH_MSG_TRACEROUTE*)buffer->data;
+
+    // populate with a Hello packet
+    tBuffer->header.modeGuaranteeSize = DRONE_MESH_MSG_MODE_UNICAST | DRONE_MESH_MSG_GUARANTEED | 1 ;  // payload is 2 byte... sent as n-1
+    tBuffer->header.txNode = _dlm->node();;
+    tBuffer->header.srcNode = _dlm->node();
+    tBuffer->header.nextNode = nextNode;
+    tBuffer->header.destNode = destNode;
+    tBuffer->header.seq = 0;
+    tBuffer->header.typeDir = DRONE_MESH_MSG_TYPE_TRACEROUTE | DRONE_MESH_MSG_REQUEST;
+    tBuffer->dummyNode = _dlm->node();
+    tBuffer->dummyMetric = 0;
+
+    // calc CRC
+    tBuffer->crc = _CRC8.smbus((uint8_t*)tBuffer, sizeof(DRONE_MESH_MSG_TRACEROUTE)-1);
+
+    return true;
+  }
+
+  return false;
+}
+
+
 boolean NetworkInterfaceModule::sendDroneLinkMessage(uint8_t destNode, uint8_t nextNode, DroneLinkMsg *msg) {
   if (!getInterfaceState()) return false;
 

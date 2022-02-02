@@ -27,6 +27,13 @@ struct DRONE_MESH_MSG_SUBCSRIPTION {
   uint8_t crc;
 } __packed;
 
+struct DRONE_MESH_MSG_TRACEROUTE {
+  DRONE_MESH_MSG_HEADER header;
+  uint8_t dummyNode;
+  uint8_t dummyMetric;
+  uint8_t crc;
+} __packed;
+
 #define DRONE_MESH_MSG_MAX_PAYLOAD_SIZE   48 // bytes - to keep within RFM69 transmit size limit
 #define DRONE_MESH_MSG_MAX_PACKET_SIZE    (6 + DRONE_MESH_MSG_MAX_PAYLOAD_SIZE + 1 )  // header + payload + CRC
 

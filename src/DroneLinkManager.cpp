@@ -457,7 +457,8 @@ void DroneLinkManager::receiveHello(NetworkInterfaceModule *interface, uint8_t *
 
   if (nodeInfo) {
 
-    boolean feasibleRoute = false;
+    // if its a brand new route entry it will have metric 255... so good to overwrite
+    boolean feasibleRoute = nodeInfo->metric == 255;
 
     if (interface != nodeInfo->interface && newMetric < nodeInfo->metric) {
       feasibleRoute = true;
@@ -620,13 +621,23 @@ void DroneLinkManager::receiveTraceroute(NetworkInterfaceModule *interface, uint
 
   } else {
     // response
-    Log.noticeln("  Response:");
+    //Log.noticeln("  Response:");
 
     // check if we are the destination... otherwise ignore it
     if (header->destNode == _node) {
-      Log.noticeln("  Traceroute received");
+      Log.noticeln("  Traceroute received:");
+
+      // list traceroute info
+      uint8_t payloadLen = getDroneMeshMsgPayloadSize(buffer);
+
+      uint8_t p = sizeof(DRONE_MESH_MSG_HEADER);
+      for (uint8_t i=0; i < payloadLen/2; i++) {
+        Log.noticeln("    %u, metric: %u", buffer[p], buffer[p+1]);
+        p += 2;
+      }
 
     } else {
+      Log.noticeln("  Response - hopAlong");
       hopAlong(buffer);
     }
   }
@@ -722,4 +733,16 @@ boolean DroneLinkManager::generateSubscriptionRequest(uint8_t extNode, uint8_t c
   }
 
   return false;
+}
+
+
+void DroneLinkManager::generateTraceroute(uint8_t destNode) {
+  // see if we have a valid route to the target node
+  DRONE_LINK_NODE_INFO* nodeInfo = getNodeInfo(destNode, false);
+  if (nodeInfo && nodeInfo->heard) {
+    // generate a traceroute request on the relevant interface
+    if (nodeInfo->interface) {
+        nodeInfo->interface->generateTraceroute(destNode, nodeInfo->nextHop);
+    }
+  }
 }
