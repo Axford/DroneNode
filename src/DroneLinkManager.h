@@ -75,6 +75,8 @@ public:
     void subscribe(uint8_t channel, DroneModule *subscriber, uint8_t param);
     void subscribe(uint8_t node, uint8_t channel, DroneModule *subscriber, uint8_t param);
 
+    void subscribeExt(uint8_t extNode, uint8_t channel, uint8_t param);
+
     bool publish(DroneLinkMsg &msg);
     //bool publishPeer(DroneLinkMsg &msg, int16_t RSSI, uint8_t interface);
 
@@ -106,6 +108,15 @@ public:
 
     void receiveHello(NetworkInterfaceModule *interface, uint8_t *buffer, uint8_t metric);
     void receiveSubscription(NetworkInterfaceModule *interface, uint8_t *buffer, uint8_t metric);
+
+    // standard forwarding mechanic for unicast packets
+    virtual void hopAlong(uint8_t *buffer);
+
+    virtual void generateResponse(uint8_t *buffer);
+
+    boolean sendDroneLinkMessage(uint8_t extNode, DroneLinkMsg *msg);
+
+    boolean generateSubscriptionRequest(uint8_t extNode, uint8_t channel, uint8_t param);
 };
 
 

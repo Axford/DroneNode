@@ -87,6 +87,37 @@ void NetworkInterfaceModule::processTransmitQueue() {
 }
 
 
+boolean NetworkInterfaceModule::generateNextHop(uint8_t *pbuffer, uint8_t nextHop) {
+  // request a new buffer in the transmit queue
+  DRONE_MESH_MSG_BUFFER *buffer = getTransmitBuffer();
+
+  if (!getInterfaceState()) return false;
+
+  // if successful
+  if (buffer) {
+    // get message size from previous buffer
+    uint8_t len = getDroneMeshMsgTotalSize(pbuffer);
+
+    // copy previous buffer to new
+    memcpy(buffer->data, pbuffer, len);
+
+    // update next hop
+    DRONE_MESH_MSG_HEADER *header = (DRONE_MESH_MSG_HEADER*)buffer->data;
+    header->nextNode = nextHop;
+
+    // and tx node
+    header->txNode = _dlm->node();
+
+    // update CRC
+    buffer->data[len-1] = _CRC8.smbus((uint8_t*)buffer, len-1);
+
+    return true;
+  }
+
+  return false;
+}
+
+
 void NetworkInterfaceModule::generateHello() {
   Serial.println("[NIM.gH]");
   if (getInterfaceState()) {
@@ -129,7 +160,7 @@ boolean NetworkInterfaceModule::generateHello(uint8_t src, uint8_t seq, uint8_t 
 }
 
 
-boolean NetworkInterfaceModule::generateSubscriptionRequest(uint8_t src, uint8_t next, uint8_t dest, uint8_t channel) {
+boolean NetworkInterfaceModule::generateSubscriptionRequest(uint8_t src, uint8_t next, uint8_t dest, uint8_t channel, uint8_t param) {
   // request a new buffer in the transmit queue
   DRONE_MESH_MSG_BUFFER *buffer = getTransmitBuffer();
 
@@ -138,7 +169,7 @@ boolean NetworkInterfaceModule::generateSubscriptionRequest(uint8_t src, uint8_t
     DRONE_MESH_MSG_SUBCSRIPTION *subBuffer = (DRONE_MESH_MSG_SUBCSRIPTION*)buffer->data;
 
     // populate with a Hello packet
-    subBuffer->header.modeGuaranteeSize = DRONE_MESH_MSG_MODE_UNICAST | DRONE_MESH_MSG_GUARANTEED | 0 ;  // payload is 1 byte... sent as n-1
+    subBuffer->header.modeGuaranteeSize = DRONE_MESH_MSG_MODE_UNICAST | DRONE_MESH_MSG_GUARANTEED | 1 ;  // payload is 2 byte... sent as n-1
     subBuffer->header.txNode = src;
     subBuffer->header.srcNode = _dlm->node();
     subBuffer->header.nextNode = next;
@@ -146,9 +177,43 @@ boolean NetworkInterfaceModule::generateSubscriptionRequest(uint8_t src, uint8_t
     subBuffer->header.seq = 0;
     subBuffer->header.typeDir = DRONE_MESH_MSG_TYPE_SUBSCRIPTION | DRONE_MESH_MSG_REQUEST;
     subBuffer->channel = channel;
+    subBuffer->param = param;
 
     // calc CRC
     subBuffer->crc = _CRC8.smbus((uint8_t*)subBuffer, sizeof(DRONE_MESH_MSG_HELLO)-1);
+
+    return true;
+  }
+
+  return false;
+}
+
+
+boolean NetworkInterfaceModule::sendDroneLinkMessage(uint8_t destNode, uint8_t nextNode, DroneLinkMsg *msg) {
+  // request a new buffer in the transmit queue
+  DRONE_MESH_MSG_BUFFER *buffer = getTransmitBuffer();
+
+  // if successful
+  if (buffer) {
+    uint8_t payloadSize = msg->totalSize();
+    uint8_t totalSize = payloadSize + sizeof(DRONE_MESH_MSG_HEADER) + 1;
+
+    DRONE_MESH_MSG_HEADER *header = (DRONE_MESH_MSG_HEADER*)buffer->data;
+
+    // populate with a DroneLinkMsg packet
+    header->modeGuaranteeSize = DRONE_MESH_MSG_MODE_UNICAST | DRONE_MESH_MSG_GUARANTEED | (payloadSize-1) ;
+    header->txNode = _dlm->node();
+    header->srcNode = _dlm->node();
+    header->nextNode = nextNode;
+    header->destNode = destNode;
+    header->seq = 0;
+    header->typeDir = DRONE_MESH_MSG_TYPE_DRONELINKMSG | DRONE_MESH_MSG_REQUEST;
+
+    // copy msg data
+    memcpy(&buffer->data[sizeof(DRONE_MESH_MSG_HEADER)], (uint8_t*)&msg->_msg, payloadSize);
+
+    // calc CRC
+    buffer->data[totalSize-1] = _CRC8.smbus((uint8_t*)buffer->data, totalSize-1);
 
     return true;
   }

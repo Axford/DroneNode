@@ -23,6 +23,7 @@ struct DRONE_MESH_MSG_HELLO {
 struct DRONE_MESH_MSG_SUBCSRIPTION {
   DRONE_MESH_MSG_HEADER header;
   uint8_t channel;
+  uint8_t param;
   uint8_t crc;
 } __packed;
 

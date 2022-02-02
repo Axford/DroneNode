@@ -145,6 +145,9 @@ public:
     uint8_t length() {
       return (_msg.paramTypeLength & 0x0F) + 1;
     }
+    uint8_t totalSize() {
+      return length() + 5;
+    }
 
     // utility
 
