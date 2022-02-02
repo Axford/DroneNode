@@ -15,8 +15,6 @@ UDPTelemetryModule::UDPTelemetryModule(uint8_t id, DroneModuleManager* dmm, Dron
    _packetsSent = 0;
    _packetsTimer = 0;
 
-   _interfaceState = false;
-
    // pubs
    initParams(UDP_PARAM_ENTRIES);
 

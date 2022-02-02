@@ -17,6 +17,11 @@ struct DroneLinkChannelSubscription {
   uint8_t param; // target param or ALL
 };
 
+// external subscription states
+#define DRONE_LINK_CHANNEL_SUBSCRIPTION_PENDING    0
+#define DRONE_LINK_CHANNEL_SUBSCRIPTION_REQUESTED  1
+#define DRONE_LINK_CHANNEL_SUBSCRIPTION_CONFIRMED  2
+
 
 class DroneLinkChannel
 {
@@ -24,6 +29,7 @@ protected:
   uint8_t _node; // which node is associated with this channel
   uint8_t _id;  // channel id
   uint32_t _choked;
+  uint8_t _state; // for external subscriptions
   IvanLinkedList::LinkedList<DroneLinkChannelSubscription> _subs;
   IvanLinkedList::LinkedList<DroneLinkMsg*> _queue;
   uint8_t _peakSize;
@@ -38,11 +44,16 @@ public:
       Log.noticeln(F("Create channel: %d>%d"),node,id);
       _choked =0;
       _peakSize = 0;
+      _state = DRONE_LINK_CHANNEL_SUBSCRIPTION_PENDING;
     }
 
-    uint8_t id() { return _id; }
+    uint8_t id() { return _id; } // channel id
 
     uint8_t node() { return _node; }
+
+    uint8_t state() {return _state; }
+
+    void state(uint8_t newState) { _state = newState; }
 
     uint8_t size() { return _queue.size(); }
 

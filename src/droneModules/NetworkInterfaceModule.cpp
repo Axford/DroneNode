@@ -8,8 +8,9 @@ NetworkInterfaceModule::NetworkInterfaceModule(uint8_t id, DroneModuleManager* d
   _txQueue(IvanLinkedList::LinkedList<DRONE_MESH_MSG_BUFFER*>())
  {
    _interfaceState = false;  // start inactive
-   _helloSeq = 255; // ready for rollover on first Hello
+   _helloSeq = 0;
    _helloTimer = 0;
+   _seqTimer = 0;
 }
 
 
@@ -18,7 +19,7 @@ void NetworkInterfaceModule::loop() {
 
   uint32_t loopTime = millis();
 
-  if (loopTime > _helloTimer + NETWORK_INTERFACE_HELLO_INTERVAL) {
+  if (loopTime > _helloTimer + NETWORK_INTERFACE_HELLO_INTERVAL || _helloTimer == 0) {
     generateHello();
     _helloTimer = loopTime;
   }
@@ -29,6 +30,11 @@ void NetworkInterfaceModule::loop() {
 
 boolean NetworkInterfaceModule::getInterfaceState() {
   return _interfaceState;
+}
+
+
+uint8_t NetworkInterfaceModule::getTxQueueSize() {
+  return _txQueue.size();
 }
 
 
@@ -85,7 +91,11 @@ void NetworkInterfaceModule::generateHello() {
   Serial.println("[NIM.gH]");
   if (getInterfaceState()) {
     if (generateHello(_dlm->node(), _helloSeq, 0)) {
-      _helloSeq++;
+      uint32_t loopTime = millis();
+      if (loopTime > _seqTimer + NETWORK_INTERFACE_SEQ_INTERVAL) {
+        _helloSeq++;
+        _seqTimer = loopTime;
+      }
     }
   }
 }
@@ -103,6 +113,7 @@ boolean NetworkInterfaceModule::generateHello(uint8_t src, uint8_t seq, uint8_t 
     helloBuffer->header.modeGuaranteeSize = DRONE_MESH_MSG_MODE_MULTICAST | DRONE_MESH_MSG_NOT_GUARANTEED | 0 ;  // payload is 1 byte... sent as n-1
     helloBuffer->header.txNode = _dlm->node();
     helloBuffer->header.srcNode = src;
+    helloBuffer->header.nextNode = 0;
     helloBuffer->header.destNode = 0;
     helloBuffer->header.seq = seq;
     helloBuffer->header.typeDir = DRONE_MESH_MSG_TYPE_HELLO | DRONE_MESH_MSG_REQUEST;
@@ -110,6 +121,34 @@ boolean NetworkInterfaceModule::generateHello(uint8_t src, uint8_t seq, uint8_t 
 
     // calc CRC
     helloBuffer->crc = _CRC8.smbus((uint8_t*)helloBuffer, sizeof(DRONE_MESH_MSG_HELLO)-1);
+
+    return true;
+  }
+
+  return false;
+}
+
+
+boolean NetworkInterfaceModule::generateSubscriptionRequest(uint8_t src, uint8_t next, uint8_t dest, uint8_t channel) {
+  // request a new buffer in the transmit queue
+  DRONE_MESH_MSG_BUFFER *buffer = getTransmitBuffer();
+
+  // if successful
+  if (buffer) {
+    DRONE_MESH_MSG_SUBCSRIPTION *subBuffer = (DRONE_MESH_MSG_SUBCSRIPTION*)buffer->data;
+
+    // populate with a Hello packet
+    subBuffer->header.modeGuaranteeSize = DRONE_MESH_MSG_MODE_UNICAST | DRONE_MESH_MSG_GUARANTEED | 0 ;  // payload is 1 byte... sent as n-1
+    subBuffer->header.txNode = src;
+    subBuffer->header.srcNode = _dlm->node();
+    subBuffer->header.nextNode = next;
+    subBuffer->header.destNode = dest;
+    subBuffer->header.seq = 0;
+    subBuffer->header.typeDir = DRONE_MESH_MSG_TYPE_SUBSCRIPTION | DRONE_MESH_MSG_REQUEST;
+    subBuffer->channel = channel;
+
+    // calc CRC
+    subBuffer->crc = _CRC8.smbus((uint8_t*)subBuffer, sizeof(DRONE_MESH_MSG_HELLO)-1);
 
     return true;
   }
@@ -133,17 +172,20 @@ void NetworkInterfaceModule::receivePacket(uint8_t *buffer, uint8_t metric) {
     return;
   }
 
-  Serial.print("[NIM.rP] recv metric: ");
-  Serial.println(metric);
-
+  Log.noticeln("[NIM.rP] Rec %u bytes with metric %u", len, metric);
+  Log.noticeln("  Interface: %s", getName());
 
   // decode packet header
-  Serial.print("Header: ");
-  for (uint8_t i=0; i<6; i++) {
-    Serial.print(buffer[i], BIN);
-    Serial.print(" ");
-  }
-  Serial.println();
+  Log.noticeln("  Mode: %u", getDroneMeshMsgMode(buffer));
+  Log.noticeln("  Guaranteed: %b", isDroneMeshMsgGuaranteed(buffer));
+  Log.noticeln("  Size: %u", getDroneMeshMsgPayloadSize(buffer));
+  Log.noticeln("  txNode: %u", getDroneMeshMsgTxNode(buffer));
+  Log.noticeln("  srcNode: %u", getDroneMeshMsgSrcNode(buffer));
+  Log.noticeln("  nextNode: %u", getDroneMeshMsgNextNode(buffer));
+  Log.noticeln("  destNode: %u", getDroneMeshMsgDestNode(buffer));
+  Log.noticeln("  seq: %u", getDroneMeshMsgSeq(buffer));
+  Log.noticeln("  Type: %u", getDroneMeshMsgType(buffer));
+  Log.noticeln("  Direction: %u", getDroneMeshMsgDirection(buffer));
 
   // see if this is an acknowledgement of a guaranteed delivery
   // TODO

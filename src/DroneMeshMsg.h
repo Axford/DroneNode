@@ -8,10 +8,11 @@ struct DRONE_MESH_MSG_HEADER {
   uint8_t modeGuaranteeSize;  // packed mode, guarantee, size
   uint8_t txNode;
   uint8_t srcNode;
+  uint8_t nextNode; // for unicast
   uint8_t destNode;
   uint8_t seq;
   uint8_t typeDir;  // packed type + direction
-} __packed;  // 6 bytes
+} __packed;  // 7 bytes
 
 struct DRONE_MESH_MSG_HELLO {
   DRONE_MESH_MSG_HEADER header;
@@ -19,7 +20,13 @@ struct DRONE_MESH_MSG_HELLO {
   uint8_t crc;
 } __packed;
 
-#define DRONE_MESH_MSG_MAX_PAYLOAD_SIZE   64 // bytes
+struct DRONE_MESH_MSG_SUBCSRIPTION {
+  DRONE_MESH_MSG_HEADER header;
+  uint8_t channel;
+  uint8_t crc;
+} __packed;
+
+#define DRONE_MESH_MSG_MAX_PAYLOAD_SIZE   48 // bytes - to keep within RFM69 transmit size limit
 #define DRONE_MESH_MSG_MAX_PACKET_SIZE    (6 + DRONE_MESH_MSG_MAX_PAYLOAD_SIZE + 1 )  // header + payload + CRC
 
 struct DRONE_MESH_MSG_BUFFER {
@@ -48,9 +55,19 @@ struct DRONE_MESH_MSG_BUFFER {
 #define DRONE_MESH_MSG_REQUEST          0
 #define DRONE_MESH_MSG_RESPONSE         1
 
+uint8_t getDroneMeshMsgMode(uint8_t *buffer);
+
 uint8_t getDroneMeshMsgPayloadSize(uint8_t *buffer);
 uint8_t getDroneMeshMsgTotalSize(uint8_t *buffer);
 
 boolean isDroneMeshMsgGuaranteed(uint8_t *buffer);
+
+uint8_t getDroneMeshMsgTxNode(uint8_t *buffer);
+uint8_t getDroneMeshMsgSrcNode(uint8_t *buffer);
+uint8_t getDroneMeshMsgNextNode(uint8_t *buffer);
+uint8_t getDroneMeshMsgDestNode(uint8_t *buffer);
+uint8_t getDroneMeshMsgSeq(uint8_t *buffer);
+uint8_t getDroneMeshMsgType(uint8_t *buffer);
+uint8_t getDroneMeshMsgDirection(uint8_t *buffer);
 
 #endif

@@ -166,10 +166,37 @@ void DroneLinkManager::processChannels() {
 }
 
 
+void DroneLinkManager::processExternalSubscriptions() {
+  // check for pending subscriptions
+
+  DroneLinkChannel* c;
+  for(int i = 0; i < _channels.size(); i++){
+    c = _channels.get(i);
+    if (c->node() != _node) {
+      if (c->state() == DRONE_LINK_CHANNEL_SUBSCRIPTION_PENDING) {
+        // see if we have a valid route to the target node
+        DRONE_LINK_NODE_INFO* nodeInfo = getNodeInfo(c->node(), false);
+        if (nodeInfo) {
+          // generate a subscription request on the relevant interface
+          if (nodeInfo->interface &&
+              nodeInfo->interface->generateSubscriptionRequest(_node, nodeInfo->nextHop, c->node(), c->id())) {
+            c->state(DRONE_LINK_CHANNEL_SUBSCRIPTION_REQUESTED);
+          }
+        }
+      }
+    }
+  }
+
+}
+
+
 void DroneLinkManager::loop() {
 
   // process local channel messages
   processChannels();
+
+  // process ext subs
+  processExternalSubscriptions();
 }
 
 
@@ -274,7 +301,17 @@ NetworkInterfaceModule* DroneLinkManager::getSourceInterface(uint8_t source) {
 void DroneLinkManager::serveNodeInfo(AsyncWebServerRequest *request) {
   AsyncResponseStream *response = request->beginResponseStream("text/text");
   response->addHeader("Server","ESP Async Web Server");
-  response->print(F("Source Node Info: \n"));
+
+  response->print(F("Interfaces: \n"));
+
+  for (uint8_t i=0; i < _interfaces.size(); i++) {
+    NetworkInterfaceModule* interface = _interfaces.get(i);
+
+    response->printf("  %s, queue size: %u\n", interface->getName(), interface->getTxQueueSize() );
+  }
+
+
+  response->print(F("\n\nRouting table: \n"));
 
   unsigned long loopTime = millis();
 
@@ -286,12 +323,14 @@ void DroneLinkManager::serveNodeInfo(AsyncWebServerRequest *request) {
         if (page->nodeInfo[j].heard) {
           uint8_t id = (i << 4) + j;
           unsigned int age = (loopTime - page->nodeInfo[j].lastHeard) / 1000;
-          response->printf("%u > ", id);
+          char *interfaceName = NULL;
+          if (page->nodeInfo[j].interface) interfaceName = page->nodeInfo[j].interface->getName();
+          response->printf("  %u > ", id);
           if (page->nodeInfo[j].name == NULL) {
             response->print("???");
           } else
             response->printf("%s", page->nodeInfo[j].name);
-          response->printf(", Seq: %u, Metric: %u, Next Hop: %u, Age: %u sec\n", page->nodeInfo[j].seq, page->nodeInfo[j].metric, page->nodeInfo[j].nextHop, age);
+          response->printf(", Seq: %u, Metric: %u, Next Hop: %u, Age: %u sec, Int: %s\n", page->nodeInfo[j].seq, page->nodeInfo[j].metric, page->nodeInfo[j].nextHop, age, interfaceName);
         }
       }
     }
@@ -311,7 +350,7 @@ void DroneLinkManager::serveChannelInfo(AsyncWebServerRequest *request) {
   DroneLinkChannel* c;
   for(int i = 0; i < _channels.size(); i++){
     c = _channels.get(i);
-    response->printf("%u>%u = %u (%u)\n", c->node(), c->id(), c->size(), c->peakSize());
+    response->printf("%u>%u = size: %u (peak: %u), state:%u\n", c->node(), c->id(), c->size(), c->peakSize(), c->state());
 
     c->serveChannelInfo(response);
     response->print("\n");
@@ -335,27 +374,41 @@ void DroneLinkManager::registerInterface(NetworkInterfaceModule *interface) {
 void DroneLinkManager::receivePacket(NetworkInterfaceModule *interface, uint8_t *buffer, uint8_t metric) {
   // this is the meaty stuff...
   // do something appropriate with it depending on its routing mode, type, etc
+  uint8_t type = getDroneMeshMsgType(buffer);
 
+  switch (type) {
+    case DRONE_MESH_MSG_TYPE_HELLO: receiveHello(interface, buffer, metric); break;
+    case DRONE_MESH_MSG_TYPE_SUBSCRIPTION: receiveSubscription(interface, buffer, metric); break;
+  }
+}
+
+
+void DroneLinkManager::receiveHello(NetworkInterfaceModule *interface, uint8_t *buffer, uint8_t metric) {
   DRONE_MESH_MSG_HEADER *header = (DRONE_MESH_MSG_HEADER*)buffer;
 
-  if (header->typeDir == (DRONE_MESH_MSG_TYPE_HELLO | DRONE_MESH_MSG_REQUEST)) {
-    Log.noticeln("[DLM.rP] Hello from %u tx by %u", header->srcNode, header->txNode);
+  if (getDroneMeshMsgDirection(buffer) != DRONE_MESH_MSG_REQUEST) return;
 
-    DRONE_MESH_MSG_HELLO *hello = (DRONE_MESH_MSG_HELLO*)buffer;
+  Log.noticeln("[DLM.rP] Hello from %u tx by %u", header->srcNode, header->txNode);
 
-    // ignore it if this hello packet is from us
-    if (header->srcNode == _node) return;
+  DRONE_MESH_MSG_HELLO *hello = (DRONE_MESH_MSG_HELLO*)buffer;
 
-    // calc total metric, inc RSSI to us
-    uint32_t newMetric = constrain(hello->metric + metric, 0, 255);
+  // ignore it if this hello packet is from us
+  if (header->srcNode == _node) return;
+
+  // calc total metric, inc RSSI to us
+  uint32_t newMetric = constrain(hello->metric + metric, 0, 255);
 
 
-    // fetch node info (routing entry), create if needed
-    DRONE_LINK_NODE_INFO* nodeInfo = getNodeInfo(header->srcNode, true);
+  // fetch node info (routing entry), create if needed
+  DRONE_LINK_NODE_INFO* nodeInfo = getNodeInfo(header->srcNode, true);
 
-    if (nodeInfo) {
+  if (nodeInfo) {
 
-      boolean feasibleRoute = false;
+    boolean feasibleRoute = false;
+
+    if (interface != nodeInfo->interface && newMetric < nodeInfo->metric) {
+      feasibleRoute = true;
+    } else {
       // is this a new sequence (allow for wrap-around)
       if ((header->seq > nodeInfo->seq) || (nodeInfo->seq > 128 && (header->seq < nodeInfo->seq - 128))) {
         feasibleRoute = true;
@@ -368,26 +421,73 @@ void DroneLinkManager::receivePacket(NetworkInterfaceModule *interface, uint8_t 
         feasibleRoute = true;
         Log.noticeln("Better metric %u", newMetric);
       }
+    }
 
-      if (feasibleRoute) {
-        Log.noticeln("Updating route info");
-        nodeInfo->seq = header->seq;
-        nodeInfo->metric = newMetric;
-        nodeInfo->interface = interface;
-        nodeInfo->nextHop = header->txNode;
+    if (feasibleRoute) {
+      Log.noticeln("Updating route info");
+      nodeInfo->seq = header->seq;
+      nodeInfo->metric = newMetric;
+      nodeInfo->interface = interface;
+      nodeInfo->nextHop = header->txNode;
 
-        // if metric < 255 then retransmit the Hello on all interfaces
-        if (newMetric < 255) {
-          for (uint8_t i=0; i < _interfaces.size(); i++) {
-            NetworkInterfaceModule* interface = _interfaces.get(i);
-            interface->generateHello(header->seq, header->srcNode, newMetric);
-          }
+      // if metric < 255 then retransmit the Hello on all interfaces
+      if (newMetric < 255) {
+        for (uint8_t i=0; i < _interfaces.size(); i++) {
+          NetworkInterfaceModule* interface = _interfaces.get(i);
+          interface->generateHello(header->srcNode, header->seq, newMetric);
         }
-        
+      }
+
+    } else {
+      Log.noticeln("New route infeasible");
+    }
+  }
+}
+
+
+void DroneLinkManager::receiveSubscription(NetworkInterfaceModule *interface, uint8_t *buffer, uint8_t metric) {
+  DRONE_MESH_MSG_HEADER *header = (DRONE_MESH_MSG_HEADER*)buffer;
+  DRONE_MESH_MSG_SUBCSRIPTION *subBuffer = (DRONE_MESH_MSG_SUBCSRIPTION*)buffer;
+
+  Log.noticeln("[DLM.rS] Sub from %u to %u", header->srcNode, header->destNode);
+
+  if (getDroneMeshMsgDirection(buffer) == DRONE_MESH_MSG_REQUEST) {
+    // request
+    // check if we are the nextNode... otherwise ignore it
+    if (header->nextNode == _node) {
+      // are we the destination?
+      if (header->destNode == _node) {
+        Log.noticeln("[DLM.rS] Reached destination");
+
+        // make a note that we need to send stuff to the subscribing (src) node
+
+
       } else {
-        Log.noticeln("New route infeasible");
+        Log.noticeln("[DLM.rS] Intermediate hop");
+
+        // get next hop
+        DRONE_LINK_NODE_INFO* nodeInfo = getNodeInfo(header->destNode, false);
+        if (nodeInfo) {
+          // generate a subscription request on the relevant interface
+          if (nodeInfo->interface &&
+              nodeInfo->interface->generateSubscriptionRequest(header->srcNode, nodeInfo->nextHop, header->destNode, subBuffer->channel)) {
+            Log.noticeln("[DLM.rS] forwarded to %u", nodeInfo->nextHop);
+          } else {
+            Log.errorln("[DLM.rS] Failed to forward sub");
+          }
+        } else {
+          // now what?
+          Log.errorln("[DLM.rS] No route to destination %u", header->destNode);
+        }
+
       }
     }
 
+  } else {
+    // response
+    // check if we are the nextNode... otherwise ignore it
+    if (header->nextNode == _node) {
+
+    }
   }
 }

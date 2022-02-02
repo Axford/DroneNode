@@ -41,6 +41,8 @@ struct DRONE_LINK_NODE_PAGE {
 
 #define DRONE_LINK_NODE_PAGES  (256 / DRONE_LINK_NODE_PAGE_SIZE)
 
+
+
 class DroneLinkManager
 {
 protected:
@@ -77,6 +79,7 @@ public:
     //bool publishPeer(DroneLinkMsg &msg, int16_t RSSI, uint8_t interface);
 
     void processChannels();
+    void processExternalSubscriptions();
     void loop();
 
     DroneLinkChannel* findChannel(uint8_t node, uint8_t chan);
@@ -100,6 +103,9 @@ public:
     // mesh methods
     void registerInterface(NetworkInterfaceModule *interface);
     void receivePacket(NetworkInterfaceModule *interface, uint8_t *buffer, uint8_t metric);
+
+    void receiveHello(NetworkInterfaceModule *interface, uint8_t *buffer, uint8_t metric);
+    void receiveSubscription(NetworkInterfaceModule *interface, uint8_t *buffer, uint8_t metric);
 };
 
 
