@@ -8,7 +8,7 @@
 //#include "RFM69registers.h"
 
 RFM69TelemetryModule::RFM69TelemetryModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm, DroneExecutionManager* dem, fs::FS &fs):
-  DroneModule ( id, dmm, dlm, dem, fs )
+  NetworkInterfaceModule ( id, dmm, dlm, dem, fs )
  {
    setTypeName(FPSTR(RFM69_TELEMETRY_STR_RFM69_TELEMETRY));
    _packetsReceived = 0;
@@ -69,7 +69,9 @@ void RFM69TelemetryModule::registerParams(DEM_NAMESPACE* ns, DroneExecutionManag
 
 
 void RFM69TelemetryModule::handleLinkMessage(DroneLinkMsg *msg) {
-  DroneModule::handleLinkMessage(msg);
+  NetworkInterfaceModule::handleLinkMessage(msg);
+
+  /*
 
   if (!_radio) return;
 
@@ -129,10 +131,11 @@ void RFM69TelemetryModule::handleLinkMessage(DroneLinkMsg *msg) {
     //msg->print();
     //Log.noticeln("[RFM.hLM] e");
   }
+  */
 }
 
 void RFM69TelemetryModule::setup() {
-  DroneModule::setup();
+  NetworkInterfaceModule::setup();
 
   if (_mgmtParams[DRONE_MODULE_PARAM_STATUS_E].data.uint8[0] == 0) return;
 
@@ -156,12 +159,17 @@ void RFM69TelemetryModule::setup() {
     //_radio->spyMode(true);
     _radio->setEncryptionKey(_encryptKey);
 
+    // register network interface
+    _dlm->registerInterface(this);
+
+    _interfaceState = true;
+
     Log.noticeln(F("RFM69 initialised"));
   }
 }
 
 void RFM69TelemetryModule::loop() {
-  DroneModule::loop();
+  NetworkInterfaceModule::loop();
 
   if (!_radio) return;
 
@@ -170,50 +178,60 @@ void RFM69TelemetryModule::loop() {
   {
     uint8_t len = sizeof(_buffer);
     if (_radio->recv(_buffer, &len)) {
-      if ((len >= sizeof(DRONE_LINK_ADDR)+3) && len <= sizeof(DRONE_LINK_MSG)+2) {
 
-        // copy out the msg data
-        memcpy(&_receivedMsg._msg, &_buffer[1], len-2);
+      boolean validPacket = true;
 
-        // calc CRC on what we received
-        uint8_t crc = _CRC8.smbus((uint8_t*)&_receivedMsg._msg, _receivedMsg.length() + sizeof(DRONE_LINK_ADDR)+1);
+      // check size
+      if (len < 8 && len > DRONE_MESH_MSG_MAX_PACKET_SIZE+2) {
+        validPacket = false;
+        Log.errorln("[RFM.rP] invalid size");
+      }
 
-        /*
-        Serial.print("[RFM.l] recevied: ");  Serial.println(len);
+      // check start byte
+      if (validPacket && _buffer[0] != RFM69_START_OF_FRAME) {
+        validPacket = false;
+        Log.errorln("[RFM.rP] invalid start");
+      }
+
+      // check CRC
+      if (validPacket) {
+        uint8_t crc = _CRC8.smbus(_buffer, len-1);
+        if (crc != _buffer[len-1]) {
+          validPacket = false;
+          Log.errorln("[RFM.rP] CRC fail");
+        }
+      }
+
+      if (validPacket) {
+        // check size matches header
+        uint8_t headerLen = getDroneMeshMsgTotalSize(&_buffer[1]);
+        if (headerLen != len-2) {
+          validPacket = false;
+          Log.errorln("[RFM.rP] size mismatch");
+        }
+      }
+
+      if (validPacket) {
+        // pass onto DLM
+        // calc receive metric
+        int16_t rssi = abs(constrain(_radio->lastRssi(), -100,0));
+        uint8_t metric = map(rssi, 0, 100, 1, 15);
+
+        Log.noticeln("[RFM.l] recv %u bytes", len);
         for (uint8_t i=0; i<len; i++) {
-          Serial.print(_buffer[i], HEX);
-          Serial.print(" ");
+          Serial.print("  ");
+          Serial.print(_buffer[i], BIN);
         }
-        Serial.println("");
-        */
+        Serial.println();
 
-        // valid packet if CRC match and decoded length matches
-        if ( (crc == _buffer[len-1])  &&
-             (len == _receivedMsg.length() + sizeof(DRONE_LINK_ADDR) + 3) ){
+        receivePacket(&_buffer[1], metric);
+        _packetsReceived++;
+      }
 
-          // valid packet
-          _packetsReceived++;
 
-          //Serial.print("[RFM.l]: ");
-          //_receivedMsg.print();
-          int16_t RSSI = -_radio->lastRssi();
-
-          _dlm->publishPeer(_receivedMsg, RSSI, _id);
-
-          // update RSSI - moving average
-          float v = _params[RFM69_TELEMETRY_PARAM_RSSI_E].data.f[0];
-          v = (9*v + RSSI)/10;
-          _params[RFM69_TELEMETRY_PARAM_RSSI_E].data.f[0] = v;
-
-          // publish every xx packets
-          if (_packetsReceived % 40 == 0) {
-            publishParamEntry(&_params[RFM69_TELEMETRY_PARAM_RSSI_E]);
-          }
-
-        } else {
-          _packetsRejected++;
-          Log.warningln("[RFM.l] Rejected packet: %u", _packetsRejected);
-        }
+      if (!validPacket) {
+        _packetsRejected++;
+        Log.warningln("[RFM.rP] Rejected packet: %u", _packetsRejected);
       }
 
 
@@ -247,4 +265,30 @@ void RFM69TelemetryModule::loop() {
 
     _packetsTimer = millis();
   }
+}
+
+
+boolean RFM69TelemetryModule::sendPacket(uint8_t *buffer) {
+
+  // wrap the DroneMesh message in a start byte and end CRC
+  uint8_t txSize = getDroneMeshMsgTotalSize(buffer) + 2;
+
+  memcpy(_buffer + 1, buffer, txSize-2);
+  _buffer[0] = RFM69_START_OF_FRAME; // ensure this is set, given we reuse the buffer
+  _buffer[txSize-1] = _CRC8.smbus(_buffer, txSize - 1);
+
+  Log.noticeln("[RFM.sP] sending %u bytes", txSize);
+  for (uint8_t i=0; i<txSize; i++) {
+    Serial.print("  ");
+    Serial.print(_buffer[i], BIN);
+  }
+  Serial.println();
+
+
+  _radio->send(_buffer, txSize);
+  _radio->waitPacketSent(100);
+
+  _packetsSent++;
+
+  return true;
 }

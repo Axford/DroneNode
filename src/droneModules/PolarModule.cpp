@@ -229,7 +229,7 @@ void PolarModule::loopActive() {
 
   // see if we drifted outside our target area
   if (newRegion == POLAR_REGION_OUT) {
-    Serial.println("[PM.lA] out");
+    //Serial.println("[PM.lA] out");
     // switch to passthrough
     /*
     uint8_t newMode = POLAR_MODE_PASSTHROUGH;
@@ -356,7 +356,7 @@ void PolarModule::loopActive() {
 
     } else {
       // SOG good... turn onto new heading through target centre
-      Serial.println("[PM.lA] SOG Good ");
+      //Serial.println("[PM.lA] SOG Good ");
 
       float newHeading = calculateInitialBearingBetweenCoordinates(
         _subs[POLAR_SUB_LOCATION_E].param.data.f[0],
@@ -365,8 +365,8 @@ void PolarModule::loopActive() {
         _params[POLAR_PARAM_TARGET_E].data.f[1]
       );
 
-      Serial.print("[PM.lA] newHeading ");
-      Serial.println(newHeading);
+      //Serial.print("[PM.lA] newHeading ");
+      //Serial.println(newHeading);
 
       updateAndPublishParam(&_params[POLAR_PARAM_ADJ_HEADING_E], (uint8_t*)&newHeading, sizeof(newHeading));
     }

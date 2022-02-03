@@ -4,7 +4,7 @@
 #include "WiFi.h"
 
 UDPTelemetryModule::UDPTelemetryModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm, DroneExecutionManager* dem, fs::FS &fs):
-  DroneModule ( id, dmm, dlm, dem, fs )
+  NetworkInterfaceModule ( id, dmm, dlm, dem, fs )
  {
    setTypeName(FPSTR(UDP_TELEMETRY_STR_UDP_TELEMETRY));
    _receivedSize = 0;
@@ -72,8 +72,9 @@ void UDPTelemetryModule::registerParams(DEM_NAMESPACE* ns, DroneExecutionManager
 
 
 void UDPTelemetryModule::handleLinkMessage(DroneLinkMsg *msg) {
-  DroneModule::handleLinkMessage(msg);
+  NetworkInterfaceModule::handleLinkMessage(msg);
 
+  /*
   if (!_enabled || !_setupDone || !_started) return;
 
   // check to see if this is the same as the last message we received!
@@ -114,38 +115,51 @@ void UDPTelemetryModule::handleLinkMessage(DroneLinkMsg *msg) {
 
     _packetsSent++;
   }
+  */
 }
 
 void UDPTelemetryModule::setup() {
-  DroneModule::setup();
+  NetworkInterfaceModule::setup();
 
-  //setup deferred
+  // register network interface
+  _dlm->registerInterface(this);
+
+  // rest of setup is deferred until a WiFi connection is available (see loop)
 }
 
 void UDPTelemetryModule::loop() {
-  DroneModule::loop();
+  NetworkInterfaceModule::loop();
 
   // deferred initialisation to allow for lack of wifi at start
   if (!_started && WiFi.status() == WL_CONNECTED) {
     Serial.println("[UDP.l] .begin");
+    // start UDP server
     _udp.begin(_params[UDP_PARAM_PORT_E].data.uint32[0]);
     _started = true;
   }
 
+  // maintain interface state
+  _interfaceState = (WiFi.status() == WL_CONNECTED);
+
   if (_started) {
     int packetSize = _udp.parsePacket();
-    if (packetSize > 0 && packetSize <= sizeof(DRONE_LINK_MSG)) {
-      //Log.noticeln("UDP <- ");
-      int len = _udp.read((uint8_t*)&_receivedMsg._msg, sizeof(DRONE_LINK_MSG));
-      if (len >= sizeof(DRONE_LINK_ADDR) + 2) {
-        //_receivedMsg.print();
-        _dlm->publishPeer(_receivedMsg, 0, _id);
+    if (packetSize > 0 && packetSize <= DRONE_MESH_MSG_MAX_PACKET_SIZE) {
+
+
+      int len = _udp.read(_rBuffer, DRONE_MESH_MSG_MAX_PACKET_SIZE);
+      if (len >= sizeof(DRONE_MESH_MSG_HEADER) + 2) {
+        // convert WiFi RSSI to receive metric
+        long rssi = abs(constrain(WiFi.RSSI(), -100, 0));
+        uint8_t metric = map(rssi, 0, 100, 1, 15);
+
+        receivePacket(_rBuffer, metric);
         _packetsReceived++;
       } else if (packetSize > 0) {
         // error - packet size mismatch
         Log.errorln(F("UDPT: Packet size mismatch"));
         _packetsRejected++;
       }
+
     } else if (packetSize > 0) {
       Log.noticeln("UDP Rec bytes: %d", packetSize);
     }
@@ -174,4 +188,29 @@ void UDPTelemetryModule::loop() {
 
     _packetsTimer = millis();
   }
+}
+
+
+boolean UDPTelemetryModule::sendPacket(uint8_t *buffer) {
+
+  // can only send if WiFi connected
+  boolean wifiConnected = (WiFi.status() == WL_CONNECTED) || (WiFi.softAPIP()[0] > 0);
+  if (!wifiConnected) return false;
+
+  IPAddress broadcastIp(
+    _params[UDP_PARAM_BROADCAST_E].data.uint8[0],
+    _params[UDP_PARAM_BROADCAST_E].data.uint8[1],
+    _params[UDP_PARAM_BROADCAST_E].data.uint8[2],
+    _params[UDP_PARAM_BROADCAST_E].data.uint8[3]
+  );
+
+  uint8_t txSize = getDroneMeshMsgTotalSize(buffer);
+
+  _udp.beginPacket(broadcastIp, _params[UDP_PARAM_PORT_E].data.uint32[0]);
+  _udp.write(buffer, txSize);
+  _udp.endPacket();
+
+  _packetsSent++;
+
+  return true;
 }

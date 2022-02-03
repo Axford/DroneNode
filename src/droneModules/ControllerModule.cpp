@@ -665,7 +665,7 @@ void ControllerModule::manageStart(boolean syncMenu) {
     char temp[16];
     DRONE_LINK_NODE_INFO* nodeInfo;
     for (uint8_t i= _dlm->minPeer(); i<=_dlm->maxPeer(); i++) {
-      nodeInfo = _dlm->getNodeInfo(i);
+      nodeInfo = _dlm->getNodeInfo(i, false);
       if (nodeInfo != NULL) {
         if (nodeInfo->name != NULL) {
           setMenuItem(CONTROLLER_MENU_START, j, nodeInfo->name, i, NULL, CONTROLLER_MENU_CREATE);

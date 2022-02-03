@@ -23,7 +23,9 @@ Handles packet framing, sync, etc
 
 #include "Arduino.h"
 #include "../DroneModule.h"
+#include "./NetworkInterfaceModule.h"
 #include "../DroneLinkMsg.h"
+#include "../DroneMeshMsg.h"
 #include <WiFiUdp.h>
 /*
 
@@ -56,13 +58,10 @@ byte    = value
 static const char UDP_TELEMETRY_STR_UDP_TELEMETRY[] PROGMEM = "UDPTelemetry";
 
 
-class UDPTelemetryModule:  public DroneModule {
+class UDPTelemetryModule:  public NetworkInterfaceModule {
 protected:
   WiFiUDP _udp;
-  //uint16_t _port;
-  //uint8_t _broadcast[4];
-  uint8_t _rBuffer[sizeof(DRONE_LINK_MSG)];
-  DroneLinkMsg _receivedMsg;
+  uint8_t _rBuffer[DRONE_MESH_MSG_MAX_PACKET_SIZE];
 
   uint8_t _receivedSize;
   boolean _started;
@@ -83,6 +82,8 @@ public:
   virtual void setup();
   virtual void loop();
 
+  // network interface methods
+  boolean sendPacket(uint8_t *buffer);
 };
 
 #endif

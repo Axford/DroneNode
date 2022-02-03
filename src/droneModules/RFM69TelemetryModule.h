@@ -23,6 +23,8 @@ Handles packet framing, sync, etc
 #include "Arduino.h"
 #include "../DroneModule.h"
 #include "../DroneLinkMsg.h"
+#include "./NetworkInterfaceModule.h"
+#include "../DroneMeshMsg.h"
 
 #include <SPI.h>
 #include <RH_RF69.h>
@@ -61,7 +63,7 @@ static const char RFM69_TELEMETRY_STR_RFM69_TELEMETRY[] PROGMEM = "RFM69Telemetr
 
 #define RFM69_START_OF_FRAME          0xFE
 
-class RFM69TelemetryModule:  public DroneModule {
+class RFM69TelemetryModule:  public NetworkInterfaceModule {
 protected:
   RH_RF69 *_radio;
   RHSoftwareSPI _spi;
@@ -85,6 +87,8 @@ public:
   virtual void setup();
   virtual void loop();
 
+  // network interface methods
+  boolean sendPacket(uint8_t *buffer);
 };
 
 #endif
