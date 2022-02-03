@@ -382,7 +382,7 @@ void DroneLinkManager::serveNodeInfo(AsyncWebServerRequest *request) {
             response->print("???");
           } else
             response->printf("%s", page->nodeInfo[j].name);
-          response->printf(", Seq: %u, Metric: %u, Next Hop: %u, Age: %u sec, Int: %s\n", page->nodeInfo[j].seq, page->nodeInfo[j].metric, page->nodeInfo[j].nextHop, age, interfaceName);
+          response->printf(", Seq: %u, Metric: %u, Next Hop: %u, Age: %u sec, Uptime: %u, Int: %s\n", page->nodeInfo[j].seq, page->nodeInfo[j].metric, page->nodeInfo[j].nextHop, age, page->nodeInfo[j].uptime, interfaceName);
         }
       }
     }
@@ -469,6 +469,12 @@ void DroneLinkManager::receiveHello(NetworkInterfaceModule *interface, uint8_t *
     // if its a brand new route entry it will have metric 255... so good to overwrite
     boolean feasibleRoute = nodeInfo->metric == 255;
 
+    // if new uptime is less than current uptime
+    if (hello->uptime < nodeInfo->uptime) {
+      feasibleRoute = true;
+      Log.noticeln("Lower uptime %u", hello->uptime);
+    }
+
     if (interface != nodeInfo->interface && newMetric < nodeInfo->metric) {
       feasibleRoute = true;
     } else {
@@ -493,12 +499,13 @@ void DroneLinkManager::receiveHello(NetworkInterfaceModule *interface, uint8_t *
       nodeInfo->interface = interface;
       nodeInfo->nextHop = header->txNode;
       nodeInfo->lastBroadcast = loopTime;
+      nodeInfo->uptime = hello->uptime;
 
       // if metric < 255 then retransmit the Hello on all interfaces
       if (newMetric < 255) {
         for (uint8_t i=0; i < _interfaces.size(); i++) {
           NetworkInterfaceModule* interface = _interfaces.get(i);
-          interface->generateHello(header->srcNode, header->seq, newMetric);
+          interface->generateHello(header->srcNode, header->seq, newMetric, hello->uptime);
         }
       }
 
@@ -509,7 +516,7 @@ void DroneLinkManager::receiveHello(NetworkInterfaceModule *interface, uint8_t *
         // retransmit our current best metric on all interfaces
         for (uint8_t i=0; i < _interfaces.size(); i++) {
           NetworkInterfaceModule* interface = _interfaces.get(i);
-          interface->generateHello(header->srcNode, header->seq, nodeInfo->metric);
+          interface->generateHello(header->srcNode, header->seq, nodeInfo->metric, nodeInfo->uptime);
         }
 
         nodeInfo->lastBroadcast = loopTime;

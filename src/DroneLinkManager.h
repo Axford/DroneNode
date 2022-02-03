@@ -28,6 +28,7 @@ struct DRONE_LINK_NODE_INFO {
   unsigned long lastBroadcast;
   boolean heard;
   uint8_t metric;
+  uint32_t uptime;
   uint8_t seq;
   uint8_t nextHop;  // what node is the next hop
   NetworkInterfaceModule* interface;  // network interface that heard this node with the lowest metric

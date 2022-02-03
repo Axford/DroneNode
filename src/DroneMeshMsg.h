@@ -17,6 +17,7 @@ struct DRONE_MESH_MSG_HEADER {
 struct DRONE_MESH_MSG_HELLO {
   DRONE_MESH_MSG_HEADER header;
   uint8_t metric;
+  uint32_t uptime;
   uint8_t crc;
 } __packed;
 

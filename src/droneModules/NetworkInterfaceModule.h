@@ -40,7 +40,7 @@ public:
   boolean generateNextHop(uint8_t *buffer, uint8_t nextHop);
 
   void generateHello();
-  boolean generateHello(uint8_t src, uint8_t seq, uint8_t metric);
+  boolean generateHello(uint8_t src, uint8_t seq, uint8_t metric, uint32_t uptime);
 
   boolean generateSubscriptionRequest(uint8_t src, uint8_t next, uint8_t dest, uint8_t channel, uint8_t param);
 

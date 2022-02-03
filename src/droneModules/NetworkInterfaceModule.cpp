@@ -125,8 +125,8 @@ boolean NetworkInterfaceModule::generateNextHop(uint8_t *pbuffer, uint8_t nextHo
 void NetworkInterfaceModule::generateHello() {
   Serial.println("[NIM.gH]");
   if (getInterfaceState()) {
-    if (generateHello(_dlm->node(), _helloSeq, 0)) {
-      uint32_t loopTime = millis();
+    uint32_t loopTime = millis();
+    if (generateHello(_dlm->node(), _helloSeq, 0, loopTime)) {
       if (loopTime > _seqTimer + NETWORK_INTERFACE_SEQ_INTERVAL) {
         _helloSeq++;
         _seqTimer = loopTime;
@@ -136,7 +136,7 @@ void NetworkInterfaceModule::generateHello() {
 }
 
 
-boolean NetworkInterfaceModule::generateHello(uint8_t src, uint8_t seq, uint8_t metric) {
+boolean NetworkInterfaceModule::generateHello(uint8_t src, uint8_t seq, uint8_t metric, uint32_t uptime) {
   if (!getInterfaceState()) return false;
 
   // request a new buffer in the transmit queue
@@ -147,7 +147,7 @@ boolean NetworkInterfaceModule::generateHello(uint8_t src, uint8_t seq, uint8_t 
     DRONE_MESH_MSG_HELLO *helloBuffer = (DRONE_MESH_MSG_HELLO*)buffer->data;
 
     // populate with a Hello packet
-    helloBuffer->header.modeGuaranteeSize = DRONE_MESH_MSG_MODE_MULTICAST | DRONE_MESH_MSG_NOT_GUARANTEED | 0 ;  // payload is 1 byte... sent as n-1
+    helloBuffer->header.modeGuaranteeSize = DRONE_MESH_MSG_MODE_MULTICAST | DRONE_MESH_MSG_NOT_GUARANTEED | (5-1) ;  // payload is 1 byte... sent as n-1
     helloBuffer->header.txNode = _dlm->node();
     helloBuffer->header.srcNode = src;
     helloBuffer->header.nextNode = 0;
@@ -155,6 +155,7 @@ boolean NetworkInterfaceModule::generateHello(uint8_t src, uint8_t seq, uint8_t 
     helloBuffer->header.seq = seq;
     helloBuffer->header.typeDir = DRONE_MESH_MSG_TYPE_HELLO | DRONE_MESH_MSG_REQUEST;
     helloBuffer->metric = metric;
+    helloBuffer->uptime = uptime;
 
     // calc CRC
     helloBuffer->crc = _CRC8.smbus((uint8_t*)helloBuffer, sizeof(DRONE_MESH_MSG_HELLO)-1);
