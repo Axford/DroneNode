@@ -494,6 +494,12 @@ void DroneLinkManager::receiveHello(NetworkInterfaceModule *interface, uint8_t *
 
     } else {
       Log.noticeln("New route infeasible");
+
+      // retransmit our current best metric on all interfaces
+      for (uint8_t i=0; i < _interfaces.size(); i++) {
+        NetworkInterfaceModule* interface = _interfaces.get(i);
+        interface->generateHello(header->srcNode, header->seq, nodeInfo->metric);
+      }
     }
   }
 }

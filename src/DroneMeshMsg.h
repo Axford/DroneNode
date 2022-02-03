@@ -35,7 +35,7 @@ struct DRONE_MESH_MSG_TRACEROUTE {
 } __packed;
 
 #define DRONE_MESH_MSG_MAX_PAYLOAD_SIZE   48 // bytes - to keep within RFM69 transmit size limit
-#define DRONE_MESH_MSG_MAX_PACKET_SIZE    (6 + DRONE_MESH_MSG_MAX_PAYLOAD_SIZE + 1 )  // header + payload + CRC
+#define DRONE_MESH_MSG_MAX_PACKET_SIZE    (sizeof(DRONE_MESH_MSG_HEADER) + DRONE_MESH_MSG_MAX_PAYLOAD_SIZE + 1 )  // header + payload + CRC
 
 struct DRONE_MESH_MSG_BUFFER {
   uint8_t data[DRONE_MESH_MSG_MAX_PACKET_SIZE];
