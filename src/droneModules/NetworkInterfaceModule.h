@@ -10,6 +10,7 @@
 #include "../DroneModule.h"
 #include "../DroneMeshMsg.h"
 #include <FastCRC.h>
+#include <ESPAsyncWebServer.h>
 
 #define NETWORK_INTERFACE_MAX_TX_QUEUE    8
 
@@ -50,6 +51,8 @@ public:
   // inherited by network interface implementations
   virtual boolean sendPacket(uint8_t *buffer);
   virtual void receivePacket(uint8_t *buffer, uint8_t metric);
+
+  void serveTxQueueInfo(AsyncResponseStream* response);
 };
 
 #endif

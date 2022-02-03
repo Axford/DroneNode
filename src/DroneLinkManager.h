@@ -25,6 +25,7 @@ class WiFiManager;
 // aka routing entry
 struct DRONE_LINK_NODE_INFO {
   unsigned long lastHeard;
+  unsigned long lastBroadcast;
   boolean heard;
   uint8_t metric;
   uint8_t seq;

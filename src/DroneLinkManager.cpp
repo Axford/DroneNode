@@ -80,9 +80,16 @@ void DroneLinkManager::subscribe(uint8_t node, uint8_t channel, DroneModule *sub
 void DroneLinkManager::subscribeExt(uint8_t extNode, uint8_t channel, uint8_t param) {
   if (extNode == 255 || channel == 255 || param == 255) return;  // invalid address
 
-  // locate a matching channel (ignore this request if doesnt exist)
+  // locate a matching channel, create if it doesn't exist
   // given this is an external request, it must be for a channel on this _node
   DroneLinkChannel* c = findChannel(_node, channel);
+
+  if (!c) {
+    Log.noticeln(F("Creating channel: %u > %u"), _node, channel);
+    c = new DroneLinkChannel(this, _node, channel);
+    _channels.add(c);
+  }
+
   if (c) {
     // wire up the subscriber to the channel
     c->subscribe(extNode, NULL, param);
@@ -352,7 +359,7 @@ void DroneLinkManager::serveNodeInfo(AsyncWebServerRequest *request) {
   for (uint8_t i=0; i < _interfaces.size(); i++) {
     NetworkInterfaceModule* interface = _interfaces.get(i);
 
-    response->printf("  %s, queue size: %u\n", interface->getName(), interface->getTxQueueSize() );
+    interface->serveTxQueueInfo(response);
   }
 
 
@@ -441,12 +448,14 @@ void DroneLinkManager::receiveHello(NetworkInterfaceModule *interface, uint8_t *
 
   if (getDroneMeshMsgDirection(buffer) != DRONE_MESH_MSG_REQUEST) return;
 
+  unsigned long loopTime = millis();
+
   Log.noticeln("[DLM.rP] Hello from %u tx by %u", header->srcNode, header->txNode);
 
   DRONE_MESH_MSG_HELLO *hello = (DRONE_MESH_MSG_HELLO*)buffer;
 
   // ignore it if this hello packet is from us
-  if (header->srcNode == _node) return;
+  if (header->srcNode == _node || header->txNode == _node) return;
 
   // calc total metric, inc RSSI to us
   uint32_t newMetric = constrain(hello->metric + metric, 0, 255);
@@ -483,6 +492,7 @@ void DroneLinkManager::receiveHello(NetworkInterfaceModule *interface, uint8_t *
       nodeInfo->metric = newMetric;
       nodeInfo->interface = interface;
       nodeInfo->nextHop = header->txNode;
+      nodeInfo->lastBroadcast = loopTime;
 
       // if metric < 255 then retransmit the Hello on all interfaces
       if (newMetric < 255) {
@@ -495,11 +505,17 @@ void DroneLinkManager::receiveHello(NetworkInterfaceModule *interface, uint8_t *
     } else {
       Log.noticeln("New route infeasible");
 
-      // retransmit our current best metric on all interfaces
-      for (uint8_t i=0; i < _interfaces.size(); i++) {
-        NetworkInterfaceModule* interface = _interfaces.get(i);
-        interface->generateHello(header->srcNode, header->seq, nodeInfo->metric);
+      if (loopTime > nodeInfo->lastBroadcast + NETWORK_INTERFACE_HELLO_INTERVAL) {
+        // retransmit our current best metric on all interfaces
+        for (uint8_t i=0; i < _interfaces.size(); i++) {
+          NetworkInterfaceModule* interface = _interfaces.get(i);
+          interface->generateHello(header->srcNode, header->seq, nodeInfo->metric);
+        }
+
+        nodeInfo->lastBroadcast = loopTime;
       }
+
+
     }
   }
 }

@@ -73,7 +73,7 @@ void NetworkInterfaceModule::processTransmitQueue() {
     DRONE_MESH_MSG_BUFFER *b = _txQueue.get(i);
     if (b->state == DRONE_MESH_MSG_BUFFER_STATE_READY) {
       if (sendPacket(b->data)) {
-        // if this is guaranteed, then wait for a reply
+        // if this is guaranteed, then flag to wait for a reply
         if (isDroneMeshMsgGuaranteed(b->data)) {
           //b->state = DRONE_MESH_MSG_BUFFER_STATE_WAITING;
           // TODO - actually implement guaranteed delivery
@@ -85,7 +85,7 @@ void NetworkInterfaceModule::processTransmitQueue() {
       }
 
       // just the one Mrs Wemberley
-      break;
+      //break;
     }
   }
 }
@@ -176,7 +176,7 @@ boolean NetworkInterfaceModule::generateSubscriptionRequest(uint8_t src, uint8_t
   if (buffer) {
     DRONE_MESH_MSG_SUBCSRIPTION *subBuffer = (DRONE_MESH_MSG_SUBCSRIPTION*)buffer->data;
 
-    // populate with a Hello packet
+    // populate with a subscription request packet
     subBuffer->header.modeGuaranteeSize = DRONE_MESH_MSG_MODE_UNICAST | DRONE_MESH_MSG_GUARANTEED | 1 ;  // payload is 2 byte... sent as n-1
     subBuffer->header.txNode = src;
     subBuffer->header.srcNode = _dlm->node();
@@ -301,4 +301,29 @@ void NetworkInterfaceModule::receivePacket(uint8_t *buffer, uint8_t metric) {
 
   // otherwise, pass onto DLM for processing
   _dlm->receivePacket(this, buffer, metric);
+}
+
+
+void NetworkInterfaceModule::serveTxQueueInfo(AsyncResponseStream* response) {
+  response->printf("  %s, queue size: %u\n", getName(), getTxQueueSize() );
+
+  // print detailed queue info
+  for (uint8_t i=0; i<_txQueue.size(); i++) {
+    DRONE_MESH_MSG_BUFFER* buffer = _txQueue.get(i);
+
+    response->printf("    %u: state=%u\n", i, buffer->state);
+
+    if (buffer->state > DRONE_MESH_MSG_BUFFER_STATE_EMPTY) {
+      // decode message in buffer
+      response->print("      (");
+      response->print( getDroneMeshMsgMode(buffer->data) == DRONE_MESH_MSG_MODE_UNICAST ? "U" : "M" );
+      response->print(", ");
+      response->print( getDroneMeshMsgDirection(buffer->data) == DRONE_MESH_MSG_REQUEST ? "Req" : "Res" );
+      response->printf(", %u) ", getDroneMeshMsgType(buffer->data));
+      response->printf("%u > %u > %u > %u ", getDroneMeshMsgSrcNode(buffer->data), getDroneMeshMsgTxNode(buffer->data), getDroneMeshMsgNextNode(buffer->data),
+    getDroneMeshMsgDestNode(buffer->data));
+      response->printf("seq=%u [%u]\n", getDroneMeshMsgSeq(buffer->data), getDroneMeshMsgPayloadSize(buffer->data));
+    }
+
+  }
 }
