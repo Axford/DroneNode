@@ -46,6 +46,8 @@ public:
 
   boolean generateTraceroute(uint8_t destNode, uint8_t nextNode);
 
+  boolean generateRouteEntryResponse(void * nodeInfo, uint8_t target, uint8_t dest, uint8_t nextHop);
+
   boolean sendDroneLinkMessage(uint8_t destNode, uint8_t nextNode, DroneLinkMsg *msg);
 
   // inherited by network interface implementations

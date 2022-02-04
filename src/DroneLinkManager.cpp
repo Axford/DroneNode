@@ -439,6 +439,7 @@ void DroneLinkManager::receivePacket(NetworkInterfaceModule *interface, uint8_t 
     case DRONE_MESH_MSG_TYPE_SUBSCRIPTION: receiveSubscription(interface, buffer, metric); break;
     case DRONE_MESH_MSG_TYPE_DRONELINKMSG: receiveDroneLinkMsg(interface, buffer, metric); break;
     case DRONE_MESH_MSG_TYPE_TRACEROUTE: receiveTraceroute(interface, buffer, metric); break;
+    case DRONE_MESH_MSG_TYPE_ROUTEENTRY: receiveRouteEntry(interface, buffer, metric); break;
   }
 }
 
@@ -668,6 +669,66 @@ void DroneLinkManager::receiveTraceroute(NetworkInterfaceModule *interface, uint
     } else {
       Log.noticeln("  Response - hopAlong");
       hopAlong(buffer);
+    }
+  }
+}
+
+
+void DroneLinkManager::receiveRouteEntry(NetworkInterfaceModule *interface, uint8_t *buffer, uint8_t metric) {
+  DRONE_MESH_MSG_HEADER *header = (DRONE_MESH_MSG_HEADER*)buffer;
+
+  Log.noticeln("[DLM.rT] Route Entry from %u to %u", header->srcNode, header->destNode);
+
+  if (getDroneMeshMsgDirection(buffer) == DRONE_MESH_MSG_REQUEST) {
+    // check if we are the nextNode... otherwise ignore it
+    if (header->nextNode == _node) {
+
+      // are we the destination?
+      if (header->destNode == _node) {
+        Log.noticeln("  Reached destination");
+
+        DRONE_MESH_MSG_ROUTEENTRY_REQUEST* req = (DRONE_MESH_MSG_ROUTEENTRY_REQUEST*)buffer;
+
+        // see if we have routing info for the requested node
+        DRONE_LINK_NODE_INFO* nodeInfo = getNodeInfo(req->node, false);
+        if (nodeInfo && nodeInfo->heard) {
+          // generate a response
+
+          // get nodeInfo for return route to requestor
+          DRONE_LINK_NODE_INFO* srcInfo = getNodeInfo(header->srcNode, false);
+          if (srcInfo && srcInfo->heard) {
+            if (srcInfo->interface) {
+              if (srcInfo->interface->generateRouteEntryResponse(nodeInfo, req->node, header->srcNode, srcInfo->nextHop)) {
+                // next hop generated ok
+              } else {
+                // unable to generate next hop... e.g. queue full or interface down
+              }
+            }
+          }
+
+        }
+
+      } else {
+        Log.noticeln("  Intermediate hop");
+        hopAlong(buffer);
+      }
+    }
+
+  } else {
+    // response
+    //Log.noticeln("  Response:");
+    // ignore if we're not the next node
+    if (header->nextNode == _node) {
+      // check if we are the destination...
+      if (header->destNode == _node) {
+        Log.noticeln("  RouteEntry received:");
+
+        // do nothing... this shouldn't ever happen on a node
+
+      } else {
+        Log.noticeln("  Response - hopAlong");
+        hopAlong(buffer);
+      }
     }
   }
 }

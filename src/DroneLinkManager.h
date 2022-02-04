@@ -119,6 +119,7 @@ public:
     void receiveSubscription(NetworkInterfaceModule *interface, uint8_t *buffer, uint8_t metric);
     void receiveDroneLinkMsg(NetworkInterfaceModule *interface, uint8_t *buffer, uint8_t metric);
     void receiveTraceroute(NetworkInterfaceModule *interface, uint8_t *buffer, uint8_t metric);
+    void receiveRouteEntry(NetworkInterfaceModule *interface, uint8_t *buffer, uint8_t metric);
 
     // standard forwarding mechanic for unicast packets
     virtual void hopAlong(uint8_t *buffer);

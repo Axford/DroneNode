@@ -229,6 +229,47 @@ boolean NetworkInterfaceModule::generateTraceroute(uint8_t destNode, uint8_t nex
 }
 
 
+boolean NetworkInterfaceModule::generateRouteEntryResponse(void * nodeInfo, uint8_t target, uint8_t dest, uint8_t nextHop) {
+  DRONE_LINK_NODE_INFO *ni = (DRONE_LINK_NODE_INFO*)nodeInfo;
+
+  if (!getInterfaceState()) return false;
+
+  // request a new buffer in the transmit queue
+  DRONE_MESH_MSG_BUFFER *buffer = getTransmitBuffer();
+
+  // if successful
+  if (buffer) {
+    DRONE_MESH_MSG_ROUTEENTRY_RESPONSE *rBuffer = (DRONE_MESH_MSG_ROUTEENTRY_RESPONSE*)buffer->data;
+
+    // populate with a Hello packet
+    rBuffer->header.modeGuaranteeSize = DRONE_MESH_MSG_MODE_UNICAST | DRONE_MESH_MSG_GUARANTEED | (sizeof(DRONE_MESH_MSG_ROUTEENTRY_RESPONSE) - sizeof(DRONE_MESH_MSG_HEADER) - 2) ;
+    rBuffer->header.txNode = _dlm->node();;
+    rBuffer->header.srcNode = _dlm->node();
+    rBuffer->header.nextNode = nextHop;
+    rBuffer->header.destNode = dest;
+    rBuffer->header.seq = 0;
+    rBuffer->header.typeDir = DRONE_MESH_MSG_TYPE_ROUTEENTRY | DRONE_MESH_MSG_REQUEST;
+
+    // populate route entry info
+    rBuffer->src = _dlm->node();
+    rBuffer->node = target;
+    rBuffer->seq = ni->seq;
+    rBuffer->metric = ni->metric;
+    rBuffer->netInterface = ni->interface->id();
+    rBuffer->nextHop = ni->nextHop;
+    rBuffer->age = ni->lastHeard - millis();
+    rBuffer->uptime = ni->uptime;
+
+    // calc CRC
+    rBuffer->crc = _CRC8.smbus((uint8_t*)rBuffer, sizeof(DRONE_MESH_MSG_ROUTEENTRY_RESPONSE)-1);
+
+    return true;
+  }
+
+  return false;
+}
+
+
 boolean NetworkInterfaceModule::sendDroneLinkMessage(uint8_t destNode, uint8_t nextNode, DroneLinkMsg *msg) {
   if (!getInterfaceState()) return false;
 

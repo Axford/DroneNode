@@ -35,6 +35,25 @@ struct DRONE_MESH_MSG_TRACEROUTE {
   uint8_t crc;
 } __packed;
 
+struct DRONE_MESH_MSG_ROUTEENTRY_REQUEST {
+  DRONE_MESH_MSG_HEADER header;
+  uint8_t node;
+  uint8_t crc;
+} __packed;
+
+struct DRONE_MESH_MSG_ROUTEENTRY_RESPONSE {
+  DRONE_MESH_MSG_HEADER header;
+  uint8_t src;
+  uint8_t node;
+  uint8_t seq;
+  uint8_t metric;
+  uint8_t netInterface;
+  uint8_t nextHop;
+  uint32_t age;
+  uint32_t uptime;
+  uint8_t crc;
+} __packed;
+
 #define DRONE_MESH_MSG_MAX_PAYLOAD_SIZE   48 // bytes - to keep within RFM69 transmit size limit
 #define DRONE_MESH_MSG_MAX_PACKET_SIZE    (sizeof(DRONE_MESH_MSG_HEADER) + DRONE_MESH_MSG_MAX_PAYLOAD_SIZE + 1 )  // header + payload + CRC
 
@@ -58,7 +77,7 @@ struct DRONE_MESH_MSG_BUFFER {
 #define DRONE_MESH_MSG_TYPE_HELLO          (0 << 1)
 #define DRONE_MESH_MSG_TYPE_SUBSCRIPTION   (1 << 1)
 #define DRONE_MESH_MSG_TYPE_TRACEROUTE     (2 << 1)
-#define DRONE_MESH_MSG_TYPE_ROUTINGENTRY   (3 << 1)
+#define DRONE_MESH_MSG_TYPE_ROUTEENTRY     (3 << 1)
 #define DRONE_MESH_MSG_TYPE_DRONELINKMSG   (4 << 1)
 
 #define DRONE_MESH_MSG_REQUEST          0
