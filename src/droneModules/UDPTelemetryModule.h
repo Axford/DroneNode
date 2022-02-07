@@ -77,7 +77,8 @@ public:
   static DEM_NAMESPACE* registerNamespace(DroneExecutionManager *dem);
   static void registerParams(DEM_NAMESPACE* ns, DroneExecutionManager *dem);
 
-  virtual void handleLinkMessage(DroneLinkMsg *msg);
+
+  uint8_t getInterfaceType();
 
   virtual void setup();
   virtual void loop();

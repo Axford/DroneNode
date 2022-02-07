@@ -71,52 +71,11 @@ void UDPTelemetryModule::registerParams(DEM_NAMESPACE* ns, DroneExecutionManager
 }
 
 
-void UDPTelemetryModule::handleLinkMessage(DroneLinkMsg *msg) {
-  NetworkInterfaceModule::handleLinkMessage(msg);
-
-  /*
-  if (!_enabled || !_setupDone || !_started) return;
-
-  // check to see if this is the same as the last message we received!
-  // if so, we're getting stuck in a loop and the message should be ignored
-  if (_receivedMsg.sameSignature(msg)) return;
-
-  boolean wifiConnected = (WiFi.status() == WL_CONNECTED) || (WiFi.softAPIP()[0] > 0);
-  if (!wifiConnected) return;
-
-  IPAddress broadcastIp(
-    _params[UDP_PARAM_BROADCAST_E].data.uint8[0],
-    _params[UDP_PARAM_BROADCAST_E].data.uint8[1],
-    _params[UDP_PARAM_BROADCAST_E].data.uint8[2],
-    _params[UDP_PARAM_BROADCAST_E].data.uint8[3]
-  );
-
-  //Log.notice("UDP -> ");
-  //msg->print();
-
-  // only send messages that originate on this node
-  boolean sendPacket = (msg->source() == _dlm->node());
-  if (!sendPacket) {
-    // OR!
-    // on a different interface
-    sendPacket = _dlm->getSourceInterface(msg->source()) != _id;
-
-    // OR!!
-    // that are queries
-    if (!sendPacket) {
-      sendPacket = msg->type() > DRONE_LINK_MSG_TYPE_CHAR;
-    }
-  }
-
-  if (sendPacket) {
-    _udp.beginPacket(broadcastIp, _params[UDP_PARAM_PORT_E].data.uint32[0]);
-    _udp.write((uint8_t*)&msg->_msg, msg->length() + sizeof(DRONE_LINK_ADDR)+1);
-    _udp.endPacket();
-
-    _packetsSent++;
-  }
-  */
+uint8_t UDPTelemetryModule::getInterfaceType() {
+  // to be overridden
+  return DRONE_MESH_INTERFACE_TYPE_UDP;
 }
+
 
 void UDPTelemetryModule::setup() {
   NetworkInterfaceModule::setup();
@@ -126,6 +85,7 @@ void UDPTelemetryModule::setup() {
 
   // rest of setup is deferred until a WiFi connection is available (see loop)
 }
+
 
 void UDPTelemetryModule::loop() {
   NetworkInterfaceModule::loop();
