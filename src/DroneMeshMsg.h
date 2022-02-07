@@ -104,6 +104,9 @@ struct DRONE_MESH_MSG_BUFFER {
   uint8_t data[DRONE_MESH_MSG_MAX_PACKET_SIZE];
   uint8_t state;
   NetworkInterfaceModule *interface;  // which interface is responsible for this buffer (if non-empty)
+  uint8_t attempts;  // how many attempts have we made to send this
+  uint32_t created;  // time packet was created
+  uint32_t sent;  // time packet was successfully sent
   // TODO - track number of retries on this packet and transmit time
 } __packed;
 
@@ -118,6 +121,7 @@ void setDroneMeshMsgPayloadSize(uint8_t *buffer, uint8_t size);
 uint8_t getDroneMeshMsgTotalSize(uint8_t *buffer);
 
 uint8_t getDroneMeshMsgPacketType(uint8_t *buffer);
+void setDroneMeshMsgPacketType(uint8_t *buffer, uint8_t type);
 boolean isDroneMeshMsgAck(uint8_t *buffer);
 boolean isDroneMeshMsgGuaranteed(uint8_t *buffer);
 

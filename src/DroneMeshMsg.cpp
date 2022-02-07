@@ -13,7 +13,11 @@ uint8_t getDroneMeshMsgTotalSize(uint8_t *buffer) {
 }
 
 uint8_t getDroneMeshMsgPacketType(uint8_t *buffer) {
-  return buffer[0] & 0b10000000;
+  return buffer[0] >> 7;
+}
+
+void setDroneMeshMsgPacketType(uint8_t *buffer, uint8_t type) {
+  buffer[0] = (buffer[0] & 0b01111111) | (type << 7);
 }
 
 boolean isDroneMeshMsgAck(uint8_t *buffer) {

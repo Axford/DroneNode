@@ -29,6 +29,10 @@ class WiFiManager;
 #define DRONE_LINK_MANAGER_HELLO_INTERVAL  5000
 #define DRONE_LINK_MANAGER_SEQ_INTERVAL    30000
 
+#define DRONE_LINK_MANAGER_MAX_RETRY_INTERVAL   5000
+#define DRONE_LINK_MANAGER_MAX_RETRIES          10
+#define DRONE_LINK_MANAGER_MAX_ACK_INTERVAL     500
+
 
 // aka routing entry
 struct DRONE_LINK_NODE_INFO {
@@ -39,8 +43,7 @@ struct DRONE_LINK_NODE_INFO {
   uint32_t uptime;  // how long has this node been up
   uint8_t seq; // last seq heard on route update (Hello)
   uint8_t nextHop;  // what node is the next hop
-  NetworkInterfaceModule* interface;  // network interface that heard this node with the lowest metric
-  uint8_t gSeq;  // next seq number to use for guaranteed packets originating on this node
+  NetworkInterfaceModule* interface;  // network interface that heard this node with the lowest metric originating on this node
   char * name; // dynamically allocated to match heard name
 };
 
@@ -78,6 +81,7 @@ protected:
   uint32_t _helloTimer;
   uint32_t _seqTimer;
   FastCRC8 _CRC8;
+  uint8_t _gSeq;  // seq number for guaranteed packets originating on this node
 
 public:
     DroneLinkManager(WiFiManager *wifiManager);
@@ -130,6 +134,8 @@ public:
     void registerInterface(NetworkInterfaceModule *interface);
     void receivePacket(NetworkInterfaceModule *interface, uint8_t *buffer, uint8_t metric);
 
+    void receiveAck(uint8_t *buffer);
+
     void receiveHello(NetworkInterfaceModule *interface, uint8_t *buffer, uint8_t metric);
 
     void receiveSubscriptionRequest(NetworkInterfaceModule *interface, uint8_t *buffer, uint8_t metric);
@@ -164,6 +170,8 @@ public:
     void processTransmitQueue();
 
     boolean generateNextHop(NetworkInterfaceModule *interface, uint8_t *buffer, uint8_t nextHop);
+
+    boolean generateAck(NetworkInterfaceModule *interface, uint8_t *buffer);
 
     void generateHellos();
     boolean generateHello(NetworkInterfaceModule *interface, uint8_t src, uint8_t seq, uint8_t metric, uint32_t uptime);
