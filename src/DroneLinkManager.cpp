@@ -328,8 +328,7 @@ void DroneLinkManager::serveNodeInfo(AsyncWebServerRequest *request) {
     if (buffer->state > DRONE_MESH_MSG_BUFFER_STATE_EMPTY) {
       // decode message in buffer
       response->print("      (");
-      response->print( isDroneMeshMsgAck(buffer->data) ? "S" : "A" );
-      response->print(", ");
+      response->print( isDroneMeshMsgAck(buffer->data) ? "A" : "S" );
       response->printf(", %u) ", getDroneMeshMsgPayloadType(buffer->data));
       response->printf("%u > %u > %u > %u ", getDroneMeshMsgSrcNode(buffer->data), getDroneMeshMsgTxNode(buffer->data), getDroneMeshMsgNextNode(buffer->data),
     getDroneMeshMsgDestNode(buffer->data));
@@ -946,7 +945,7 @@ void DroneLinkManager::processTransmitQueue() {
     if (b->state == DRONE_MESH_MSG_BUFFER_STATE_READY) {
       if (b->interface->sendPacket(b->data)) {
         // if this is guaranteed, then flag to wait for a reply
-        if (isDroneMeshMsgGuaranteed(b->data)) {
+        if (!isDroneMeshMsgAck(b->data) && isDroneMeshMsgGuaranteed(b->data)) {
           b->state = DRONE_MESH_MSG_BUFFER_STATE_WAITING;
           b->sent = loopTime;
         } else {
@@ -1025,6 +1024,11 @@ boolean DroneLinkManager::generateAck(NetworkInterfaceModule *interface, uint8_t
     // update next hop based on prev tx node
     DRONE_MESH_MSG_HEADER *header = (DRONE_MESH_MSG_HEADER*)abuffer->data;
     header->nextNode = getDroneMeshMsgTxNode(buffer);
+
+    // flip source and dest
+    uint8_t src = header->srcNode;
+    header->srcNode = header->destNode;
+    header->destNode = src;
 
     // and tx node
     header->txNode = node();
