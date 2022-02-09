@@ -67,72 +67,11 @@ void RFM69TelemetryModule::registerParams(DEM_NAMESPACE* ns, DroneExecutionManag
 }
 
 
-
-void RFM69TelemetryModule::handleLinkMessage(DroneLinkMsg *msg) {
-  NetworkInterfaceModule::handleLinkMessage(msg);
-
-  /*
-
-  if (!_radio) return;
-
-  //Log.noticeln("[RFM.hLM] a");
-
-  if (!_enabled || !_setupDone) return;
-
-  if (_error > 0) return;
-
-  // check to see if this is the same as the last message we received!
-  // if so, we're getting stuck in a loop and the message should be ignored
-  if (_receivedMsg.sameSignature(msg)) {
-    //Serial.print("RFM69: Blocked: ");
-    //msg->print();
-    return;
-  }
-
-  //Log.noticeln("[RFM.hLM] b");
-
-  // only send messages that originate on this node
-  boolean sendPacket = (msg->source() == _dlm->node());
-  if (!sendPacket) {
-    // OR!
-    // on a different interface
-    sendPacket = _dlm->getSourceInterface(msg->source()) != _id;
-
-    // OR!!
-    // that are queries
-    if (!sendPacket) {
-      sendPacket = msg->type() > DRONE_LINK_MSG_TYPE_CHAR;
-    }
-  }
-
-  //Log.noticeln("[RFM.hLM] c");
-
-  if (sendPacket) {
-    //Serial.print("[RFM69.hLM] ");
-    //msg->print();
-
-    // TODO - is this length right????
-    uint8_t transmitLength = msg->length() + sizeof(DRONE_LINK_ADDR) + 2 + 1;
-
-    memcpy(_buffer + 1, &msg->_msg, transmitLength-2);
-    _buffer[0] = RFM69_START_OF_FRAME; // ensure this is set, given we reuse the buffer
-    _buffer[transmitLength-1] = _CRC8.smbus(_buffer + 1, msg->length() + sizeof(DRONE_LINK_ADDR)+1);
-
-    //Log.noticeln("[RFM.hLM] d");
-
-    //_radio->send(255, (uint8_t*)_buffer, transmitLength);
-    _radio->send(_buffer, transmitLength);
-    _radio->waitPacketSent(100);
-
-    _packetsSent++;
-    //Serial.println("[RFM69.hLM] ok");
-  } else {
-    //Serial.print("RFM69: Filtered: ");
-    //msg->print();
-    //Log.noticeln("[RFM.hLM] e");
-  }
-  */
+uint8_t RFM69TelemetryModule::getInterfaceType() {
+  // to be overridden
+  return DRONE_MESH_INTERFACE_TYPE_RFM69;
 }
+
 
 void RFM69TelemetryModule::setup() {
   NetworkInterfaceModule::setup();
@@ -167,6 +106,7 @@ void RFM69TelemetryModule::setup() {
     Log.noticeln(F("RFM69 initialised"));
   }
 }
+
 
 void RFM69TelemetryModule::loop() {
   NetworkInterfaceModule::loop();
