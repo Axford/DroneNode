@@ -24,14 +24,14 @@ Manages the local set of pub/sub channels
 class WiFiManager;
 
 
-#define DRONE_LINK_MANAGER_MAX_TX_QUEUE    16
+#define DRONE_LINK_MANAGER_MAX_TX_QUEUE    24
 
 #define DRONE_LINK_MANAGER_HELLO_INTERVAL  5000
 #define DRONE_LINK_MANAGER_SEQ_INTERVAL    30000
 
-#define DRONE_LINK_MANAGER_MAX_RETRY_INTERVAL   5000
+#define DRONE_LINK_MANAGER_MAX_RETRY_INTERVAL   2000
 #define DRONE_LINK_MANAGER_MAX_RETRIES          10
-#define DRONE_LINK_MANAGER_MAX_ACK_INTERVAL     500
+#define DRONE_LINK_MANAGER_MAX_ACK_INTERVAL     250
 
 
 // aka routing entry
@@ -82,6 +82,14 @@ protected:
   uint32_t _seqTimer;
   FastCRC8 _CRC8;
   uint8_t _gSeq;  // seq number for guaranteed packets originating on this node
+
+  // mesh stats
+  uint32_t _packetsSent;
+  uint32_t _packetsReceived;
+  uint32_t _choked;  // transmit buffer full, nothing to kick
+  uint32_t _kicked;  // got kicked by a higher priority packet
+  float _chokeRate;  // rolling average
+  float _kickRate;   // rolling average
 
 public:
     DroneLinkManager(WiFiManager *wifiManager);

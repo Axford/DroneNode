@@ -56,6 +56,8 @@ public:
   static void registerParams(DEM_NAMESPACE* ns, DroneExecutionManager *dem);
 
   void doReset();
+  
+  void doShutdown();
 
   void setup();
   void loop();
