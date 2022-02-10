@@ -61,6 +61,27 @@ void DiagnosticModule::doReset() {
 }
 
 
+void DiagnosticModule::doShutdown() {
+  DroneModule::doShutdown(); // disables module
+
+  // write shutdown message to screen
+  // clear the display
+  if (_display) {
+
+    _display->clear();
+
+    _display->setColor(WHITE);
+    _display->setFont(ArialMT_Plain_10);
+
+    _display->setTextAlignment(TEXT_ALIGN_CENTER);
+    _display->drawString(64, 25, F("Restarting..."));
+
+    // write the buffer to the display
+    _display->display();
+  }
+}
+
+
 void DiagnosticModule::setup() {
   I2CBaseModule::setup();
 

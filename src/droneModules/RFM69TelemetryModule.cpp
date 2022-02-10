@@ -210,6 +210,8 @@ void RFM69TelemetryModule::loop() {
 
 boolean RFM69TelemetryModule::sendPacket(uint8_t *buffer) {
 
+  if (!_enabled) return false;
+
   // wrap the DroneMesh message in a start byte and end CRC
   uint8_t txSize = getDroneMeshMsgTotalSize(buffer) + 2;
 

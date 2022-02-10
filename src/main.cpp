@@ -51,7 +51,7 @@ Steps to setup a new device:
 #endif
 
 //#include <AsyncJson.h>
-#include <ArduinoJson.h>
+//#include <ArduinoJson.h>
 
 #ifdef INC_SPIFFS_EDITOR
 #include <SPIFFSEditor.h>
@@ -91,6 +91,7 @@ const char* QUERY_PARAM_PASSWORD = "password";
 // semaphore used to avoid conflicts on SPI bus between filesystem and telemetry radio
 // caused by async webserver
 SemaphoreHandle_t xSPISemaphore;
+
 
 #ifdef INC_WEB_SERVER
 void setupWebServer() {

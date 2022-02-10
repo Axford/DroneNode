@@ -152,6 +152,7 @@ void UDPTelemetryModule::loop() {
 
 
 boolean UDPTelemetryModule::sendPacket(uint8_t *buffer) {
+  if (!_enabled) return false;
 
   // can only send if WiFi connected
   boolean wifiConnected = (WiFi.status() == WL_CONNECTED) || (WiFi.softAPIP()[0] > 0);
