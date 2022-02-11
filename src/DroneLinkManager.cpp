@@ -1,6 +1,7 @@
 #include "Arduino.h"
 #include "DroneLinkManager.h"
 #include "WiFiManager.h"
+#include <Update.h>
 
 DroneLinkManager::DroneLinkManager(WiFiManager *wifiManager):
   _wifiManager(wifiManager),
@@ -26,6 +27,11 @@ DroneLinkManager::DroneLinkManager(WiFiManager *wifiManager):
   _kicked = 0;
   _chokeRate = 0;
   _kickRate = 0;
+
+  _firmwareStarted = false;
+  _firmwareSize = 0;
+  _firmwarePos = 0;
+  _firmwareComplete = false;
 }
 
 void DroneLinkManager::enableWiFi() {
@@ -434,7 +440,7 @@ void DroneLinkManager::receivePacket(NetworkInterfaceModule *interface, uint8_t 
   uint8_t nn = getDroneMeshMsgNextNode(buffer);
   if (nn != 0 && nn != _node) return;
 
-  Log.noticeln("[DLM.rP] Rec %u bytes with metric %u on int: ", len, metric, interface->getName());
+  //Log.noticeln("[DLM.rP] Rec %u bytes with metric %u on int: ", len, metric, interface->getName());
 
   // this is the meaty stuff...
   // do something appropriate with it depending on its routing mode, type, etc
@@ -484,6 +490,10 @@ void DroneLinkManager::receivePacket(NetworkInterfaceModule *interface, uint8_t 
       case DRONE_MESH_MSG_TYPE_ROUTEENTRY_RESPONSE: receiveRouteEntryResponse(interface, buffer, metric); break;
 
       case DRONE_MESH_MSG_TYPE_DRONELINKMSG: receiveDroneLinkMsg(interface, buffer, metric); break;
+
+      // firmware updates
+      case DRONE_MESH_MSG_TYPE_FIRMWARE_START_REQUEST: receiveFirmwareStartRequest(interface, buffer, metric); break;
+      case DRONE_MESH_MSG_TYPE_FIRMWARE_WRITE: receiveFirmwareWrite(interface, buffer, metric); break;
     }
   }
 }
@@ -671,8 +681,106 @@ void DroneLinkManager::receiveDroneLinkMsg(NetworkInterfaceModule *interface, ui
       hopAlong(buffer);
     }
   }
+}
 
 
+void DroneLinkManager::receiveFirmwareStartRequest(NetworkInterfaceModule *interface, uint8_t *buffer, uint8_t metric) {
+  DRONE_MESH_MSG_HEADER *header = (DRONE_MESH_MSG_HEADER*)buffer;
+
+  Log.noticeln("[DLM.rFSR] Firmware Start request from %u", header->srcNode);
+
+  // are we the destination?
+  if (header->destNode == _node || header->destNode == 0) {
+    DRONE_MESH_MSG_FIRMWARE_START_REQUEST* firmwareStart = (DRONE_MESH_MSG_FIRMWARE_START_REQUEST*)buffer;
+
+    // get size
+    _firmwareSize = firmwareStart->size;
+
+    Update.end();
+
+    _firmwareStarted = Update.begin(_firmwareSize);
+
+    _firmwarePos = 0;
+
+    _firmwareComplete = false;
+
+    Log.noticeln("[DLM.rFSR] Primed to receive: %u bytes", _firmwareSize);
+
+    // generate a response
+    generateFirmwareStartResponse(interface, header->srcNode, _firmwareStarted ? 1 : 0);
+
+    // alert main
+    if (onEvent) onEvent(DRONE_LINK_MANAGER_FIRMWARE_UPDATE_START, 0);
+  }
+}
+
+
+void DroneLinkManager::receiveFirmwareWrite(NetworkInterfaceModule *interface, uint8_t *buffer, uint8_t metric) {
+  DRONE_MESH_MSG_HEADER *header = (DRONE_MESH_MSG_HEADER*)buffer;
+
+  //Log.noticeln("[DLM.rFW] Firmware Write from %u", header->srcNode);
+
+  // are we primed to receive?
+  if (_firmwareStarted && _firmwareSize > 0 && !_firmwareComplete) {
+    DRONE_MESH_MSG_FIRMWARE_WRITE* wBuffer = (DRONE_MESH_MSG_FIRMWARE_WRITE*)buffer;
+
+    // get total payload size
+    uint8_t payloadSize = getDroneMeshMsgPayloadSize(buffer);
+
+    // calc data size
+    uint8_t dataSize = payloadSize - 4;
+
+    // check offset matches write pos
+    if (wBuffer->offset == _firmwarePos) {
+
+      Log.noticeln("[DLM.rFW] Firmware Write %u bytes at pos: %u", dataSize, _firmwarePos);
+
+      // write data to firmware
+      Update.write(&wBuffer->data[0], dataSize);
+
+      _firmwarePos += dataSize;
+
+      // have we reached the end?
+      if (_firmwarePos >= _firmwareSize) {
+        _firmwareStarted = false;
+        _firmwareComplete = true;
+
+        if (Update.end()) {
+          if (Update.isFinished())
+          {
+            // alert main
+            if (onEvent) onEvent(DRONE_LINK_MANAGER_FIRMWARE_UPDATE_END, 1);
+
+            Log.noticeln("Update successfully completed. Rebooting.");
+            ESP.restart();
+          }
+          else
+          {
+            Log.errorln("Update not finished? Something went wrong!");
+          }
+        } else {
+          Log.errorln("Update failed");
+        }
+      } else {
+        // alert main
+        if (onEvent) onEvent(DRONE_LINK_MANAGER_FIRMWARE_UPDATE_PROGRESS, 1.0f * _firmwarePos / _firmwareSize);
+      }
+
+    } else {
+      // are we behind?
+      if (wBuffer->offset > _firmwarePos) {
+        Log.noticeln("[DLM.rFW] Behind Firmware Write %u vs %u", wBuffer->offset, _firmwarePos);
+
+        // we've obviously missed a packet... ask for a rewind
+        generateFirmwareRewind(interface, header->srcNode, _firmwarePos);
+      } else {
+        // we're ahead... someone else must have asked for a rewind, we'll wait for them to catchup
+        Log.noticeln("[DLM.rFW] Ahead of Firmware Write %u vs %u", wBuffer->offset, _firmwarePos);
+
+      }
+    }
+
+  }
 }
 
 
@@ -1316,6 +1424,68 @@ boolean DroneLinkManager::sendDroneLinkMessage(NetworkInterfaceModule *interface
 
     // calc CRC
     buffer->data[totalSize-1] = _CRC8.smbus((uint8_t*)buffer->data, totalSize-1);
+
+    return true;
+  }
+
+  return false;
+}
+
+
+boolean DroneLinkManager::generateFirmwareStartResponse(NetworkInterfaceModule *interface, uint8_t dest, uint8_t status) {
+
+  // request a new buffer in the transmit queue
+  DRONE_MESH_MSG_BUFFER *buffer = getTransmitBuffer(interface, DRONE_MESH_MSG_PRIORITY_CRITICAL);
+
+  // if successful
+  if (buffer) {
+    DRONE_MESH_MSG_FIRMWARE_START_RESPONSE *rBuffer = (DRONE_MESH_MSG_FIRMWARE_START_RESPONSE*)buffer->data;
+
+    // populate packet
+    rBuffer->header.typeGuaranteeSize = DRONE_MESH_MSG_SEND | DRONE_MESH_MSG_NOT_GUARANTEED | (sizeof(DRONE_MESH_MSG_FIRMWARE_START_RESPONSE) - sizeof(DRONE_MESH_MSG_HEADER) - 2) ;
+    rBuffer->header.txNode = node();;
+    rBuffer->header.srcNode = node();
+    rBuffer->header.nextNode = dest;
+    rBuffer->header.destNode = dest;
+    rBuffer->header.seq = _gSeq++;
+    setDroneMeshMsgPriorityAndPayloadType(buffer->data, DRONE_MESH_MSG_PRIORITY_CRITICAL, DRONE_MESH_MSG_TYPE_FIRMWARE_START_RESPONSE);
+
+    // populate info
+    rBuffer->status = status;
+
+    // calc CRC
+    rBuffer->crc = _CRC8.smbus((uint8_t*)rBuffer, sizeof(DRONE_MESH_MSG_FIRMWARE_START_RESPONSE)-1);
+
+    return true;
+  }
+
+  return false;
+}
+
+
+boolean DroneLinkManager::generateFirmwareRewind(NetworkInterfaceModule *interface, uint8_t dest, uint32_t offset) {
+
+  // request a new buffer in the transmit queue
+  DRONE_MESH_MSG_BUFFER *buffer = getTransmitBuffer(interface, DRONE_MESH_MSG_PRIORITY_CRITICAL);
+
+  // if successful
+  if (buffer) {
+    DRONE_MESH_MSG_FIRMWARE_REWIND *rBuffer = (DRONE_MESH_MSG_FIRMWARE_REWIND*)buffer->data;
+
+    // populate packet
+    rBuffer->header.typeGuaranteeSize = DRONE_MESH_MSG_SEND | DRONE_MESH_MSG_NOT_GUARANTEED | (sizeof(DRONE_MESH_MSG_FIRMWARE_REWIND) - sizeof(DRONE_MESH_MSG_HEADER) - 2) ;
+    rBuffer->header.txNode = node();;
+    rBuffer->header.srcNode = node();
+    rBuffer->header.nextNode = dest;
+    rBuffer->header.destNode = dest;
+    rBuffer->header.seq = 0;
+    setDroneMeshMsgPriorityAndPayloadType(buffer->data, DRONE_MESH_MSG_PRIORITY_CRITICAL, DRONE_MESH_MSG_TYPE_FIRMWARE_REWIND);
+
+    // populate info
+    rBuffer->offset = offset;
+
+    // calc CRC
+    rBuffer->crc = _CRC8.smbus((uint8_t*)rBuffer, sizeof(DRONE_MESH_MSG_FIRMWARE_REWIND)-1);
 
     return true;
   }

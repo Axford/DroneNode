@@ -58,6 +58,14 @@ struct DRONE_LINK_NODE_PAGE {
 
 #define DRONE_LINK_MANAGER_MAX_ROUTE_AGE    60000  // 60 sec
 
+enum DroneLinkManagerEvent {
+  DRONE_LINK_MANAGER_FIRMWARE_UPDATE_START,
+  DRONE_LINK_MANAGER_FIRMWARE_UPDATE_END,
+  DRONE_LINK_MANAGER_FIRMWARE_UPDATE_PROGRESS
+};
+
+typedef void (*DroneLinkManagerCallback) (const DroneLinkManagerEvent event, const float progress);
+
 
 class DroneLinkManager
 {
@@ -91,7 +99,15 @@ protected:
   float _chokeRate;  // rolling average
   float _kickRate;   // rolling average
 
+  // firmware updates
+  boolean _firmwareStarted;
+  uint32_t _firmwareSize;
+  uint32_t _firmwarePos; // next write position
+  boolean _firmwareComplete;
+
 public:
+    DroneLinkManagerCallback onEvent;
+
     DroneLinkManager(WiFiManager *wifiManager);
 
     void enableWiFi();
@@ -157,6 +173,9 @@ public:
 
     void receiveDroneLinkMsg(NetworkInterfaceModule *interface, uint8_t *buffer, uint8_t metric);
 
+    void receiveFirmwareStartRequest(NetworkInterfaceModule *interface, uint8_t *buffer, uint8_t metric);
+    void receiveFirmwareWrite(NetworkInterfaceModule *interface, uint8_t *buffer, uint8_t metric);
+
     // standard forwarding mechanic for unicast packets
     virtual void hopAlong(uint8_t *buffer);
 
@@ -191,6 +210,9 @@ public:
     boolean generateRouteEntryResponse(NetworkInterfaceModule *interface,void * nodeInfo, uint8_t target, uint8_t dest, uint8_t nextHop);
 
     boolean sendDroneLinkMessage(NetworkInterfaceModule *interface, uint8_t destNode, uint8_t nextNode, DroneLinkMsg *msg);
+
+    boolean generateFirmwareStartResponse(NetworkInterfaceModule *interface, uint8_t dest, uint8_t status);
+    boolean generateFirmwareRewind(NetworkInterfaceModule *interface, uint8_t dest, uint32_t offset);
 };
 
 

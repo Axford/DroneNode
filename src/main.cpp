@@ -168,6 +168,16 @@ void handleOTAEVent(OTAManagerEvent event, float progress) {
   }
 }
 
+
+void handleDLMEvent( DroneLinkManagerEvent event, float progress) {
+  if (event == DRONE_LINK_MANAGER_FIRMWARE_UPDATE_START) {
+    dmm->updateStarting();
+
+  } else if (event == DRONE_LINK_MANAGER_FIRMWARE_UPDATE_END) {
+
+  }
+}
+
 TaskHandle_t _coreTask;
 
 void coreTask( void * pvParameters ) {
@@ -315,6 +325,7 @@ void setup() {
 
   // create core objects
   dlm = new DroneLinkManager(&wifiManager);
+  dlm->onEvent = handleDLMEvent;
   dmm = new DroneModuleManager(dlm);
   dem = new DroneExecutionManager(dmm, dlm, LITTLEFS, logFile);
 

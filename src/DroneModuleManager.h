@@ -58,6 +58,7 @@ public:
 
   void shutdown();
   void restart();  // will shutdown all modules, then restart
+  void updateStarting();
 
   void setupModules();
   void loopModules();

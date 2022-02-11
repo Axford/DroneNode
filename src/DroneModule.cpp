@@ -249,6 +249,9 @@ void DroneModule::doShutdown() {
 boolean DroneModule::isAlive() { return true; }
 
 
+boolean DroneModule::getInterfaceState() { return false; }
+
+
 boolean DroneModule::publishParamEntry(DRONE_PARAM_ENTRY *param) {
   _mgmtMsg._msg.param = param->param;
   _mgmtMsg._msg.paramTypeLength = param->paramTypeLength;

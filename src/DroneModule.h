@@ -116,6 +116,8 @@ protected:
   unsigned long _lastLoop;
   boolean _setupDone;
 
+  boolean _interfaceState;
+
 public:
   long hLMDuration;
   long loopDuration;
@@ -151,6 +153,8 @@ public:
   virtual void onOTAProgress(float progress);
 
   virtual boolean isAlive();  // polled by watchdog, return true if everything ok
+
+  virtual boolean getInterfaceState();
 
   boolean publishParamEntry(DRONE_PARAM_ENTRY *param);
   boolean publishMgmtParamEntries();

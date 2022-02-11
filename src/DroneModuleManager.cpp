@@ -110,6 +110,20 @@ void DroneModuleManager::restart() {
   ESP.restart();
 }
 
+void DroneModuleManager::updateStarting() {
+  // disable discovery
+  discovery(false);
+
+  // shutdown non-essential modules
+  DroneModule* m;
+  for(int i = 1; i < _modules.size(); i++) {
+    m = _modules.get(i);
+    if (!m->getInterfaceState()) {
+      m->doShutdown();
+    }
+  }
+}
+
 void DroneModuleManager::setupModules() {
   DroneModule* m;
   for(int i = 0; i < _modules.size(); i++) {
