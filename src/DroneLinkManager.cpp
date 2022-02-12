@@ -1386,10 +1386,11 @@ boolean DroneLinkManager::sendDroneLinkMessage(NetworkInterfaceModule *interface
     // check for packets ready to send
     if (b->state > DRONE_MESH_MSG_BUFFER_STATE_EMPTY) {
       if (getDroneMeshMsgPayloadType(b->data) == DRONE_MESH_MSG_TYPE_DRONELINKMSG) {
-        // compare signatures
+        // compare signatures and destNodes
         uint8_t offset = sizeof(DRONE_MESH_MSG_HEADER);
-        if (memcmp(&b->data[offset], &msg->_msg, 5) == 0) {
-          // signatures match... overwrite existing transmit buffer with new payload
+        if (memcmp(&b->data[offset], &msg->_msg, 5) == 0 &&
+            getDroneMeshMsgDestNode(b->data) == destNode) {
+          // signatures and destinations match... overwrite existing transmit buffer with new payload
 
           // copy msg data
           memcpy(&b->data[sizeof(DRONE_MESH_MSG_HEADER)], (uint8_t*)&msg->_msg, payloadSize);
