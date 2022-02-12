@@ -474,16 +474,21 @@ void DroneLinkManager::receivePacket(NetworkInterfaceModule *interface, uint8_t 
 
   // is this an Ack?
   if (isDroneMeshMsgAck(buffer)) {
+    //Log.noticeln("isAck");
     receiveAck(buffer);
 
   } else {
     // generate Ack
     if (isDroneMeshMsgGuaranteed(buffer)) {
+      //Log.noticeln("genAck");
+
       // check to see if we've already received this packet (gSeq)
       DRONE_LINK_NODE_INFO* srcNodeInfo = getNodeInfo(header->srcNode, false);
-      if (header->seq <= srcNodeInfo->gSeq && header->seq > 5) return;
+      if (srcNodeInfo) {
+        if (header->seq <= srcNodeInfo->gSeq && header->seq > 5) return;
 
-      srcNodeInfo->gSeq = header->seq;
+        srcNodeInfo->gSeq = header->seq;
+      }
 
       generateAck(interface, buffer);
     }
@@ -708,9 +713,13 @@ void DroneLinkManager::receiveFirmwareStartRequest(NetworkInterfaceModule *inter
     // get size
     _firmwareSize = firmwareStart->size;
 
+    //Use cli() to disable interrupts and sei() to
+    /// reenable them.
+    cli();
     Update.end();
 
     _firmwareStarted = Update.begin(_firmwareSize);
+    sei();
 
     _firmwarePos = 0;
 
@@ -750,7 +759,9 @@ void DroneLinkManager::receiveFirmwareWrite(NetworkInterfaceModule *interface, u
       Log.noticeln("[DLM.rFW] Firmware Write %u bytes at pos: %u", dataSize, _firmwarePos);
 
       // write data to firmware
+      cli();
       Update.write(&wBuffer->data[0], dataSize);
+      sei();
 
       _firmwarePos += dataSize;
       _firmwareLastRewind = millis();
@@ -760,6 +771,7 @@ void DroneLinkManager::receiveFirmwareWrite(NetworkInterfaceModule *interface, u
         _firmwareStarted = false;
         _firmwareComplete = true;
 
+        cli();
         if (Update.end()) {
           if (Update.isFinished())
           {
@@ -776,6 +788,7 @@ void DroneLinkManager::receiveFirmwareWrite(NetworkInterfaceModule *interface, u
         } else {
           Log.errorln("Update failed");
         }
+        sei();
       } else {
         // alert main
         if (onEvent) onEvent(DRONE_LINK_MANAGER_FIRMWARE_UPDATE_PROGRESS, 1.0f * _firmwarePos / _firmwareSize);
@@ -1107,14 +1120,15 @@ void DroneLinkManager::scrubDuplicateTransmitBuffers(DRONE_MESH_MSG_BUFFER *buff
     DRONE_MESH_MSG_BUFFER *b = _txQueue.get(i);
     // check for packets ready to send
     if (b != buffer &&
-        b->state >= DRONE_MESH_MSG_BUFFER_STATE_EMPTY) {
+        b->state > DRONE_MESH_MSG_BUFFER_STATE_EMPTY) {
       // see if b contains duplicate data as buffer
       uint8_t bSize = getDroneMeshMsgTotalSize(b->data);
       if (bSize == bufferSize) {
         // compare memory
-        if (memcmp(b->data, buffer->data, bufferSize) == 0) {
+        if (memcmp(&b->data[0], &buffer->data[0], bufferSize) == 0) {
           // match, so mark buffer as empty, in case b has already sent and is waiting for Ack
           buffer->state = DRONE_MESH_MSG_BUFFER_STATE_EMPTY;
+          Log.noticeln("transmitScrub %u vs %u", buffer, b);
         }
       }
     }
@@ -1512,6 +1526,8 @@ boolean DroneLinkManager::generateFirmwareRewind(NetworkInterfaceModule *interfa
   // if successful
   if (buffer) {
     DRONE_MESH_MSG_FIRMWARE_REWIND *rBuffer = (DRONE_MESH_MSG_FIRMWARE_REWIND*)buffer->data;
+
+    Log.noticeln("Firmware rewind %u", offset);
 
     // populate packet
     rBuffer->header.typeGuaranteeSize = DRONE_MESH_MSG_SEND | DRONE_MESH_MSG_NOT_GUARANTEED | (sizeof(DRONE_MESH_MSG_FIRMWARE_REWIND) - sizeof(DRONE_MESH_MSG_HEADER) - 2) ;
