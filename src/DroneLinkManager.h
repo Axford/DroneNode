@@ -105,6 +105,8 @@ protected:
   uint32_t _firmwareSize;
   uint32_t _firmwarePos; // next write position
   boolean _firmwareComplete;
+  uint32_t _firmwareLastRewind;
+  uint8_t _firmwareSrc;
 
 public:
     DroneLinkManagerCallback onEvent;
@@ -195,6 +197,8 @@ public:
 
     uint8_t getTxQueueSize();
     DRONE_MESH_MSG_BUFFER* getTransmitBuffer(NetworkInterfaceModule *interface, uint8_t priority);
+    void scrubDuplicateTransmitBuffers(DRONE_MESH_MSG_BUFFER *buffer);
+
     void processTransmitQueue();
 
     boolean generateNextHop(NetworkInterfaceModule *interface, uint8_t *buffer, uint8_t nextHop);
@@ -214,6 +218,8 @@ public:
 
     boolean generateFirmwareStartResponse(NetworkInterfaceModule *interface, uint8_t dest, uint8_t status);
     boolean generateFirmwareRewind(NetworkInterfaceModule *interface, uint8_t dest, uint32_t offset);
+
+    void processFirmwareUpdate();
 };
 
 

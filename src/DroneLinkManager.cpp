@@ -32,6 +32,8 @@ DroneLinkManager::DroneLinkManager(WiFiManager *wifiManager):
   _firmwareSize = 0;
   _firmwarePos = 0;
   _firmwareComplete = false;
+  _firmwareLastRewind = 0;
+  _firmwareSrc = 0;
 }
 
 void DroneLinkManager::enableWiFi() {
@@ -224,6 +226,8 @@ void DroneLinkManager::loop() {
   }
 
   processTransmitQueue();
+
+  processFirmwareUpdate();
 }
 
 
@@ -712,6 +716,8 @@ void DroneLinkManager::receiveFirmwareStartRequest(NetworkInterfaceModule *inter
 
     _firmwareComplete = false;
 
+    _firmwareSrc = header->srcNode;
+
     Log.noticeln("[DLM.rFSR] Primed to receive: %u bytes", _firmwareSize);
 
     // generate a response
@@ -747,6 +753,7 @@ void DroneLinkManager::receiveFirmwareWrite(NetworkInterfaceModule *interface, u
       Update.write(&wBuffer->data[0], dataSize);
 
       _firmwarePos += dataSize;
+      _firmwareLastRewind = millis();
 
       // have we reached the end?
       if (_firmwarePos >= _firmwareSize) {
@@ -1090,6 +1097,28 @@ DRONE_MESH_MSG_BUFFER* DroneLinkManager::getTransmitBuffer(NetworkInterfaceModul
   _chokeRate = (_chokeRate * 99 + (isChoked ? 1 : 0)) / 100;
 
   return buffer;
+}
+
+
+void DroneLinkManager::scrubDuplicateTransmitBuffers(DRONE_MESH_MSG_BUFFER *buffer) {
+  uint8_t bufferSize = getDroneMeshMsgTotalSize(buffer->data);
+  // look through txQueue
+  for (uint8_t i=0; i<_txQueue.size(); i++) {
+    DRONE_MESH_MSG_BUFFER *b = _txQueue.get(i);
+    // check for packets ready to send
+    if (b != buffer &&
+        b->state >= DRONE_MESH_MSG_BUFFER_STATE_EMPTY) {
+      // see if b contains duplicate data as buffer
+      uint8_t bSize = getDroneMeshMsgTotalSize(b->data);
+      if (bSize == bufferSize) {
+        // compare memory
+        if (memcmp(b->data, buffer->data, bufferSize) == 0) {
+          // match, so mark buffer as empty, in case b has already sent and is waiting for Ack
+          buffer->state = DRONE_MESH_MSG_BUFFER_STATE_EMPTY;
+        }
+      }
+    }
+  }
 }
 
 
@@ -1499,8 +1528,23 @@ boolean DroneLinkManager::generateFirmwareRewind(NetworkInterfaceModule *interfa
     // calc CRC
     rBuffer->crc = _CRC8.smbus((uint8_t*)rBuffer, sizeof(DRONE_MESH_MSG_FIRMWARE_REWIND)-1);
 
+    scrubDuplicateTransmitBuffers(buffer);
+
+    _firmwareLastRewind = millis();
+
     return true;
   }
 
   return false;
+}
+
+
+void DroneLinkManager::processFirmwareUpdate() {
+  uint32_t loopTime = millis();
+  if (_firmwareStarted &&
+      _firmwarePos < _firmwareSize &&
+      loopTime > _firmwareLastRewind + 250) {
+
+    generateFirmwareRewind(getSourceInterface(_firmwareSrc), _firmwareSrc, _firmwarePos);
+  }
 }
