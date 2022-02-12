@@ -42,6 +42,7 @@ struct DRONE_LINK_NODE_INFO {
   uint8_t metric;
   uint32_t uptime;  // how long has this node been up
   uint8_t seq; // last seq heard on route update (Hello)
+  uint8_t gSeq;  // last seq heard for guaranteed packets
   uint8_t nextHop;  // what node is the next hop
   NetworkInterfaceModule* interface;  // network interface that heard this node with the lowest metric originating on this node
   char * name; // dynamically allocated to match heard name

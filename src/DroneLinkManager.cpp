@@ -295,6 +295,7 @@ DRONE_LINK_NODE_INFO* DroneLinkManager::getNodeInfo(uint8_t source, boolean hear
     for (uint8_t i=0; i<DRONE_LINK_NODE_PAGE_SIZE; i++) {
       page->nodeInfo[i].heard = false;
       page->nodeInfo[i].seq = 0;
+      page->nodeInfo[i].gSeq = 0;
       page->nodeInfo[i].metric = 255;
       page->nodeInfo[i].name = NULL;
       page->nodeInfo[i].interface = NULL;
@@ -473,8 +474,15 @@ void DroneLinkManager::receivePacket(NetworkInterfaceModule *interface, uint8_t 
 
   } else {
     // generate Ack
-    if (isDroneMeshMsgGuaranteed(buffer))
+    if (isDroneMeshMsgGuaranteed(buffer)) {
+      // check to see if we've already received this packet (gSeq)
+      DRONE_LINK_NODE_INFO* srcNodeInfo = getNodeInfo(header->srcNode, false);
+      if (header->seq <= srcNodeInfo->gSeq && header->seq > 5) return;
+
+      srcNodeInfo->gSeq = header->seq;
+
       generateAck(interface, buffer);
+    }
 
     // pass to receive handler
     switch (type) {
@@ -1108,6 +1116,9 @@ void DroneLinkManager::processTransmitQueue() {
           // otherwise set to empty
           b->state = DRONE_MESH_MSG_BUFFER_STATE_EMPTY;
         }
+
+        // just the one Mrs Wemberley
+        return;
       } else {
         // send failed, see how long we've been trying for
         if (loopTime > b->created + DRONE_LINK_MANAGER_MAX_RETRY_INTERVAL) {
