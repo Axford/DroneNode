@@ -91,6 +91,7 @@ struct DRONE_MESH_MSG_ROUTEENTRY_RESPONSE {
   uint32_t age;
   uint32_t uptime;
   uint8_t avgAttempts;  // encoded as value x 10 (i.e. in range 0..100)
+  uint8_t avgAckTime;  // in ms, rounded to nearest ms
   uint8_t crc;
 } __packed;
 

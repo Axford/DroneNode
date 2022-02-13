@@ -47,6 +47,8 @@ struct DRONE_LINK_NODE_INFO {
   NetworkInterfaceModule* interface;  // network interface that heard this node with the lowest metric originating on this node
   char * name; // dynamically allocated to match heard name
   float avgAttempts;  
+  float avgTxTime;  // avg ms to transmit a packet
+  float avgAckTime; // avg time from packet creation to confirmed Ack
 };
 
 #define DRONE_LINK_NODE_PAGE_SIZE  16

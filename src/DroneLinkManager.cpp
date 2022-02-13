@@ -305,6 +305,8 @@ DRONE_LINK_NODE_INFO* DroneLinkManager::getNodeInfo(uint8_t source, boolean hear
       page->nodeInfo[i].interface = NULL;
       page->nodeInfo[i].nextHop = 0;
       page->nodeInfo[i].avgAttempts = 0;
+      page->nodeInfo[i].avgTxTime = 0;
+      page->nodeInfo[i].avgAckTime = 0;
     }
   }
 
@@ -387,7 +389,7 @@ void DroneLinkManager::serveNodeInfo(AsyncWebServerRequest *request) {
             response->print("???");
           } else
             response->printf("%s", page->nodeInfo[j].name);
-          response->printf(", Seq: %u, Metric: %u, Next Hop: %u, Age: %u sec, Uptime: %u, Int: %s (%u), avgAttempts: %.1f\n", page->nodeInfo[j].seq, page->nodeInfo[j].metric, page->nodeInfo[j].nextHop, age, page->nodeInfo[j].uptime, interfaceName, page->nodeInfo[j].interface->getInterfaceType(), page->nodeInfo[j].avgAttempts);
+          response->printf(", Seq: %u, Metric: %u, Next Hop: %u, Age: %u sec, Uptime: %u, Int: %s (%u), avgAttempts: %.1f, avgTx: %.0fms, avgAck: %.0fms\n", page->nodeInfo[j].seq, page->nodeInfo[j].metric, page->nodeInfo[j].nextHop, age, page->nodeInfo[j].uptime, interfaceName, page->nodeInfo[j].interface->getInterfaceType(), page->nodeInfo[j].avgAttempts, page->nodeInfo[j].avgTxTime, page->nodeInfo[j].avgAckTime);
         }
       }
     }
@@ -532,9 +534,10 @@ void DroneLinkManager::receiveAck(uint8_t *buffer) {
         b->state = DRONE_MESH_MSG_BUFFER_STATE_EMPTY;
 
         // update stats on nextNode
-        DRONE_LINK_NODE_INFO* nextNodeInfo = getNodeInfo(getDroneMeshMsgNextNode(buffer), false);
+        DRONE_LINK_NODE_INFO* nextNodeInfo = getNodeInfo(getDroneMeshMsgTxNode(buffer), false);
         if (nextNodeInfo) {
-          nextNodeInfo->avgAttempts = (nextNodeInfo->avgAttempts * 99 + b->attempts) / 100;
+          nextNodeInfo->avgAttempts = (nextNodeInfo->avgAttempts * 49 + b->attempts) / 50;
+          nextNodeInfo->avgAckTime = (nextNodeInfo->avgAckTime * 49 + (millis() - b->created)) / 50;
         }
       }
     }
@@ -1161,6 +1164,11 @@ void DroneLinkManager::processTransmitQueue() {
         } else {
           // otherwise set to empty
           b->state = DRONE_MESH_MSG_BUFFER_STATE_EMPTY;
+          // update stats
+          DRONE_LINK_NODE_INFO* nextNodeInfo = getNodeInfo(getDroneMeshMsgNextNode(b->data), false);
+          if (nextNodeInfo) {
+            nextNodeInfo->avgTxTime = (nextNodeInfo->avgTxTime * 49 + (loopTime - b->created)) / 50;
+          }
         }
 
         // just the one Mrs Wemberley
@@ -1415,6 +1423,7 @@ boolean DroneLinkManager::generateRouteEntryResponse(NetworkInterfaceModule *int
     rBuffer->age = millis() - ni->lastHeard;
     rBuffer->uptime = ni->uptime;
     rBuffer->avgAttempts = round(ni->avgAttempts * 10);
+    rBuffer->avgAckTime = round(ni->avgAckTime);
 
     // calc CRC
     rBuffer->crc = _CRC8.smbus((uint8_t*)rBuffer, sizeof(DRONE_MESH_MSG_ROUTEENTRY_RESPONSE)-1);
