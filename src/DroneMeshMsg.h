@@ -42,8 +42,6 @@ struct DRONE_MESH_MSG_HEADER {
 #define DRONE_MESH_MSG_TYPE_FIRMWARE_START_RESPONSE  23
 #define DRONE_MESH_MSG_TYPE_FIRMWARE_WRITE           24
 #define DRONE_MESH_MSG_TYPE_FIRMWARE_REWIND          25
-#define DRONE_MESH_MSG_TYPE_FIRMWARE_END_REQUEST     26
-#define DRONE_MESH_MSG_TYPE_FIRMWARE_END_RESPONSE    27
 
 // -------------------------------------------------------------------------
 
@@ -117,18 +115,6 @@ struct DRONE_MESH_MSG_FIRMWARE_WRITE {
 struct DRONE_MESH_MSG_FIRMWARE_REWIND {
   DRONE_MESH_MSG_HEADER header;
   uint32_t offset;
-  uint8_t crc;
-} __packed;
-
-struct DRONE_MESH_MSG_FIRMWARE_END_REQUEST {
-  DRONE_MESH_MSG_HEADER header;
-  uint8_t padding;
-  uint8_t crc;
-} __packed;
-
-struct DRONE_MESH_MSG_FIRMWARE_END_RESPONSE {
-  DRONE_MESH_MSG_HEADER header;
-  uint8_t status;
   uint8_t crc;
 } __packed;
 
