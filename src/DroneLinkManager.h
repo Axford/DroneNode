@@ -46,6 +46,7 @@ struct DRONE_LINK_NODE_INFO {
   uint8_t nextHop;  // what node is the next hop
   NetworkInterfaceModule* interface;  // network interface that heard this node with the lowest metric originating on this node
   char * name; // dynamically allocated to match heard name
+  float avgAttempts;  
 };
 
 #define DRONE_LINK_NODE_PAGE_SIZE  16

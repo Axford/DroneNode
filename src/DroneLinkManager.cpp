@@ -304,6 +304,7 @@ DRONE_LINK_NODE_INFO* DroneLinkManager::getNodeInfo(uint8_t source, boolean hear
       page->nodeInfo[i].name = NULL;
       page->nodeInfo[i].interface = NULL;
       page->nodeInfo[i].nextHop = 0;
+      page->nodeInfo[i].avgAttempts = 0;
     }
   }
 
@@ -336,8 +337,6 @@ void DroneLinkManager::serveNodeInfo(AsyncWebServerRequest *request) {
   response->addHeader("Server","ESP Async Web Server");
 
   response->printf(("Tx Queue:  (size %u), kicked: %u (%.1f), choked: %u (%.1f) \n"), getTxQueueSize(), _kicked, _kickRate, _choked, _chokeRate);
-
-  DRONE_LINK_MSG* tempMsg;
 
   // print detailed queue info
   for (uint8_t i=0; i<_txQueue.size(); i++) {
@@ -388,7 +387,7 @@ void DroneLinkManager::serveNodeInfo(AsyncWebServerRequest *request) {
             response->print("???");
           } else
             response->printf("%s", page->nodeInfo[j].name);
-          response->printf(", Seq: %u, Metric: %u, Next Hop: %u, Age: %u sec, Uptime: %u, Int: %s (%u)\n", page->nodeInfo[j].seq, page->nodeInfo[j].metric, page->nodeInfo[j].nextHop, age, page->nodeInfo[j].uptime, interfaceName, page->nodeInfo[j].interface->getInterfaceType());
+          response->printf(", Seq: %u, Metric: %u, Next Hop: %u, Age: %u sec, Uptime: %u, Int: %s (%u), avgAttempts: %.1f\n", page->nodeInfo[j].seq, page->nodeInfo[j].metric, page->nodeInfo[j].nextHop, age, page->nodeInfo[j].uptime, interfaceName, page->nodeInfo[j].interface->getInterfaceType(), page->nodeInfo[j].avgAttempts);
         }
       }
     }
@@ -532,7 +531,11 @@ void DroneLinkManager::receiveAck(uint8_t *buffer) {
         // clear waiting buffer
         b->state = DRONE_MESH_MSG_BUFFER_STATE_EMPTY;
 
-        // TODO - update stats?
+        // update stats on nextNode
+        DRONE_LINK_NODE_INFO* nextNodeInfo = getNodeInfo(getDroneMeshMsgNextNode(buffer), false);
+        if (nextNodeInfo) {
+          nextNodeInfo->avgAttempts = (nextNodeInfo->avgAttempts * 99 + b->attempts) / 100;
+        }
       }
     }
   }
@@ -1178,6 +1181,12 @@ void DroneLinkManager::processTransmitQueue() {
         if (b->attempts >= DRONE_LINK_MANAGER_MAX_RETRIES) {
           // give up and release the buffer
           b->state = DRONE_MESH_MSG_BUFFER_STATE_EMPTY;
+
+          // update stats on nextNode
+          DRONE_LINK_NODE_INFO* nextNodeInfo = getNodeInfo(getDroneMeshMsgNextNode(b->data), false);
+          if (nextNodeInfo) {
+            nextNodeInfo->avgAttempts = (nextNodeInfo->avgAttempts * 99 + b->attempts) / 100;
+          }
         } else {
           // reset to ready to trigger retransmission
           b->state = DRONE_MESH_MSG_BUFFER_STATE_READY;
