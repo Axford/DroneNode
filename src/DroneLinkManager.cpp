@@ -563,8 +563,8 @@ void DroneLinkManager::receiveHello(NetworkInterfaceModule *interface, uint8_t *
     // if its a brand new route entry it will have metric 255... so good to overwrite
     boolean feasibleRoute = nodeInfo->metric == 255;
 
-    // if new uptime is less than current uptime
-    if (hello->uptime < nodeInfo->uptime) {
+    // if new uptime is significantly less than current uptime
+    if (hello->uptime < nodeInfo->uptime * 0.9) {
       feasibleRoute = true;
       Log.noticeln("Lower uptime %u", hello->uptime);
     }
