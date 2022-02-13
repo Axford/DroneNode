@@ -1414,6 +1414,7 @@ boolean DroneLinkManager::generateRouteEntryResponse(NetworkInterfaceModule *int
     rBuffer->nextHop = ni->nextHop;
     rBuffer->age = millis() - ni->lastHeard;
     rBuffer->uptime = ni->uptime;
+    rBuffer->avgAttempts = round(ni->avgAttempts * 10);
 
     // calc CRC
     rBuffer->crc = _CRC8.smbus((uint8_t*)rBuffer, sizeof(DRONE_MESH_MSG_ROUTEENTRY_RESPONSE)-1);
