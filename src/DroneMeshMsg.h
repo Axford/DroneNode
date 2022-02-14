@@ -141,7 +141,6 @@ struct DRONE_MESH_MSG_BUFFER {
   uint8_t attempts;  // how many attempts have we made to send this
   uint32_t created;  // time packet was created
   uint32_t sent;  // time packet was successfully sent
-  // TODO - track number of retries on this packet and transmit time
 } __packed;
 
 // buffer states

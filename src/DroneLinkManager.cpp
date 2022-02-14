@@ -1094,6 +1094,7 @@ DRONE_MESH_MSG_BUFFER* DroneLinkManager::getTransmitBuffer(NetworkInterfaceModul
         buffer = b;
         _kicked++;
         isKicked = true;
+        break;
       }
     }
   }
