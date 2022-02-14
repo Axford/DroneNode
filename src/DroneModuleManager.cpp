@@ -149,13 +149,14 @@ void DroneModuleManager::loopModules() {
       //Serial.println(" Y");
       //Log.noticeln(F("[DMM.lM] %s"), m->getName());
       m->loop();
+
+      // update loopDuration
+      long duration = millis()-start;
+      m->loopDuration = (m->loopDuration*15 + duration)/16;
     } else {
       //Serial.println(" N");
     }
     yield();
-    long duration = millis()-start;
-    if (duration > m->loopDuration)
-      m->loopDuration = duration;
   }
 
 

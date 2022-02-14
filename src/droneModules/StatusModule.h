@@ -34,7 +34,7 @@
 #define STATUS_PARAM_VALUE4        13
 #define STATUS_PARAM_VALUE4_E      4
 
-#define STATUS_PARAM_ENTRIES       6
+#define STATUS_PARAM_ENTRIES       5
 
 // subs
 // @sub 20;21;f;2;sub1;First parameter to monitor for status
