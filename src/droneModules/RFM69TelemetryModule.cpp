@@ -94,7 +94,8 @@ void RFM69TelemetryModule::setup() {
       Serial.println("setFrequency failed");
 
 
-    _radio->setTxPower(14, true);
+    // maximum POWWWWAAAAAA!!
+    _radio->setTxPower(20, true);
     //_radio->spyMode(true);
     _radio->setEncryptionKey(_encryptKey);
 
@@ -154,15 +155,20 @@ void RFM69TelemetryModule::loop() {
       if (validPacket) {
         // pass onto DLM
         // calc receive metric
-        int16_t rssi = abs(constrain(_radio->lastRssi(), -100,0));
+        int16_t rssi = abs(constrain(_radio->lastRssi()/2, -100, 0));
         uint8_t metric = map(rssi, 0, 100, 1, 15);
 
+        // rolling average rssi
+        _params[RFM69_TELEMETRY_PARAM_RSSI_E].data.f[0] = (_params[RFM69_TELEMETRY_PARAM_RSSI_E].data.f[0] * 15 + rssi)/16;
+
+        /*
         Log.noticeln("[RFM.l] recv %u bytes", len);
         for (uint8_t i=0; i<len; i++) {
           Serial.print("  ");
           Serial.print(_buffer[i], BIN);
         }
         Serial.println();
+        */
 
         receivePacket(&_buffer[1], metric);
         _packetsReceived++;
@@ -202,6 +208,9 @@ void RFM69TelemetryModule::loop() {
       _params[RFM69_TELEMETRY_PARAM_SPEED_E].data.f[i] = delta[i] / dur;
     }
     publishParamEntry(&_params[RFM69_TELEMETRY_PARAM_SPEED_E]);
+
+    // RSSI
+    publishParamEntry(&_params[RFM69_TELEMETRY_PARAM_RSSI_E]);
 
     _packetsTimer = millis();
   }
