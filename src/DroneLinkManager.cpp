@@ -1440,8 +1440,12 @@ boolean DroneLinkManager::sendDroneLinkMessage(NetworkInterfaceModule *interface
   uint8_t payloadSize = msg->totalSize();
   uint8_t totalSize = payloadSize + sizeof(DRONE_MESH_MSG_HEADER) + 1;
 
+  // ignore anything where the source node is not this node
+  if (msg->source() != _node) return true;
+
   // param filter check only relevant to local address space
-  if (msg->node() == _node) {
+  // and can be ignored for name responses
+  if (msg->node() == _node && msg->type() < DRONE_LINK_MSG_TYPE_NAME) {
     // calc hashmap index
     int index = (msg->_msg.channel << 8) | msg->_msg.param;
 
