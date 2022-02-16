@@ -509,9 +509,19 @@ void DroneLinkManager::receivePacket(NetworkInterfaceModule *interface, uint8_t 
 
       case DRONE_MESH_MSG_TYPE_DRONELINKMSG: receiveDroneLinkMsg(interface, buffer, metric); break;
 
+      case DRONE_MESH_MSG_TYPE_ROUTER_REQUEST: receiveRouterRequest(interface, buffer, metric); break;
+      case DRONE_MESH_MSG_TYPE_ROUTER_RESPONSE: receiveRouterResponse(interface, buffer, metric); break;
+
+
       // firmware updates
       case DRONE_MESH_MSG_TYPE_FIRMWARE_START_REQUEST: receiveFirmwareStartRequest(interface, buffer, metric); break;
       case DRONE_MESH_MSG_TYPE_FIRMWARE_WRITE: receiveFirmwareWrite(interface, buffer, metric); break;
+
+    default:
+      // if not a broadcast then just provide default routing using hopAlong
+      if (nn != 0) {
+        hopAlong(buffer);
+      }
     }
   }
 }
@@ -701,6 +711,42 @@ void DroneLinkManager::receiveDroneLinkMsg(NetworkInterfaceModule *interface, ui
     } else {
       Log.noticeln("[DLM.rDlM] Intermediate hop");
 
+      hopAlong(buffer);
+    }
+  }
+}
+
+
+void DroneLinkManager::receiveRouterRequest(NetworkInterfaceModule *interface, uint8_t *buffer, uint8_t metric) {
+  DRONE_MESH_MSG_HEADER *header = (DRONE_MESH_MSG_HEADER*)buffer;
+
+  Log.noticeln("[DLM.rT] Router request from %u to %u", header->srcNode, header->destNode);
+
+  // check if we are the nextNode... otherwise ignore it
+  if (header->nextNode == _node) {
+
+    // are we the destination?
+    if (header->destNode == _node) {
+      Log.noticeln("  Reached destination");
+
+      DRONE_MESH_MSG_ROUTER_REQUEST* req = (DRONE_MESH_MSG_ROUTER_REQUEST*)buffer;
+
+      // get nodeInfo for return route to requestor
+      DRONE_LINK_NODE_INFO* srcInfo = getNodeInfo(header->srcNode, false);
+      if (srcInfo && srcInfo->heard) {
+        if (srcInfo->interface) {
+          if (generateRouterResponse(srcInfo->interface, header->srcNode, srcInfo->nextHop)) {
+            // next hop generated ok
+          } else {
+            // unable to generate next hop... e.g. queue full or interface down
+          }
+        }
+      }
+
+
+
+    } else {
+      Log.noticeln("  Intermediate hop");
       hopAlong(buffer);
     }
   }
@@ -948,6 +994,26 @@ void DroneLinkManager::receiveRouteEntryResponse(NetworkInterfaceModule *interfa
 }
 
 
+void DroneLinkManager::receiveRouterResponse(NetworkInterfaceModule *interface, uint8_t *buffer, uint8_t metric) {
+  DRONE_MESH_MSG_HEADER *header = (DRONE_MESH_MSG_HEADER*)buffer;
+
+  Log.noticeln("[DLM.rT] Router response from %u to %u", header->srcNode, header->destNode);
+
+  // ignore if we're not the next node
+  if (header->nextNode == _node) {
+    // check if we are the destination...
+    if (header->destNode == _node) {
+      // do nothing... this shouldn't ever happen on a node
+
+    } else {
+      Log.noticeln("  Response - hopAlong");
+      hopAlong(buffer);
+    }
+  }
+
+}
+
+
 void DroneLinkManager::hopAlong(uint8_t *buffer) {
   DRONE_MESH_MSG_HEADER *header = (DRONE_MESH_MSG_HEADER*)buffer;
 
@@ -1059,6 +1125,17 @@ void DroneLinkManager::generateTraceroute(uint8_t destNode) {
 
 uint8_t DroneLinkManager::getTxQueueSize() {
   return _txQueue.size();
+}
+
+
+uint8_t DroneLinkManager::getTxQueueActive() {
+  uint8_t n = 0;
+  DRONE_MESH_MSG_BUFFER* b;
+  for (uint8_t i=0; i<_txQueue.size(); i++) {
+    b = _txQueue.get(i);
+    if (b->state > DRONE_MESH_MSG_BUFFER_STATE_EMPTY) n++;
+  }
+  return n;
 }
 
 
@@ -1428,6 +1505,42 @@ boolean DroneLinkManager::generateRouteEntryResponse(NetworkInterfaceModule *int
 
     // calc CRC
     rBuffer->crc = _CRC8.smbus((uint8_t*)rBuffer, sizeof(DRONE_MESH_MSG_ROUTEENTRY_RESPONSE)-1);
+
+    return true;
+  }
+
+  return false;
+}
+
+
+boolean DroneLinkManager::generateRouterResponse(NetworkInterfaceModule *interface, uint8_t dest, uint8_t nextHop) {
+  // request a new buffer in the transmit queue
+  DRONE_MESH_MSG_BUFFER *buffer = getTransmitBuffer(interface, DRONE_MESH_MSG_PRIORITY_HIGH);
+
+  // if successful
+  if (buffer) {
+    DRONE_MESH_MSG_ROUTER_RESPONSE *rBuffer = (DRONE_MESH_MSG_ROUTER_RESPONSE*)buffer->data;
+
+    // populate packet
+    rBuffer->header.typeGuaranteeSize = DRONE_MESH_MSG_SEND | DRONE_MESH_MSG_GUARANTEED | (sizeof(DRONE_MESH_MSG_ROUTER_RESPONSE) - sizeof(DRONE_MESH_MSG_HEADER) - 2) ;
+    rBuffer->header.txNode = node();;
+    rBuffer->header.srcNode = node();
+    rBuffer->header.nextNode = nextHop;
+    rBuffer->header.destNode = dest;
+    rBuffer->header.seq = _gSeq++;
+    //rBuffer->header.type = DRONE_MESH_MSG_TYPE_ROUTEENTRY_RESPONSE;
+    setDroneMeshMsgPriorityAndPayloadType(buffer->data, DRONE_MESH_MSG_PRIORITY_HIGH, DRONE_MESH_MSG_TYPE_ROUTER_RESPONSE);
+
+    // populate route entry info
+    rBuffer->txQueueSize = getTxQueueSize();
+    rBuffer->txQueueActive = getTxQueueActive();
+    rBuffer->choked = _choked;
+    rBuffer->kicked = _kicked;
+    rBuffer->chokeRate = round(_chokeRate * 10);
+    rBuffer->kickRate = round(_kickRate * 10);
+
+    // calc CRC
+    rBuffer->crc = _CRC8.smbus((uint8_t*)rBuffer, sizeof(DRONE_MESH_MSG_ROUTER_RESPONSE)-1);
 
     return true;
   }

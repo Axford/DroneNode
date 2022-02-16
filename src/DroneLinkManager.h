@@ -191,6 +191,10 @@ public:
 
     void receiveDroneLinkMsg(NetworkInterfaceModule *interface, uint8_t *buffer, uint8_t metric);
 
+    void receiveRouterRequest(NetworkInterfaceModule *interface, uint8_t *buffer, uint8_t metric);
+    void receiveRouterResponse(NetworkInterfaceModule *interface, uint8_t *buffer, uint8_t metric);
+
+
     void receiveFirmwareStartRequest(NetworkInterfaceModule *interface, uint8_t *buffer, uint8_t metric);
     void receiveFirmwareWrite(NetworkInterfaceModule *interface, uint8_t *buffer, uint8_t metric);
 
@@ -211,6 +215,7 @@ public:
     // ----------------------------------------------------------------
 
     uint8_t getTxQueueSize();
+    uint8_t getTxQueueActive();
     DRONE_MESH_MSG_BUFFER* getTransmitBuffer(NetworkInterfaceModule *interface, uint8_t priority);
     void scrubDuplicateTransmitBuffers(DRONE_MESH_MSG_BUFFER *buffer);
 
@@ -228,6 +233,8 @@ public:
     boolean generateTracerouteRequest(NetworkInterfaceModule *interface, uint8_t destNode, uint8_t nextNode);
 
     boolean generateRouteEntryResponse(NetworkInterfaceModule *interface,void * nodeInfo, uint8_t target, uint8_t dest, uint8_t nextHop);
+
+    boolean generateRouterResponse(NetworkInterfaceModule *interface, uint8_t dest, uint8_t nextHop);
 
     boolean sendDroneLinkMessage(NetworkInterfaceModule *interface, uint8_t destNode, uint8_t nextNode, DroneLinkMsg *msg);
 
