@@ -1440,6 +1440,30 @@ boolean DroneLinkManager::sendDroneLinkMessage(NetworkInterfaceModule *interface
   uint8_t payloadSize = msg->totalSize();
   uint8_t totalSize = payloadSize + sizeof(DRONE_MESH_MSG_HEADER) + 1;
 
+  // param filter check only relevant to local address space
+  if (msg->node() == _node) {
+    // calc hashmap index
+    int index = (msg->_msg.channel << 8) | msg->_msg.param;
+
+    // see if we already have an entry in the hasmap
+    struct DRONE_LINK_PARAM_FILTER *pf;
+    HASH_FIND_INT(_paramFilter, &index, pf);
+    if (pf) {
+      // check last tx time
+      if (millis() <= pf->lastTxTime + 1000) return true; // abandon packet
+
+      // update lastTxTime
+      pf->lastTxTime = millis();
+    } else {
+      // create a new entry in the hashmap
+      pf = (DRONE_LINK_PARAM_FILTER*)malloc(sizeof *pf);
+      pf->index = index;
+      pf->lastTxTime = millis();
+      HASH_ADD_INT(_paramFilter, index, pf);
+    }
+  }
+
+
   // before we allocate a new transmit buffer...  check to see if this is a duplicate msg
   // i.e. matching signature (first 5 bytes)
   // same sig if memcmp(&_msg, &msg->_msg, 5) == 0;

@@ -17,6 +17,7 @@ Manages the local set of pub/sub channels
 #include "DroneLinkChannel.h"
 #include <ESPAsyncWebServer.h>
 #include <FastCRC.h>
+#include <uthash.h>
 
 #include "droneModules/NetworkInterfaceModule.h"
 
@@ -33,7 +34,7 @@ class WiFiManager;
 #define DRONE_LINK_MANAGER_MAX_RETRIES          10
 #define DRONE_LINK_MANAGER_MAX_ACK_INTERVAL     250
 
-
+// -----------------------------------------------------------------------------
 // aka routing entry
 struct DRONE_LINK_NODE_INFO {
   unsigned long lastHeard;
@@ -46,7 +47,7 @@ struct DRONE_LINK_NODE_INFO {
   uint8_t nextHop;  // what node is the next hop
   NetworkInterfaceModule* interface;  // network interface that heard this node with the lowest metric originating on this node
   char * name; // dynamically allocated to match heard name
-  float avgAttempts;  
+  float avgAttempts;
   float avgTxTime;  // avg ms to transmit a packet
   float avgAckTime; // avg time from packet creation to confirmed Ack
 };
@@ -60,6 +61,15 @@ struct DRONE_LINK_NODE_PAGE {
 #define DRONE_LINK_NODE_PAGES  (256 / DRONE_LINK_NODE_PAGE_SIZE)
 
 
+// -----------------------------------------------------------------------------
+struct DRONE_LINK_PARAM_FILTER {
+  int index;  // channel + param
+  uint32_t lastTxTime;
+  UT_hash_handle hh;
+};
+
+
+// -----------------------------------------------------------------------------
 #define DRONE_LINK_MANAGER_MAX_ROUTE_AGE    60000  // 60 sec
 
 enum DroneLinkManagerEvent {
@@ -110,6 +120,8 @@ protected:
   boolean _firmwareComplete;
   uint32_t _firmwareLastRewind;
   uint8_t _firmwareSrc;
+
+  struct DRONE_LINK_PARAM_FILTER *_paramFilter = NULL;
 
 public:
     DroneLinkManagerCallback onEvent;
