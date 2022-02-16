@@ -1,11 +1,11 @@
 #include "DroneMeshMsg.h"
 
 uint8_t getDroneMeshMsgPayloadSize(uint8_t *buffer) {
-  return constrain( (buffer[0] & 0b00111111) + 1, 0, DRONE_MESH_MSG_MAX_PAYLOAD_SIZE);
+  return constrain( (buffer[0] & 0b00111111) + 1, 1, DRONE_MESH_MSG_MAX_PAYLOAD_SIZE);
 }
 
 void setDroneMeshMsgPayloadSize(uint8_t *buffer, uint8_t size) {
-  buffer[0] = (buffer[0] & 0b11000000) | (constrain(size, 1, DRONE_MESH_MSG_MAX_PAYLOAD_SIZE)-1);
+  buffer[0] = (buffer[0] & 0b11000000) | (constrain(size, 1, DRONE_MESH_MSG_MAX_PAYLOAD_SIZE) - 1);
 }
 
 uint8_t getDroneMeshMsgTotalSize(uint8_t *buffer) {

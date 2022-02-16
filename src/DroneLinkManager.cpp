@@ -887,6 +887,7 @@ void DroneLinkManager::receiveTracerouteRequest(NetworkInterfaceModule *interfac
       setDroneMeshMsgPayloadSize(buffer, payloadLen+2);
 
       // no need to recalc CRC, as that will be dealt with by generateResponse or hopAlong
+
     }
 
     // are we the destination?
@@ -1613,7 +1614,7 @@ boolean DroneLinkManager::sendDroneLinkMessage(NetworkInterfaceModule *interface
   uint8_t g = DRONE_MESH_MSG_NOT_GUARANTEED;
   if (msg->type() < DRONE_LINK_MSG_TYPE_CHAR) {
     p = DRONE_MESH_MSG_PRIORITY_HIGH;
-    //g = DRONE_MESH_MSG_GUARANTEED;
+    g = DRONE_MESH_MSG_GUARANTEED;
   }
 
   // request a new buffer in the transmit queue
