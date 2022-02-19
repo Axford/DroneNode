@@ -25,12 +25,12 @@ PanTiltModule::PanTiltModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManag
 
    sub = &_subs[PAN_TILT_SUB_TARGET_E];
    sub->addrParam = PAN_TILT_SUB_TARGET_ADDR;
-   sub->param.param = PAN_TILT_SUB_TARGET;
+   sub->param.paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, PAN_TILT_SUB_TARGET);
    setParamName(FPSTR(STRING_TARGET), &sub->param);
 
    sub = &_subs[PAN_TILT_SUB_HEADING_E];
    sub->addrParam = PAN_TILT_SUB_HEADING_ADDR;
-   sub->param.param = PAN_TILT_SUB_HEADING;
+   sub->param.paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, PAN_TILT_SUB_HEADING);
    setParamName(FPSTR(STRING_HEADING), &sub->param);
 
 
@@ -40,7 +40,7 @@ PanTiltModule::PanTiltModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManag
    DRONE_PARAM_ENTRY *param;
 
    param = &_params[PAN_TILT_PARAM_PID_E];
-   param->param = PAN_TILT_PARAM_PID;
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, PAN_TILT_PARAM_PID);
    setParamName(FPSTR(STRING_PID), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_FLOAT, 12);
    _params[PAN_TILT_PARAM_PID_E].data.f[0] = 0.005;
@@ -48,13 +48,13 @@ PanTiltModule::PanTiltModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManag
    _params[PAN_TILT_PARAM_PID_E].data.f[2] = 0.0001;
 
    param = &_params[PAN_TILT_PARAM_PAN_E];
-   param->param = PAN_TILT_PARAM_PAN;
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, PAN_TILT_PARAM_PAN);
    setParamName(FPSTR(STRING_PAN), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 4);
    _params[PAN_TILT_PARAM_PAN_E].data.f[0] = 0;
 
    param = &_params[PAN_TILT_PARAM_LIMITS_E];
-   param->param = PAN_TILT_PARAM_LIMITS;
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, PAN_TILT_PARAM_LIMITS);
    setParamName(FPSTR(STRING_LIMITS), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_FLOAT, 8);
    _params[PAN_TILT_PARAM_LIMITS_E].data.f[0] = -90;

@@ -17,27 +17,27 @@ JoystickModule::JoystickModule(uint8_t id, DroneModuleManager* dmm, DroneLinkMan
    DRONE_PARAM_ENTRY *param;
 
    param = &_params[JOYSTICK_PARAM_X_E];
-   param->param = JOYSTICK_PARAM_X;
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_HIGH, JOYSTICK_PARAM_X);
    setParamName(FPSTR(STRING_XAXIS), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 4);
 
    param = &_params[JOYSTICK_PARAM_Y_E];
-   param->param = JOYSTICK_PARAM_Y;
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_HIGH, JOYSTICK_PARAM_Y);
    setParamName(FPSTR(STRING_YAXIS), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 4);
 
    param = &_params[JOYSTICK_PARAM_Z_E];
-   param->param = JOYSTICK_PARAM_Z;
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_HIGH, JOYSTICK_PARAM_Z);
    setParamName(FPSTR(STRING_ZAXIS), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 4);
 
    param = &_params[JOYSTICK_PARAM_BUTTON_E];
-   param->param = JOYSTICK_PARAM_BUTTON;
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_HIGH, JOYSTICK_PARAM_BUTTON);
    setParamName(FPSTR(STRING_BUTTON), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 4);
 
    param = &_params[JOYSTICK_PARAM_INVERT_E];
-   param->param = JOYSTICK_PARAM_INVERT;
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_HIGH, JOYSTICK_PARAM_INVERT);
    setParamName(FPSTR(STRING_INVERT), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_UINT8_T, 4);
    _params[JOYSTICK_PARAM_INVERT_E].data.uint8[0] = 0;

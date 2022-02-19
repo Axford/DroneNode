@@ -106,7 +106,7 @@ DroneExecutionManager::DroneExecutionManager(DroneModuleManager *dmm, DroneLinkM
   _instruction.command[2] = 0;
   _instruction.addr.node = dlm->node();
   _instruction.addr.channel = 0;
-  _instruction.addr.param = 0;
+  _instruction.addr.paramPriority = 0;
   _instruction.dataType = DRONE_LINK_MSG_TYPE_UINT8_T;
   _instruction.numTokens = 0;
 
@@ -236,7 +236,7 @@ DEM_MACRO* DroneExecutionManager::createMacro(const char* name) {
     strcpy(res->name, name);
     res->eventAddr.node = 0;
     res->eventAddr.channel = 0;
-    res->eventAddr.param = 0;
+    res->eventAddr.paramPriority = 0;
     res->commands = new IvanLinkedList::LinkedList<DEM_INSTRUCTION_COMPILED>();
 
     _macros.add(res);
@@ -370,7 +370,7 @@ void DroneExecutionManager::printInstruction(DEM_INSTRUCTION * instruction) {
   Serial.print('>');
   Serial.print(instruction->addr.channel);
   Serial.print('.');
-  Serial.print(instruction->addr.param);
+  Serial.print(getDroneLinkMsgParam(instruction->addr.paramPriority));
   Serial.print(' ');
   uint8_t ty = instruction->dataType;
   switch(ty) {
@@ -709,21 +709,21 @@ boolean DroneExecutionManager::compileLine(const char * line, DEM_INSTRUCTION_CO
             else if (eop) {
               eop = false;
               if (tokenContainsNumber(token[0])) {
-                tempAddr.param = atoi(token);
+                tempAddr.paramPriority = atoi(token);
               } else if (tempAddr.node == _dlm->node()) {
                 // named param
                 DroneModule* mod = _dmm->getModuleById(tempAddr.channel);
                 if (mod) {
                   DRONE_PARAM_ENTRY* p = mod->getParamEntryByName(token);
                   if (p) {
-                    tempAddr.param = p->param;
+                    tempAddr.paramPriority = p->paramPriority;
                   } else {
                     Log.errorln(F("Param not found"));
                   }
                 } else {
                   Log.errorln(F("Module not found, can't lookup param"));
                 }
-                tempAddr.param = 0;
+                tempAddr.paramPriority = 0;
                 //Serial.print("_Param lookup_");
               }
 
@@ -933,7 +933,7 @@ boolean DroneExecutionManager::compileLine(const char * line, DEM_INSTRUCTION_CO
       if (instr->handler != NULL) {
         instr->msg.node = _instruction.addr.node;
         instr->msg.channel = _instruction.addr.channel;
-        instr->msg.param = _instruction.addr.param;
+        instr->msg.paramPriority = _instruction.addr.paramPriority;
         uint8_t byteLen = DRONE_LINK_MSG_TYPE_SIZES[_instruction.dataType] * _instruction.numTokens;
         instr->msg.payload.c[0] = 0; // safety
         // zero all bytes in instr first (to null term strings in particular)
@@ -1086,7 +1086,7 @@ void DroneExecutionManager::serveMacroInfo(AsyncWebServerRequest *request) {
     for (uint8_t j=0; j<m->commands->size(); j++) {
       ic = m->commands->get(j);
       response->printf("   %u: %s ", j, ic.cmd);
-      response->printf(" %u>%u.%u ", ic.msg.node, ic.msg.channel, ic.msg.param);
+      response->printf(" %u>%u.%u ", ic.msg.node, ic.msg.channel, getDroneLinkMsgParam(ic.msg.paramPriority));
       DroneLinkMsg::printPayload(&ic.msg.payload, ic.msg.paramTypeLength, response);
     }
     response->print("\n");
@@ -1314,14 +1314,14 @@ boolean DroneExecutionManager::core_run(DEM_INSTRUCTION_COMPILED* instr, DEM_CAL
 }
 
 boolean DroneExecutionManager::core_send(DEM_INSTRUCTION_COMPILED* instr, DEM_CALLSTACK* cs, DEM_DATASTACK* ds, boolean continuation) {
-  Log.noticeln(F("[.send] Publish msg to: %u>%u.%u\n"), instr->msg.node, instr->msg.channel, instr->msg.param);
+  Log.noticeln(F("[.send] Publish msg to: %u>%u.%u\n"), instr->msg.node, instr->msg.channel, getDroneLinkMsgParam(instr->msg.paramPriority));
   // check for address rewrites
   if (instr->msg.node == 0) instr->msg.node = _dlm->node();
   // see if we can get module context
   DEM_DATASTACK_ENTRY *dse = dataStackPeek(0);
   if (instr->msg.channel == 0 && dse) instr->msg.channel = dse->d;
   DroneLinkMsg temp(&instr->msg);
-  if (instr->msg.channel > 0 && instr->msg.param > 0) {
+  if (instr->msg.channel > 0 && getDroneLinkMsgParam(instr->msg.paramPriority) > 0) {
     instr->msg.source = instr->msg.node;
     _dlm->publish(temp);
   } else {
@@ -1507,7 +1507,7 @@ boolean DroneExecutionManager::mod_param(DEM_INSTRUCTION_COMPILED* instr, DEM_CA
       if (instr->msg.node == 0) instr->msg.node = _dlm->node();
       instr->msg.source = instr->msg.node;
       instr->msg.channel = module;
-      instr->msg.param = param;
+      instr->msg.paramPriority = param;
 
       DroneLinkMsg temp(&instr->msg);
       temp.print();

@@ -19,22 +19,22 @@ StatusModule::StatusModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager
 
    sub = &_subs[STATUS_SUB_SUB1_E];
    sub->addrParam = STATUS_SUB_SUB1_ADDR;
-   sub->param.param = STATUS_SUB_SUB1;
+   sub->param.paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, STATUS_SUB_SUB1);
    setParamName(FPSTR(STRING_SUB1), &sub->param);
 
    sub = &_subs[STATUS_SUB_SUB2_E];
    sub->addrParam = STATUS_SUB_SUB2_ADDR;
-   sub->param.param = STATUS_SUB_SUB2;
+   sub->param.paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, STATUS_SUB_SUB2);
    setParamName(FPSTR(STRING_SUB2), &sub->param);
 
    sub = &_subs[STATUS_SUB_SUB3_E];
    sub->addrParam = STATUS_SUB_SUB3_ADDR;
-   sub->param.param = STATUS_SUB_SUB3;
+   sub->param.paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, STATUS_SUB_SUB3);
    setParamName(FPSTR(STRING_SUB3), &sub->param);
 
    sub = &_subs[STATUS_SUB_SUB4_E];
    sub->addrParam = STATUS_SUB_SUB4_ADDR;
-   sub->param.param = STATUS_SUB_SUB4;
+   sub->param.paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, STATUS_SUB_SUB4);
    setParamName(FPSTR(STRING_SUB4), &sub->param);
 
 
@@ -44,7 +44,7 @@ StatusModule::StatusModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager
    DRONE_PARAM_ENTRY *param;
 
    param = &_params[STATUS_PARAM_SCENE_E];
-   param->param = STATUS_PARAM_SCENE;
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_MEDIUM, STATUS_PARAM_SCENE);
    setParamName(FPSTR(STRING_SCENE), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_UINT8_T, 16);
    _params[STATUS_PARAM_SCENE_E].data.uint8[0] = 50;
@@ -69,25 +69,25 @@ StatusModule::StatusModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager
    _params[STATUS_PARAM_SCENE_E].data.uint8[15] = 0;
 
    param = &_params[STATUS_PARAM_VALUE1_E];
-   param->param = STATUS_PARAM_VALUE1;
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, STATUS_PARAM_VALUE1);
    setParamName(FPSTR(STRING_VALUE1), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_FLOAT, 4);
    _params[STATUS_PARAM_VALUE1_E].data.f[0] = 0.5;
 
    param = &_params[STATUS_PARAM_VALUE2_E];
-   param->param = STATUS_PARAM_VALUE2;
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, STATUS_PARAM_VALUE2);
    setParamName(FPSTR(STRING_VALUE2), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_FLOAT, 4);
    _params[STATUS_PARAM_VALUE2_E].data.f[0] = 0.5;
 
    param = &_params[STATUS_PARAM_VALUE3_E];
-   param->param = STATUS_PARAM_VALUE3;
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, STATUS_PARAM_VALUE3);
    setParamName(FPSTR(STRING_VALUE3), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_FLOAT, 4);
    _params[STATUS_PARAM_VALUE3_E].data.f[0] = 0.5;
 
    param = &_params[STATUS_PARAM_VALUE4_E];
-   param->param = STATUS_PARAM_VALUE4;
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, STATUS_PARAM_VALUE4);
    setParamName(FPSTR(STRING_VALUE4), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_FLOAT, 4);
    _params[STATUS_PARAM_VALUE4_E].data.f[0] = 0.5;

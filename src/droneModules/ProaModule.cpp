@@ -23,27 +23,27 @@ ProaModule::ProaModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dl
 
    sub = &_subs[PROA_SUB_TARGET_E];
    sub->addrParam = PROA_SUB_TARGET_ADDR;
-   sub->param.param = PROA_SUB_TARGET;
+   sub->param.paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, PROA_SUB_TARGET);
    setParamName(FPSTR(STRING_TARGET), &sub->param);
 
    sub = &_subs[PROA_SUB_HEADING_E];
    sub->addrParam = PROA_SUB_HEADING_ADDR;
-   sub->param.param = PROA_SUB_HEADING;
+   sub->param.paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, PROA_SUB_HEADING);
    setParamName(FPSTR(STRING_HEADING), &sub->param);
 
    sub = &_subs[PROA_SUB_WIND_E];
    sub->addrParam = PROA_SUB_WIND_ADDR;
-   sub->param.param = PROA_SUB_WIND;
+   sub->param.paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, PROA_SUB_WIND);
    setParamName(FPSTR(STRING_WIND), &sub->param);
 
    sub = &_subs[PROA_SUB_CROSSTRACK_E];
    sub->addrParam = PROA_SUB_CROSSTRACK_ADDR;
-   sub->param.param = PROA_SUB_CROSSTRACK;
+   sub->param.paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, PROA_SUB_CROSSTRACK);
    setParamName(FPSTR(STRING_CROSSTRACK), &sub->param);
 
    sub = &_subs[PROA_SUB_COW_E];
    sub->addrParam = PROA_SUB_COW_ADDR;
-   sub->param.param = PROA_SUB_COW;
+   sub->param.paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, PROA_SUB_COW);
    setParamName(FPSTR(STRING_COW), &sub->param);
 
    // pubs
@@ -52,28 +52,28 @@ ProaModule::ProaModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dl
    DRONE_PARAM_ENTRY *param;
 
    param = &_params[PROA_PARAM_COURSE_E];
-   param->param = PROA_PARAM_COURSE;
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, PROA_PARAM_COURSE);
    setParamName(FPSTR(STRING_COURSE), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 4);
 
    param = &_params[PROA_PARAM_WING_E];
-   param->param = PROA_PARAM_WING;
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, PROA_PARAM_WING);
    setParamName(FPSTR(STRING_WING), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 4);
 
    param = &_params[PROA_PARAM_POLAR_E];
-   param->param = PROA_PARAM_POLAR;
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, PROA_PARAM_POLAR);
    setParamName(FPSTR(STRING_POLAR), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_UINT8_T, 16);
 
    param = &_params[PROA_PARAM_SPEED_E];
-   param->param = PROA_PARAM_SPEED;
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, PROA_PARAM_SPEED);
    param->publish = true;
    setParamName(FPSTR(STRING_SPEED), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_UINT8_T, 16);
 
    param = &_params[PROA_PARAM_SPEED2_E];
-   param->param = PROA_PARAM_SPEED2;
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, PROA_PARAM_SPEED2);
    param->publish = true;
    setParamName(FPSTR(STRING_SPEED), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_UINT8_T, 16);
@@ -83,23 +83,23 @@ ProaModule::ProaModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dl
    }
 
    param = &_params[PROA_PARAM_FLAGS_E];
-   param->param = PROA_PARAM_FLAGS;
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_HIGH, PROA_PARAM_FLAGS);
    param->publish = true;
    setParamName(FPSTR(STRING_SPEED), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_UINT8_T, 3);
 
    param = &_params[PROA_PARAM_LEFT_E];
-   param->param = PROA_PARAM_LEFT;
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_MEDIUM, PROA_PARAM_LEFT);
    setParamName(FPSTR(STRING_LEFT), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 4);
 
    param = &_params[PROA_PARAM_RIGHT_E];
-   param->param = PROA_PARAM_RIGHT;
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_MEDIUM, PROA_PARAM_RIGHT);
    setParamName(FPSTR(STRING_RIGHT), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 4);
 
    param = &_params[PROA_PARAM_PID_E];
-   param->param = PROA_PARAM_PID;
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, PROA_PARAM_PID);
    setParamName(FPSTR(STRING_PID), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_FLOAT, 12);
    _params[PROA_PARAM_PID_E].data.f[0] = 0.5;
@@ -107,18 +107,18 @@ ProaModule::ProaModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dl
    _params[PROA_PARAM_PID_E].data.f[2] = 0;
 
    param = &_params[PROA_PARAM_AOA_E];
-   param->param = PROA_PARAM_AOA;
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, PROA_PARAM_AOA);
    setParamName(FPSTR(STRING_AOA), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_FLOAT, 4);
    _params[PROA_PARAM_AOA_E].data.f[0] = 8;
 
    param = &_params[PROA_PARAM_OFFSET_E];
-   param->param = PROA_PARAM_OFFSET;
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, PROA_PARAM_OFFSET);
    setParamName(FPSTR(STRING_OFFSET), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 4);
 
    param = &_params[PROA_PARAM_MODE_E];
-   param->param = PROA_PARAM_MODE;
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, PROA_PARAM_MODE);
    setParamName(FPSTR(STRING_MODE), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_UINT8_T, 1);
    _params[PROA_PARAM_MODE_E].data.f[0] = 0;

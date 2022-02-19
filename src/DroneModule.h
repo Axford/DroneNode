@@ -54,7 +54,7 @@ things that would be useful for all modules
 
 
 struct DRONE_PARAM_ENTRY {
-  uint8_t param;  // the param value as sent by dronelink
+  uint8_t paramPriority;  // packed priorty adn param value as sent by dronelink
   const __FlashStringHelper *name; // pointer to PROGMEM string entry that describes this param
   uint8_t nameLen;
   uint8_t paramTypeLength;
@@ -154,6 +154,7 @@ public:
 
   virtual boolean isAlive();  // polled by watchdog, return true if everything ok
 
+  virtual uint8_t getInterfaceType();
   virtual boolean getInterfaceState();
 
   boolean publishParamEntry(DRONE_PARAM_ENTRY *param);

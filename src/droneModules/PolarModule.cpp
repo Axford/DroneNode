@@ -27,7 +27,7 @@ PolarModule::PolarModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* 
 
    sub = &_subs[POLAR_SUB_LOCATION_E];
    sub->addrParam = POLAR_SUB_LOCATION_ADDR;
-   sub->param.param = POLAR_SUB_LOCATION;
+   sub->param.paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, POLAR_SUB_LOCATION);
    sub->param.paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_FLOAT, 8);
    setParamName(FPSTR(STRING_LOCATION), &sub->param);
    sub->param.data.f[0] =0;
@@ -35,22 +35,22 @@ PolarModule::PolarModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* 
 
    sub = &_subs[POLAR_SUB_SOG_E];
    sub->addrParam = POLAR_SUB_SOG_ADDR;
-   sub->param.param = POLAR_SUB_SOG;
+   sub->param.paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, POLAR_SUB_SOG);
    setParamName(FPSTR(STRING_SOG), &sub->param);
 
    sub = &_subs[POLAR_SUB_WIND_E];
    sub->addrParam = POLAR_SUB_WIND_ADDR;
-   sub->param.param = POLAR_SUB_WIND;
+   sub->param.paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, POLAR_SUB_WIND);
    setParamName(FPSTR(STRING_WIND), &sub->param);
 
    sub = &_subs[POLAR_SUB_WIND_SPEED_E];
    sub->addrParam = POLAR_SUB_WIND_SPEED_ADDR;
-   sub->param.param = POLAR_SUB_WIND_SPEED;
+   sub->param.paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, POLAR_SUB_WIND_SPEED);
    setParamName(FPSTR(STRING_WIND_SPEED), &sub->param);
 
    sub = &_subs[POLAR_SUB_HEADING_E];
    sub->addrParam = POLAR_SUB_HEADING_ADDR;
-   sub->param.param = POLAR_SUB_HEADING;
+   sub->param.paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, POLAR_SUB_HEADING);
    setParamName(FPSTR(STRING_HEADING), &sub->param);
 
 
@@ -60,39 +60,39 @@ PolarModule::PolarModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* 
    DRONE_PARAM_ENTRY *param;
 
    param = &_params[POLAR_PARAM_TARGET_E];
-   param->param = POLAR_PARAM_TARGET;
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_HIGH, POLAR_PARAM_TARGET);
    setParamName(FPSTR(STRING_TARGET), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_FLOAT, 8);
    param->data.f[0] = 0;
    param->data.f[1] = 0;
 
    param = &_params[POLAR_PARAM_MODE_E];
-   param->param = POLAR_PARAM_MODE;
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_HIGH, POLAR_PARAM_MODE);
    setParamName(FPSTR(STRING_MODE), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_UINT8_T, 1);
    param->data.uint8[0] = POLAR_MODE_PASSTHROUGH;
 
    param = &_params[POLAR_PARAM_THRESHOLD_E];
-   param->param = POLAR_PARAM_THRESHOLD;
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_MEDIUM, POLAR_PARAM_THRESHOLD);
    setParamName(FPSTR(STRING_THRESHOLD), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_FLOAT, 8);
    param->data.f[0] = 1;  // min SOG
    param->data.f[1] = 10;  // acceptable heading deviation
 
    param = &_params[POLAR_PARAM_POLAR_E];
-   param->param = POLAR_PARAM_POLAR;
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_HIGH, POLAR_PARAM_POLAR);
    setParamName(FPSTR(STRING_POLAR), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_UINT8_T, 16);
    for (uint8_t i=0; i<16; i++) param->data.uint8[i] = 0;
 
    param = &_params[POLAR_PARAM_SAMPLES_E];
-   param->param = POLAR_PARAM_SAMPLES;
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_MEDIUM, POLAR_PARAM_SAMPLES);
    setParamName(FPSTR(STRING_SAMPLES), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_UINT8_T, 16);
    for (uint8_t i=0; i<16; i++) param->data.uint8[i] = 0;
 
    param = &_params[POLAR_PARAM_RADIUS_E];
-   param->param = POLAR_PARAM_RADIUS;
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_MEDIUM, POLAR_PARAM_RADIUS);
    setParamName(FPSTR(STRING_RADIUS), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_FLOAT, 12);
    param->data.f[0] = 0; // inner
@@ -100,7 +100,7 @@ PolarModule::PolarModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* 
    param->data.f[2] = 0; // outer radii
 
    param = &_params[POLAR_PARAM_ADJ_HEADING_E];
-   param->param = POLAR_PARAM_ADJ_HEADING;
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_MEDIUM, POLAR_PARAM_ADJ_HEADING);
    setParamName(FPSTR(STRING_ADJ_HEADING), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_FLOAT, 4);
 

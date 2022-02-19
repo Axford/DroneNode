@@ -13,13 +13,13 @@ void I2CBaseModule::initBaseParams() {
   DRONE_PARAM_ENTRY *param;
 
   param = &_params[I2CBASE_PARAM_BUS_E];
-  param->param = I2CBASE_PARAM_BUS;
+  param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, I2CBASE_PARAM_BUS);
   setParamName(FPSTR(STRING_BUS), param);
   param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_UINT8_T, 1);
   _params[I2CBASE_PARAM_BUS_E].data.uint8[0] = 0;
 
   param = &_params[I2CBASE_PARAM_ADDR_E];
-  param->param = I2CBASE_PARAM_ADDR;
+  param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, I2CBASE_PARAM_ADDR);
   setParamName(FPSTR(STRING_ADDR), param);
   param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_UINT8_T, 1);
   _params[I2CBASE_PARAM_ADDR_E].data.uint8[0] = 0;

@@ -21,7 +21,7 @@ HMC5883LModule::HMC5883LModule(uint8_t id, DroneModuleManager* dmm, DroneLinkMan
 
    sub = &_subs[HMC5883L_SUB_LOCATION_E];
    sub->addrParam = HMC5883L_SUB_LOCATION_ADDR;
-   sub->param.param = HMC5883L_SUB_LOCATION;
+   sub->param.paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, HMC5883L_SUB_LOCATION);
    setParamName(FPSTR(STRING_LOCATION), &sub->param);
 
    // pubs
@@ -31,23 +31,23 @@ HMC5883LModule::HMC5883LModule(uint8_t id, DroneModuleManager* dmm, DroneLinkMan
    _params[I2CBASE_PARAM_ADDR_E].data.uint8[0] = HMC5883L_I2C_ADDRESS;
 
    // init param entries
-   _params[HMC5883L_PARAM_VECTOR_E].param = HMC5883L_PARAM_VECTOR;
+   _params[HMC5883L_PARAM_VECTOR_E].paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, HMC5883L_PARAM_VECTOR);
    _params[HMC5883L_PARAM_VECTOR_E].name = FPSTR(STRING_VECTOR);
    _params[HMC5883L_PARAM_VECTOR_E].nameLen = sizeof(STRING_VECTOR);
    _params[HMC5883L_PARAM_VECTOR_E].paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 12);
 
-   _params[HMC5883L_PARAM_HEADING_E].param = HMC5883L_PARAM_HEADING;
+   _params[HMC5883L_PARAM_HEADING_E].paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_HIGH, HMC5883L_PARAM_HEADING);
    _params[HMC5883L_PARAM_HEADING_E].name = FPSTR(STRING_HEADING);
    _params[HMC5883L_PARAM_HEADING_E].nameLen = sizeof(STRING_HEADING);
    _params[HMC5883L_PARAM_HEADING_E].paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 4);
 
-   _params[HMC5883L_PARAM_DECLINATION_E].param = HMC5883L_PARAM_DECLINATION;
+   _params[HMC5883L_PARAM_DECLINATION_E].paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, HMC5883L_PARAM_DECLINATION);
    _params[HMC5883L_PARAM_DECLINATION_E].name = FPSTR(STRING_DECLINATION);
    _params[HMC5883L_PARAM_DECLINATION_E].nameLen = sizeof(STRING_DECLINATION);
    _params[HMC5883L_PARAM_DECLINATION_E].data.f[0] = 0;
    _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_FLOAT, 4);
 
-   _params[HMC5883L_PARAM_CALIB_X_E].param = HMC5883L_PARAM_CALIB_X;
+   _params[HMC5883L_PARAM_CALIB_X_E].paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, HMC5883L_PARAM_CALIB_X);
    _params[HMC5883L_PARAM_CALIB_X_E].name = FPSTR(STRING_CALIB_X);
    _params[HMC5883L_PARAM_CALIB_X_E].nameLen = sizeof(STRING_CALIB_X);
    _params[HMC5883L_PARAM_CALIB_X_E].paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_FLOAT, 12);
@@ -55,7 +55,7 @@ HMC5883LModule::HMC5883LModule(uint8_t id, DroneModuleManager* dmm, DroneLinkMan
    _params[HMC5883L_PARAM_CALIB_X_E].data.f[1] = 0;
    _params[HMC5883L_PARAM_CALIB_X_E].data.f[2] = 1;
 
-   _params[HMC5883L_PARAM_CALIB_Y_E].param = HMC5883L_PARAM_CALIB_Y;
+   _params[HMC5883L_PARAM_CALIB_Y_E].paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, HMC5883L_PARAM_CALIB_Y);
    _params[HMC5883L_PARAM_CALIB_Y_E].name = FPSTR(STRING_CALIB_Y);
    _params[HMC5883L_PARAM_CALIB_Y_E].nameLen = sizeof(STRING_CALIB_Y);
    _params[HMC5883L_PARAM_CALIB_Y_E].paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_FLOAT, 12);
@@ -63,13 +63,13 @@ HMC5883LModule::HMC5883LModule(uint8_t id, DroneModuleManager* dmm, DroneLinkMan
    _params[HMC5883L_PARAM_CALIB_Y_E].data.f[1] = 0;
    _params[HMC5883L_PARAM_CALIB_Y_E].data.f[2] = 1;
 
-   _params[HMC5883L_PARAM_TRIM_E].param = HMC5883L_PARAM_TRIM;
+   _params[HMC5883L_PARAM_TRIM_E].paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, HMC5883L_PARAM_TRIM);
    _params[HMC5883L_PARAM_TRIM_E].name = FPSTR(STRING_TRIM);
    _params[HMC5883L_PARAM_TRIM_E].nameLen = sizeof(STRING_TRIM);
    _params[HMC5883L_PARAM_TRIM_E].paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_FLOAT, 4);
    _params[HMC5883L_PARAM_TRIM_E].data.f[0] = 0;
 
-   _params[HMC5883L_PARAM_LIMITS_E].param = HMC5883L_PARAM_LIMITS;
+   _params[HMC5883L_PARAM_LIMITS_E].paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, HMC5883L_PARAM_LIMITS);
    _params[HMC5883L_PARAM_LIMITS_E].name = FPSTR(STRING_LIMITS);
    _params[HMC5883L_PARAM_LIMITS_E].nameLen = sizeof(STRING_LIMITS);
    _params[HMC5883L_PARAM_LIMITS_E].paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_FLOAT, 16);

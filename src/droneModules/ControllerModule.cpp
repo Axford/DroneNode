@@ -98,25 +98,25 @@ ControllerModule::ControllerModule(uint8_t id, DroneModuleManager* dmm, DroneLin
    DRONE_PARAM_ENTRY *param;
 
    param = &_params[CONTROLLER_PARAM_LEFT_E];
-   param->param = CONTROLLER_PARAM_LEFT;
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, CONTROLLER_PARAM_LEFT);
    setParamName(FPSTR(STRING_LEFT), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_UINT8_T, 1);
    param->data.uint8[0] = 4;
 
    param = &_params[CONTROLLER_PARAM_RIGHT_E];
-   param->param = CONTROLLER_PARAM_RIGHT;
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, CONTROLLER_PARAM_RIGHT);
    setParamName(FPSTR(STRING_RIGHT), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_UINT8_T, 1);
    param->data.uint8[0] = 5;
 
    param = &_params[CONTROLLER_PARAM_TELEMETRY_E];
-   param->param = CONTROLLER_PARAM_TELEMETRY;
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, CONTROLLER_PARAM_TELEMETRY);
    setParamName(FPSTR(STRING_TELEMETRY), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_UINT8_T, 1);
    param->data.uint8[0] = 6;
 
    param = &_params[CONTROLLER_PARAM_POWER_E];
-   param->param = CONTROLLER_PARAM_POWER;
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, CONTROLLER_PARAM_POWER);
    setParamName(FPSTR(STRING_POWER), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_UINT8_T, 1);
    param->data.uint8[0] = 9;
@@ -163,7 +163,7 @@ void ControllerModule::clear() {
     _neutral[i] = true;
     _bindings[i].node = 255;
     _bindings[i].channel = 255;
-    _bindings[i].param = 255;
+    _bindings[i].paramPriority = 255;
     _bindingLabels[i] = "";
     _invert[i] = false;
   }
@@ -268,7 +268,7 @@ void ControllerModule::disarm() {
 CONTROLLER_PARAM_INFO* ControllerModule::getParamInfo(CONTROLLER_CHANNEL_INFO *channel, uint8_t param) {
   // find param
   for (uint8_t i = 0; i<channel->params->size(); i++) {
-    if (channel->params->get(i)->param == param) {
+    if (getDroneLinkMsgParam(channel->params->get(i)->param) == param) {
       return channel->params->get(i);
     }
   }
@@ -746,7 +746,7 @@ void ControllerModule::drawEditMenuItem(uint8_t index, uint8_t y) {
 
 
   uint8_t axis = _menus[_menu].items[index].data;
-  if (_bindings[axis].param != 255) {
+  if (_bindings[axis].paramPriority != 255) {
     _display->setFont(TomThumb4x6);
     _display->drawString(24, y+4, _bindingLabels[axis]);
   }
@@ -788,7 +788,7 @@ void ControllerModule::manageEditAxis(boolean syncMenu) {
   // keep an eye on clear
   if (_menus[_menu].items[2].data > 0) {
     // clear axis binding and update title
-    _bindings[axis].param = 255;
+    _bindings[axis].paramPriority = 255;
     _bindingLabels[axis] = "";
     bindingChanged = true;
     _menus[_menu].items[2].data = 0;
@@ -797,7 +797,7 @@ void ControllerModule::manageEditAxis(boolean syncMenu) {
   if (bindingChanged) {
     if (_invert[axis]) tempStr = "!"; else tempStr = "";
     tempStr += _menus[CONTROLLER_MENU_EDIT].items[_menus[CONTROLLER_MENU_EDIT].selected].name;
-    if (_bindings[axis].param != 255) tempStr += ": " + _bindingLabels[axis];
+    if (_bindings[axis].paramPriority != 255) tempStr += ": " + _bindingLabels[axis];
     _menus[CONTROLLER_MENU_EDITAXIS].name = tempStr;
   }
 
@@ -923,7 +923,7 @@ void ControllerModule::manageBindAxis3(boolean syncMenu) {
 
     _bindings[axis].node = _binding;
     _bindings[axis].channel = chanInfo->channel;
-    _bindings[axis].param = paramInfo->param;
+    _bindings[axis].paramPriority = paramInfo->param;
 
     _bindingLabels[axis] = String(chanInfo->name) + "." + String(paramInfo->name);
 
@@ -1060,9 +1060,9 @@ void ControllerModule::loop() {
     _sendMsg.length(4);
     _sendMsg.writable(false);
     for (uint8_t i=0; i<8; i++) {
-      if (_bindings[i].param <255) {
+      if (_bindings[i].paramPriority <255) {
         _sendMsg.channel(_bindings[i].channel);
-        _sendMsg.param(_bindings[i].param);
+        _sendMsg.param(getDroneLinkMsgParam(_bindings[i].paramPriority));
         _sendMsg._msg.payload.f[0] = (_invert[i] ? -1 : 1) * _axes[i];
         _dlm->publish(_sendMsg);
       }

@@ -22,17 +22,17 @@ TurnRateModule::TurnRateModule(uint8_t id, DroneModuleManager* dmm, DroneLinkMan
    initSubs(TURN_RATE_SUBS);
 
    _subs[TURN_RATE_SUB_TARGET_E].addrParam = TURN_RATE_SUB_TARGET_ADDR;
-   _subs[TURN_RATE_SUB_TARGET_E].param.param = TURN_RATE_SUB_TARGET;
+   _subs[TURN_RATE_SUB_TARGET_E].param.paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, TURN_RATE_SUB_TARGET);
    _subs[TURN_RATE_SUB_TARGET_E].param.name = FPSTR(STRING_TARGET);
    _subs[TURN_RATE_SUB_TARGET_E].param.nameLen = sizeof(STRING_TARGET);
 
    _subs[TURN_RATE_SUB_HEADING_E].addrParam = TURN_RATE_SUB_HEADING_ADDR;
-   _subs[TURN_RATE_SUB_HEADING_E].param.param = TURN_RATE_SUB_HEADING;
+   _subs[TURN_RATE_SUB_HEADING_E].param.paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, TURN_RATE_SUB_HEADING);
    _subs[TURN_RATE_SUB_HEADING_E].param.name = FPSTR(STRING_HEADING);
    _subs[TURN_RATE_SUB_HEADING_E].param.nameLen = sizeof(STRING_HEADING);
 
    _subs[TURN_RATE_SUB_PID_E].addrParam = TURN_RATE_SUB_PID_ADDR;
-   _subs[TURN_RATE_SUB_PID_E].param.param = TURN_RATE_SUB_PID;
+   _subs[TURN_RATE_SUB_PID_E].param.paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, TURN_RATE_SUB_PID);
    _subs[TURN_RATE_SUB_PID_E].param.paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_FLOAT, 12);
    _subs[TURN_RATE_SUB_PID_E].param.name = FPSTR(STRING_PID);
    _subs[TURN_RATE_SUB_PID_E].param.nameLen = sizeof(STRING_PID);
@@ -41,7 +41,7 @@ TurnRateModule::TurnRateModule(uint8_t id, DroneModuleManager* dmm, DroneLinkMan
    // outputs
    initParams(TURN_RATE_PARAM_ENTRIES);
 
-   _params[TURN_RATE_PARAM_TURN_RATE_E].param = TURN_RATE_PARAM_TURN_RATE;
+   _params[TURN_RATE_PARAM_TURN_RATE_E].paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_MEDIUM, TURN_RATE_PARAM_TURN_RATE);
    _params[TURN_RATE_PARAM_TURN_RATE_E].name = FPSTR(STRING_TURN_RATE);
    _params[TURN_RATE_PARAM_TURN_RATE_E].nameLen = sizeof(STRING_TURN_RATE);
    _params[TURN_RATE_PARAM_TURN_RATE_E].paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 4);

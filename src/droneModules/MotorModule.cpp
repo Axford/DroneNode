@@ -15,7 +15,7 @@ MotorModule::MotorModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* 
 
    sub = &_subs[MOTOR_SUB_SPEED_E];
    sub->addrParam = MOTOR_SUB_SPEED_ADDR;
-   sub->param.param = MOTOR_SUB_SPEED;
+   sub->param.paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, MOTOR_SUB_SPEED);
    setParamName(FPSTR(STRING_SPEED), &sub->param);
 
    // pubs
@@ -24,26 +24,26 @@ MotorModule::MotorModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* 
    DRONE_PARAM_ENTRY *param;
 
    param = &_params[MOTOR_PARAM_PINS_E];
-   param->param = MOTOR_PARAM_PINS;
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, MOTOR_PARAM_PINS);
    setParamName(FPSTR(STRING_PINS), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_UINT8_T, 3);
    _params[MOTOR_PARAM_PINS_E].data.uint8[0] = 0;
 
    param = &_params[MOTOR_PARAM_PWMCHANNEL_E];
-   param->param = MOTOR_PARAM_PWMCHANNEL;
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, MOTOR_PARAM_PWMCHANNEL);
    setParamName(FPSTR(STRING_PWM_CHANNEL), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_UINT8_T, 1);
    _params[MOTOR_PARAM_PWMCHANNEL_E].data.uint8[0] = 15;
 
    param = &_params[MOTOR_PARAM_LIMITS_E];
-   param->param = MOTOR_PARAM_LIMITS;
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, MOTOR_PARAM_LIMITS);
    setParamName(FPSTR(STRING_LIMITS), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_FLOAT, 8);
    _params[MOTOR_PARAM_LIMITS_E].data.f[0] = -1;
    _params[MOTOR_PARAM_LIMITS_E].data.f[1] = 1;
 
    param = &_params[MOTOR_PARAM_DEADBAND_E];
-   param->param = MOTOR_PARAM_DEADBAND;
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, MOTOR_PARAM_DEADBAND);
    setParamName(FPSTR(STRING_DEADBAND), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_FLOAT, 4);
    _params[MOTOR_PARAM_DEADBAND_E].data.f[0] = 0.3;

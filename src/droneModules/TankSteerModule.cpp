@@ -17,17 +17,17 @@ TankSteerModule::TankSteerModule(uint8_t id, DroneModuleManager* dmm, DroneLinkM
 
    sub = &_subs[TANK_STEER_SUB_TURN_RATE_E];
    sub->addrParam = TANK_STEER_SUB_TURN_RATE_ADDR;
-   sub->param.param = TANK_STEER_SUB_TURN_RATE;
+   sub->param.paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, TANK_STEER_SUB_TURN_RATE);
    setParamName(FPSTR(STRING_TURN_RATE), &sub->param);
 
    sub = &_subs[TANK_STEER_SUB_SPEED_E];
    sub->addrParam = TANK_STEER_SUB_SPEED_ADDR;
-   sub->param.param = TANK_STEER_SUB_SPEED;
+   sub->param.paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, TANK_STEER_SUB_SPEED);
    setParamName(FPSTR(STRING_SPEED), &sub->param);
 
    sub = &_subs[TANK_STEER_SUB_TRIM_E];
    sub->addrParam = TANK_STEER_SUB_TRIM_ADDR;
-   sub->param.param = TANK_STEER_SUB_TRIM;
+   sub->param.paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, TANK_STEER_SUB_TRIM);
    setParamName(FPSTR(STRING_TRIM), &sub->param);
 
 
@@ -37,17 +37,17 @@ TankSteerModule::TankSteerModule(uint8_t id, DroneModuleManager* dmm, DroneLinkM
    DRONE_PARAM_ENTRY *param;
 
    param = &_params[TANK_STEER_PARAM_LEFT_E];
-   param->param = TANK_STEER_PARAM_LEFT;
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_MEDIUM, TANK_STEER_PARAM_LEFT);
    setParamName(FPSTR(STRING_LEFT), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 4);
 
    param = &_params[TANK_STEER_PARAM_RIGHT_E];
-   param->param = TANK_STEER_PARAM_RIGHT;
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_MEDIUM, TANK_STEER_PARAM_RIGHT);
    setParamName(FPSTR(STRING_RIGHT), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 4);
 
    param = &_params[TANK_STEER_PARAM_MODE_E];
-   param->param = TANK_STEER_PARAM_MODE;
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_HIGH, TANK_STEER_PARAM_MODE);
    setParamName(FPSTR(STRING_MODE), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_UINT8_T, 1);
    param->data.uint8[0] = TANK_STEER_MODE_MANUAL;  // default to manual

@@ -40,42 +40,42 @@ _fs(fs) {
   // alloc for mgmt params
   _mgmtParams = (DRONE_PARAM_ENTRY*)malloc( sizeof(DRONE_PARAM_ENTRY) * DRONE_MGMT_PARAM_ENTRIES);
 
-  _mgmtParams[DRONE_MODULE_PARAM_STATUS_E].param = DRONE_MODULE_PARAM_STATUS;
+  _mgmtParams[DRONE_MODULE_PARAM_STATUS_E].paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_HIGH, DRONE_MODULE_PARAM_STATUS);
   _mgmtParams[DRONE_MODULE_PARAM_STATUS_E].name = FPSTR(STRING_STATUS);
   _mgmtParams[DRONE_MODULE_PARAM_STATUS_E].nameLen = sizeof(STRING_STATUS);
   _mgmtParams[DRONE_MODULE_PARAM_STATUS_E].paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_UINT8_T, 1);
   _mgmtParams[DRONE_MODULE_PARAM_STATUS_E].publish = true;
   _mgmtParams[DRONE_MODULE_PARAM_STATUS_E].data.uint8[0] = _enabled ? 1 : 0;
 
-  _mgmtParams[DRONE_MODULE_PARAM_NAME_E].param = DRONE_MODULE_PARAM_NAME;
+  _mgmtParams[DRONE_MODULE_PARAM_NAME_E].paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, DRONE_MODULE_PARAM_NAME);
   _mgmtParams[DRONE_MODULE_PARAM_NAME_E].name = FPSTR(STRING_NAME);
   _mgmtParams[DRONE_MODULE_PARAM_NAME_E].nameLen = sizeof(STRING_NAME);
   _mgmtParams[DRONE_MODULE_PARAM_NAME_E].paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_CHAR, 1);
   _mgmtParams[DRONE_MODULE_PARAM_NAME_E].publish = true;
   _mgmtParams[DRONE_MODULE_PARAM_NAME_E].data.c[0] = '?';
 
-  _mgmtParams[DRONE_MODULE_PARAM_ERROR_E].param = DRONE_MODULE_PARAM_ERROR;
+  _mgmtParams[DRONE_MODULE_PARAM_ERROR_E].paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_HIGH, DRONE_MODULE_PARAM_ERROR);
   _mgmtParams[DRONE_MODULE_PARAM_ERROR_E].name = FPSTR(STRING_ERROR);
   _mgmtParams[DRONE_MODULE_PARAM_ERROR_E].nameLen = sizeof(STRING_ERROR);
   _mgmtParams[DRONE_MODULE_PARAM_ERROR_E].paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_UINT8_T, 1);
   _mgmtParams[DRONE_MODULE_PARAM_ERROR_E].publish = true;
   _mgmtParams[DRONE_MODULE_PARAM_ERROR_E].data.uint8[0] = _error;
 
-  _mgmtParams[DRONE_MODULE_PARAM_RESETCOUNT_E].param = DRONE_MODULE_PARAM_RESETCOUNT;
+  _mgmtParams[DRONE_MODULE_PARAM_RESETCOUNT_E].paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, DRONE_MODULE_PARAM_RESETCOUNT);
   _mgmtParams[DRONE_MODULE_PARAM_RESETCOUNT_E].name = FPSTR(STRING_RESETCOUNT);
   _mgmtParams[DRONE_MODULE_PARAM_RESETCOUNT_E].nameLen = sizeof(STRING_RESETCOUNT);
   _mgmtParams[DRONE_MODULE_PARAM_RESETCOUNT_E].paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_UINT8_T, 1);
   _mgmtParams[DRONE_MODULE_PARAM_RESETCOUNT_E].publish = true;
   _mgmtParams[DRONE_MODULE_PARAM_RESETCOUNT_E].data.uint8[0] = _resetCount;
 
-  _mgmtParams[DRONE_MODULE_PARAM_TYPE_E].param = DRONE_MODULE_PARAM_TYPE;
+  _mgmtParams[DRONE_MODULE_PARAM_TYPE_E].paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_MEDIUM, DRONE_MODULE_PARAM_TYPE);
   _mgmtParams[DRONE_MODULE_PARAM_TYPE_E].name = FPSTR(STRING_TYPE);
   _mgmtParams[DRONE_MODULE_PARAM_TYPE_E].nameLen = sizeof(STRING_TYPE);
   _mgmtParams[DRONE_MODULE_PARAM_TYPE_E].publish = true;
   _mgmtParams[DRONE_MODULE_PARAM_TYPE_E].paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_CHAR, sizeof(STRING_DRONE));
   strncpy_P(_mgmtParams[DRONE_MODULE_PARAM_TYPE_E].data.c, STRING_DRONE, sizeof(STRING_DRONE));
 
-  _mgmtParams[DRONE_MODULE_PARAM_INTERVAL_E].param = DRONE_MODULE_PARAM_INTERVAL;
+  _mgmtParams[DRONE_MODULE_PARAM_INTERVAL_E].paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, DRONE_MODULE_PARAM_INTERVAL);
   _mgmtParams[DRONE_MODULE_PARAM_INTERVAL_E].name = FPSTR(STRING_INTERVAL);
   _mgmtParams[DRONE_MODULE_PARAM_INTERVAL_E].nameLen = sizeof(STRING_INTERVAL);
   _mgmtParams[DRONE_MODULE_PARAM_INTERVAL_E].publish = true;
@@ -124,7 +124,7 @@ void DroneModule::initSubs(uint8_t numSubs) {
     _subs[i].addr.source = _dlm->node();
     _subs[i].addr.node = 0;
     _subs[i].addr.channel = 0;
-    _subs[i].addr.param = 255;
+    _subs[i].addr.paramPriority = 255;
     _subs[i].param.publish = false;
     _subs[i].param.nameLen = sizeof(STRING_BLANK);
     _subs[i].param.name = FPSTR(STRING_BLANK);
@@ -149,7 +149,7 @@ void DroneModule::initParams(uint8_t numParams) {
 uint8_t DroneModule::getParamIdByName(const char* name) {
   DRONE_PARAM_ENTRY* p = getParamEntryByName(name);
   if (p != NULL) {
-    return p->param;
+    return getDroneLinkMsgParam(p->paramPriority);
   }
   return 0;
 }
@@ -248,12 +248,13 @@ void DroneModule::doShutdown() {
 
 boolean DroneModule::isAlive() { return true; }
 
-
+// to be overridden
+uint8_t DroneModule::getInterfaceType() { return DRONE_MESH_INTERFACE_TYPE_UDP; }
 boolean DroneModule::getInterfaceState() { return false; }
 
 
 boolean DroneModule::publishParamEntry(DRONE_PARAM_ENTRY *param) {
-  _mgmtMsg._msg.param = param->param;
+  _mgmtMsg._msg.paramPriority = param->paramPriority;
   _mgmtMsg._msg.paramTypeLength = param->paramTypeLength;
   memcpy(_mgmtMsg._msg.payload.c, param->data.c, 16);
   return _dlm->publish(_mgmtMsg);
@@ -280,7 +281,7 @@ boolean DroneModule::publishParamEntries() {
 }
 
 boolean DroneModule::publishSubAddress(DRONE_PARAM_SUB *sub) {
-  _mgmtMsg._msg.param = sub->addrParam;
+  _mgmtMsg._msg.paramPriority = sub->addrParam;
   _mgmtMsg._msg.paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_ADDR, sizeof(DRONE_LINK_ADDR));
   memcpy(_mgmtMsg._msg.payload.c, (uint8_t*)&sub->addr, sizeof(DRONE_LINK_ADDR));
   return _dlm->publish(_mgmtMsg);
@@ -301,7 +302,7 @@ boolean DroneModule::publishSubs() {
 
 
 void DroneModule::onParamWrite(DRONE_PARAM_ENTRY *param) {
-  if (param->param == DRONE_MODULE_PARAM_STATUS) {
+  if (getDroneLinkMsgParam(param->paramPriority) == DRONE_MODULE_PARAM_STATUS) {
     switch(param->data.uint8[0]) {
       case 0: disable();
         break;
@@ -358,7 +359,8 @@ void DroneModule::handleParamMessage(DroneLinkMsg *msg, DRONE_PARAM_ENTRY *param
 
   } else if (msg->type() == DRONE_LINK_MSG_TYPE_NAMEQUERY) {
     // query name
-    _mgmtMsg._msg.param = param->param;
+    // set return priority to low for names
+    _mgmtMsg._msg.paramPriority = getDroneLinkMsgParam(param->paramPriority);
     _mgmtMsg.type(DRONE_LINK_MSG_TYPE_NAME);
     _mgmtMsg.length(param->nameLen);
     memcpy(_mgmtMsg._msg.payload.c, param->name, param->nameLen);
@@ -391,7 +393,8 @@ void DroneModule::handleSubAddrMessage(DroneLinkMsg *msg, DRONE_PARAM_SUB *sub) 
 
   } else if (msg->type() == DRONE_LINK_MSG_TYPE_NAMEQUERY) {
     // query name
-    _mgmtMsg._msg.param = sub->addrParam;
+    // set priority to low for names
+    _mgmtMsg._msg.paramPriority = sub->addrParam;  // sub addr always has low upper bits = low priority
     _mgmtMsg.type(DRONE_LINK_MSG_TYPE_NAME);
     _mgmtMsg.length(sub->param.nameLen);
     memcpy(_mgmtMsg._msg.payload.c, sub->param.name, sub->param.nameLen);
@@ -404,7 +407,7 @@ boolean DroneModule::handleManagementMessage(DroneLinkMsg *msg) {
   //Log.noticeln("[DM.hMM]");
   if (msg->param() < DRONE_CUSTOM_PARAM_START) {
     for (uint8_t i=0; i<DRONE_MGMT_PARAM_ENTRIES; i++) {
-      if (msg->param() == _mgmtParams[i].param) {
+      if (msg->param() == getDroneLinkMsgParam(_mgmtParams[i].paramPriority)) {
         handleParamMessage(msg, &_mgmtParams[i]);
       }
     }
@@ -453,14 +456,14 @@ void DroneModule::handleLinkMessage(DroneLinkMsg *msg) {
     if (_enabled || !_setupDone) {
       // handle output params
       for (uint8_t i=0; i<_numParamEntries; i++) {
-        if (msg->param() == _params[i].param) {
+        if (msg->param() == getDroneLinkMsgParam(_params[i].paramPriority)) {
           handleParamMessage(msg, &_params[i]);
         }
       }
 
       // handle subs
       for (uint8_t i=0; i<_numSubs; i++) {
-        if (msg->param() == _subs[i].param.param) {
+        if (msg->param() == getDroneLinkMsgParam(_subs[i].param.paramPriority)) {
           // handles writes to the internal value
           handleParamMessage(msg, &_subs[i].param);
         } else if (msg->param() == _subs[i].addrParam) {
@@ -642,7 +645,7 @@ void DroneModule::respondWithInfo(AsyncResponseStream *response) {
   for (uint8_t i=0; i<DRONE_MGMT_PARAM_ENTRIES; i++) {
     p = &_mgmtParams[i];
 
-    response->printf("    %u: %s ",p->param,(PGM_P)p->name);
+    response->printf("    %u: %s ",getDroneLinkMsgParam(p->paramPriority),(PGM_P)p->name);
     if (p->publish) response->print('*');
     DroneLinkMsg::printPayload(&p->data, p->paramTypeLength, response);
   }
@@ -650,7 +653,7 @@ void DroneModule::respondWithInfo(AsyncResponseStream *response) {
   response->print(F("\n  Params:\n"));
   for (uint8_t i=0; i<_numParamEntries; i++) {
     p = &_params[i];
-    response->printf("    %u: %s ",p->param,(PGM_P)(p->name));
+    response->printf("    %u: %s ",getDroneLinkMsgParam(p->paramPriority),(PGM_P)(p->name));
     if (p->publish) response->print('*');
     DroneLinkMsg::printPayload(&p->data, p->paramTypeLength, response);
   }
@@ -665,7 +668,7 @@ void DroneModule::respondWithInfo(AsyncResponseStream *response) {
     DroneLinkMsg::printAddress(&s->addr, response);
     response->print("]\n");
 
-    response->printf("    %u: %s ",s->param.param, (PGM_P)s->param.name);
+    response->printf("    %u: %s ",getDroneLinkMsgParam(s->param.paramPriority), (PGM_P)s->param.name);
     if (s->param.publish) response->print('*');
     DroneLinkMsg::printPayload(&s->param.data, s->param.paramTypeLength, response);
   }

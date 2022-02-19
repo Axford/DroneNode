@@ -120,6 +120,11 @@ void DroneModuleManager::updateStarting() {
     m = _modules.get(i);
     if (!m->getInterfaceState()) {
       m->doShutdown();
+    } else {
+      // also shutdown all non-UDP interfaces
+      if (m->getInterfaceType() != DRONE_MESH_INTERFACE_TYPE_UDP) {
+        m->doShutdown();
+      }
     }
   }
 }

@@ -24,7 +24,7 @@ NeopixelModule::NeopixelModule(uint8_t id, DroneModuleManager* dmm, DroneLinkMan
 
    sub = &_subs[NEOPIXEL_SUB_SCENE_E];
    sub->addrParam = NEOPIXEL_SUB_SCENE_ADDR;
-   sub->param.param = NEOPIXEL_SUB_SCENE;
+   sub->param.paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, NEOPIXEL_SUB_SCENE);
    setParamName(FPSTR(STRING_SCENE), &sub->param);
    sub->param.paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_UINT8_T, 16);
 
@@ -36,12 +36,12 @@ NeopixelModule::NeopixelModule(uint8_t id, DroneModuleManager* dmm, DroneLinkMan
    DRONE_PARAM_ENTRY *param;
 
    param = &_params[NEOPIXEL_PARAM_PINS_E];
-   param->param = NEOPIXEL_PARAM_PINS;
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, NEOPIXEL_PARAM_PINS);
    setParamName(FPSTR(STRING_PINS), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_UINT8_T, 1);
 
    param = &_params[NEOPIXEL_PARAM_NUMPIXELS_E];
-   param->param = NEOPIXEL_PARAM_NUMPIXELS;
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, NEOPIXEL_PARAM_NUMPIXELS);
    setParamName(FPSTR(STRING_NUMPIXELS), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_UINT8_T, 1);
    _params[NEOPIXEL_PARAM_NUMPIXELS_E].data.uint8[0] = 4;

@@ -26,7 +26,7 @@ NMEAModule::NMEAModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dl
 
    sub = &_subs[NMEA_SUB_CORRECTION_E];
    sub->addrParam = NMEA_SUB_CORRECTION_ADDR;
-   sub->param.param = NMEA_SUB_CORRECTION;
+   sub->param.paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, NMEA_SUB_CORRECTION);
    setParamName(FPSTR(STRING_CORRECTION), &sub->param);
    sub->param.paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_FLOAT, 16);
    sub->param.data.f[0] = 0;
@@ -40,7 +40,7 @@ NMEAModule::NMEAModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dl
    DRONE_PARAM_ENTRY *param;
 
    param = &_params[NMEA_PARAM_LOCATION_E];
-   param->param = NMEA_PARAM_LOCATION;
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_CRITICAL, NMEA_PARAM_LOCATION);
    setParamName(FPSTR(STRING_LOCATION), param);
    _params[NMEA_PARAM_LOCATION_E].paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 12);
    _params[NMEA_PARAM_LOCATION_E].data.f[0] = 0;
@@ -48,43 +48,43 @@ NMEAModule::NMEAModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dl
    _params[NMEA_PARAM_LOCATION_E].data.f[2] = 0;
 
    param = &_params[NMEA_PARAM_SATELLITES_E];
-   param->param = NMEA_PARAM_SATELLITES;
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_MEDIUM, NMEA_PARAM_SATELLITES);
    setParamName(FPSTR(STRING_SATELLITES), param);
    _params[NMEA_PARAM_SATELLITES_E].paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 4);
    _params[NMEA_PARAM_SATELLITES_E].data.f[0] = 0;
 
    param = &_params[NMEA_PARAM_HEADING_E];
-   param->param = NMEA_PARAM_HEADING;
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, NMEA_PARAM_HEADING);
    setParamName(FPSTR(STRING_HEADING), param);
    _params[NMEA_PARAM_HEADING_E].paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 4);
    _params[NMEA_PARAM_HEADING_E].data.f[0] = 0;
 
    param = &_params[NMEA_PARAM_SPEED_E];
-   param->param = NMEA_PARAM_SPEED;
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, NMEA_PARAM_SPEED);
    setParamName(FPSTR(STRING_SPEED), param);
    _params[NMEA_PARAM_SPEED_E].paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 4);
    _params[NMEA_PARAM_SPEED_E].data.f[0] = 0;
 
    param = &_params[NMEA_PARAM_HDOP_E];
-   param->param = NMEA_PARAM_HDOP;
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, NMEA_PARAM_HDOP);
    setParamName(FPSTR(STRING_HDOP), param);
    _params[NMEA_PARAM_HDOP_E].paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_UINT8_T, 1);
    _params[NMEA_PARAM_HDOP_E].data.uint8[0] = 0;
 
    param = &_params[NMEA_PARAM_PORT_E];
-   param->param = NMEA_PARAM_PORT;
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, NMEA_PARAM_PORT);
    setParamName(FPSTR(STRING_PORT), param);
    _params[NMEA_PARAM_PORT_E].paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_UINT8_T, 1);
    _params[NMEA_PARAM_PORT_E].data.uint8[0] = 1;
 
    param = &_params[NMEA_PARAM_BAUD_E];
-   param->param = NMEA_PARAM_BAUD;
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, NMEA_PARAM_BAUD);
    setParamName(FPSTR(STRING_BAUD), param);
    _params[NMEA_PARAM_BAUD_E].paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_UINT32_T, 4);
    _params[NMEA_PARAM_BAUD_E].data.uint32[0] = 38400;
 
    param = &_params[NMEA_PARAM_FIX_E];
-   param->param = NMEA_PARAM_FIX;
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, NMEA_PARAM_FIX);
    setParamName(FPSTR(STRING_FIX), param);
    _params[NMEA_PARAM_FIX_E].paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_FLOAT, 12);
    _params[NMEA_PARAM_FIX_E].data.f[0] = 0;
@@ -92,7 +92,7 @@ NMEAModule::NMEAModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dl
    _params[NMEA_PARAM_FIX_E].data.f[2] = 0;
 
    param = &_params[NMEA_PARAM_FOLLOWME_E];
-   param->param = NMEA_PARAM_FOLLOWME;
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_CRITICAL, NMEA_PARAM_FOLLOWME);
    setParamName(FPSTR(STRING_FOLLOWME), param);
    _params[NMEA_PARAM_FOLLOWME_E].paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_FLOAT, 12);
    _params[NMEA_PARAM_FOLLOWME_E].data.f[0] = 0;

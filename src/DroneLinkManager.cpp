@@ -68,7 +68,7 @@ uint32_t DroneLinkManager::getChokes() {
 
 
 void DroneLinkManager::subscribe(DRONE_LINK_ADDR *addr, DroneModule *subscriber) {
-  subscribe(addr->node, addr->channel, subscriber, addr->param);
+  subscribe(addr->node, addr->channel, subscriber, addr->paramPriority);
 }
 
 
@@ -90,7 +90,7 @@ void DroneLinkManager::subscribe(uint8_t node, uint8_t channel, DroneModule *sub
   }
 
   // wire up the subscriber to the channel
-  c->subscribe(_node, subscriber, param);
+  c->subscribe(_node, subscriber, getDroneLinkMsgParam(param));
 
   // print new set of subscribers
   //c->printSubscribers();
@@ -483,6 +483,11 @@ void DroneLinkManager::receivePacket(NetworkInterfaceModule *interface, uint8_t 
     if (isDroneMeshMsgGuaranteed(buffer)) {
       //Log.noticeln("genAck");
 
+      // even if we've received this packet before, we should try to send another Ack, as the sending node may not have heard our previous Ack and be stuck re-transmitting
+      // however, we need to make sure we're not in the middle of transmitting an Ack... how? ... let generateAck take care of that
+
+      generateAck(interface, buffer);
+
       // check to see if we've already received this packet (gSeq)
       DRONE_LINK_NODE_INFO* srcNodeInfo = getNodeInfo(header->srcNode, false);
       if (srcNodeInfo) {
@@ -490,8 +495,6 @@ void DroneLinkManager::receivePacket(NetworkInterfaceModule *interface, uint8_t 
 
         srcNodeInfo->gSeq = header->seq;
       }
-
-      generateAck(interface, buffer);
     }
 
     // pass to receive handler
@@ -729,7 +732,7 @@ void DroneLinkManager::receiveRouterRequest(NetworkInterfaceModule *interface, u
     if (header->destNode == _node) {
       Log.noticeln("  Reached destination");
 
-      DRONE_MESH_MSG_ROUTER_REQUEST* req = (DRONE_MESH_MSG_ROUTER_REQUEST*)buffer;
+      //DRONE_MESH_MSG_ROUTER_REQUEST* req = (DRONE_MESH_MSG_ROUTER_REQUEST*)buffer;
 
       // get nodeInfo for return route to requestor
       DRONE_LINK_NODE_INFO* srcInfo = getNodeInfo(header->srcNode, false);
@@ -1224,8 +1227,29 @@ void DroneLinkManager::scrubDuplicateTransmitBuffers(DRONE_MESH_MSG_BUFFER *buff
 void DroneLinkManager::processTransmitQueue() {
   uint32_t loopTime = millis();
   // sort txQueue
+  // a negative return value means item a is sorted before b
   _txQueue.sort( [](DRONE_MESH_MSG_BUFFER*& a, DRONE_MESH_MSG_BUFFER*& b) -> int {
-    return a->created - b->created;
+    // only need to sort non-empty packets
+    if (a->state > DRONE_MESH_MSG_BUFFER_STATE_READY && b->state > DRONE_MESH_MSG_BUFFER_STATE_READY) {
+      // send Acks before new packets
+      uint8_t a1 = isDroneMeshMsgAck(a->data) ? 0 : 1;
+      uint8_t b1 = isDroneMeshMsgAck(b->data) ? 0 : 1;
+      if (a1 == 0 && b1 == 1) {
+        return -1;
+      } else if (a1 == 1 && b1 == 0) {
+        return 1;
+      } else {
+        // send higher priority items first
+        a1 = getDroneMeshMsgPriority(a->data);
+        b1 = getDroneMeshMsgPriority(b->data);
+        if (a1 != b1) {
+          return b1 - a1;
+        }
+        // send older items first (FIFO)
+        return a->created - b->created;
+      }
+    }
+    return 0;
   } );
 
   // look through txQueue
@@ -1316,8 +1340,10 @@ boolean DroneLinkManager::generateNextHop(NetworkInterfaceModule *interface, uin
 
 
 boolean DroneLinkManager::generateAck(NetworkInterfaceModule *interface, uint8_t *buffer) {
-  // request a new buffer in the transmit queue, same priority as existing
-  DRONE_MESH_MSG_BUFFER *abuffer = getTransmitBuffer(interface, getDroneMeshMsgPriority(buffer));
+  // need to make sure we're not in the middle of transmitting an Ack for this same buffer...  do that toward the end.. with a scrub
+
+  // request a new buffer in the transmit queue, treat Acks as critical priority so we can clear them fast
+  DRONE_MESH_MSG_BUFFER *abuffer = getTransmitBuffer(interface, DRONE_MESH_MSG_PRIORITY_CRITICAL);
 
   // if successful
   if (abuffer) {
@@ -1344,6 +1370,9 @@ boolean DroneLinkManager::generateAck(NetworkInterfaceModule *interface, uint8_t
 
     // update CRC
     abuffer->data[len-1] = _CRC8.smbus((uint8_t*)abuffer, len-1);
+
+    // check we've not already got an equivalent packet in the queue
+    scrubDuplicateTransmitBuffers(abuffer);
 
     return true;
   }
@@ -1561,7 +1590,7 @@ boolean DroneLinkManager::sendDroneLinkMessage(NetworkInterfaceModule *interface
   // and can be ignored for name responses
   if (msg->node() == _node && msg->type() < DRONE_LINK_MSG_TYPE_NAME) {
     // calc hashmap index
-    int index = (msg->_msg.channel << 8) | msg->_msg.param;
+    int index = (msg->_msg.channel << 8) | getDroneLinkMsgParam(msg->_msg.paramPriority);
 
     // see if we already have an entry in the hasmap
     struct DRONE_LINK_PARAM_FILTER *pf;
@@ -1610,12 +1639,18 @@ boolean DroneLinkManager::sendDroneLinkMessage(NetworkInterfaceModule *interface
   }
 
 
+  /*
   uint8_t p = DRONE_MESH_MSG_PRIORITY_LOW;
   uint8_t g = DRONE_MESH_MSG_NOT_GUARANTEED;
   if (msg->type() < DRONE_LINK_MSG_TYPE_CHAR) {
     p = DRONE_MESH_MSG_PRIORITY_HIGH;
     g = DRONE_MESH_MSG_GUARANTEED;
   }
+  */
+
+  // let's try guaranteeing everything and see if prioritisation works
+  uint8_t p = msg->priority();
+  uint8_t g = DRONE_MESH_MSG_GUARANTEED;
 
   // request a new buffer in the transmit queue
   DRONE_MESH_MSG_BUFFER *buffer = getTransmitBuffer(interface, p);
@@ -1706,6 +1741,7 @@ boolean DroneLinkManager::generateFirmwareRewind(NetworkInterfaceModule *interfa
     // calc CRC
     rBuffer->crc = _CRC8.smbus((uint8_t*)rBuffer, sizeof(DRONE_MESH_MSG_FIRMWARE_REWIND)-1);
 
+    // check we've not already got an equivalent packet in the queue
     scrubDuplicateTransmitBuffers(buffer);
 
     _firmwareLastRewind = millis();

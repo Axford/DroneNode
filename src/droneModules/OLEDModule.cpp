@@ -35,22 +35,22 @@ OLEDModule::OLEDModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dl
 
    sub = &_subs[OLED_SUB_SUB1_E];
    sub->addrParam = OLED_SUB_SUB1_ADDR;
-   sub->param.param = OLED_SUB_SUB1;
+   sub->param.paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, OLED_SUB_SUB1);
    setParamName(FPSTR(STRING_SUB1), &sub->param);
 
    sub = &_subs[OLED_SUB_SUB2_E];
    sub->addrParam = OLED_SUB_SUB2_ADDR;
-   sub->param.param = OLED_SUB_SUB2;
+   sub->param.paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, OLED_SUB_SUB2);
    setParamName(FPSTR(STRING_SUB2), &sub->param);
 
    sub = &_subs[OLED_SUB_SUB3_E];
    sub->addrParam = OLED_SUB_SUB3_ADDR;
-   sub->param.param = OLED_SUB_SUB3;
+   sub->param.paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, OLED_SUB_SUB3);
    setParamName(FPSTR(STRING_SUB3), &sub->param);
 
    sub = &_subs[OLED_SUB_SUB4_E];
    sub->addrParam = OLED_SUB_SUB4_ADDR;
-   sub->param.param = OLED_SUB_SUB4;
+   sub->param.paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, OLED_SUB_SUB4);
    setParamName(FPSTR(STRING_SUB4), &sub->param);
 }
 
@@ -205,7 +205,7 @@ void OLEDModule::loop() {
         labelRequested = true;
         _queryMsg._msg.node = _subs[i].addr.node;
         _queryMsg._msg.channel = _subs[i].addr.channel;
-        _queryMsg._msg.param = _subs[i].addr.param;
+        _queryMsg._msg.paramPriority = getDroneLinkMsgParam(_subs[i].addr.paramPriority);
         _dlm->publish(_queryMsg);
         _lastDiscovery = loopTime;
       }

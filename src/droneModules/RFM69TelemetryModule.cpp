@@ -28,12 +28,12 @@ RFM69TelemetryModule::RFM69TelemetryModule(uint8_t id, DroneModuleManager* dmm, 
    DRONE_PARAM_ENTRY *param;
 
    param = &_params[RFM69_TELEMETRY_PARAM_RSSI_E];
-   param->param = RFM69_TELEMETRY_PARAM_RSSI;
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_MEDIUM, RFM69_TELEMETRY_PARAM_RSSI);
    setParamName(FPSTR(STRING_RSSI), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 4);
 
    param = &_params[RFM69_TELEMETRY_PARAM_PACKETS_E];
-   param->param = RFM69_TELEMETRY_PARAM_PACKETS;
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, RFM69_TELEMETRY_PARAM_PACKETS);
    setParamName(FPSTR(STRING_PACKETS), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_UINT32_T, 12);
    param->data.uint32[0] = 0;
@@ -41,7 +41,7 @@ RFM69TelemetryModule::RFM69TelemetryModule(uint8_t id, DroneModuleManager* dmm, 
    param->data.uint32[2] = 0;
 
    param = &_params[RFM69_TELEMETRY_PARAM_SPEED_E];
-   param->param = RFM69_TELEMETRY_PARAM_SPEED;
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, RFM69_TELEMETRY_PARAM_SPEED);
    setParamName(FPSTR(STRING_SPEED), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 12);
    param->data.f[0] = 0;

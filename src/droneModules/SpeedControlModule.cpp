@@ -12,27 +12,27 @@ SpeedControlModule::SpeedControlModule(uint8_t id, DroneModuleManager* dmm, Dron
    initSubs(SPEED_CONTROL_SUBS);
 
    _subs[SPEED_CONTROL_SUB_DISTANCE_E].addrParam = SPEED_CONTROL_SUB_DISTANCE_ADDR;
-   _subs[SPEED_CONTROL_SUB_DISTANCE_E].param.param = SPEED_CONTROL_SUB_DISTANCE;
+   _subs[SPEED_CONTROL_SUB_DISTANCE_E].param.paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, SPEED_CONTROL_SUB_DISTANCE);
    _subs[SPEED_CONTROL_SUB_DISTANCE_E].param.name = FPSTR(STRING_DISTANCE);
    _subs[SPEED_CONTROL_SUB_DISTANCE_E].param.nameLen = sizeof(STRING_DISTANCE);
 
    // pubs
    initParams(SPEED_CONTROL_PARAM_ENTRIES);
 
-   _params[SPEED_CONTROL_PARAM_LIMITS_E].param = SPEED_CONTROL_PARAM_LIMITS;
+   _params[SPEED_CONTROL_PARAM_LIMITS_E].paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, SPEED_CONTROL_PARAM_LIMITS);
    _params[SPEED_CONTROL_PARAM_LIMITS_E].name = FPSTR(STRING_LIMITS);
    _params[SPEED_CONTROL_PARAM_LIMITS_E].nameLen = sizeof(STRING_LIMITS);
    _params[SPEED_CONTROL_PARAM_LIMITS_E].paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_FLOAT, 8);
    _params[SPEED_CONTROL_PARAM_LIMITS_E].data.f[0] = 0.2; // just below deadband
    _params[SPEED_CONTROL_PARAM_LIMITS_E].data.f[1] = 1;
 
-   _params[SPEED_CONTROL_PARAM_THRESHOLD_E].param = SPEED_CONTROL_PARAM_THRESHOLD;
+   _params[SPEED_CONTROL_PARAM_THRESHOLD_E].paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, SPEED_CONTROL_PARAM_THRESHOLD);
    _params[SPEED_CONTROL_PARAM_THRESHOLD_E].name = FPSTR(STRING_THRESHOLD);
    _params[SPEED_CONTROL_PARAM_THRESHOLD_E].nameLen = sizeof(STRING_THRESHOLD);
    _params[SPEED_CONTROL_PARAM_THRESHOLD_E].paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_FLOAT, 4);
    _params[SPEED_CONTROL_PARAM_THRESHOLD_E].data.f[0] = 3;  // 3 meters
 
-   _params[SPEED_CONTROL_PARAM_SPEED_E].param = SPEED_CONTROL_PARAM_SPEED;
+   _params[SPEED_CONTROL_PARAM_SPEED_E].paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_MEDIUM, SPEED_CONTROL_PARAM_SPEED);
    _params[SPEED_CONTROL_PARAM_SPEED_E].name = FPSTR(STRING_SPEED);
    _params[SPEED_CONTROL_PARAM_SPEED_E].nameLen = sizeof(STRING_SPEED);
    _params[SPEED_CONTROL_PARAM_SPEED_E].paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 4);

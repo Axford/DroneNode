@@ -106,7 +106,8 @@ void TelemetryModule::loop() {
           } else if (_receivedSize == 2) {
             _receivedMsg._msg.channel = b;
           } else if (_receivedSize == 3) {
-            _receivedMsg._msg.param = b;
+            // TODO
+            _receivedMsg._msg.paramPriority = b;
           } else if (_receivedSize == 4) {
             _receivedMsg._msg.paramTypeLength = b;
             _decodeState = 2;

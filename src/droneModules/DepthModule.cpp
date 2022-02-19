@@ -22,7 +22,7 @@ DepthModule::DepthModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* 
 
    sub = &_subs[DEPTH_SUB_LOCATION_E];
    sub->addrParam = DEPTH_SUB_LOCATION_ADDR;
-   sub->param.param = DEPTH_SUB_LOCATION;
+   sub->param.paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, DEPTH_SUB_LOCATION);
    setParamName(FPSTR(STRING_LOCATION), &sub->param);
 
 
@@ -32,32 +32,32 @@ DepthModule::DepthModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* 
    DRONE_PARAM_ENTRY *param;
 
    param = &_params[DEPTH_PARAM_PINS_E];
-   param->param = DEPTH_PARAM_PINS;
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, DEPTH_PARAM_PINS);
    setParamName(FPSTR(STRING_PINS), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_UINT8_T, 2);
    _params[DEPTH_PARAM_PINS_E].data.uint8[0] = 0;
 
    param = &_params[DEPTH_PARAM_SPEED_E];
-   param->param = DEPTH_PARAM_SPEED;
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, DEPTH_PARAM_SPEED);
    setParamName(FPSTR(STRING_PWM_CHANNEL), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_FLOAT, 4);
    _params[DEPTH_PARAM_SPEED_E].data.f[0] = 1480;
 
    param = &_params[DEPTH_PARAM_LIMITS_E];
-   param->param = DEPTH_PARAM_LIMITS;
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, DEPTH_PARAM_LIMITS);
    setParamName(FPSTR(STRING_LIMITS), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_FLOAT, 8);
    _params[DEPTH_PARAM_LIMITS_E].data.f[0] = 0.25;
    _params[DEPTH_PARAM_LIMITS_E].data.f[1] = 10;
 
    param = &_params[DEPTH_PARAM_DEPTH_E];
-   param->param = DEPTH_PARAM_DEPTH;
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_HIGH, DEPTH_PARAM_DEPTH);
    setParamName(FPSTR(STRING_DEPTH), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 4);
    _params[DEPTH_PARAM_DEPTH_E].data.f[0] = 0;
 
    param = &_params[DEPTH_PARAM_LOG_E];
-   param->param = DEPTH_PARAM_LOG;
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_HIGH, DEPTH_PARAM_LOG);
    setParamName(FPSTR(STRING_LOG), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 12);
    _params[DEPTH_PARAM_LOG_E].data.f[0] = 0;
@@ -65,7 +65,7 @@ DepthModule::DepthModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* 
    _params[DEPTH_PARAM_LOG_E].data.f[2] = 0;
 
    param = &_params[DEPTH_PARAM_DISTANCE_E];
-   param->param = DEPTH_PARAM_DISTANCE;
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, DEPTH_PARAM_DISTANCE);
    setParamName(FPSTR(STRING_PWM_CHANNEL), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_FLOAT, 4);
    _params[DEPTH_PARAM_DISTANCE_E].data.f[0] = 0;

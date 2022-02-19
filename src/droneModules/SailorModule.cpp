@@ -21,22 +21,22 @@ SailorModule::SailorModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager
 
    sub = &_subs[SAILOR_SUB_TARGET_E];
    sub->addrParam = SAILOR_SUB_TARGET_ADDR;
-   sub->param.param = SAILOR_SUB_TARGET;
+   sub->param.paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, SAILOR_SUB_TARGET);
    setParamName(FPSTR(STRING_TARGET), &sub->param);
 
    sub = &_subs[SAILOR_SUB_HEADING_E];
    sub->addrParam = SAILOR_SUB_HEADING_ADDR;
-   sub->param.param = SAILOR_SUB_HEADING;
+   sub->param.paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, SAILOR_SUB_HEADING);
    setParamName(FPSTR(STRING_HEADING), &sub->param);
 
    sub = &_subs[SAILOR_SUB_WIND_E];
    sub->addrParam = SAILOR_SUB_WIND_ADDR;
-   sub->param.param = SAILOR_SUB_WIND;
+   sub->param.paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, SAILOR_SUB_WIND);
    setParamName(FPSTR(STRING_WIND), &sub->param);
 
    sub = &_subs[SAILOR_SUB_CROSSTRACK_E];
    sub->addrParam = SAILOR_SUB_CROSSTRACK_ADDR;
-   sub->param.param = SAILOR_SUB_CROSSTRACK;
+   sub->param.paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, SAILOR_SUB_CROSSTRACK);
    setParamName(FPSTR(STRING_CROSSTRACK), &sub->param);
 
    // pubs
@@ -45,34 +45,34 @@ SailorModule::SailorModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager
    DRONE_PARAM_ENTRY *param;
 
    param = &_params[SAILOR_PARAM_COURSE_E];
-   param->param = SAILOR_PARAM_COURSE;
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_MEDIUM, SAILOR_PARAM_COURSE);
    setParamName(FPSTR(STRING_COURSE), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 4);
 
    param = &_params[SAILOR_PARAM_SHEET_E];
-   param->param = SAILOR_PARAM_SHEET;
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_MEDIUM, SAILOR_PARAM_SHEET);
    setParamName(FPSTR(STRING_SHEET), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 4);
 
    param = &_params[SAILOR_PARAM_POLAR_E];
-   param->param = SAILOR_PARAM_POLAR;
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, SAILOR_PARAM_POLAR);
    setParamName(FPSTR(STRING_POLAR), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_UINT8_T, 16);
 
    param = &_params[SAILOR_PARAM_SPEED_E];
-   param->param = SAILOR_PARAM_SPEED;
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, SAILOR_PARAM_SPEED);
    param->publish = true;
    setParamName(FPSTR(STRING_SPEED), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_UINT8_T, 16);
 
    param = &_params[SAILOR_PARAM_SPEED2_E];
-   param->param = SAILOR_PARAM_SPEED2;
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, SAILOR_PARAM_SPEED2);
    param->publish = true;
    setParamName(FPSTR(STRING_SPEED), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_UINT8_T, 16);
 
    param = &_params[SAILOR_PARAM_FLAGS_E];
-   param->param = SAILOR_PARAM_FLAGS;
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_MEDIUM, SAILOR_PARAM_FLAGS);
    param->publish = true;
    setParamName(FPSTR(STRING_SPEED), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_UINT8_T, 3);

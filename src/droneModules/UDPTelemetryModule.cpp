@@ -21,13 +21,13 @@ UDPTelemetryModule::UDPTelemetryModule(uint8_t id, DroneModuleManager* dmm, Dron
    DRONE_PARAM_ENTRY *param;
 
    param = &_params[UDP_PARAM_PORT_E];
-   param->param = UDP_PARAM_PORT;
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, UDP_PARAM_PORT);
    setParamName(FPSTR(STRING_PORT), param);
    _params[UDP_PARAM_PORT_E].paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_UINT32_T, 4);
    _params[UDP_PARAM_PORT_E].data.uint32[0] = UDP_TELEMETRY_PORT;
 
    param = &_params[UDP_PARAM_BROADCAST_E];
-   param->param = UDP_PARAM_BROADCAST;
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, UDP_PARAM_BROADCAST);
    setParamName(FPSTR(STRING_BROADCAST), param);
    _params[UDP_PARAM_BROADCAST_E].paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_UINT32_T, 4);
    _params[UDP_PARAM_BROADCAST_E].data.uint8[0] = 255;
@@ -36,7 +36,7 @@ UDPTelemetryModule::UDPTelemetryModule(uint8_t id, DroneModuleManager* dmm, Dron
    _params[UDP_PARAM_BROADCAST_E].data.uint8[3] = 255;
 
    param = &_params[UDP_TELEMETRY_PARAM_PACKETS_E];
-   param->param = UDP_TELEMETRY_PARAM_PACKETS;
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, UDP_TELEMETRY_PARAM_PACKETS);
    setParamName(FPSTR(STRING_PACKETS), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_UINT32_T, 12);
    param->data.uint32[0] = 0;
@@ -44,7 +44,7 @@ UDPTelemetryModule::UDPTelemetryModule(uint8_t id, DroneModuleManager* dmm, Dron
    param->data.uint32[2] = 0;
 
    param = &_params[UDP_TELEMETRY_PARAM_SPEED_E];
-   param->param = UDP_TELEMETRY_PARAM_SPEED;
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, UDP_TELEMETRY_PARAM_SPEED);
    setParamName(FPSTR(STRING_SPEED), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 12);
    param->data.f[0] = 0;

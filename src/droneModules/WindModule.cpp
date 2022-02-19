@@ -27,7 +27,7 @@ WindModule::WindModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dl
 
    sub = &_subs[WIND_SUB_HEADING_E];
    sub->addrParam = WIND_SUB_HEADING_ADDR;
-   sub->param.param = WIND_SUB_HEADING;
+   sub->param.paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, WIND_SUB_HEADING);
    setParamName(FPSTR(STRING_HEADING), &sub->param);
 
 
@@ -38,33 +38,33 @@ WindModule::WindModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dl
    _params[I2CBASE_PARAM_ADDR_E].data.uint8[0] = WIND_I2C_ADDRESS;
 
    // init param entries
-   _params[WIND_PARAM_DIRECTION_E].param = WIND_PARAM_DIRECTION;
+   _params[WIND_PARAM_DIRECTION_E].paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_CRITICAL, WIND_PARAM_DIRECTION);
    _params[WIND_PARAM_DIRECTION_E].name = FPSTR(STRING_DIRECTION);
    _params[WIND_PARAM_DIRECTION_E].nameLen = sizeof(STRING_DIRECTION);
    _params[WIND_PARAM_DIRECTION_E].paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 4);
 
-   _params[WIND_PARAM_SPEED_E].param = WIND_PARAM_SPEED;
+   _params[WIND_PARAM_SPEED_E].paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_MEDIUM, WIND_PARAM_SPEED);
    _params[WIND_PARAM_SPEED_E].name = FPSTR(STRING_SPEED);
    _params[WIND_PARAM_SPEED_E].nameLen = sizeof(STRING_SPEED);
    _params[WIND_PARAM_SPEED_E].paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 4);
 
-   _params[WIND_PARAM_PINS_E].param = WIND_PARAM_PINS;
+   _params[WIND_PARAM_PINS_E].paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, WIND_PARAM_PINS);
    _params[WIND_PARAM_PINS_E].name = FPSTR(STRING_PINS);
    _params[WIND_PARAM_PINS_E].nameLen = sizeof(STRING_PINS);
    _params[WIND_PARAM_PINS_E].paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_UINT8_T, 1);
 
-   _params[WIND_PARAM_CENTRE_E].param = WIND_PARAM_CENTRE;
+   _params[WIND_PARAM_CENTRE_E].paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, WIND_PARAM_CENTRE);
    _params[WIND_PARAM_CENTRE_E].name = FPSTR(STRING_CENTRE);
    _params[WIND_PARAM_CENTRE_E].nameLen = sizeof(STRING_CENTRE);
    _params[WIND_PARAM_CENTRE_E].paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_FLOAT, 4);
    _params[WIND_PARAM_CENTRE_E].data.f[0] = 0;
 
-   _params[WIND_PARAM_WIND_E].param = WIND_PARAM_WIND;
+   _params[WIND_PARAM_WIND_E].paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, WIND_PARAM_WIND);
    _params[WIND_PARAM_WIND_E].name = FPSTR(STRING_WIND);
    _params[WIND_PARAM_WIND_E].nameLen = sizeof(STRING_WIND);
    _params[WIND_PARAM_WIND_E].paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 4);
 
-   _params[WIND_PARAM_MODE_E].param = WIND_PARAM_MODE;
+   _params[WIND_PARAM_MODE_E].paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, WIND_PARAM_MODE);
    _params[WIND_PARAM_MODE_E].name = FPSTR(STRING_MODE);
    _params[WIND_PARAM_MODE_E].nameLen = sizeof(STRING_MODE);
    _params[WIND_PARAM_MODE_E].paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_UINT8_T, 1);

@@ -19,48 +19,48 @@ INA219Module::INA219Module(uint8_t id, DroneModuleManager* dmm, DroneLinkManager
    DRONE_PARAM_ENTRY *param;
 
    param = &_params[INA219_PARAM_SHUNTV_E];
-   param->param = INA219_PARAM_SHUNTV;
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, INA219_PARAM_SHUNTV);
    setParamName(FPSTR(STRING_SHUNTV), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 4);
 
    param = &_params[INA219_PARAM_BUSV_E];
-   param->param = INA219_PARAM_BUSV;
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, INA219_PARAM_BUSV);
    setParamName(FPSTR(STRING_BUSV), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 4);
 
    param = &_params[INA219_PARAM_CURRENT_E];
-   param->param = INA219_PARAM_CURRENT;
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_MEDIUM, INA219_PARAM_CURRENT);
    setParamName(FPSTR(STRING_CURRENT), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 4);
 
    param = &_params[INA219_PARAM_POWER_E];
-   param->param = INA219_PARAM_POWER;
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_MEDIUM, INA219_PARAM_POWER);
    setParamName(FPSTR(STRING_POWER), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 4);
 
    param = &_params[INA219_PARAM_LOADV_E];
-   param->param = INA219_PARAM_LOADV;
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_MEDIUM, INA219_PARAM_LOADV);
    setParamName(FPSTR(STRING_LOADV), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 4);
 
    param = &_params[INA219_PARAM_CELLV_E];
-   param->param = INA219_PARAM_CELLV;
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_HIGH, INA219_PARAM_CELLV);
    setParamName(FPSTR(STRING_CELLV), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 4);
 
    param = &_params[INA219_PARAM_ALARM_E];
-   param->param = INA219_PARAM_ALARM;
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_HIGH, INA219_PARAM_ALARM);
    setParamName(FPSTR(STRING_ALARM), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_UINT8_T, 1);
 
    param = &_params[INA219_PARAM_CELLS_E];
-   param->param = INA219_PARAM_CELLS;
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, INA219_PARAM_CELLS);
    setParamName(FPSTR(STRING_CELLS), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_UINT8_T, 1);
    _params[INA219_PARAM_CELLS_E].data.uint8[0] = 3;
 
    param = &_params[INA219_PARAM_THRESHOLD_E];
-   param->param = INA219_PARAM_THRESHOLD;
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, INA219_PARAM_THRESHOLD);
    setParamName(FPSTR(STRING_THRESHOLD), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_FLOAT, 4);
    _params[INA219_PARAM_THRESHOLD_E].data.f[0] = 11.2;
