@@ -1230,7 +1230,7 @@ void DroneLinkManager::processTransmitQueue() {
   // a negative return value means item a is sorted before b
   _txQueue.sort( [](DRONE_MESH_MSG_BUFFER*& a, DRONE_MESH_MSG_BUFFER*& b) -> int {
     // only need to sort non-empty packets
-    if (a->state > DRONE_MESH_MSG_BUFFER_STATE_READY && b->state > DRONE_MESH_MSG_BUFFER_STATE_READY) {
+    if (a->state > DRONE_MESH_MSG_BUFFER_STATE_EMPTY && b->state > DRONE_MESH_MSG_BUFFER_STATE_EMPTY) {
       // send Acks before new packets
       uint8_t a1 = isDroneMeshMsgAck(a->data) ? 0 : 1;
       uint8_t b1 = isDroneMeshMsgAck(b->data) ? 0 : 1;
@@ -1247,6 +1247,12 @@ void DroneLinkManager::processTransmitQueue() {
         }
         // send older items first (FIFO)
         return a->created - b->created;
+      }
+    } else {
+      if (a->state > DRONE_MESH_MSG_BUFFER_STATE_EMPTY) {
+        return -1;
+      } else if (b->state > DRONE_MESH_MSG_BUFFER_STATE_EMPTY) {
+        return 1;
       }
     }
     return 0;
