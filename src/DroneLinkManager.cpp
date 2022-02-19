@@ -782,13 +782,6 @@ void DroneLinkManager::receiveFirmwareStartRequest(NetworkInterfaceModule *inter
 
     _firmwareSrc = header->srcNode;
 
-    // clear write buffer
-    _firmwareWriteBufferStart = 0;
-    _firmwareWriteBufferSize = 0;
-    for (uint8_t i=0; i<DRONE_LINK_FIRMWARE_WRITE_BUFFER_SIZE; i++) {
-      _firmwareWriteBuffer[i].size = 0;
-    }
-
     Log.noticeln("[DLM.rFSR] Primed to receive: %u bytes", _firmwareSize);
 
     // generate a response
@@ -815,40 +808,17 @@ void DroneLinkManager::receiveFirmwareWrite(NetworkInterfaceModule *interface, u
     // calc data size
     uint8_t dataSize = payloadSize - 4;
 
-    // see if offset matches write pos
+    // check offset matches write pos
     if (wBuffer->offset == _firmwarePos) {
 
       Log.noticeln("[DLM.rFW] Firmware Write %u bytes at pos: %u", dataSize, _firmwarePos);
 
-      // disable interrupts so we don't clash with RFM69
+      // write data to firmware
       cli();
-
-      // write newest block to flash
       Update.write(&wBuffer->data[0], dataSize);
-      _firmwarePos += dataSize;
-
-      // write all contiguous stuff in the writeBuffer?
-      while (_firmwareWriteBuffer[_firmwareWriteBufferStart].size > 0) {
-        // write block
-        Update.write(_firmwareWriteBuffer[_firmwareWriteBufferStart].data, _firmwareWriteBuffer[_firmwareWriteBufferStart].size);
-        // update firmwarePos
-        _firmwarePos += _firmwareWriteBuffer[_firmwareWriteBufferStart].size;
-
-        // mark block as empty
-        _firmwareWriteBuffer[_firmwareWriteBufferStart].size = 0;
-
-        // update pointers
-        _firmwareWriteBufferSize--;
-        _firmwareWriteBufferStart++;
-        if (_firmwareWriteBufferStart >= DRONE_LINK_FIRMWARE_WRITE_BUFFER_SIZE) _firmwareWriteBufferStart=0;
-
-        if (_firmwareWriteBufferSize == 0) break;
-      }
-
-      // enable interrupts
       sei();
 
-      // reset rewind timer
+      _firmwarePos += dataSize;
       _firmwareLastRewind = millis();
 
       // have we reached the end?
@@ -884,41 +854,8 @@ void DroneLinkManager::receiveFirmwareWrite(NetworkInterfaceModule *interface, u
       if (wBuffer->offset > _firmwarePos) {
         Log.noticeln("[DLM.rFW] Behind Firmware Write %u vs %u", wBuffer->offset, _firmwarePos);
 
-        boolean rewindNeeded = false;
-
-        // calc block index based on offset relative to current write position
-        uint8_t blockIndex = ((wBuffer->offset - _firmwarePos) / DRONE_LINK_FIRMWARE_WRITE_MAX_SIZE) - 1;
-
-        // see if we have room to store this in the writeBuffer
-        if (_firmwareWriteBufferSize < DRONE_LINK_FIRMWARE_WRITE_BUFFER_SIZE  &&
-            blockIndex < DRONE_LINK_FIRMWARE_WRITE_BUFFER_SIZE) {
-
-          // conver to relative block index
-          blockIndex += _firmwareWriteBufferStart;
-          // wrap around
-          if (blockIndex >= DRONE_LINK_FIRMWARE_WRITE_BUFFER_SIZE) {
-            blockIndex -= DRONE_LINK_FIRMWARE_WRITE_BUFFER_SIZE;
-          }
-
-          // copy block data into buffer
-          memcpy(_firmwareWriteBuffer[blockIndex].data, &wBuffer->data[0], dataSize);
-
-          _firmwareWriteBuffer[blockIndex].size = dataSize;
-
-          _firmwareWriteBufferSize++;
-
-          // is this the last block?  if so, trigger a rewind as we've missed something
-          if (wBuffer->offset + dataSize == _firmwareSize) {
-            rewindNeeded = true;
-          }
-
-        } else {
-          rewindNeeded = true;
-        }
-
         // we've obviously missed a packet... ask for a rewind
-        if (rewindNeeded)
-          generateFirmwareRewind(interface, header->srcNode, _firmwarePos);
+        generateFirmwareRewind(interface, header->srcNode, _firmwarePos);
       } else {
         // we're ahead... someone else must have asked for a rewind, we'll wait for them to catchup
         Log.noticeln("[DLM.rFW] Ahead of Firmware Write %u vs %u", wBuffer->offset, _firmwarePos);

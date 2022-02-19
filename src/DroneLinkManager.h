@@ -80,17 +80,6 @@ enum DroneLinkManagerEvent {
 
 typedef void (*DroneLinkManagerCallback) (const DroneLinkManagerEvent event, const float progress);
 
-// -----------------------------------------------------------------------------
-
-#define DRONE_LINK_FIRMWARE_WRITE_MAX_SIZE       44
-#define DRONE_LINK_FIRMWARE_WRITE_BUFFER_SIZE    16   // how many blocks in buffer
-
-struct DRONE_LINK_FIRMWARE_WRITE_BUFFER {
-  uint8_t data[DRONE_LINK_FIRMWARE_WRITE_MAX_SIZE];
-  uint8_t size;
-};
-
-
 
 class DroneLinkManager
 {
@@ -131,9 +120,6 @@ protected:
   boolean _firmwareComplete;
   uint32_t _firmwareLastRewind;
   uint8_t _firmwareSrc;
-  uint8_t _firmwareWriteBufferStart;
-  uint8_t _firmwareWriteBufferSize;
-  DRONE_LINK_FIRMWARE_WRITE_BUFFER _firmwareWriteBuffer[DRONE_LINK_FIRMWARE_WRITE_BUFFER_SIZE];
 
   struct DRONE_LINK_PARAM_FILTER *_paramFilter = NULL;
 
