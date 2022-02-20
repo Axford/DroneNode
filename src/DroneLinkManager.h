@@ -30,9 +30,10 @@ class WiFiManager;
 #define DRONE_LINK_MANAGER_HELLO_INTERVAL  5000
 #define DRONE_LINK_MANAGER_SEQ_INTERVAL    30000
 
-#define DRONE_LINK_MANAGER_MAX_RETRY_INTERVAL   2000
-#define DRONE_LINK_MANAGER_MAX_RETRIES          10
+#define DRONE_LINK_MANAGER_MAX_RETRY_INTERVAL   3000
 #define DRONE_LINK_MANAGER_MAX_ACK_INTERVAL     250
+
+#define DRONE_LINK_MANAGER_LINK_CHECK_INTERVAL     2000
 
 // -----------------------------------------------------------------------------
 // aka routing entry
@@ -49,6 +50,9 @@ struct DRONE_LINK_NODE_INFO {
   NetworkInterfaceModule* interface;  // network interface that heard this node with the lowest metric originating on this node
   char * name; // dynamically allocated to match heard name
   float avgAttempts;
+  uint32_t givenUp;  // abandoned packets
+  uint32_t lastHello;  // when was the last direct hello heard from this node...  used to identify potential direct routes
+  uint32_t lastAck;  // time of last ack from this node
   float avgTxTime;  // avg ms to transmit a packet
   float avgAckTime; // avg time from packet creation to confirmed Ack
 };
@@ -153,6 +157,7 @@ public:
     void removeRoute(uint8_t node);
 
     void checkForOldRoutes(); // check for old routes and interface status
+    void checkDirectLinks();  // check link quality to direct nodes
     void loop();
 
     DroneLinkChannel* findChannel(uint8_t node, uint8_t chan);
@@ -195,6 +200,7 @@ public:
     void receiveRouterRequest(NetworkInterfaceModule *interface, uint8_t *buffer, uint8_t metric);
     void receiveRouterResponse(NetworkInterfaceModule *interface, uint8_t *buffer, uint8_t metric);
 
+    void receiveLinkCheckRequest(NetworkInterfaceModule *interface, uint8_t *buffer, uint8_t metric);
 
     void receiveFirmwareStartRequest(NetworkInterfaceModule *interface, uint8_t *buffer, uint8_t metric);
     void receiveFirmwareWrite(NetworkInterfaceModule *interface, uint8_t *buffer, uint8_t metric);
@@ -236,6 +242,8 @@ public:
     boolean generateRouteEntryResponse(NetworkInterfaceModule *interface,void * nodeInfo, uint8_t target, uint8_t dest, uint8_t nextHop);
 
     boolean generateRouterResponse(NetworkInterfaceModule *interface, uint8_t dest, uint8_t nextHop);
+
+    boolean generateLinkCheckRequest(NetworkInterfaceModule *interface, uint8_t dest, uint8_t nextHop);
 
     boolean sendDroneLinkMessage(NetworkInterfaceModule *interface, uint8_t destNode, uint8_t nextNode, DroneLinkMsg *msg);
 

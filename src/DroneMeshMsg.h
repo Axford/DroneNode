@@ -40,6 +40,8 @@ struct DRONE_MESH_MSG_HEADER {
 #define DRONE_MESH_MSG_TYPE_ROUTER_REQUEST           20
 #define DRONE_MESH_MSG_TYPE_ROUTER_RESPONSE          21
 
+#define DRONE_MESH_MSG_TYPE_LINK_CHECK_REQUEST       26
+
 // batch firmware messages
 #define DRONE_MESH_MSG_TYPE_FIRMWARE_START_REQUEST   22
 #define DRONE_MESH_MSG_TYPE_FIRMWARE_START_RESPONSE  23
@@ -114,6 +116,12 @@ struct DRONE_MESH_MSG_ROUTER_RESPONSE {
   uint8_t kickRate;  // x10 and rounded
   uint8_t crc;
 } __packed;  // header(7) + 5 + 8 = 20
+
+struct DRONE_MESH_MSG_LINK_CHECK_REQUEST {
+  DRONE_MESH_MSG_HEADER header;
+  uint8_t padding;
+  uint8_t crc;
+} __packed;
 
 struct DRONE_MESH_MSG_FIRMWARE_START_REQUEST {
   DRONE_MESH_MSG_HEADER header;
