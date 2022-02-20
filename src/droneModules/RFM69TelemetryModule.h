@@ -52,7 +52,11 @@ byte    = value
 #define RFM69_TELEMETRY_PARAM_SPEED          10
 #define RFM69_TELEMETRY_PARAM_SPEED_E        2
 
-#define RFM69_TELEMETRY_PARAM_ENTRIES        3
+// @pub 11;f;1;power;Radio transmit power (-14..20), default 20
+#define RFM69_TELEMETRY_PARAM_POWER          11
+#define RFM69_TELEMETRY_PARAM_POWER_E        3
+
+#define RFM69_TELEMETRY_PARAM_ENTRIES        4
 
 
 #define RFM69_TELEMETRY_NETWORKID     66  //the same on all nodes that talk to each other
@@ -81,6 +85,8 @@ public:
 
   static DEM_NAMESPACE* registerNamespace(DroneExecutionManager *dem);
   static void registerParams(DEM_NAMESPACE* ns, DroneExecutionManager *dem);
+
+  void onParamWrite(DRONE_PARAM_ENTRY *param);
 
   uint8_t getInterfaceType();
 

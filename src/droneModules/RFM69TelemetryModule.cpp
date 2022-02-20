@@ -47,6 +47,12 @@ RFM69TelemetryModule::RFM69TelemetryModule(uint8_t id, DroneModuleManager* dmm, 
    param->data.f[0] = 0;
    param->data.f[1] = 0;
    param->data.f[2] = 0;
+
+   param = &_params[RFM69_TELEMETRY_PARAM_POWER_E];
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, RFM69_TELEMETRY_PARAM_POWER);
+   setParamName(FPSTR(STRING_POWER), param);
+   param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_FLOAT, 4);
+   param->data.f[0] = 20;
 }
 
 DEM_NAMESPACE* RFM69TelemetryModule::registerNamespace(DroneExecutionManager *dem) {
@@ -63,13 +69,24 @@ void RFM69TelemetryModule::registerParams(DEM_NAMESPACE* ns, DroneExecutionManag
   // writable mgmt params
   DEMCommandHandler ph = std::bind(&DroneExecutionManager::mod_param, dem, _1, _2, _3, _4);
 
-  //dem->registerCommand(ns, STRING_LOCATION, DRONE_LINK_MSG_TYPE_FLOAT, ph);
+  dem->registerCommand(ns, STRING_POWER, DRONE_LINK_MSG_TYPE_FLOAT, ph);
 }
 
 
 uint8_t RFM69TelemetryModule::getInterfaceType() {
   // to be overridden
   return DRONE_MESH_INTERFACE_TYPE_RFM69;
+}
+
+
+void RFM69TelemetryModule::onParamWrite(DRONE_PARAM_ENTRY *param) {
+  if (getDroneLinkMsgParam(param->paramPriority) == RFM69_TELEMETRY_PARAM_POWER) {
+    int p = param->data.f[0];
+    if (p > 20) p = 20;
+    if (p < -14) p = -14;
+
+    if (_radio) _radio->setTxPower(p, true);
+  }
 }
 
 
@@ -95,7 +112,7 @@ void RFM69TelemetryModule::setup() {
 
 
     // maximum POWWWWAAAAAA!!
-    _radio->setTxPower(20, true);
+    _radio->setTxPower(_params[RFM69_TELEMETRY_PARAM_POWER_E].data.f[0], true);
     //_radio->spyMode(true);
     _radio->setEncryptionKey(_encryptKey);
 
@@ -156,7 +173,8 @@ void RFM69TelemetryModule::loop() {
         // pass onto DLM
         // calc receive metric
         int16_t rssi = abs(constrain(_radio->lastRssi()/2, -100, 0));
-        uint8_t metric = map(rssi, 0, 100, 1, 15);
+        // packet loss is severe by -40db, so set the limit to 45
+        uint8_t metric = map(min((int)rssi, 45), 0, 45, 1, 15);
 
         // rolling average rssi
         _params[RFM69_TELEMETRY_PARAM_RSSI_E].data.f[0] = (_params[RFM69_TELEMETRY_PARAM_RSSI_E].data.f[0] * 15 + rssi)/16;

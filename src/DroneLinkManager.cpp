@@ -301,6 +301,7 @@ DRONE_LINK_NODE_INFO* DroneLinkManager::getNodeInfo(uint8_t source, boolean hear
       page->nodeInfo[i].seq = 0;
       page->nodeInfo[i].gSeq = 0;
       page->nodeInfo[i].metric = 255;
+      page->nodeInfo[i].helloMetric = 255;
       page->nodeInfo[i].name = NULL;
       page->nodeInfo[i].interface = NULL;
       page->nodeInfo[i].nextHop = 0;
@@ -338,7 +339,32 @@ void DroneLinkManager::serveNodeInfo(AsyncWebServerRequest *request) {
   AsyncResponseStream *response = request->beginResponseStream("text/text");
   response->addHeader("Server","ESP Async Web Server");
 
-  response->printf(("Tx Queue:  (size %u), kicked: %u (%.1f), choked: %u (%.1f) \n"), getTxQueueSize(), _kicked, _kickRate, _choked, _chokeRate);
+  response->print(F("Routing table: \n"));
+
+  unsigned long loopTime = millis();
+
+  DRONE_LINK_NODE_PAGE *page;
+  for (uint8_t i=0; i<DRONE_LINK_NODE_PAGES; i++) {
+    page = _nodePages[i];
+    if (page != NULL) {
+      for (uint8_t j=0; j<DRONE_LINK_NODE_PAGE_SIZE; j++) {
+        if (page->nodeInfo[j].heard) {
+          uint8_t id = (i << 4) + j;
+          unsigned int age = (loopTime - page->nodeInfo[j].lastHeard) / 1000;
+          char *interfaceName = NULL;
+          if (page->nodeInfo[j].interface) interfaceName = page->nodeInfo[j].interface->getName();
+          response->printf("  %u > ", id);
+          if (page->nodeInfo[j].name == NULL) {
+            response->print("???");
+          } else
+            response->printf("%s", page->nodeInfo[j].name);
+          response->printf(", Seq: %u, Metric: %u, Next Hop: %u, Age: %u sec, Uptime: %u, Int: %s (%u), avgAttempts: %.1f, avgTx: %.0fms, avgAck: %.0fms\n", page->nodeInfo[j].seq, page->nodeInfo[j].metric, page->nodeInfo[j].nextHop, age, page->nodeInfo[j].uptime, interfaceName, page->nodeInfo[j].interface->getInterfaceType(), page->nodeInfo[j].avgAttempts, page->nodeInfo[j].avgTxTime, page->nodeInfo[j].avgAckTime);
+        }
+      }
+    }
+  }
+
+  response->printf(("\n\nTx Queue:  (size %u), kicked: %u (%.1f), choked: %u (%.1f) \n"), getTxQueueSize(), _kicked, _kickRate, _choked, _chokeRate);
 
   // print detailed queue info
   for (uint8_t i=0; i<_txQueue.size(); i++) {
@@ -367,32 +393,6 @@ void DroneLinkManager::serveNodeInfo(AsyncWebServerRequest *request) {
       response->print("\n");
     }
 
-  }
-
-
-  response->print(F("\n\nRouting table: \n"));
-
-  unsigned long loopTime = millis();
-
-  DRONE_LINK_NODE_PAGE *page;
-  for (uint8_t i=0; i<DRONE_LINK_NODE_PAGES; i++) {
-    page = _nodePages[i];
-    if (page != NULL) {
-      for (uint8_t j=0; j<DRONE_LINK_NODE_PAGE_SIZE; j++) {
-        if (page->nodeInfo[j].heard) {
-          uint8_t id = (i << 4) + j;
-          unsigned int age = (loopTime - page->nodeInfo[j].lastHeard) / 1000;
-          char *interfaceName = NULL;
-          if (page->nodeInfo[j].interface) interfaceName = page->nodeInfo[j].interface->getName();
-          response->printf("  %u > ", id);
-          if (page->nodeInfo[j].name == NULL) {
-            response->print("???");
-          } else
-            response->printf("%s", page->nodeInfo[j].name);
-          response->printf(", Seq: %u, Metric: %u, Next Hop: %u, Age: %u sec, Uptime: %u, Int: %s (%u), avgAttempts: %.1f, avgTx: %.0fms, avgAck: %.0fms\n", page->nodeInfo[j].seq, page->nodeInfo[j].metric, page->nodeInfo[j].nextHop, age, page->nodeInfo[j].uptime, interfaceName, page->nodeInfo[j].interface->getInterfaceType(), page->nodeInfo[j].avgAttempts, page->nodeInfo[j].avgTxTime, page->nodeInfo[j].avgAckTime);
-        }
-      }
-    }
   }
 
   //send the response last
@@ -570,8 +570,15 @@ void DroneLinkManager::receiveHello(NetworkInterfaceModule *interface, uint8_t *
   // ignore it if this hello packet is from us
   if (header->srcNode == _node || header->txNode == _node) return;
 
-  // calc total metric, inc RSSI to us
+  // set an initial new total metric, inc RSSI to us
   uint32_t newMetric = constrain(hello->metric + metric, 0, 255);
+
+  // lookup info on tx Node... to calc a better metric than RSSI
+  DRONE_LINK_NODE_INFO* txNodeInfo = getNodeInfo(header->txNode, false);
+  if (txNodeInfo) {
+    // use avgAttempts to txNode to update total metric
+    newMetric = constrain(hello->metric + ceil(txNodeInfo->avgAttempts + 0.1), 0, 255);
+  }
 
 
   // fetch node info (routing entry), create if needed
@@ -580,7 +587,17 @@ void DroneLinkManager::receiveHello(NetworkInterfaceModule *interface, uint8_t *
   if (nodeInfo) {
 
     // if its a brand new route entry it will have metric 255... so good to overwrite
-    boolean feasibleRoute = nodeInfo->metric == 255;
+    boolean feasibleRoute = false;
+    if (nodeInfo->metric == 255) {
+      feasibleRoute = true;
+    } else {
+      // update existing metric info based on latest link quality
+      DRONE_LINK_NODE_INFO* nextHopInfo = getNodeInfo(nodeInfo->nextHop, false);
+      if (nextHopInfo) {
+        // use avgAttempts to nexthop to update total metric
+        nodeInfo->metric = constrain(nodeInfo->helloMetric + ceil(nextHopInfo->avgAttempts + 0.1), 0, 255);
+      }
+    }
 
     // if new uptime is significantly less than current uptime
     if (hello->uptime < nodeInfo->uptime * 0.9) {
@@ -588,6 +605,7 @@ void DroneLinkManager::receiveHello(NetworkInterfaceModule *interface, uint8_t *
       Log.noticeln("Lower uptime %u", hello->uptime);
     }
 
+    // if the interface has changed and there's a lower metric
     if (interface != nodeInfo->interface && newMetric < nodeInfo->metric) {
       feasibleRoute = true;
     } else {
@@ -597,7 +615,7 @@ void DroneLinkManager::receiveHello(NetworkInterfaceModule *interface, uint8_t *
         Log.noticeln("New seq %u", header->seq);
       }
 
-      // or is it the same, but with a better metric
+      // or is it the same seq, but with a better metric
       if (header->seq == nodeInfo->seq &&
           newMetric < nodeInfo->metric) {
         feasibleRoute = true;
@@ -609,6 +627,7 @@ void DroneLinkManager::receiveHello(NetworkInterfaceModule *interface, uint8_t *
       Log.noticeln("Updating route info");
       nodeInfo->seq = header->seq;
       nodeInfo->metric = newMetric;
+      nodeInfo->helloMetric = hello->metric;
       nodeInfo->interface = interface;
       nodeInfo->nextHop = header->txNode;
       nodeInfo->lastBroadcast = loopTime;
@@ -882,9 +901,17 @@ void DroneLinkManager::receiveTracerouteRequest(NetworkInterfaceModule *interfac
       // calc index of insertion point
       uint8_t p = sizeof(DRONE_MESH_MSG_HEADER) + payloadLen;
 
+      // lookup txNode and get avgAttempts value as metric
+      uint8_t m = metric;
+
+      DRONE_LINK_NODE_INFO* txInfo = getNodeInfo(header->txNode, false);
+      if (txInfo) {
+        m = ceil(txInfo->avgAttempts + 0.1);
+      }
+
       // add our info
-      buffer[p] = _node;
-      buffer[p+1] = metric;
+      buffer[p] = m;
+      buffer[p+1] = _node;
 
       // update payload size
       setDroneMeshMsgPayloadSize(buffer, payloadLen+2);
@@ -928,6 +955,38 @@ void DroneLinkManager::receiveTracerouteResponse(NetworkInterfaceModule *interfa
     }
 
   } else {
+
+    // check if we are the nextNode... otherwise ignore it
+    if (header->nextNode == _node) {
+
+      // tweak buffer to add our traceroute info
+      uint8_t payloadLen = getDroneMeshMsgPayloadSize(buffer);
+
+      if (payloadLen < DRONE_MESH_MSG_MAX_PAYLOAD_SIZE-2) {
+        // calc index of insertion point
+        uint8_t p = sizeof(DRONE_MESH_MSG_HEADER) + payloadLen;
+
+        // lookup txNode and get avgAttempts value as metric
+        uint8_t m = metric;
+
+        DRONE_LINK_NODE_INFO* txInfo = getNodeInfo(header->txNode, false);
+        if (txInfo) {
+          m = ceil(txInfo->avgAttempts + 0.1);
+        }
+
+        // add our info
+        buffer[p] = m;
+        buffer[p+1] = _node;
+
+        // update payload size
+        setDroneMeshMsgPayloadSize(buffer, payloadLen+2);
+
+        // no need to recalc CRC, as that will be dealt with by generateResponse or hopAlong
+
+      }
+    }
+
+    // send the packet on its way
     Log.noticeln("  Response - hopAlong");
     hopAlong(buffer);
   }
@@ -1368,7 +1427,7 @@ boolean DroneLinkManager::generateAck(NetworkInterfaceModule *interface, uint8_t
     header->srcNode = header->destNode;
     header->destNode = src;
 
-    // and tx node
+    // set tx node to us
     header->txNode = node();
 
     // set Ack flag

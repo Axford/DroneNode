@@ -40,7 +40,8 @@ struct DRONE_LINK_NODE_INFO {
   unsigned long lastHeard;
   unsigned long lastBroadcast;
   boolean heard;
-  uint8_t metric;
+  uint8_t metric; // total metric at last check
+  uint8_t helloMetric;  // what was the metric we heard in the Hello packet
   uint32_t uptime;  // how long has this node been up
   uint8_t seq; // last seq heard on route update (Hello)
   uint8_t gSeq;  // last seq heard for guaranteed packets
