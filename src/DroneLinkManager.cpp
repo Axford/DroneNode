@@ -217,7 +217,8 @@ void DroneLinkManager::checkDirectLinks() {
           if (millis() < page->nodeInfo[j].lastHello + 10 * DRONE_LINK_MANAGER_HELLO_INTERVAL) {
             // see how long since we last had an Ack from this node?
             if (millis() > page->nodeInfo[j].lastAck + DRONE_LINK_MANAGER_LINK_CHECK_INTERVAL) {
-              if (page->nodeInfo[j].helloInterface) {
+              if (page->nodeInfo[j].helloInterface &&
+                  page->nodeInfo[j].helloInterface->getInterfaceState()) {
                 generateLinkCheckRequest(page->nodeInfo[j].helloInterface, n, n);
                 // update lastAck so we don't try again too soon
                 page->nodeInfo[j].lastAck = millis();
@@ -340,6 +341,7 @@ DRONE_LINK_NODE_INFO* DroneLinkManager::getNodeInfo(uint8_t source, boolean hear
       page->nodeInfo[i].lastHello = 0;
       page->nodeInfo[i].helloInterface = NULL;
       page->nodeInfo[i].avgAckTime = 0;
+      page->nodeInfo[i].gSequencer = NULL;
     }
   }
 
@@ -349,6 +351,12 @@ DRONE_LINK_NODE_INFO* DroneLinkManager::getNodeInfo(uint8_t source, boolean hear
       if (!page->nodeInfo[nodeIndex].heard) {
         _peerNodes++;
         page->nodeInfo[nodeIndex].heard = true;
+        // init sequencer if needed
+        if (!page->nodeInfo[nodeIndex].gSequencer) {
+          page->nodeInfo[nodeIndex].gSequencer = new DroneLinkMeshMsgSequencer();
+        } else {
+          page->nodeInfo[nodeIndex].gSequencer->clear();
+        }
       }
       page->nodeInfo[nodeIndex].lastHeard = millis();
     }
@@ -356,6 +364,15 @@ DRONE_LINK_NODE_INFO* DroneLinkManager::getNodeInfo(uint8_t source, boolean hear
     return &page->nodeInfo[nodeIndex];
   } else
     return NULL;
+}
+
+
+uint8_t DroneLinkManager::getMetricFromNodeInfo(DRONE_LINK_NODE_INFO* nodeInfo) {
+  uint8_t metric = 20;
+  if (nodeInfo) {
+    metric = min((int)ceil(2*nodeInfo->avgAttempts + 0.1), 20);
+  }
+  return constrain(metric, 1, 20);
 }
 
 
@@ -520,12 +537,18 @@ void DroneLinkManager::receivePacket(NetworkInterfaceModule *interface, uint8_t 
 
       generateAck(interface, buffer);
 
-      // check to see if we've already received this packet (gSeq)
+      // check to see if we've already received this packet
+
       DRONE_LINK_NODE_INFO* srcNodeInfo = getNodeInfo(header->srcNode, false);
       if (srcNodeInfo) {
-        if (header->seq <= srcNodeInfo->gSeq && header->seq > 5) return;
+        if (srcNodeInfo->gSequencer &&
+            srcNodeInfo->gSequencer->isDuplicate(header->seq)) {
+          return;
+        }
 
-        srcNodeInfo->gSeq = header->seq;
+        //if (header->seq <= srcNodeInfo->gSeq && header->seq > 5) return;
+
+        //srcNodeInfo->gSeq = header->seq;
       }
     }
 
@@ -584,8 +607,8 @@ void DroneLinkManager::receiveAck(uint8_t *buffer) {
         DRONE_LINK_NODE_INFO* nextNodeInfo = getNodeInfo(getDroneMeshMsgTxNode(buffer), false);
         if (nextNodeInfo) {
           nextNodeInfo->lastAck = millis();
-          nextNodeInfo->avgAttempts = (nextNodeInfo->avgAttempts * 49 + b->attempts) / 50;
-          nextNodeInfo->avgAckTime = (nextNodeInfo->avgAckTime * 49 + (millis() - b->created)) / 50;
+          nextNodeInfo->avgAttempts = (nextNodeInfo->avgAttempts * (DRONE_LINK_MANAGER_AVG_SAMPLES-1) + b->attempts) / DRONE_LINK_MANAGER_AVG_SAMPLES;
+          nextNodeInfo->avgAckTime = (nextNodeInfo->avgAckTime * (DRONE_LINK_MANAGER_AVG_SAMPLES-1) + (millis() - b->created)) / DRONE_LINK_MANAGER_AVG_SAMPLES;
         }
       }
     }
@@ -612,7 +635,7 @@ void DroneLinkManager::receiveHello(NetworkInterfaceModule *interface, uint8_t *
   DRONE_LINK_NODE_INFO* txNodeInfo = getNodeInfo(header->txNode, false);
   if (txNodeInfo) {
     // use avgAttempts to txNode to update total metric
-    newMetric = constrain(hello->metric + ceil(txNodeInfo->avgAttempts + 0.1), 0, 255);
+    newMetric = constrain(hello->metric + getMetricFromNodeInfo(txNodeInfo), 0, 255);
     // update last hello
     txNodeInfo->lastHello = millis();
     txNodeInfo->helloInterface = interface;
@@ -633,7 +656,7 @@ void DroneLinkManager::receiveHello(NetworkInterfaceModule *interface, uint8_t *
       DRONE_LINK_NODE_INFO* nextHopInfo = getNodeInfo(nodeInfo->nextHop, false);
       if (nextHopInfo) {
         // use avgAttempts to nexthop to update total metric
-        nodeInfo->metric = constrain(nodeInfo->helloMetric + ceil(nextHopInfo->avgAttempts + 0.1), 0, 255);
+        nodeInfo->metric = constrain(nodeInfo->helloMetric + getMetricFromNodeInfo(nextHopInfo), 0, 255);
       }
     }
 
@@ -828,7 +851,11 @@ void DroneLinkManager::receiveFirmwareStartRequest(NetworkInterfaceModule *inter
     //Use cli() to disable interrupts and sei() to
     /// reenable them.
     cli();
-    Update.end();
+
+    if (Update.isRunning()) {
+      Update.abort();
+      Update.end();
+    }
 
     _firmwareStarted = Update.begin(_firmwareSize);
     sei();
@@ -944,7 +971,7 @@ void DroneLinkManager::receiveTracerouteRequest(NetworkInterfaceModule *interfac
 
       DRONE_LINK_NODE_INFO* txInfo = getNodeInfo(header->txNode, false);
       if (txInfo) {
-        m = ceil(txInfo->avgAttempts + 0.1);
+        m = getMetricFromNodeInfo(txInfo);
       }
 
       // add our info
@@ -1009,7 +1036,7 @@ void DroneLinkManager::receiveTracerouteResponse(NetworkInterfaceModule *interfa
 
         DRONE_LINK_NODE_INFO* txInfo = getNodeInfo(header->txNode, false);
         if (txInfo) {
-          m = ceil(txInfo->avgAttempts + 0.1);
+          m = getMetricFromNodeInfo(txInfo);
         }
 
         // add our info
@@ -1380,6 +1407,22 @@ void DroneLinkManager::processTransmitQueue() {
   // look through txQueue
   for (uint8_t i=0; i<_txQueue.size(); i++) {
     DRONE_MESH_MSG_BUFFER *b = _txQueue.get(i);
+
+    // check age of packet
+    if (b->state > DRONE_MESH_MSG_BUFFER_STATE_EMPTY &&
+        loopTime > b->created + DRONE_LINK_MANAGER_MAX_RETRY_INTERVAL) {
+
+      // update stats on nextNode
+      DRONE_LINK_NODE_INFO* nextNodeInfo = getNodeInfo(getDroneMeshMsgNextNode(b->data), false);
+      if (nextNodeInfo) {
+        nextNodeInfo->avgAttempts = (nextNodeInfo->avgAttempts * (DRONE_LINK_MANAGER_AVG_SAMPLES-1) + b->attempts) / DRONE_LINK_MANAGER_AVG_SAMPLES;
+        nextNodeInfo->givenUp++;
+      }
+
+      // give up and release the buffer
+      b->state = DRONE_MESH_MSG_BUFFER_STATE_EMPTY;
+    }
+
     // check for packets ready to send
     if (b->state == DRONE_MESH_MSG_BUFFER_STATE_READY) {
       if (b->interface->sendPacket(b->data)) {
@@ -1395,7 +1438,7 @@ void DroneLinkManager::processTransmitQueue() {
           // update stats
           DRONE_LINK_NODE_INFO* nextNodeInfo = getNodeInfo(getDroneMeshMsgNextNode(b->data), false);
           if (nextNodeInfo) {
-            nextNodeInfo->avgTxTime = (nextNodeInfo->avgTxTime * 49 + (loopTime - b->created)) / 50;
+            nextNodeInfo->avgTxTime = (nextNodeInfo->avgTxTime * (DRONE_LINK_MANAGER_AVG_SAMPLES-1) + (loopTime - b->created)) / DRONE_LINK_MANAGER_AVG_SAMPLES;
           }
         }
 
@@ -1406,39 +1449,25 @@ void DroneLinkManager::processTransmitQueue() {
       }
     } else if (b->state == DRONE_MESH_MSG_BUFFER_STATE_WAITING) {
 
-      if (loopTime > b->created + DRONE_LINK_MANAGER_MAX_RETRY_INTERVAL) {
-
-        // update stats on nextNode
-        DRONE_LINK_NODE_INFO* nextNodeInfo = getNodeInfo(getDroneMeshMsgNextNode(b->data), false);
-        if (nextNodeInfo) {
-          nextNodeInfo->avgAttempts = (nextNodeInfo->avgAttempts * 99 + b->attempts) / 100;
-          nextNodeInfo->givenUp++;
-        }
-
-        // give up and release the buffer
-        b->state = DRONE_MESH_MSG_BUFFER_STATE_EMPTY;
-      } else {
-        // get avgAck time for this link to compare against
-        uint32_t t = DRONE_LINK_MANAGER_MAX_ACK_INTERVAL;
-        DRONE_LINK_NODE_INFO* nextNodeInfo = getNodeInfo(getDroneMeshMsgNextNode(b->data), false);
-        if (nextNodeInfo) {
-          // use avgAckTime + 10% to reduce duplicate packet transmission
-          t = min(t, (uint32_t)(1.1 * nextNodeInfo->avgAckTime));
-        }
-
-        if (loopTime > b->sent + t) {
-
-          //increment the attempts counter
-          b->attempts++;
-
-          // reset to ready to trigger retransmission
-          b->state = DRONE_MESH_MSG_BUFFER_STATE_READY;
-
-          // TODO - check/update route?
-
-        }
+      // get avgAck time for this link to compare against
+      uint32_t t = DRONE_LINK_MANAGER_MAX_ACK_INTERVAL;
+      DRONE_LINK_NODE_INFO* nextNodeInfo = getNodeInfo(getDroneMeshMsgNextNode(b->data), false);
+      if (nextNodeInfo) {
+        // use avgAckTime + 10% to reduce duplicate packet transmission
+        t = min(t, (uint32_t)(1.1 * nextNodeInfo->avgAckTime));
       }
 
+      if (loopTime > b->sent + t) {
+
+        //increment the attempts counter
+        b->attempts++;
+
+        // reset to ready to trigger retransmission
+        b->state = DRONE_MESH_MSG_BUFFER_STATE_READY;
+
+        // TODO - check/update route?
+
+      }
     }
   }
 }
@@ -1860,7 +1889,7 @@ boolean DroneLinkManager::generateFirmwareStartResponse(NetworkInterfaceModule *
     rBuffer->header.srcNode = node();
     rBuffer->header.nextNode = dest;
     rBuffer->header.destNode = dest;
-    rBuffer->header.seq = _gSeq++;
+    rBuffer->header.seq = 0;
     setDroneMeshMsgPriorityAndPayloadType(buffer->data, DRONE_MESH_MSG_PRIORITY_CRITICAL, DRONE_MESH_MSG_TYPE_FIRMWARE_START_RESPONSE);
 
     // populate info

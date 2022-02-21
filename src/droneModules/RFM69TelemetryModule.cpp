@@ -80,6 +80,8 @@ uint8_t RFM69TelemetryModule::getInterfaceType() {
 
 
 void RFM69TelemetryModule::onParamWrite(DRONE_PARAM_ENTRY *param) {
+  NetworkInterfaceModule::onParamWrite(param);
+  
   if (getDroneLinkMsgParam(param->paramPriority) == RFM69_TELEMETRY_PARAM_POWER) {
     int p = param->data.f[0];
     if (p > 20) p = 20;

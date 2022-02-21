@@ -32,6 +32,9 @@ void OTAManager::init(String hostname) {
     // backoff watchdog
     esp_task_wdt_init(60,0);
 
+    // clear interrupts
+    cli();
+
     _events->send("Update Start", "ota");
     if (onEvent) { onEvent(start, 0); }
   });

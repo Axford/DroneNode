@@ -14,6 +14,7 @@ Manages the local set of pub/sub channels
 
 #include "DroneLinkMsg.h"
 #include "DroneMeshMsg.h"
+#include "DroneLinkMeshMsgSequencer.h"
 #include "DroneLinkChannel.h"
 #include <ESPAsyncWebServer.h>
 #include <FastCRC.h>
@@ -34,6 +35,9 @@ class WiFiManager;
 #define DRONE_LINK_MANAGER_MAX_ACK_INTERVAL     250
 
 #define DRONE_LINK_MANAGER_LINK_CHECK_INTERVAL     2000
+
+#define DRONE_LINK_MANAGER_AVG_SAMPLES             16  // averaging window for avgAttempts, avgTxTime, etc
+
 
 // -----------------------------------------------------------------------------
 // aka routing entry
@@ -56,6 +60,7 @@ struct DRONE_LINK_NODE_INFO {
   uint32_t lastAck;  // time of last ack from this node
   float avgTxTime;  // avg ms to transmit a packet
   float avgAckTime; // avg time from packet creation to confirmed Ack
+  DroneLinkMeshMsgSequencer *gSequencer;
 };
 
 #define DRONE_LINK_NODE_PAGE_SIZE  16
@@ -172,6 +177,7 @@ public:
 
     uint8_t getNodeByName(char * name);
     DRONE_LINK_NODE_INFO* getNodeInfo(uint8_t source, boolean heard);
+    uint8_t getMetricFromNodeInfo(DRONE_LINK_NODE_INFO* nodeInfo);
 
     // get the interface associated with a source id
     NetworkInterfaceModule* getSourceInterface(uint8_t source);
