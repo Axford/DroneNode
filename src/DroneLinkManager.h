@@ -52,6 +52,7 @@ struct DRONE_LINK_NODE_INFO {
   float avgAttempts;
   uint32_t givenUp;  // abandoned packets
   uint32_t lastHello;  // when was the last direct hello heard from this node...  used to identify potential direct routes
+  NetworkInterfaceModule* helloInterface;  // network interface that last heard a direct hello
   uint32_t lastAck;  // time of last ack from this node
   float avgTxTime;  // avg ms to transmit a packet
   float avgAckTime; // avg time from packet creation to confirmed Ack
