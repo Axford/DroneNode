@@ -224,6 +224,9 @@ void DroneLinkManager::checkDirectLinks() {
                 page->nodeInfo[j].lastAck = millis();
               }
             }
+          } else {
+            // taper off avgAttempts info ready for potential future connection?
+            page->nodeInfo[j].avgAttempts *= 0.9;
           }
         }
       }
