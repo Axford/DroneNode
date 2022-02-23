@@ -130,7 +130,7 @@ void DroneLinkChannel::subscribe(uint8_t extNode, DroneModule* subscriber, uint8
 
   sub = (DroneLinkChannelSubscription*)malloc(sizeof(DroneLinkChannelSubscription));
   sub->extNode = extNode;
-  sub->module = subscriber;
+  sub->module = subscriber; // will be NULL for an external sub (i.e. a diff node or a server)
   sub->param = param;
   sub->state = DRONE_LINK_CHANNEL_SUBSCRIPTION_PENDING;
   sub->timer = millis();

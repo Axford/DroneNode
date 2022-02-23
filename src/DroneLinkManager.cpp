@@ -172,11 +172,14 @@ void DroneLinkManager::removeRoute(uint8_t node) {
     nodeInfo->heard = false;
 
     // udpate state for any associated ext subs
+    // UPDATE: removing subscriptions is unhelpful - e.g. if routes are briefly down then we lose subs, e.g. to the server
+    /*
     DroneLinkChannel* c;
     for(int i = 0; i < _channels.size(); i++){
       c = _channels.get(i);
       c->removeExternalSubscriptions(node);
     }
+    */
   }
 }
 
