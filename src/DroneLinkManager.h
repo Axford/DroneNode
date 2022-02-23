@@ -123,6 +123,7 @@ protected:
   uint32_t _kicked;  // got kicked by a higher priority packet
   float _chokeRate;  // rolling average
   float _kickRate;   // rolling average
+  float _utilisation;  // rolling average of txQueue utilisation
 
   // firmware updates
   boolean _firmwareStarted;
@@ -233,7 +234,7 @@ public:
     DRONE_MESH_MSG_BUFFER* getTransmitBuffer(NetworkInterfaceModule *interface, uint8_t priority);
     void scrubDuplicateTransmitBuffers(DRONE_MESH_MSG_BUFFER *buffer);
 
-    void processTransmitQueue();
+    void processTransmitQueue();  // returns utilisation
 
     boolean generateNextHop(NetworkInterfaceModule *interface, uint8_t *buffer, uint8_t nextHop);
 

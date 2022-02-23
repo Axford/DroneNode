@@ -27,6 +27,7 @@ DroneLinkManager::DroneLinkManager(WiFiManager *wifiManager):
   _kicked = 0;
   _chokeRate = 0;
   _kickRate = 0;
+  _utilisation = 0;
 
   _firmwareStarted = false;
   _firmwareSize = 0;
@@ -252,6 +253,21 @@ void DroneLinkManager::loop() {
     checkForOldRoutes();
     checkDirectLinks();
 
+    // update _utilisation
+    uint8_t utilCount = 0;
+    for (uint8_t i=0; i<_txQueue.size(); i++) {
+      DRONE_MESH_MSG_BUFFER *b = _txQueue.get(i);
+
+      // check age of packet
+      if (b->state > DRONE_MESH_MSG_BUFFER_STATE_EMPTY) {
+        utilCount++;
+      }
+    }
+
+    // 10 second average
+    if (_txQueue.size() > 0)
+      _utilisation = (_utilisation * 9 + ((float)utilCount / _txQueue.size())) / 10;
+
     processTimer = loopTime;
   }
 
@@ -419,7 +435,7 @@ void DroneLinkManager::serveNodeInfo(AsyncWebServerRequest *request) {
     }
   }
 
-  response->printf(("\n\nTx Queue:  (size %u), kicked: %u (%.1f), choked: %u (%.1f) \n"), getTxQueueSize(), _kicked, _kickRate, _choked, _chokeRate);
+  response->printf(("\n\nTx Queue: %.1f (size %u), kicked: %u (%.1f), choked: %u (%.1f) \n"), (100*_utilisation), getTxQueueSize(), _kicked, _kickRate, _choked, _chokeRate);
 
   // print detailed queue info
   for (uint8_t i=0; i<_txQueue.size(); i++) {
@@ -1411,6 +1427,8 @@ void DroneLinkManager::processTransmitQueue() {
   } );
 
   // look through txQueue
+  uint8_t sentAPacket = false;
+
   for (uint8_t i=0; i<_txQueue.size(); i++) {
     DRONE_MESH_MSG_BUFFER *b = _txQueue.get(i);
 
@@ -1431,7 +1449,9 @@ void DroneLinkManager::processTransmitQueue() {
 
     // check for packets ready to send
     if (b->state == DRONE_MESH_MSG_BUFFER_STATE_READY) {
-      if (b->interface->sendPacket(b->data)) {
+
+      if (!sentAPacket &&
+          b->interface->sendPacket(b->data)) {
         _packetsSent++;
 
         // if this is guaranteed, then flag to wait for a reply
@@ -1449,7 +1469,7 @@ void DroneLinkManager::processTransmitQueue() {
         }
 
         // just the one Mrs Wemberley
-        return;
+        sentAPacket = true;
       } else {
         // ??
       }
@@ -1737,6 +1757,7 @@ boolean DroneLinkManager::generateRouterResponse(NetworkInterfaceModule *interfa
     rBuffer->kicked = _kicked;
     rBuffer->chokeRate = round(_chokeRate * 10);
     rBuffer->kickRate = round(_kickRate * 10);
+    rBuffer->utilisation = round(_utilisation * 100);
 
     // calc CRC
     rBuffer->crc = _CRC8.smbus((uint8_t*)rBuffer, sizeof(DRONE_MESH_MSG_ROUTER_RESPONSE)-1);

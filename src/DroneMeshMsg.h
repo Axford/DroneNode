@@ -114,8 +114,9 @@ struct DRONE_MESH_MSG_ROUTER_RESPONSE {
   uint32_t choked;
   uint8_t chokeRate; // x10 and rounded.  e.g. 0.2 becomes 20
   uint8_t kickRate;  // x10 and rounded
+  uint8_t utilisation;  // x100 and rounded .. i.e. utilisation %
   uint8_t crc;
-} __packed;  // header(7) + 5 + 8 = 20
+} __packed;  // header(7) + 6 + 8 = 21
 
 struct DRONE_MESH_MSG_LINK_CHECK_REQUEST {
   DRONE_MESH_MSG_HEADER header;
