@@ -1000,8 +1000,8 @@ void DroneExecutionManager::execute() {
         // fetch the instruction
         DEM_INSTRUCTION_COMPILED ic = cse->macro->commands->get(cse->i);
 
-        if (!cse->continuation)
-          Log.noticeln(F("[DEM.e] %s #%u > %s\n"), cse->macro->name, cse->i, ic.cmd);
+        //if (!cse->continuation)
+        //  Log.noticeln(F("[DEM.e] %s #%u > %s\n"), cse->macro->name, cse->i, ic.cmd);
 
         // execute the instruction
         unsigned long start = millis();
@@ -1277,7 +1277,7 @@ boolean DroneExecutionManager::core_publish(DEM_INSTRUCTION_COMPILED* instr, DEM
   memcpy(buffer, instr->msg.payload.c, len);
   buffer[len] = 0;
 
-  Log.noticeln(F("[.pub] Publishing %s on module %u"), buffer, dse->d);
+  //Log.noticeln(F("[.pub] Publishing %s on module %u"), buffer, dse->d);
   // get param address by name from module
   DroneModule* mod = _dmm->getModuleById(dse->d);
   if (mod != NULL) {
@@ -1286,11 +1286,11 @@ boolean DroneExecutionManager::core_publish(DEM_INSTRUCTION_COMPILED* instr, DEM
       p->publish = true;
 
     } else {
-      Log.errorln(F("[.r] Unknown param"));
+      Log.errorln(F("[DEM.r] Unknown param"));
     }
 
   } else {
-      Log.errorln(F("[.pub] Unknown module"));
+      Log.errorln(F("[DEM.pub] Unknown module"));
   }
   return true;
 }

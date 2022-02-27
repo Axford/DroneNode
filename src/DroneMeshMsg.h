@@ -48,6 +48,17 @@ struct DRONE_MESH_MSG_HEADER {
 #define DRONE_MESH_MSG_TYPE_FIRMWARE_WRITE           24
 #define DRONE_MESH_MSG_TYPE_FIRMWARE_REWIND          25
 
+// filesystem messages
+#define DRONE_MESH_MSG_TYPE_FS_FILE_REQUEST          10
+#define DRONE_MESH_MSG_TYPE_FS_FILE_RESPONSE         11
+#define DRONE_MESH_MSG_TYPE_FS_RESIZE_REQUEST        12
+#define DRONE_MESH_MSG_TYPE_FS_RESIZE_RESPONSE       13
+#define DRONE_MESH_MSG_TYPE_FS_READ_REQUEST          14
+#define DRONE_MESH_MSG_TYPE_FS_READ_RESPONSE         15
+#define DRONE_MESH_MSG_TYPE_FS_WRITE_REQUEST         16
+#define DRONE_MESH_MSG_TYPE_FS_WRITE_RESPONSE        17
+
+
 // -------------------------------------------------------------------------
 
 // Priorities
@@ -124,6 +135,9 @@ struct DRONE_MESH_MSG_LINK_CHECK_REQUEST {
   uint8_t crc;
 } __packed;
 
+// ----------------------------------------------------------------------------
+// firmware messages
+// ----------------------------------------------------------------------------
 struct DRONE_MESH_MSG_FIRMWARE_START_REQUEST {
   DRONE_MESH_MSG_HEADER header;
   uint32_t size;
@@ -149,6 +163,42 @@ struct DRONE_MESH_MSG_FIRMWARE_REWIND {
   uint8_t crc;
 } __packed;
 
+
+// ----------------------------------------------------------------------------
+// filesystem
+// ----------------------------------------------------------------------------
+
+#define DRONE_MESH_MSG_FS_MAX_PATH_SIZE       24  // inc null termination
+
+#define DRONE_MESH_MSG_FS_FLAG_PATH_INFO      0
+#define DRONE_MESH_MSG_FS_FLAG_INDEX_INFO     1
+
+#define DRONE_MESH_MSG_FS_FLAG_DIRECTORY      4
+#define DRONE_MESH_MSG_FS_FLAG_FILE           5
+#define DRONE_MESH_MSG_FS_FLAG_NOT_FOUND      6
+#define DRONE_MESH_MSG_FS_FLAG_ERROR          7
+
+
+struct DRONE_MESH_MSG_FS_FILE_REQUEST {
+  DRONE_MESH_MSG_HEADER header;
+  uint8_t flags;
+  uint8_t id; // index of file in directory (subject to flags)
+  uint8_t path[DRONE_MESH_MSG_FS_MAX_PATH_SIZE];  // null terminated
+  uint8_t crc;
+} __packed;
+
+struct DRONE_MESH_MSG_FS_FILE_RESPONSE {
+  DRONE_MESH_MSG_HEADER header;
+  uint8_t flags;
+  uint8_t id; // unique numeric id of entry
+  uint32_t size;  // filesize of number of directory entries
+  uint8_t path[DRONE_MESH_MSG_FS_MAX_PATH_SIZE];  // null terminated
+  uint8_t crc;
+} __packed;
+
+
+
+// ----------------------------------------------------------------------------
 #define DRONE_MESH_MSG_MAX_PAYLOAD_SIZE   48 // bytes - to keep within RFM69 transmit size limit
 #define DRONE_MESH_MSG_MAX_PACKET_SIZE    (sizeof(DRONE_MESH_MSG_HEADER) + DRONE_MESH_MSG_MAX_PAYLOAD_SIZE + 1 )  // header + payload + CRC
 

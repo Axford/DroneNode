@@ -1,0 +1,196 @@
+
+#include "DroneFS.h"
+#include <ArduinoLog.h>
+
+//--------------------------------------------------------
+// DroneFSEntry
+//--------------------------------------------------------
+
+DroneFSEntry::DroneFSEntry(DroneFS* fs, DroneFSEntry* parent, const char* name, boolean isDir) {
+  _fs = fs;
+  _parent = parent;
+
+  // init name
+  _name[0] = '/';
+  for (uint8_t i=1; i<DRONE_FS_MAX_NAME_SIZE; i++) _name[i] = 0;
+  setName(name);
+
+  _size = 0;
+  _id = _fs->getNextId();
+
+  isDirectory(isDir);
+  _enumerated = false;
+}
+
+void DroneFSEntry::setName(const char* name) {
+  strncpy(_name, name, DRONE_FS_MAX_NAME_SIZE-1);
+}
+
+char* DroneFSEntry::getName() {
+  return _name;
+}
+
+void DroneFSEntry::setId(uint8_t id) {
+  _id = id;
+}
+
+uint8_t DroneFSEntry::getId() {
+  return _id;
+}
+
+uint32_t DroneFSEntry::getSize() {
+  return _isDir ? _children.size() : _size;
+}
+
+void DroneFSEntry::getPath(char * path, uint8_t maxLen) {
+  uint8_t len = 0;
+
+  // get path to this entry (will inc trailing /)
+  /*
+  if (_parent) {
+    _parent->getPath(path, maxLen);
+    len  = strlen(path);
+  }
+  */
+
+  // add our name to the path
+  strncpy(&path[len], _name, maxLen - len);
+  len += strlen(path);
+
+  // if we are a directory, but not the root, add a trailing /
+  if (_parent &&
+      _isDir &&
+      len < maxLen) {
+    path[len] = '/';
+    len++;
+  }
+
+  // add null
+  path[len] = 0;
+}
+
+boolean DroneFSEntry::matchesPath(char* path) {
+  char tpath[DRONE_FS_MAX_PATH_SIZE];
+  getPath((char*)&tpath, DRONE_FS_MAX_PATH_SIZE);
+  if (strlen(path) != strlen(tpath)) return false;
+  return strcmp(path, tpath) == 0;
+}
+
+void DroneFSEntry::isDirectory(boolean isDir) {
+  _isDir = isDir;
+}
+
+boolean DroneFSEntry::isDirectory() {
+  return _isDir;
+}
+
+boolean DroneFSEntry::enumerate() {
+  if (!_isDir) return false;
+
+  char path[DRONE_FS_MAX_PATH_SIZE];
+  getPath(path, DRONE_FS_MAX_PATH_SIZE-1);
+
+  Log.noticeln(path);
+
+  File dir = LITTLEFS.open(path);
+  if (!dir) {
+    Log.errorln(F("  can't open path"));
+    return false;
+  }
+
+  if (!dir.isDirectory()) {
+    Log.errorln(F("  not a directory"));
+    return false;
+  }
+
+  uint8_t i = 0;
+  File file = dir.openNextFile();
+  while(file){
+    // do we need to create a new entry object?
+    DroneFSEntry* entry = NULL;
+    if (i < _children.size()) {
+      entry = _children.get(i);
+      // sync entry
+      entry->setName(file.name());
+      entry->isDirectory(file.isDirectory());
+    } else {
+      // create a new entry
+      entry = new DroneFSEntry(_fs, this, file.name(), file.isDirectory());
+      // add to children
+      _children.add(entry);
+    }
+    // sync properties
+    entry->readProperties(file);
+
+    Log.noticeln(entry->getName());
+
+    file = dir.openNextFile();
+    i++;
+  }
+
+  _enumerated = true;
+  return true;
+}
+
+void DroneFSEntry::readProperties(File f) {
+  _size = f.size();
+}
+
+DroneFSEntry* DroneFSEntry::getEntryByPath(char* path) {
+  if (matchesPath(path)) return this;
+
+  DroneFSEntry* entry = NULL;
+
+  if (_isDir) {
+    for (uint8_t i=0; i<_children.size(); i++) {
+      entry = _children.get(i)->getEntryByPath(path);
+      if (entry) break;
+    }
+  }
+
+  return entry;
+}
+
+DroneFSEntry* DroneFSEntry::getEntryByIndex(uint8_t index) {
+  if (index < _children.size()) return _children.get(index);
+  return NULL;
+}
+
+//--------------------------------------------------------
+// DroneFS
+//--------------------------------------------------------
+
+DroneFS::DroneFS() {
+  char rootName[2] = "/";
+  _nextId = 0;
+  _root = new DroneFSEntry(this, NULL, rootName, true);
+}
+
+
+void DroneFS::setup() {
+  Log.noticeln(F("DroneFS setup..."));
+
+  _root->enumerate(); // will not recurse
+
+  Log.noticeln(F("  totalBytes %d"), LITTLEFS.totalBytes());
+  Log.noticeln(F("  usedBytes %d"), LITTLEFS.usedBytes());
+}
+
+uint8_t DroneFS::getNextId() {
+  return _nextId++;
+}
+
+DroneFSEntry* DroneFS::getEntryByPath(char* path) {
+  return _root->getEntryByPath(path);
+}
+
+DroneFSEntry* DroneFS::getEntryByIndex(char* path, uint8_t index) {
+  // get the specified directory
+  DroneFSEntry* dir = _root->getEntryByPath(path);
+
+  if (dir) {
+    return dir->getEntryByIndex(index);
+  } else{
+    return NULL;
+  }
+}
