@@ -33,6 +33,7 @@ Steps to setup a new device:
 #include "DroneModuleManager.h"
 #include "DroneWire.h"
 #include "DroneExecutionManager.h"
+#include "DroneFS.h"
 
 #define INC_WEB_SERVER
 
@@ -78,6 +79,7 @@ WebFSEditor fsEditor(LITTLEFS, doLoop);
 AsyncEventSource events("/events");
 OTAManager OTAMgr(&events);
 
+DroneFS dfs;
 DroneLinkManager *dlm;
 DroneModuleManager *dmm;
 DroneExecutionManager *dem;
@@ -207,57 +209,6 @@ void coreTask( void * pvParameters ) {
 }
 
 
-void listDir(fs::FS &fs, const char * dirname, uint8_t levels){
-  doLoop = false;
-  Serial.printf("Listing directory: %s\r\n", dirname);
-
-  File root = fs.open(dirname);
-  if(!root){
-      Serial.println("- failed to open directory");
-      return;
-  }
-  if(!root.isDirectory()){
-      Serial.println(" - not a directory");
-      return;
-  }
-
-  File file = root.openNextFile();
-  while(file){
-      if(file.isDirectory()){
-          Serial.print("  DIR : ");
-
-#ifdef CONFIG_LITTLEFS_FOR_IDF_3_2
-          Serial.println(file.name());
-#else
-          Serial.print(file.name());
-          time_t t= file.getLastWrite();
-          struct tm * tmstruct = localtime(&t);
-          Serial.printf("  LAST WRITE: %d-%02d-%02d %02d:%02d:%02d\n",(tmstruct->tm_year)+1900,( tmstruct->tm_mon)+1, tmstruct->tm_mday,tmstruct->tm_hour , tmstruct->tm_min, tmstruct->tm_sec);
-#endif
-
-          if(levels){
-              listDir(fs, file.name(), levels -1);
-          }
-      } else {
-          Serial.print("  FILE: ");
-          Serial.print(file.name());
-          Serial.print("  SIZE: ");
-
-#ifdef CONFIG_LITTLEFS_FOR_IDF_3_2
-          Serial.println(file.size());
-#else
-          Serial.print(file.size());
-          time_t t= file.getLastWrite();
-          struct tm * tmstruct = localtime(&t);
-          Serial.printf("  LAST WRITE: %d-%02d-%02d %02d:%02d:%02d\n",(tmstruct->tm_year)+1900,( tmstruct->tm_mon)+1, tmstruct->tm_mday,tmstruct->tm_hour , tmstruct->tm_min, tmstruct->tm_sec);
-#endif
-      }
-      file = root.openNextFile();
-  }
-  doLoop = true;
-}
-
-
 void setup() {
   pinMode(PIN_LED, OUTPUT);
   digitalWrite(PIN_LED, HIGH);
@@ -293,11 +244,14 @@ void setup() {
     ESP.restart();
   }
 
-  // list filesystem
-  listDir(LITTLEFS, "/", 0);
+  // setup FS
+  dfs.setup();
 
-  Log.noticeln(F("  totalBytes %d"), LITTLEFS.totalBytes());
-  Log.noticeln(F("  usedBytes %d"), LITTLEFS.usedBytes());
+  // list filesystem
+  //listDir(LITTLEFS, "/", 0);
+
+  //Log.noticeln(F("  totalBytes %d"), LITTLEFS.totalBytes());
+  //Log.noticeln(F("  usedBytes %d"), LITTLEFS.usedBytes());
 
 
   logFile = LITTLEFS.open("/startup.log", FILE_WRITE);
@@ -324,7 +278,7 @@ void setup() {
   #endif
 
   // create core objects
-  dlm = new DroneLinkManager(&wifiManager);
+  dlm = new DroneLinkManager(&wifiManager, &dfs);
   dlm->onEvent = handleDLMEvent;
   dmm = new DroneModuleManager(dlm);
   dem = new DroneExecutionManager(dmm, dlm, LITTLEFS, logFile);

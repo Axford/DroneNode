@@ -16,9 +16,11 @@ Manages the local set of pub/sub channels
 #include "DroneMeshMsg.h"
 #include "DroneLinkMeshMsgSequencer.h"
 #include "DroneLinkChannel.h"
+#include "DroneFS.h"
 #include <ESPAsyncWebServer.h>
 #include <FastCRC.h>
 #include <uthash.h>
+#include "FS.h"
 
 #include "droneModules/NetworkInterfaceModule.h"
 
@@ -96,6 +98,7 @@ class DroneLinkManager
 {
 protected:
   WiFiManager *_wifiManager;
+  DroneFS* _fs;
   uint8_t _node;  // local node id
   unsigned long _publishedMessages;
   IvanLinkedList::LinkedList<DroneLinkChannel*> _channels;
@@ -138,7 +141,7 @@ protected:
 public:
     DroneLinkManagerCallback onEvent;
 
-    DroneLinkManager(WiFiManager *wifiManager);
+    DroneLinkManager(WiFiManager *wifiManager, DroneFS* fs);
 
     void enableWiFi();
     void disableWiFi();
@@ -213,6 +216,8 @@ public:
     void receiveFirmwareStartRequest(NetworkInterfaceModule *interface, uint8_t *buffer, uint8_t metric);
     void receiveFirmwareWrite(NetworkInterfaceModule *interface, uint8_t *buffer, uint8_t metric);
 
+    void receiveFSFileRequest(NetworkInterfaceModule *interface, uint8_t *buffer, uint8_t metric);
+
     // standard forwarding mechanic for unicast packets
     virtual void hopAlong(uint8_t *buffer);
 
@@ -254,6 +259,8 @@ public:
     boolean generateLinkCheckRequest(NetworkInterfaceModule *interface, uint8_t dest, uint8_t nextHop);
 
     boolean sendDroneLinkMessage(NetworkInterfaceModule *interface, uint8_t destNode, uint8_t nextNode, DroneLinkMsg *msg);
+
+    boolean generateFSFileResponse(NetworkInterfaceModule *interface, uint8_t dest, uint8_t nextHop, DroneFSEntry* entry);
 
     boolean generateFirmwareStartResponse(NetworkInterfaceModule *interface, uint8_t dest, uint8_t status);
     boolean generateFirmwareRewind(NetworkInterfaceModule *interface, uint8_t dest, uint32_t offset);
