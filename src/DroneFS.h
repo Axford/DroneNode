@@ -27,6 +27,7 @@ class DroneFS;
 class DroneFSEntry {
 protected:
   DroneFS* _fs;
+  File _file;  // our own file handle... used in read operations
   DroneFSEntry* _parent;
   char _name[DRONE_FS_MAX_NAME_SIZE];
   uint8_t _id;
@@ -55,8 +56,11 @@ public:
 
   void readProperties(File f);  // read properties from an open file handle, used by enumerate
 
+  boolean readBlock(uint32_t offset, uint8_t* buffer, uint8_t size);
+
   DroneFSEntry* getEntryByPath(char* path);
   DroneFSEntry* getEntryByIndex(uint8_t index);
+  DroneFSEntry* getEntryById(uint8_t id);
 };
 
 
@@ -77,6 +81,7 @@ public:
   uint8_t getNextId();
   DroneFSEntry* getEntryByPath(char* path);
   DroneFSEntry* getEntryByIndex(char* path, uint8_t index);
+  DroneFSEntry* getEntryById(uint8_t id);
 
 };
 

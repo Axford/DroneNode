@@ -217,6 +217,7 @@ public:
     void receiveFirmwareWrite(NetworkInterfaceModule *interface, uint8_t *buffer, uint8_t metric);
 
     void receiveFSFileRequest(NetworkInterfaceModule *interface, uint8_t *buffer, uint8_t metric);
+    void receiveFSReadRequest(NetworkInterfaceModule *interface, uint8_t *buffer, uint8_t metric);
 
     // standard forwarding mechanic for unicast packets
     virtual void hopAlong(uint8_t *buffer);
@@ -261,6 +262,7 @@ public:
     boolean sendDroneLinkMessage(NetworkInterfaceModule *interface, uint8_t destNode, uint8_t nextNode, DroneLinkMsg *msg);
 
     boolean generateFSFileResponse(NetworkInterfaceModule *interface, uint8_t dest, uint8_t nextHop, DroneFSEntry* entry);
+    boolean generateFSReadResponse(NetworkInterfaceModule *interface, uint8_t dest, uint8_t nextHop, DroneFSEntry* entry, uint32_t offset);
 
     boolean generateFirmwareStartResponse(NetworkInterfaceModule *interface, uint8_t dest, uint8_t status);
     boolean generateFirmwareRewind(NetworkInterfaceModule *interface, uint8_t dest, uint32_t offset);

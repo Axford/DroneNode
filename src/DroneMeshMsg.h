@@ -169,6 +169,7 @@ struct DRONE_MESH_MSG_FIRMWARE_REWIND {
 // ----------------------------------------------------------------------------
 
 #define DRONE_MESH_MSG_FS_MAX_PATH_SIZE       24  // inc null termination
+#define DRONE_MESH_MSG_FS_DATA_SIZE           32
 
 #define DRONE_MESH_MSG_FS_FLAG_PATH_INFO      0
 #define DRONE_MESH_MSG_FS_FLAG_INDEX_INFO     1
@@ -196,6 +197,21 @@ struct DRONE_MESH_MSG_FS_FILE_RESPONSE {
   uint8_t crc;
 } __packed;
 
+struct DRONE_MESH_MSG_FS_READ_REQUEST {
+  DRONE_MESH_MSG_HEADER header;
+  uint8_t id; // id of file in directory
+  uint32_t offset;
+  uint8_t crc;
+} __packed;
+
+struct DRONE_MESH_MSG_FS_READ_RESPONSE {
+  DRONE_MESH_MSG_HEADER header;
+  uint8_t id; // id of file in directory
+  uint32_t offset;
+  uint8_t size;
+  uint8_t data[DRONE_MESH_MSG_FS_DATA_SIZE];
+  uint8_t crc;
+} __packed;
 
 
 // ----------------------------------------------------------------------------

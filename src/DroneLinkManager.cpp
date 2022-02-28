@@ -601,6 +601,7 @@ void DroneLinkManager::receivePacket(NetworkInterfaceModule *interface, uint8_t 
 
       // filesystem
       case DRONE_MESH_MSG_TYPE_FS_FILE_REQUEST: receiveFSFileRequest(interface, buffer, metric); break;
+      case DRONE_MESH_MSG_TYPE_FS_READ_REQUEST: receiveFSReadRequest(interface, buffer, metric); break;
 
     default:
       // if not a broadcast then just provide default routing using hopAlong
@@ -1002,6 +1003,32 @@ void DroneLinkManager::receiveFSFileRequest(NetworkInterfaceModule *interface, u
         entry = _fs->getEntryByIndex((char*)rbuffer->path, rbuffer->id);
       }
       generateFSFileResponse(interface, header->srcNode, header->txNode, entry);
+
+    } else {
+      hopAlong(buffer);
+    }
+  }
+}
+
+
+void DroneLinkManager::receiveFSReadRequest(NetworkInterfaceModule *interface, uint8_t *buffer, uint8_t metric) {
+  DRONE_MESH_MSG_HEADER *header = (DRONE_MESH_MSG_HEADER*)buffer;
+
+  Log.noticeln("[DLM.rT] FS Read request from %u to %u", header->srcNode, header->destNode);
+
+  // check if we are the nextNode... otherwise ignore it
+  if (header->nextNode == _node) {
+
+    // are we the destination?
+    if (header->destNode == _node) {
+
+      DRONE_MESH_MSG_FS_READ_REQUEST* rbuffer = (DRONE_MESH_MSG_FS_READ_REQUEST*)buffer;
+
+      // handle request type
+      DroneFSEntry* entry = NULL;
+      entry = _fs->getEntryById(rbuffer->id);
+
+      generateFSReadResponse(interface, header->srcNode, header->txNode, entry, rbuffer->offset);
 
     } else {
       hopAlong(buffer);
@@ -1977,6 +2004,53 @@ boolean DroneLinkManager::generateFSFileResponse(NetworkInterfaceModule *interfa
 
     // calc CRC
     rBuffer->crc = _CRC8.smbus((uint8_t*)rBuffer, sizeof(DRONE_MESH_MSG_FS_FILE_RESPONSE)-1);
+
+    return true;
+  }
+
+  return false;
+}
+
+
+boolean DroneLinkManager::generateFSReadResponse(NetworkInterfaceModule *interface, uint8_t dest, uint8_t nextHop, DroneFSEntry* entry, uint32_t offset) {
+
+  // request a new buffer in the transmit queue
+  DRONE_MESH_MSG_BUFFER *buffer = getTransmitBuffer(interface, DRONE_MESH_MSG_PRIORITY_HIGH);
+
+  // if successful
+  if (buffer) {
+    DRONE_MESH_MSG_FS_READ_RESPONSE *rBuffer = (DRONE_MESH_MSG_FS_READ_RESPONSE*)buffer->data;
+
+    // populate packet
+    rBuffer->header.typeGuaranteeSize = DRONE_MESH_MSG_SEND | DRONE_MESH_MSG_GUARANTEED | (sizeof(DRONE_MESH_MSG_FS_READ_RESPONSE) - sizeof(DRONE_MESH_MSG_HEADER) - 2) ;
+    rBuffer->header.txNode = node();;
+    rBuffer->header.srcNode = node();
+    rBuffer->header.nextNode = nextHop;
+    rBuffer->header.destNode = dest;
+    rBuffer->header.seq = _gSeq++;
+    setDroneMeshMsgPriorityAndPayloadType(buffer->data, DRONE_MESH_MSG_PRIORITY_HIGH, DRONE_MESH_MSG_TYPE_FS_READ_RESPONSE);
+
+    // populate info
+    if (entry) {
+      rBuffer->id = entry->getId();
+      rBuffer->offset = offset;
+
+      // calc data size
+      rBuffer->size = min(entry->getSize() - offset,  (uint32_t)DRONE_MESH_MSG_FS_DATA_SIZE);
+
+      // read and populate data buffer
+      if (!entry->readBlock(offset, rBuffer->data, rBuffer->size)) {
+        rBuffer->size = 0; // something went wrong
+      }
+
+    } else {
+      rBuffer->id = 0;
+      rBuffer->offset = 0;
+      rBuffer->size = 0;
+    }
+
+    // calc CRC
+    rBuffer->crc = _CRC8.smbus((uint8_t*)rBuffer, sizeof(DRONE_MESH_MSG_FS_READ_RESPONSE)-1);
 
     return true;
   }

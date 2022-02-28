@@ -136,6 +136,24 @@ void DroneFSEntry::readProperties(File f) {
   _size = f.size();
 }
 
+boolean DroneFSEntry::readBlock(uint32_t offset, uint8_t* buffer, uint8_t size) {
+  if (!_file) {
+    char tpath[DRONE_FS_MAX_PATH_SIZE];
+    getPath((char*)&tpath, DRONE_FS_MAX_PATH_SIZE);
+
+    _file = LITTLEFS.open(tpath);
+  }
+
+  if (!_file) return false;
+
+  if (_file.seek(offset, SeekSet)) {
+    _file.read(buffer, size);
+    return true;
+  } else {
+    return false;
+  }
+}
+
 DroneFSEntry* DroneFSEntry::getEntryByPath(char* path) {
   if (matchesPath(path)) return this;
 
@@ -154,6 +172,21 @@ DroneFSEntry* DroneFSEntry::getEntryByPath(char* path) {
 DroneFSEntry* DroneFSEntry::getEntryByIndex(uint8_t index) {
   if (index < _children.size()) return _children.get(index);
   return NULL;
+}
+
+DroneFSEntry* DroneFSEntry::getEntryById(uint8_t id) {
+  if (_id == id) return this;
+
+  DroneFSEntry* entry = NULL;
+
+  if (_isDir) {
+    for (uint8_t i=0; i<_children.size(); i++) {
+      entry = _children.get(i)->getEntryById(id);
+      if (entry) break;
+    }
+  }
+
+  return entry;
 }
 
 //--------------------------------------------------------
@@ -193,4 +226,8 @@ DroneFSEntry* DroneFS::getEntryByIndex(char* path, uint8_t index) {
   } else{
     return NULL;
   }
+}
+
+DroneFSEntry* DroneFS::getEntryById(uint8_t id) {
+  return _root->getEntryById(id);
 }
