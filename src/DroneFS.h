@@ -45,6 +45,7 @@ public:
   uint8_t getId();
 
   uint32_t getSize();
+  boolean setSize(uint32_t size);
 
   void getPath(char * path, uint8_t maxLen);
   boolean matchesPath(char* path);
@@ -57,6 +58,7 @@ public:
   void readProperties(File f);  // read properties from an open file handle, used by enumerate
 
   boolean readBlock(uint32_t offset, uint8_t* buffer, uint8_t size);
+  boolean writeBlock(uint32_t offset, uint8_t* buffer, uint8_t size);
 
   DroneFSEntry* getEntryByPath(char* path);
   DroneFSEntry* getEntryByIndex(uint8_t index);

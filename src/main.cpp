@@ -244,15 +244,6 @@ void setup() {
     ESP.restart();
   }
 
-  // setup FS
-  dfs.setup();
-
-  // list filesystem
-  //listDir(LITTLEFS, "/", 0);
-
-  //Log.noticeln(F("  totalBytes %d"), LITTLEFS.totalBytes());
-  //Log.noticeln(F("  usedBytes %d"), LITTLEFS.usedBytes());
-
 
   logFile = LITTLEFS.open("/startup.log", FILE_WRITE);
 
@@ -344,6 +335,9 @@ void setup() {
 
   Log.begin(LOG_LEVEL_VERBOSE, &Serial);
   Log.noticeln(F("[] Startup complete"));
+
+  // setup FS
+  dfs.setup();
 
   // start core task
   /*

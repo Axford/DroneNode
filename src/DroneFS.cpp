@@ -42,6 +42,64 @@ uint32_t DroneFSEntry::getSize() {
   return _isDir ? _children.size() : _size;
 }
 
+boolean DroneFSEntry::setSize(uint32_t size) {
+  if (_isDir) return false;
+
+  if (_file) {
+    _file.close();
+  }
+
+  char tpath[DRONE_FS_MAX_PATH_SIZE];
+  getPath((char*)&tpath, DRONE_FS_MAX_PATH_SIZE);
+
+  Log.noticeln("Resizing: %s to %u", tpath, size);
+
+  if (size != _size) {
+    if (size > _size) {
+      Log.noticeln("Extending current file from: %u", _size);
+      // can write padding to extend current size
+      File file = LITTLEFS.open(tpath, FILE_WRITE);
+      if (file.seek(0, SeekEnd)) {
+        Log.noticeln("Padding from position %u to %u", file.position(), size);
+        for (uint32_t i=file.position(); i<size; i++) {
+          file.write(63);  // ?
+        }
+        file.flush();
+        Log.noticeln("New size: %u", file.size());
+        file.close();
+      } else {
+        file.close();
+        Log.noticeln("Error seeking");
+        return false;
+      }
+
+    } else{
+      // need to delete and then rewrite new size
+      Log.noticeln("Removing prev file");
+      LITTLEFS.remove(tpath);
+
+      if (size > 0) {
+        // write padding
+        Log.noticeln("Creating new file");
+        File file = LITTLEFS.open(tpath, FILE_WRITE);
+        if (file) {
+          Log.noticeln("Padding to %u", size);
+          for (uint32_t i=0; i<size; i++) {
+            file.write(63); // ?
+          }
+          file.flush();
+          Log.noticeln("New size: %u", file.size());
+          file.close();
+        } else {
+          Log.noticeln("Unable to create new file");
+        }
+      }
+    }
+  }
+  _size = size;
+  return true;
+}
+
 void DroneFSEntry::getPath(char * path, uint8_t maxLen) {
   uint8_t len = 0;
 
@@ -92,13 +150,14 @@ boolean DroneFSEntry::enumerate() {
 
   Log.noticeln(path);
 
-  File dir = LITTLEFS.open(path);
+  File dir = LITTLEFS.open(path, FILE_READ);
   if (!dir) {
     Log.errorln(F("  can't open path"));
     return false;
   }
 
   if (!dir.isDirectory()) {
+    dir.close();
     Log.errorln(F("  not a directory"));
     return false;
   }
@@ -124,9 +183,13 @@ boolean DroneFSEntry::enumerate() {
 
     Log.noticeln(entry->getName());
 
+    file.close();
+
     file = dir.openNextFile();
     i++;
   }
+  if (file) file.close();
+  dir.close();
 
   _enumerated = true;
   return true;
@@ -141,7 +204,7 @@ boolean DroneFSEntry::readBlock(uint32_t offset, uint8_t* buffer, uint8_t size) 
     char tpath[DRONE_FS_MAX_PATH_SIZE];
     getPath((char*)&tpath, DRONE_FS_MAX_PATH_SIZE);
 
-    _file = LITTLEFS.open(tpath);
+    _file = LITTLEFS.open(tpath, FILE_READ);
   }
 
   if (!_file) return false;
@@ -152,6 +215,31 @@ boolean DroneFSEntry::readBlock(uint32_t offset, uint8_t* buffer, uint8_t size) 
   } else {
     return false;
   }
+}
+
+boolean DroneFSEntry::writeBlock(uint32_t offset, uint8_t* buffer, uint8_t size) {
+  if (_file) _file.close();
+  
+  char tpath[DRONE_FS_MAX_PATH_SIZE];
+  getPath((char*)&tpath, DRONE_FS_MAX_PATH_SIZE);
+
+  _file = LITTLEFS.open(tpath, FILE_WRITE);
+
+  if (!_file) return false;
+  Log.noticeln("writeBlock offset: %u, size: %u", offset, size);
+  if (_file.seek(offset, SeekSet)) {
+    Log.noticeln("Seeked to %u", _file.position());
+    if (_file.write(buffer, size) == size) {
+      Log.noticeln("Written and flushing");
+      _file.flush();
+      _file.close();
+      return true;
+    } else {
+      Log.noticeln("Unable to write the required size");
+    }
+  }
+  if (_file) _file.close();
+  return false;
 }
 
 DroneFSEntry* DroneFSEntry::getEntryByPath(char* path) {

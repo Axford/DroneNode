@@ -213,6 +213,37 @@ struct DRONE_MESH_MSG_FS_READ_RESPONSE {
   uint8_t crc;
 } __packed;
 
+struct DRONE_MESH_MSG_FS_RESIZE_REQUEST {
+  DRONE_MESH_MSG_HEADER header;
+  uint32_t size;
+  uint8_t path[DRONE_MESH_MSG_FS_MAX_PATH_SIZE];  // null terminated
+  uint8_t crc;
+} __packed;
+
+struct DRONE_MESH_MSG_FS_RESIZE_RESPONSE {
+  DRONE_MESH_MSG_HEADER header;
+  uint32_t size;
+  uint8_t path[DRONE_MESH_MSG_FS_MAX_PATH_SIZE];  // null terminated
+  uint8_t crc;
+} __packed;
+
+struct DRONE_MESH_MSG_FS_WRITE_REQUEST {
+  DRONE_MESH_MSG_HEADER header;
+  uint8_t id; // id of file in directory
+  uint32_t offset;
+  uint8_t size;
+  uint8_t data[DRONE_MESH_MSG_FS_DATA_SIZE];
+  uint8_t crc;
+} __packed;
+
+struct DRONE_MESH_MSG_FS_WRITE_RESPONSE {
+  DRONE_MESH_MSG_HEADER header;
+  uint8_t id; // id of file in directory
+  uint32_t offset;
+  uint8_t size;
+  uint8_t crc;
+} __packed;
+
 
 // ----------------------------------------------------------------------------
 #define DRONE_MESH_MSG_MAX_PAYLOAD_SIZE   48 // bytes - to keep within RFM69 transmit size limit
