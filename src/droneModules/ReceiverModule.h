@@ -8,8 +8,9 @@
 Receiver.new 14
   name "Receiver"
   interval 200
-  pins IN0_0 IN0_1 32 0
+  pins 34
   limits 980 2020
+  mode 1 // PPM
   $switch [@>14.13]
   $input1 [@>9.14]
   $input2 [@>8.16]

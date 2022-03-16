@@ -102,8 +102,11 @@ void TurnRateModule::update() {
   // calc and publish new speeds
 
   // check we've received valid heading and target
+  // this is actually very annoying, as it prevents manual control until a subscriber input is heard
+  /*
   if (!_subs[TURN_RATE_SUB_HEADING_E].received ||
       !_subs[TURN_RATE_SUB_TARGET_E].received) return;
+  */
 
   // local shortcuts
   float h = _subs[TURN_RATE_SUB_HEADING_E].param.data.f[0];

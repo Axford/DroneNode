@@ -13,6 +13,7 @@
 #include "droneModules/INA219Module.h"
 #include "droneModules/INA3221Module.h"
 #include "droneModules/JoystickModule.h"
+#include "droneModules/LSM9DS1Module.h"
 #include "droneModules/ManagementModule.h"
 #include "droneModules/MotorModule.h"
 #include "droneModules/MPU6050Module.h"
@@ -157,6 +158,7 @@ DroneExecutionManager::DroneExecutionManager(DroneModuleManager *dmm, DroneLinkM
   ns = INA219Module::registerNamespace(this); INA219Module::registerParams(ns, this);
   ns = INA3221Module::registerNamespace(this); INA3221Module::registerParams(ns, this);
   ns = JoystickModule::registerNamespace(this); JoystickModule::registerParams(ns, this);
+  ns = LSM9DS1Module::registerNamespace(this); LSM9DS1Module::registerParams(ns, this);
   ns = ManagementModule::registerNamespace(this); ManagementModule::registerParams(ns, this);
   ns = MotorModule::registerNamespace(this);  MotorModule::registerParams(ns, this);
   ns = MPU6050Module::registerNamespace(this);  MPU6050Module::registerParams(ns, this);
@@ -1436,6 +1438,8 @@ boolean DroneExecutionManager::mod_constructor(DEM_INSTRUCTION_COMPILED* instr, 
       newMod = new INA3221Module(id, _dmm, _dlm, this, _fs);
     } else if (strcmp_P(instr->ns->name, JOYSTICK_STR_JOYSTICK) == 0) {
       newMod = new JoystickModule(id, _dmm, _dlm, this, _fs);
+    } else if (strcmp_P(instr->ns->name, LSM9DS1_STR_LSM9DS1) == 0) {
+      newMod = new LSM9DS1Module(id, _dmm, _dlm, this, _fs);
     } else if (strcmp_P(instr->ns->name, MANAGEMENT_STR_MANAGEMENT) == 0) {
       newMod = new ManagementModule(id, _dmm, _dlm, this, _fs);
     } else if (strcmp_P(instr->ns->name, MOTOR_STR_MOTOR) == 0) {
