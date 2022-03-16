@@ -152,9 +152,3 @@ Neopixel.new 20
 
 // finish setup
 .setup
-
-// green flashing LEDs to show we've finished
-.send 1>20.8 (u8) 50 1 10 5  0 255 0  0 255 0  0 255 0  0 255 0
-
-// wait 10seconds
-.delay 10000

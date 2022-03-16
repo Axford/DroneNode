@@ -52,51 +52,11 @@ boolean DroneFSEntry::setSize(uint32_t size) {
   char tpath[DRONE_FS_MAX_PATH_SIZE];
   getPath((char*)&tpath, DRONE_FS_MAX_PATH_SIZE);
 
-  Log.noticeln("Resizing: %s to %u", tpath, size);
+  // need to delete ready for writeBlock to save new file
+  Log.noticeln("Removing prev file");
+  LITTLEFS.remove(tpath);
 
-  if (size != _size) {
-    if (size > _size) {
-      Log.noticeln("Extending current file from: %u", _size);
-      // can write padding to extend current size
-      File file = LITTLEFS.open(tpath, FILE_WRITE);
-      if (file.seek(0, SeekEnd)) {
-        Log.noticeln("Padding from position %u to %u", file.position(), size);
-        for (uint32_t i=file.position(); i<size; i++) {
-          file.write(63);  // ?
-        }
-        file.flush();
-        Log.noticeln("New size: %u", file.size());
-        file.close();
-      } else {
-        file.close();
-        Log.noticeln("Error seeking");
-        return false;
-      }
-
-    } else{
-      // need to delete and then rewrite new size
-      Log.noticeln("Removing prev file");
-      LITTLEFS.remove(tpath);
-
-      if (size > 0) {
-        // write padding
-        Log.noticeln("Creating new file");
-        File file = LITTLEFS.open(tpath, FILE_WRITE);
-        if (file) {
-          Log.noticeln("Padding to %u", size);
-          for (uint32_t i=0; i<size; i++) {
-            file.write(63); // ?
-          }
-          file.flush();
-          Log.noticeln("New size: %u", file.size());
-          file.close();
-        } else {
-          Log.noticeln("Unable to create new file");
-        }
-      }
-    }
-  }
-  _size = size;
+  _size = 0;
   return true;
 }
 
@@ -218,21 +178,48 @@ boolean DroneFSEntry::readBlock(uint32_t offset, uint8_t* buffer, uint8_t size) 
 }
 
 boolean DroneFSEntry::writeBlock(uint32_t offset, uint8_t* buffer, uint8_t size) {
-  if (_file) _file.close();
-  
-  char tpath[DRONE_FS_MAX_PATH_SIZE];
-  getPath((char*)&tpath, DRONE_FS_MAX_PATH_SIZE);
+  //if (_file) _file.close();
 
-  _file = LITTLEFS.open(tpath, FILE_WRITE);
+  // is this the first block?  if so, assume we are starting a write sequence and delete the previous file
+  if (offset == 0) {
+    if (_file) {
+      _file.close();
+    }
+
+    char tpath[DRONE_FS_MAX_PATH_SIZE];
+    getPath((char*)&tpath, DRONE_FS_MAX_PATH_SIZE);
+
+    // need to delete ready for writeBlock to save new file
+    Log.noticeln("Removing prev file");
+    LITTLEFS.remove(tpath);
+  }
+
+  // is this the last block... i.e. size == 0
+  if (_file && size == 0) {
+    // close/flush file
+    _file.close();
+    return true;
+  }
+
+  if (!_file) {
+    char tpath[DRONE_FS_MAX_PATH_SIZE];
+    getPath((char*)&tpath, DRONE_FS_MAX_PATH_SIZE);
+
+    _file = LITTLEFS.open(tpath, FILE_WRITE);
+  }
 
   if (!_file) return false;
+
+  // check offset lines up with current size - i.e. we're writing sequentially
+  if (offset != _file.size()) return false;
+
   Log.noticeln("writeBlock offset: %u, size: %u", offset, size);
   if (_file.seek(offset, SeekSet)) {
     Log.noticeln("Seeked to %u", _file.position());
     if (_file.write(buffer, size) == size) {
       Log.noticeln("Written and flushing");
       _file.flush();
-      _file.close();
+      _size = _file.size();
       return true;
     } else {
       Log.noticeln("Unable to write the required size");

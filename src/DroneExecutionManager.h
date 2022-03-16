@@ -127,7 +127,7 @@ protected:
   DroneLinkManager *_dlm;
   DroneModuleManager *_dmm;
 
-  File _file;  // TODO - can prob remove this
+  //File _file;  // TODO - can prob remove this
   fs::FS &_fs;
   File &_logFile;
   uint8_t _channelContext;  // set by module commands

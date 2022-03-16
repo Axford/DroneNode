@@ -331,7 +331,7 @@ void setup() {
 
   // redirect logging to serial
   logFile.flush();
-  //logFile.close();
+  logFile.close();
 
   Log.begin(LOG_LEVEL_VERBOSE, &Serial);
   Log.noticeln(F("[] Startup complete"));
@@ -437,7 +437,7 @@ void loop() {
     //Log.noticeln("[] e");
     dem->execute();
 
-    if (logFile) logFile.flush();
+    //if (logFile) logFile.flush();
   } else {
     digitalWrite(PIN_LED, HIGH);
   }

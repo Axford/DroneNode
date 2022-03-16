@@ -20,6 +20,7 @@
 #include "droneModules/NeopixelModule.h"
 #include "droneModules/NMEAModule.h"
 #include "droneModules/NunchuckJoystickModule.h"
+#include "droneModules/ODriveModule.h"
 #include "droneModules/PanTiltModule.h"
 #include "droneModules/PolarModule.h"
 #include "droneModules/ProaModule.h"
@@ -163,6 +164,7 @@ DroneExecutionManager::DroneExecutionManager(DroneModuleManager *dmm, DroneLinkM
   ns = NMEAModule::registerNamespace(this); NMEAModule::registerParams(ns, this);
   ns = NeopixelModule::registerNamespace(this); NeopixelModule::registerParams(ns, this);
   ns = NunchuckJoystick::registerNamespace(this); NunchuckJoystick::registerParams(ns, this);
+  ns = ODriveModule::registerNamespace(this); ODriveModule::registerParams(ns, this);
   ns = PanTiltModule::registerNamespace(this); PanTiltModule::registerParams(ns, this);
   ns = PolarModule::registerNamespace(this); PolarModule::registerParams(ns, this);
   ns = ProaModule::registerNamespace(this); ProaModule::registerParams(ns, this);
@@ -431,17 +433,13 @@ void DroneExecutionManager::parseEnums(DEM_INSTRUCTION * instruction, DEM_ENUM_M
 
 
 boolean DroneExecutionManager::load(const char * filename) {
-  if (_file) {
-    _file.close();
-  }
-
   Log.noticeln(F("[DEM.l] %s ..."), filename);
   if (_fs.exists(filename)) {
     uint32_t startTime = millis();
 
-    _file = _fs.open(filename, FILE_READ);
+    File file = _fs.open(filename, FILE_READ);
 
-    if(!_file){
+    if(!file){
         Log.errorln(F("[DEM.l] Error opening file"));
         return false;
     }
@@ -460,8 +458,8 @@ boolean DroneExecutionManager::load(const char * filename) {
     uint8_t rp =0;  //read buffer position
     DEM_INSTRUCTION_COMPILED instr;
 
-    while(_file.available()) {
-      char c = _file.read();
+    while(file.available()) {
+      char c = file.read();
       switch(c) {
         case '\n':
           // end of line, parse the readBuffer
@@ -497,6 +495,7 @@ boolean DroneExecutionManager::load(const char * filename) {
     uint32_t duration = millis() - startTime;
     Log.noticeln(F("[DEM.l] Complete: %u commands, %u ms"), m->commands->size(), duration);
 
+    file.close();
     return true;
   } else {
     Log.errorln(F("[DEM.l] %s file does not exist"), filename);
@@ -1449,6 +1448,8 @@ boolean DroneExecutionManager::mod_constructor(DEM_INSTRUCTION_COMPILED* instr, 
       newMod = new NeopixelModule(id, _dmm, _dlm, this, _fs);
     } else if (strcmp_P(instr->ns->name, NunJOYSTICK_STR_NunJOYSTICK) == 0) {
       newMod = new NunchuckJoystick(id, _dmm, _dlm, this, _fs);
+    } else if (strcmp_P(instr->ns->name, ODRIVE_STR_ODRIVE) == 0) {
+      newMod = new ODriveModule(id, _dmm, _dlm, this, _fs);
     } else if (strcmp_P(instr->ns->name, PAN_TILT_STR_PAN_TILT) == 0) {
       newMod = new PanTiltModule(id, _dmm, _dlm, this, _fs);
     } else if (strcmp_P(instr->ns->name, POLAR_STR_POLAR) == 0) {
