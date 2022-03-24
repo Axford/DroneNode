@@ -84,8 +84,12 @@ boolean WiFiManager::isEnabled() {
 void WiFiManager::enable() {
   if (_enabled) return;
 
-  WiFi.mode(WIFI_AP_STA);
+  //WiFi.mode(WIFI_AP_STA);
+  WiFi.mode(WIFI_STA);
   vTaskDelay(2);
+
+  // reduce wifi tx power to avoid brownout on V4 motherboards
+  WiFi.setTxPower(WIFI_POWER_MINUS_1dBm);
 
   uint8_t mac[6];
   WiFi.macAddress(mac);
@@ -94,8 +98,7 @@ void WiFiManager::enable() {
     hostname += String(mac[i], HEX);
   }
 
-  //WiFi.softAP(dmm->hostname().c_str());
-  WiFi.softAP(hostname.c_str());
+  //WiFi.softAP(hostname.c_str());
   vTaskDelay(2);
 
   _scanActive = false;

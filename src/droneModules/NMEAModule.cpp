@@ -167,7 +167,7 @@ void NMEAModule::loop() {
 
     //Serial.print(c);
     if (_nmea->process( c )) {
-      //Log.noticeln(F("[NMEA.l] c"));
+      Log.noticeln(F("[NMEA.l] c"));
 
       if (_nmea->isUnknown()) {
         // pass to AIS decoder
@@ -178,7 +178,7 @@ void NMEAModule::loop() {
         // TODO:
       } else {
         if (_nmea->isValid()) {
-          //Log.noticeln(F("Fresh GPS"));
+          Log.noticeln(F("Fresh GPS"));
 
           float tempf[3];
           tempf[1] = _nmea->getLatitude() / 1000000.;

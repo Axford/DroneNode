@@ -75,7 +75,9 @@ public:
   //shortestSignedDistanceBetweenCircularValues
   static float getRotationDistance(float origin, float target);
 
-  void update();
+  //void update();
+
+  void loop();
 };
 
 #endif

@@ -92,12 +92,11 @@ float TurnRateModule::getRotationDistance(float origin, float target){
 }
 
 
-void TurnRateModule::update() {
+void TurnRateModule::loop() {
   if (!_setupDone) return;
 
   unsigned long updateTime = millis();
   float dt = (updateTime - _lastUpdate) / 1000.0;
-
 
   // calc and publish new speeds
 
