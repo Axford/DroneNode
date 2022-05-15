@@ -110,6 +110,8 @@ public:
   static DEM_NAMESPACE* registerNamespace(DroneExecutionManager *dem);
   static void registerParams(DEM_NAMESPACE* ns, DroneExecutionManager *dem);
 
+  void onParamWrite(DRONE_PARAM_ENTRY *param);
+
   void setup();
   void loop();
 

@@ -1,11 +1,29 @@
+
 /*
 
-Manages a Wind speed and direction sensor
+@type          Wind
+@inherits      I2CBaseModule
+@description   Manages a Wind speed and direction sensor.
 
+@guide >>>
 - Wind direction using I2C AS5600 sensor
 - Wind speed from cup anemometor on an digital input with internal pullup
 
+<<<
+
+@config >>>
+Wind.new 14
+   bus 4
+   interval 100
+   $heading [@>8.11]
+   centre 0
+
+   .publish "wind" // .14
+   .publish "centre"
+.done
+<<<
 */
+
 #ifndef WIND_MODULE_H
 #define WIND_MODULE_H
 
@@ -21,18 +39,22 @@ Manages a Wind speed and direction sensor
 #define WIND_I2C_ADDRESS  0x36
 
 // pubs
-// local wind direction
+// @pub 10;f;1;direction;local wind direction
 #define WIND_PARAM_DIRECTION       (I2CBASE_SUBCLASS_PARAM_START+0)  //10
+
+// @pub 11;f;1;speed;wind speed
 #define WIND_PARAM_SPEED           (I2CBASE_SUBCLASS_PARAM_START+1)  // 11
+
+// @pub 12;u8;1;pins;Pin to use for anemometer interrupt signal
 #define WIND_PARAM_PINS            (I2CBASE_SUBCLASS_PARAM_START+2)  // 12
-// calibration for local wind direction
+
+// // @pub 13;f;1;centre;Calibration for local wind direction
 #define WIND_PARAM_CENTRE          (I2CBASE_SUBCLASS_PARAM_START+3)  // 13
-// world wind direction
+
+// // @pub 14;f;1;wind;World wind direction - combination of local direction and heading
 #define WIND_PARAM_WIND            (I2CBASE_SUBCLASS_PARAM_START+4)  // 14
-// mode:
-// 0 = standard
-// 1 = inverted - if using upside down as a water direction sensor
-// 2 = anemometer
+
+// @pub 15;u8;1;mode;Operation mode 0=standard, 1=inverted (upside down, e.g. for water direction sensor), 2=anemometer
 #define WIND_PARAM_MODE            (I2CBASE_SUBCLASS_PARAM_START+5)  // 15
 
 #define WIND_PARAM_DIRECTION_E     (I2CBASE_PARAM_ENTRIES+0)
@@ -45,7 +67,7 @@ Manages a Wind speed and direction sensor
 #define WIND_PARAM_ENTRIES         (I2CBASE_PARAM_ENTRIES + 6)
 
 // subs
-// sub to compass heading to work out world wind direction
+// @sub 16;17;f;1;heading;Sub to compass heading to work out world wind direction
 #define WIND_SUB_HEADING            (I2CBASE_SUBCLASS_PARAM_START+6)
 #define WIND_SUB_HEADING_ADDR       (I2CBASE_SUBCLASS_PARAM_START+7)
 #define WIND_SUB_HEADING_E          0

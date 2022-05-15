@@ -142,6 +142,15 @@ void NavModule::registerParams(DEM_NAMESPACE* ns, DroneExecutionManager *dem) {
 }
 
 
+void NavModule::onParamWrite(DRONE_PARAM_ENTRY *param) {
+  DroneModule::onParamWrite(param);
+
+  if (getDroneLinkMsgParam(param->paramPriority) == NAV_SUB_TARGET) {
+    // update last location if target changes
+    updateLast(false);
+  }
+}
+
 
 void NavModule::setup() {
   DroneModule::setup();
