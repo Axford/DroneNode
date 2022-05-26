@@ -249,7 +249,8 @@ void setup() {
 
   // switch to logging to startup.log file on flash
   Serial.println(F("[] Sending log to startup.log..."));
-  Log.begin(LOG_LEVEL_VERBOSE, &logFile);
+  //Log.begin(LOG_LEVEL_VERBOSE, &logFile);
+  //Log.begin(LOG_LEVEL_VERBOSE, &Serial);
   Log.noticeln(F("[] Starting..."));
 
   DroneWire::setup();
@@ -258,6 +259,7 @@ void setup() {
   // WiFi.mode(WIFI_AP_STA); // moved to WiFiManager
 
   // load WIFI Configuration and enable during startup
+  Log.noticeln(F("[] Load WiFi config..."));
   wifiManager.loadConfiguration(LITTLEFS);
   wifiManager.enable();
   wifiManager.start();
@@ -269,6 +271,7 @@ void setup() {
   #endif
 
   // create core objects
+  Log.noticeln(F("[] Init DroneLink core..."));
   dlm = new DroneLinkManager(&wifiManager, &dfs);
   dlm->onEvent = handleDLMEvent;
   dmm = new DroneModuleManager(dlm);

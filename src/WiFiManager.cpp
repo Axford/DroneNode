@@ -33,6 +33,8 @@ WiFiManager::WiFiManager() {
 
 
 void WiFiManager::loadConfiguration(fs::FS &fs) {
+  boolean addDefault = true;
+
   if (fs.exists(F("/wifi.json"))) {
     File file = fs.open(F("/wifi.json"), FILE_READ);
 
@@ -55,19 +57,17 @@ void WiFiManager::loadConfiguration(fs::FS &fs) {
           if (cred.ssid != "") {
             Log.noticeln("[WIFI] Adding %s, %s", cred.ssid.c_str(), cred.password.c_str());
             _networks.add(cred);
+            addDefault = false;
           }
         }
-      } else {
-        // add default credentials
-        cred.ssid = "Badger";
-        cred.password = "LouisVuitton";
-        _networks.add(cred);
       }
     }
 
     // Close the file (Curiously, File's destructor doesn't close the file)
     file.close();
-  } else {
+  }
+
+  if (addDefault ){
     Log.errorln(F("[WIFI] wifi.json file does not exist, adding defaults"));
     WiFiNetworkCredentials cred;
     // add default credentials

@@ -1,0 +1,202 @@
+// D-Code Config Script
+
+// Setup the node
+node 2
+
+// Init modules
+Management.new 1
+  name "Management"
+  status true
+  interval 1000
+  discovery true
+  hostname "Proa"
+
+  // publish
+  .publish "hostname"
+  .publish "build"
+  .publish "uptime"
+  .publish "IP"
+.done
+
+UDPTelemetry.new 2
+  name "UDPT"
+  status 1
+  port 8007
+  broadcast 255 255 255 255
+.done
+
+RFM69Telemetry.new 3
+  name "RFM69"
+  status 1
+  .publish "RSSI"
+.done
+
+INA219.new 4
+  name "Power"
+  bus 4
+  addr 65
+  interval 1000
+  cells 2
+  threshold 6.4
+  status 1
+  .publish "current"
+  .publish "power"
+  .publish "loadV"
+  .publish "alarm"
+  .publish "cellV"
+.done
+
+NMEA.new 5
+  name "GPS"
+  interval 500
+  port 2
+  baud 9600
+  .publish "location"
+  .publish "satellites"
+  .publish "HDOP"
+.done
+
+Wind.new 6
+ name "WindDir"
+ bus 6
+ interval 100
+ $heading [@>8.11]
+ centre -115
+
+ .publish "wind" // .14
+ .publish "centre"
+.done
+
+Nav.new 7
+  name "Nav"
+  status 1
+  interval 50
+  $location [@>5.8]
+  target -1.82 51.56 5
+  crosswind 0.2
+  correction 20
+  wind 0
+  mode 1
+  .publish "target"
+  .publish "location"
+  .publish "heading"
+  .publish "distance"
+  .publish "mode"
+  .publish "last"
+  .publish "home"
+  .publish "crosstrack"
+  .publish "correction"
+  .publish "wind"
+  .publish "crosswind"
+  .publish "adjHeading"
+.done
+
+HMC5883L.new 8
+  name "Compass"
+  interval 100
+  bus 0
+  status 1
+  calibX -3.5 0 2.3
+  calibY -3.6 0 3.2
+  trim 90
+  // default location
+  location -1.8 52 5
+  $location [@>5.8]
+  .publish "heading"
+  .publish "vector"
+  .publish "calibX"
+  .publish "calibY"
+.done
+
+
+Servo.new 12
+  position 0
+  pins OUT1_0
+  status 1
+  name "Left"
+  interval 100
+  map 150 111 72 30
+  centre 0
+  $position [@>16.22]
+  .publish "map"
+  .publish "centre"
+  .publish "position"
+  .publish "output"
+.done
+
+Servo.new 13
+  position 0
+  pins DAC0_1
+  status 1
+  name "Right"
+  interval 100
+  map 150 111 72 30
+  centre 6
+  $position [@>16.23] // todo 23
+  .publish "map"
+  .publish "centre"
+  .publish "position"
+  .publish "output"
+.done
+
+Servo.new 14
+  position 0
+  pins DAC0_0
+  status 1
+  name "Wing"
+  interval 100
+  map 154 112 74 30
+  centre 2.5
+  $position [@>16.17]
+  .publish "map"
+  .publish "centre"
+  .publish "position"
+  .publish "output"
+.done
+
+Wind.new 15
+   name "COW"
+   bus 3
+   interval 100
+   $heading [@>8.11]
+   centre 12
+   mode 0
+
+   .publish "centre"
+   .publish "direction"
+.done
+
+
+Proa.new 16
+  name "Proa"
+  interval 100
+  polar 0 0 0 200 255 255 255 250 240 230 220 210 200 180 160 140
+  PID 0.1 0 0
+  AOA 15
+  mode 0
+
+  $target [@>7.20] // Nav.adjHeading
+  $heading [@>8.11] // compass.heading
+  $wind [@>6.14] // windDir.Wind
+  $crosstrack [@>7.17] // nav.crossTrack
+  $COW [@>15.10] // COW.direction
+
+  .publish "target"
+  .publish "heading"
+  .publish "wind"
+  .publish "crosstrack"
+  .publish "course"
+  .publish "wing"
+  .publish "polar"
+  .publish "speed"
+  .publish "left"
+  .publish "right"
+  .publish "COW"
+  .publish "PID"
+  .publish "AOA"
+  .publish "offset"
+  .publish "mode"
+.done
+
+// finish setup
+.setup
