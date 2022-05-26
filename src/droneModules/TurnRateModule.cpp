@@ -38,13 +38,34 @@ TurnRateModule::TurnRateModule(uint8_t id, DroneModuleManager* dmm, DroneLinkMan
    _subs[TURN_RATE_SUB_PID_E].param.nameLen = sizeof(STRING_PID);
 
 
-   // outputs
+   // pubs
    initParams(TURN_RATE_PARAM_ENTRIES);
 
    _params[TURN_RATE_PARAM_TURN_RATE_E].paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_MEDIUM, TURN_RATE_PARAM_TURN_RATE);
    _params[TURN_RATE_PARAM_TURN_RATE_E].name = FPSTR(STRING_TURN_RATE);
    _params[TURN_RATE_PARAM_TURN_RATE_E].nameLen = sizeof(STRING_TURN_RATE);
    _params[TURN_RATE_PARAM_TURN_RATE_E].paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 4);
+
+   _params[TURN_RATE_PARAM_THRESHOLD_E].paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, TURN_RATE_PARAM_THRESHOLD);
+   _params[TURN_RATE_PARAM_THRESHOLD_E].name = FPSTR(STRING_THRESHOLD);
+   _params[TURN_RATE_PARAM_THRESHOLD_E].nameLen = sizeof(STRING_THRESHOLD);
+   _params[TURN_RATE_PARAM_THRESHOLD_E].paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_FLOAT, 4);
+   _params[TURN_RATE_PARAM_THRESHOLD_E].data.f[0] = 20;
+
+   _params[TURN_RATE_PARAM_TIMEOUT_E].paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, TURN_RATE_PARAM_TIMEOUT);
+   _params[TURN_RATE_PARAM_TIMEOUT_E].name = FPSTR(STRING_TIMEOUT);
+   _params[TURN_RATE_PARAM_TIMEOUT_E].nameLen = sizeof(STRING_TIMEOUT);
+   _params[TURN_RATE_PARAM_TIMEOUT_E].paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_FLOAT, 4);
+   _params[TURN_RATE_PARAM_TIMEOUT_E].data.f[0] = 10;
+
+   _params[TURN_RATE_PARAM_MODE_E].paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_MEDIUM, TURN_RATE_PARAM_MODE);
+   _params[TURN_RATE_PARAM_MODE_E].name = FPSTR(STRING_MODE);
+   _params[TURN_RATE_PARAM_MODE_E].nameLen = sizeof(STRING_MODE);
+   _params[TURN_RATE_PARAM_MODE_E].paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_UINT8_T, 1);
+   _params[TURN_RATE_PARAM_MODE_E].data.uint8[0] = 0;
+
+   _gybeTimerStart = TURN_RATE_MODE_NORMAL;
+   _positiveError = false;
 }
 
 
@@ -114,6 +135,37 @@ void TurnRateModule::loop() {
   // calc shortest signed distance
   // positive values indicate a clockwise turn
   float err = getRotationDistance( h, t );
+  boolean positiveError = err > 0;
+
+  uint8_t newMode = _params[TURN_RATE_PARAM_MODE_E].data.uint8[0];
+
+  // check for potential gybe condition
+  if (fabs(err) > _params[TURN_RATE_PARAM_THRESHOLD_E].data.f[0]) {
+    if (newMode == TURN_RATE_MODE_NORMAL) {
+      // if in normal mode, then change to potential gybe and start the timer
+      newMode = TURN_RATE_MODE_POTENTIAL_GYBE;
+      _gybeTimerStart = updateTime;
+      _positiveError = err > 0;
+    }
+
+    if (positiveError != _positiveError) {
+      // reset to normal mode
+      newMode = TURN_RATE_MODE_NORMAL;
+    } else {
+      if ( (updateTime - _gybeTimerStart)/1000.0 > _params[TURN_RATE_PARAM_TIMEOUT_E].data.f[0]) {
+        // if in potential gybe and timer has exceed the timeout... switch to gybe mode
+        newMode = TURN_RATE_MODE_GYBE;
+      }
+    }
+  } else {
+    // reset to normal mode
+    newMode = TURN_RATE_MODE_NORMAL;
+  }
+
+  // if gybe mode then invert err
+  if (newMode == TURN_RATE_MODE_GYBE) {
+    err = -err;
+  }
 
   // limit to 90 for ease
   if (err > 90) err = 90;
@@ -136,4 +188,7 @@ void TurnRateModule::loop() {
   if (tr < -10) tr = -10;
 
   updateAndPublishParam(&_params[TURN_RATE_PARAM_TURN_RATE_E], (uint8_t*)&tr, sizeof(tr));
+
+  updateAndPublishParam(&_params[TURN_RATE_PARAM_MODE_E], (uint8_t*)&newMode, sizeof(newMode));
+
 }

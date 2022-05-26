@@ -123,6 +123,7 @@ static const char STRING_TARGET_LOCATION[] PROGMEM = "targetLocation";
 static const char STRING_TELEMETRY[] PROGMEM = "telemetry";
 static const char STRING_TEMPERATURE[] PROGMEM = "temperature";
 static const char STRING_THRESHOLD[] PROGMEM = "threshold";
+static const char STRING_TIMEOUT[] PROGMEM = "timeout";
 static const char STRING_TRIM[] PROGMEM = "trim";
 static const char STRING_TRUE[] PROGMEM = "true";
 static const char STRING_TURN_RATE[] PROGMEM = "turnRate";
