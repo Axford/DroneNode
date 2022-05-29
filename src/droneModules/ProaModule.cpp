@@ -325,9 +325,12 @@ void ProaModule::update() {
   // ---------------------------------------------------------------------------
   // update the wing position based on where the wind is coming from
   // i.e. to allow for us being in the wrong orientation, or mid tack
+
+  float courseToWind = fabs(shortestSignedDistanceBetweenCircularValues(c, w));
+
   float localWind = w - h;
   float wingAng = 0;
-  if (localWind < 0) localWind += 360;
+  if (localWind < 0) localWind += 360;  // put localWind in range 0.. 360
   if (localWind < 90 || localWind > 270) {
     // wind over bow
     // set wing for maximum drag (orthogonal to localWind)
@@ -340,12 +343,27 @@ void ProaModule::update() {
     }
   } else {
     // wind over stern
-    if (localWind < 180) {
-      // starboard wind
-      wingAng = (localWind - 180) - aoa;
+    // orient for a run when shortest path round circle from course to wind > 135 degrees
+    // which gives a 90 degree regeion when the wind is over the stern to orient for a run
+    if (courseToWind > 135) {
+      // orient for a run
+      // set wing for maximum drag (orthogonal to localWind)
+      if (localWind < 180) {
+        // starboard wind, wing should be to starboard (servo -1 .. 0)
+        wingAng = localWind - 90;
+      } else {
+        // port wind, wing should be to port (servo 0 .. 1)
+        wingAng = localWind + 90;
+      }
     } else {
-      // port wind
-      wingAng = (localWind - 180) + aoa;
+      // orient for optimal lift
+      if (localWind < 180) {
+        // starboard wind
+        wingAng = (localWind - 180) - aoa;
+      } else {
+        // port wind
+        wingAng = (localWind - 180) + aoa;
+      }
     }
   }
 
@@ -366,14 +384,21 @@ void ProaModule::update() {
   // OR course has changed... so just recalc every time
   if (tackChanged || true) {
     float offset = 0;
+    float frameOrientation = 0;
 
-    if (_starboardTack) {
-      // frame orientation should be
-      float frameOrientation = w - 90 - aoa;
-      offset = frameOrientation - c;
+    if (courseToWind > 135) {
+      // on a run
+      frameOrientation = w - 180;
     } else {
-      // frame orientation should be
-      float frameOrientation = w + 90 + aoa;
+      // optimal lift
+      if (_starboardTack) {
+        // frame orientation should be
+        frameOrientation = w - 90 - aoa;
+      } else {
+        // frame orientation should be
+        frameOrientation = w + 90 + aoa;
+      }
+
       offset = frameOrientation - c;
     }
 
@@ -408,8 +433,8 @@ void ProaModule::update() {
     // this is the leading pontoon, so adjust its position to align COW with c
     // negative coeErr = toe Out
     // positive coeErr = toe In
-    // use half the "power" vs the trailing pontoon
-    la += _params[PROA_PARAM_PID_E].data.f[0] * 0.5 * cowErr;
+    // use the second PID term for course control
+    la += _params[PROA_PARAM_PID_E].data.f[1] * cowErr;
   }
 
   // ensure in range 0..360
@@ -443,8 +468,8 @@ void ProaModule::update() {
     // this is the leading pontoon, so adjust its position to align COW with c
     // negative coeErr = toe Out
     // positive coeErr = toe In
-    // use half the "power" vs the trailing pontoon
-    ra += _params[PROA_PARAM_PID_E].data.f[0] * 0.5 * cowErr;
+    // use the second PID term for course control
+    ra += _params[PROA_PARAM_PID_E].data.f[1] * cowErr;
   }
 
   // ensure in range 0..360

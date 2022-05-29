@@ -17,13 +17,14 @@ Management.new 1
   .publish "IP"
   .publish "uptime"
   .publish "macro"
+  //.publish "heap"
 .done
 
 UDPTelemetry.new 2
   name "UDPT"
   port 8007
   broadcast 255 255 255 255
-  .sub [@>0.0]
+  //.sub [@>0.0]
 .done
 
 INA219.new 4
@@ -34,12 +35,12 @@ INA219.new 4
   cells 3
   threshold 11.2
   status 1
-  .publish "current"
-  .publish "power"
+  //.publish "current"
+  //.publish "power"
   .publish "loadV"
-  .publish "alarm"
-  .publish "shuntV"
-  .publish "busV"
+  //.publish "alarm"
+  //.publish "shuntV"
+  //.publish "busV"
   .publish "cellV"
 .done
 
@@ -48,12 +49,13 @@ NMEA.new 5
   interval 500
   port 2
   baud 9600
-  fix -1.829613 51.562265 0
+ // fix -1.829613 51.562265 0
   .publish "location"
   .publish "satellites"
-  .publish "HDOP"
-  .publish "fix"
-  .publish "correction"
+  //.publish "HDOP"
+  //.publish "fix"
+  //.publish "correction"
+  //.publish "speed"
 .done
 
 HMC5883L.new 6
@@ -77,8 +79,9 @@ HMC5883L.new 6
 RFM69Telemetry.new 3
   name "RFM69"
   status 1  // enable
-  .sub [@>0.0]
+  //.sub [@>0.0]
   .publish "RSSI"
+  .publish "power"
 .done
 
 
@@ -88,9 +91,8 @@ Nav.new 7
   interval 50
   $location [@>5.8]
   target -1.834 51.576 100
-  $target [10>5.8]
+  //$target [10>5.8]
   .publish "target"
-  .publish "last"
   .publish "location"
   .publish "heading"
   .publish "distance"
@@ -99,25 +101,25 @@ Nav.new 7
 
 TurnRate.new 8
   name "TurnRate"
-  status 0
+  status 1
   PID (f) 0.01 0 0
   interval 50
   $target [@>7.8]
   $heading [@>6.11]
-  .publish "target"
-  .publish "heading"
-  .publish "PID"
+  //.publish "target"
+  //.publish "heading"
+  //.publish "PID"
   .publish "turnRate"
 .done
 
 SpeedControl.new 9
   name "Speed"
-  status 0
+  status 1
   interval 50
   limits 0.2 1
   threshold 5
   $distance [@>7.9]
-  .publish "distance"
+  //.publish "distance"
   .publish "limits"
   .publish "threshold"
   .publish "speed"
@@ -134,6 +136,7 @@ TankSteer.new 10
   .publish "turnRate"
   .publish "speed"
   .publish "trim"
+  .publish "mode"
 .done
 
 
@@ -163,63 +166,21 @@ Motor.new 12
   .publish "speed"
 .done
 
-Neopixel.new 20
-  name "Neopixel"
+
+
+Motor.new 13
+  name "WinchMotor"
   interval 50
-  pins OUT2_1
-  numPixels 16
-  $scene [@>21.8]
-  .publish "scene"
-.done
+  pins OUT2_1 OUT2_0 0
+  PWMChannel 14
+  limits -0.8 0.8
+  deadband 0.3
+  //$speed [@>10.9]
 
-Status.new 21
-  name "Status"
-  //cell voltage
-  $sub1 [@>4.15]
-  value1 3.7
-
-  // GPS Satellites
-  $sub2 [@>5.9]
-  value2 4
-
-  // distance to next waypoint
-  $sub3 [@>7.9]
-  value3 15
-
-
-  .publish "scene"
-  .publish "sub1"
-  .publish "value1"
-  .publish "sub2"
-  .publish "value2"
-  .publish "sub3"
-  .publish "value3"
-.done
-
-Depth.new 30
-  name "Depth"
-  status true
-  interval 1000
-  pins 12 13
-  limits 0.1 10
-  speed 1480
-  $location [@>5.8]
-  distance 1
-
-  .publish "depth"
-  .publish "log"
+  // publish
+  .publish "speed"
 .done
 
 
-// finish setup
+
 .setup
-
-// disable
-.send 1>8.1 (u8) 0
-.send 1>9.1 (u8) 0
-
-// green flashing LEDs to show we've finished
-.send 1>20.8 (u8) 50 1 10 5  0 255 0  0 255 0  0 255 0  0 255 0
-
-// wait 1 seconds
-.delay 1000
