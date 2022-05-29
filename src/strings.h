@@ -42,6 +42,7 @@ static const char STRING_CROSSWIND[] PROGMEM = "crosswind";
 static const char STRING_CURRENT[] PROGMEM = "current";
 static const char STRING_DEADBAND[] PROGMEM = "deadband";
 static const char STRING_DECLINATION[] PROGMEM = "declination";
+static const char STRING_DEBUG[] PROGMEM = "debug";
 static const char STRING_DELAY[] PROGMEM = "delay";
 static const char STRING_DEPTH[] PROGMEM = "depth";
 static const char STRING_DIRECTION[] PROGMEM = "direction";

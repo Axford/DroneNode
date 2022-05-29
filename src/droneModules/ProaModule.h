@@ -104,7 +104,11 @@ config (pubs)
 #define PROA_PARAM_MODE              29
 #define PROA_PARAM_MODE_E            11
 
-#define PROA_PARAM_ENTRIES           12
+// @pub 30;f;4;debug;Debug parameters 
+#define PROA_PARAM_DEBUG              30
+#define PROA_PARAM_DEBUG_E            12
+
+#define PROA_PARAM_ENTRIES           13
 
 
 static const char PROA_STR_PROA[] PROGMEM = "Proa";

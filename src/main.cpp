@@ -399,6 +399,12 @@ void loop() {
         dmm->restart();
       }
 
+      // enable wifi
+      if (strcmp(serialCommand, "wifi")==0) {
+        Serial.println("Enabling WiFi");
+        dlm->enableWiFi();
+      }
+
       // traceroute
       if (strncmp(serialCommand, "trace", 5)==0) {
         // read node address

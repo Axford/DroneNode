@@ -123,6 +123,15 @@ ProaModule::ProaModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dl
    param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_UINT8_T, 1);
    _params[PROA_PARAM_MODE_E].data.f[0] = 0;
 
+   param = &_params[PROA_PARAM_DEBUG_E];
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_MEDIUM, PROA_PARAM_DEBUG);
+   setParamName(FPSTR(STRING_DEBUG), param);
+   param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 16);
+   _params[PROA_PARAM_DEBUG_E].data.f[0] = 0;
+   _params[PROA_PARAM_DEBUG_E].data.f[1] = 0;
+   _params[PROA_PARAM_DEBUG_E].data.f[2] = 0;
+   _params[PROA_PARAM_DEBUG_E].data.f[3] = 0;
+
    update();  // set defaults
 }
 
@@ -417,6 +426,9 @@ void ProaModule::update() {
   // -- left -----------------------
   float la = cow;
 
+  // irrespective of leading/lagging, set the base angle to correct for course error
+  la += _params[PROA_PARAM_PID_E].data.f[1] * cowErr;
+
   // left pontoon only steers for CCW turns (i.e. err < 0)
   if (err < 0) {
     // Left pontoon toe in if lagging, toe out if leading.
@@ -434,7 +446,7 @@ void ProaModule::update() {
     // negative coeErr = toe Out
     // positive coeErr = toe In
     // use the second PID term for course control
-    la += _params[PROA_PARAM_PID_E].data.f[1] * cowErr;
+    // la += _params[PROA_PARAM_PID_E].data.f[1] * cowErr;
   }
 
   // ensure in range 0..360
@@ -451,6 +463,9 @@ void ProaModule::update() {
 
   // -- right -----------------------
   float ra = cow;
+
+  // irrespective of leading/lagging, set the base angle to correct for course error
+  ra += _params[PROA_PARAM_PID_E].data.f[1] * cowErr;
 
   // right pontoon only steers for CW turns (i.e. err > 0)
   if (err > 0) {
@@ -469,7 +484,7 @@ void ProaModule::update() {
     // negative coeErr = toe Out
     // positive coeErr = toe In
     // use the second PID term for course control
-    ra += _params[PROA_PARAM_PID_E].data.f[1] * cowErr;
+    //ra += _params[PROA_PARAM_PID_E].data.f[1] * cowErr;
   }
 
   // ensure in range 0..360
@@ -483,6 +498,13 @@ void ProaModule::update() {
   ra = ra / 90;
 
   updateAndPublishParam(&_params[PROA_PARAM_RIGHT_E], (uint8_t*)&ra, sizeof(ra));
+
+  // publish debug info
+  _params[PROA_PARAM_DEBUG_E].data.f[0] = courseToWind;
+  _params[PROA_PARAM_DEBUG_E].data.f[1] = err;
+  _params[PROA_PARAM_DEBUG_E].data.f[2] = cowErr;
+
+  publishParamEntry(&_params[PROA_PARAM_DEBUG_E]);
 }
 
 

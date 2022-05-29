@@ -167,7 +167,7 @@ void NMEAModule::loop() {
 
     //Serial.print(c);
     if (_nmea->process( c )) {
-      Log.noticeln(F("[NMEA.l] c"));
+      //Log.noticeln(F("[NMEA.l] c"));
 
       if (_nmea->isUnknown()) {
         // pass to AIS decoder
