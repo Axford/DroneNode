@@ -244,6 +244,29 @@ void setup() {
     ESP.restart();
   }
 
+  // see if safeMode.txt exists, if not create it
+  if (!LITTLEFS.exists("/safeMode.txt")) {
+    File file = LITTLEFS.open("/safeMode.txt", FILE_WRITE);
+    if(!file){
+        Log.errorln("[] Failed to open safeMode.txt for writing");
+        return;
+    }
+    file.println("node 1");
+    file.println("Management.new 1");
+    file.println("  name \"safeMode\'");
+    file.println("  .publish \"hostname\"");
+    file.println("  .publish \"IP\"");
+    file.println(".done");
+    file.println("UDPTelemetry.new 2");
+    file.println("  port 8007");
+    file.println("  broadcast 255 255 255 255");
+    file.println(".done");
+    file.println(".setup");
+
+    file.close();
+  }
+
+
 
   logFile = LITTLEFS.open("/startup.log", FILE_WRITE);
 
