@@ -10,6 +10,7 @@ Management.new 1
   interval 1000
   discovery true
   hostname "Proa"
+  wifi 1
 
   // publish
   .publish "hostname"
@@ -59,7 +60,7 @@ NMEA.new 5
 Wind.new 6
  name "WindDir"
  bus 6
- interval 100
+ interval 50
  $heading [@>8.11]
  centre -115
 
@@ -93,7 +94,7 @@ Nav.new 7
 
 HMC5883L.new 8
   name "Compass"
-  interval 100
+  interval 50
   bus 0
   status 1
   calibX -3.5 0 2.3
@@ -115,8 +116,8 @@ Servo.new 12
   status 1
   name "Left"
   interval 100
-  map 150 111 72 30
-  centre 0
+  map 176 121 65 12 // 240 degrees range
+  centre -4
   $position [@>16.22]
   .publish "map"
   .publish "centre"
@@ -130,8 +131,8 @@ Servo.new 13
   status 1
   name "Right"
   interval 100
-  map 150 111 72 30
-  centre 6
+  map 176 121 65 12
+  centre 4
   $position [@>16.23] // todo 23
   .publish "map"
   .publish "centre"
@@ -157,7 +158,7 @@ Servo.new 14
 Wind.new 15
    name "COW"
    bus 3
-   interval 100
+   interval 50
    $heading [@>8.11]
    centre 12
    mode 0
@@ -170,8 +171,8 @@ Wind.new 15
 Proa.new 16
   name "Proa"
   interval 100
-  polar 0 0 0 200 255 255 255 250 240 230 220 210 200 180 160 140
-  PID 0.2 0 0
+  polar 0 0 0 0 200 255 255 250 240 230 220 210 200 180 160 140
+  PID 0.2 0.4 0
   AOA 15
   mode 0
 
@@ -196,6 +197,7 @@ Proa.new 16
   .publish "AOA"
   .publish "offset"
   .publish "mode"
+  .publish "debug"
 .done
 
 // finish setup

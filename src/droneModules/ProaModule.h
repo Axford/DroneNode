@@ -100,15 +100,21 @@ config (pubs)
 #define PROA_PARAM_OFFSET            28
 #define PROA_PARAM_OFFSET_E          10
 
-// mode
+// @pub 29;u8;1;mode;Operational mode: 0=passive for setup, 1=active
 #define PROA_PARAM_MODE              29
 #define PROA_PARAM_MODE_E            11
 
-// @pub 30;f;4;debug;Debug parameters 
-#define PROA_PARAM_DEBUG              30
-#define PROA_PARAM_DEBUG_E            12
+// @pub 30;f;4;debug;Debug parameters
+#define PROA_PARAM_DEBUG             30
+#define PROA_PARAM_DEBUG_E           12
 
 #define PROA_PARAM_ENTRIES           13
+
+
+// control modes - dictates wing and pontoon control logic
+#define PROA_CONTROL_MODE_NORMAL     0  // orient wing for optimal AOA
+#define PROA_CONTROL_MODE_BRAKE      1  // orient wing for air brake assisted turn
+#define PROA_CONTROL_MODE_RUN        2  // orient wing for run
 
 
 static const char PROA_STR_PROA[] PROGMEM = "Proa";

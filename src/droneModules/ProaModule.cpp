@@ -332,63 +332,10 @@ void ProaModule::update() {
   updateAndPublishParam(&_params[PROA_PARAM_COURSE_E], (uint8_t*)&c, sizeof(c));
 
   // ---------------------------------------------------------------------------
-  // update the wing position based on where the wind is coming from
-  // i.e. to allow for us being in the wrong orientation, or mid tack
-
-  float courseToWind = fabs(shortestSignedDistanceBetweenCircularValues(c, w));
-
-  float localWind = w - h;
-  float wingAng = 0;
-  if (localWind < 0) localWind += 360;  // put localWind in range 0.. 360
-  if (localWind < 90 || localWind > 270) {
-    // wind over bow
-    // set wing for maximum drag (orthogonal to localWind)
-    if (localWind < 90) {
-      // starboard wind, wing should be to port (servo -1 .. 0)
-      wingAng = localWind - 90;
-    } else {
-      // port wind, wing should be to starboard (servo 0 .. 1)
-      wingAng = localWind + 90;
-    }
-  } else {
-    // wind over stern
-    // orient for a run when shortest path round circle from course to wind > 135 degrees
-    // which gives a 90 degree regeion when the wind is over the stern to orient for a run
-    if (courseToWind > 135) {
-      // orient for a run
-      // set wing for maximum drag (orthogonal to localWind)
-      if (localWind < 180) {
-        // starboard wind, wing should be to starboard (servo -1 .. 0)
-        wingAng = localWind - 90;
-      } else {
-        // port wind, wing should be to port (servo 0 .. 1)
-        wingAng = localWind + 90;
-      }
-    } else {
-      // orient for optimal lift
-      if (localWind < 180) {
-        // starboard wind
-        wingAng = (localWind - 180) - aoa;
-      } else {
-        // port wind
-        wingAng = (localWind - 180) + aoa;
-      }
-    }
-  }
-
-  // map wingAng to -90 to 90
-  if (wingAng > 180) { wingAng -= 360; }
-  // clamp
-  if (wingAng > 90) wingAng = 90;
-  if (wingAng < -90) wingAng = -90;
-
-  // remap wingAng to -1 to 1
-  wingAng = wingAng / 90;
-  updateAndPublishParam(&_params[PROA_PARAM_WING_E], (uint8_t*)&wingAng, sizeof(wingAng));
-
-  // ---------------------------------------------------------------------------
   // if we've changed tack, need to recalculate the target frame orientation
   // target frame orientation is an OFFSET relative to the target heading
+
+  float courseToWind = fabs(shortestSignedDistanceBetweenCircularValues(c, w));
 
   // OR course has changed... so just recalc every time
   if (tackChanged || true) {
@@ -421,81 +368,166 @@ void ProaModule::update() {
   // calculate the error in COW vs intended course
   float cowErr = shortestSignedDistanceBetweenCircularValues(cow, c);
 
+  // ---------------------------------------------------------------------------
+  // update the wing position based on where the wind is coming from
+  // i.e. to allow for us being in the wrong orientation, or mid tack
+
+  uint8_t controlMode = PROA_CONTROL_MODE_NORMAL;
+
+  float localWind = w - h;
+  float wingAng = 0;
+  if (localWind < 0) localWind += 360;  // put localWind in range 0.. 360
+  if (localWind < 90 || localWind > 270) {
+    // wind over bow
+    // set wing for high drag (orthogonal to localWind), whilst supporting a turn toward target orientation
+    controlMode = PROA_CONTROL_MODE_BRAKE;
+
+    // select wing orientation based on err to target orientation
+    if (err < 0) {
+      // starboard wind, wing should be to port (servo -1 .. 0)
+      wingAng = localWind - 90;
+    } else {
+      // port wind, wing should be to starboard (servo 0 .. 1)
+      wingAng = localWind + 90;
+    }
+  } else {
+    // wind over stern
+    // orient for a run when shortest path round circle from course to wind > 135 degrees
+    // which gives a 90 degree regeion when the wind is over the stern to orient for a run
+    if (courseToWind > 135) {
+      // orient for a run
+      controlMode = PROA_CONTROL_MODE_RUN;
+      // set wing for maximum drag (orthogonal to localWind)
+      if (localWind < 180) {
+        // starboard wind, wing should be to starboard (servo -1 .. 0)
+        wingAng = localWind - 90;
+      } else {
+        // port wind, wing should be to port (servo 0 .. 1)
+        wingAng = localWind + 90;
+      }
+    } else {
+      // orient for optimal lift
+      controlMode = PROA_CONTROL_MODE_NORMAL;
+      if (localWind < 180) {
+        // starboard wind
+        wingAng = (localWind - 180) - aoa;
+      } else {
+        // port wind
+        wingAng = (localWind - 180) + aoa;
+      }
+    }
+  }
+
+  // map wingAng to -90 to 90
+  if (wingAng > 180) { wingAng -= 360; }
+  // clamp
+  if (wingAng > 90) wingAng = 90;
+  if (wingAng < -90) wingAng = -90;
+
+  // remap wingAng to -1 to 1
+  wingAng = wingAng / 90;
+  updateAndPublishParam(&_params[PROA_PARAM_WING_E], (uint8_t*)&wingAng, sizeof(wingAng));
+
+
+
   // use the orientation error and COW to set the pontoon positions
 
   // -- left -----------------------
   float la = cow;
 
-  // irrespective of leading/lagging, set the base angle to correct for course error
-  la += _params[PROA_PARAM_PID_E].data.f[1] * cowErr;
+  if (controlMode == PROA_CONTROL_MODE_BRAKE) {
+    // in braking mode, the left pontoon points into the wind for CCW (err < 0) turns, or orthogonal to wind otherwise
+    if (err < 0) {
+      la = localWind;
+    } else {
+      la = localWind + 90;
+    }
 
-  // left pontoon only steers for CCW turns (i.e. err < 0)
-  if (err < 0) {
-    // Left pontoon toe in if lagging, toe out if leading.
-    // lagging is when COW is 0 - 180
-    // leading is when COW is 180 - 360
-    // toe in is a positive err
-    // toe out is a negative err
-    boolean toeIn = false;
-    if (cow < 180) toeIn = true;
-
-    // PID to control angle
-    la += (toeIn ? 1 : -1) * _params[PROA_PARAM_PID_E].data.f[0] * err;
   } else {
-    // this is the leading pontoon, so adjust its position to align COW with c
-    // negative coeErr = toe Out
-    // positive coeErr = toe In
-    // use the second PID term for course control
-    // la += _params[PROA_PARAM_PID_E].data.f[1] * cowErr;
+    // irrespective of leading/lagging, set the base angle to correct for course error
+    la += _params[PROA_PARAM_PID_E].data.f[1] * cowErr;
+
+    // left pontoon only steers for CCW turns (i.e. err < 0)
+    if (err < 0) {
+      // Left pontoon toe in if lagging, toe out if leading.
+      // lagging is when COW is 0 - 180
+      // leading is when COW is 180 - 360
+      // toe in is a positive err
+      // toe out is a negative err
+      boolean toeIn = false;
+      if (cow < 180) toeIn = true;
+
+      // PID to control angle
+      la += (toeIn ? 1 : -1) * _params[PROA_PARAM_PID_E].data.f[0] * err;
+    } else {
+      // this is the leading pontoon, so adjust its position to align COW with c
+      // negative coeErr = toe Out
+      // positive coeErr = toe In
+      // use the second PID term for course control
+      // la += _params[PROA_PARAM_PID_E].data.f[1] * cowErr;
+    }
   }
 
   // ensure in range 0..360
   la = fmod(la, 360);
   // remap to +-180
   if (la > 180) la -= 360;
-  // map -90 to 90
-  if (la > 90) la -= 180;
-  if (la < -90) la += 180;
+
+  // max range is 240 degrees... or +-120
+
+  if (la > 120) la -= 180;
+  if (la < -120) la += 180;
   // remap -1 to 1
-  la = la / 90;
+  la = la / 120;
 
   updateAndPublishParam(&_params[PROA_PARAM_LEFT_E], (uint8_t*)&la, sizeof(la));
 
   // -- right -----------------------
   float ra = cow;
 
-  // irrespective of leading/lagging, set the base angle to correct for course error
-  ra += _params[PROA_PARAM_PID_E].data.f[1] * cowErr;
+  if (controlMode == PROA_CONTROL_MODE_BRAKE) {
+    // in braking mode, the right pontoon points into the wind for CW (err > 0) turns, or orthogonal to wind otherwise
+    if (err > 0) {
+      ra = localWind;
+    } else {
+      ra = localWind + 90;
+    }
 
-  // right pontoon only steers for CW turns (i.e. err > 0)
-  if (err > 0) {
-    // Right pontoon toe in if lagging, toe out if leading.
-    // lagging is when COW is 180 - 360
-    // leading is when COW is 0 - 180
-    // toe in is a negative err
-    // toe out is a positive err
-    boolean toeIn = false;
-    if (cow > 180) toeIn = true;
-
-    // PID to control angle
-    ra += (toeIn ? -1 : 1) * _params[PROA_PARAM_PID_E].data.f[0] * err;
   } else {
-    // this is the leading pontoon, so adjust its position to align COW with c
-    // negative coeErr = toe Out
-    // positive coeErr = toe In
-    // use the second PID term for course control
-    //ra += _params[PROA_PARAM_PID_E].data.f[1] * cowErr;
+    // irrespective of leading/lagging, set the base angle to correct for course error
+    ra += _params[PROA_PARAM_PID_E].data.f[1] * cowErr;
+
+    // right pontoon only steers for CW turns (i.e. err > 0)
+    if (err > 0) {
+      // Right pontoon toe in if lagging, toe out if leading.
+      // lagging is when COW is 180 - 360
+      // leading is when COW is 0 - 180
+      // toe in is a negative err
+      // toe out is a positive err
+      boolean toeIn = false;
+      if (cow > 180) toeIn = true;
+
+      // PID to control angle
+      ra += (toeIn ? -1 : 1) * _params[PROA_PARAM_PID_E].data.f[0] * err;
+    } else {
+      // this is the leading pontoon, so adjust its position to align COW with c
+      // negative coeErr = toe Out
+      // positive coeErr = toe In
+      // use the second PID term for course control
+      //ra += _params[PROA_PARAM_PID_E].data.f[1] * cowErr;
+    }
   }
 
   // ensure in range 0..360
   ra = fmod(ra, 360);
   // remap to +-180
   if (ra > 180) ra -= 360;
-  // map -90 to 90
-  if (ra > 90) ra -= 180;
-  if (ra < -90) ra += 180;
+
+  // max range is 240 degrees... or +-120
+  if (ra > 120) ra -= 180;
+  if (ra < -120) ra += 180;
   // remap -1 to 1
-  ra = ra / 90;
+  ra = ra / 120;
 
   updateAndPublishParam(&_params[PROA_PARAM_RIGHT_E], (uint8_t*)&ra, sizeof(ra));
 
@@ -503,6 +535,7 @@ void ProaModule::update() {
   _params[PROA_PARAM_DEBUG_E].data.f[0] = courseToWind;
   _params[PROA_PARAM_DEBUG_E].data.f[1] = err;
   _params[PROA_PARAM_DEBUG_E].data.f[2] = cowErr;
+  _params[PROA_PARAM_DEBUG_E].data.f[3] = controlMode;
 
   publishParamEntry(&_params[PROA_PARAM_DEBUG_E]);
 }
