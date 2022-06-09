@@ -253,7 +253,7 @@ void setup() {
     }
     file.println("node 1");
     file.println("Management.new 1");
-    file.println("  name \"safeMode\'");
+    file.println("  name \"safeMode\"");
     file.println("  .publish \"hostname\"");
     file.println("  .publish \"IP\"");
     file.println(".done");

@@ -222,8 +222,8 @@ void ProaModule::update() {
   float w = _subs[PROA_SUB_WIND_E].param.data.f[0];
   float t = _subs[PROA_SUB_TARGET_E].param.data.f[0];
   float ct = _subs[PROA_SUB_CROSSTRACK_E].param.data.f[0];
-  float c = _params[PROA_PARAM_COURSE_E].data.f[0];
-  float cow = _subs[PROA_SUB_COW_E].param.data.f[0];
+  float c = _params[PROA_PARAM_COURSE_E].data.f[0];  // world coordinates
+  float cow = _subs[PROA_SUB_COW_E].param.data.f[0];  // local coordinates
   float aoa = _params[PROA_PARAM_AOA_E].data.f[0];
 
   // -- algo 1 --
@@ -365,8 +365,8 @@ void ProaModule::update() {
   // calculate the error in orientation between current heading (h), adjusted for frame offset, and selected course (c)
   float err = shortestSignedDistanceBetweenCircularValues(h - _params[PROA_PARAM_OFFSET_E].data.f[0], c);
 
-  // calculate the error in COW vs intended course
-  float cowErr = shortestSignedDistanceBetweenCircularValues(cow, c);
+  // calculate the error in COW vs intended course, need to convert COW to world coordinate frame
+  float cowErr = shortestSignedDistanceBetweenCircularValues(cow + h, c);
 
   // ---------------------------------------------------------------------------
   // update the wing position based on where the wind is coming from
