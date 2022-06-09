@@ -365,6 +365,25 @@ void ProaModule::update() {
   // calculate the error in orientation between current heading (h), adjusted for frame offset, and selected course (c)
   float err = shortestSignedDistanceBetweenCircularValues(h - _params[PROA_PARAM_OFFSET_E].data.f[0], c);
 
+  // need to set an error that avoids crossing the wind - i.e. always choose a gybe if we are in danger of crossing the wind
+  // lets do this by taking the err value and see if it would involve crossing the wind, if so, we'll switch to the opposite rotation
+  // negative err values indicate a CCW move, positive is CW
+  // we can compare err to shortest distance to the wind from current heading
+  float headingToWind = shortestSignedDistanceBetweenCircularValues(h, w);
+
+  // start by comparing signs to see if we have a potential issue
+  if ((err < 0 && headingToWind < 0) || (err > 0 && headingToWind > 0)) {
+    // now see if the abs value of headingToWind is less than abs value of err
+    if (fabs(headingToWind) < fabs(err)) {
+      // we will cross the wind... so switch err to go the other way round the circle
+      if (err > 0) {
+        err = err - 360;
+      } else {
+        err = 360 + err;
+      }
+    }
+  }
+
   // calculate the error in COW vs intended course, need to convert COW to world coordinate frame
   float cowErr = shortestSignedDistanceBetweenCircularValues(cow + h, c);
 
@@ -377,8 +396,15 @@ void ProaModule::update() {
   float localWind = w - h;
   float wingAng = 0;
   if (localWind < 0) localWind += 360;  // put localWind in range 0.. 360
-  if (localWind < 90 || localWind > 270) {
-    // wind over bow
+
+  // wind on wrong side excludes the region when we would be on a run
+  // 45 degrees either side of the stern
+  boolean windOnWrongSide = (_starboardTack && localWind > 180+45) ||
+                            (!_starboardTack && localWind < 180-45);
+
+  boolean windOverBow = localWind < 90 || localWind > 270;
+
+  if (windOnWrongSide || windOverBow) {
     // set wing for high drag (orthogonal to localWind), whilst supporting a turn toward target orientation
     controlMode = PROA_CONTROL_MODE_BRAKE;
 
@@ -392,9 +418,8 @@ void ProaModule::update() {
     }
   } else {
     // wind over stern
-    // orient for a run when shortest path round circle from course to wind > 135 degrees
-    // which gives a 90 degree regeion when the wind is over the stern to orient for a run
-    if (courseToWind > 135) {
+    // orient for a run when wind is in 90 degree region over the stern
+    if (localWind > 180-45 && localWind < 180+45) {
       // orient for a run
       controlMode = PROA_CONTROL_MODE_RUN;
       // set wing for maximum drag (orthogonal to localWind)
