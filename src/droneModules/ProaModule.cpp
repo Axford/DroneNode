@@ -419,7 +419,8 @@ void ProaModule::update() {
   } else {
     // wind over stern
     // orient for a run when wind is in 90 degree region over the stern
-    if (localWind > 180-45 && localWind < 180+45) {
+    // and the course is >135 degrees from the wind
+    if (localWind > 180-45 && localWind < 180+45 && courseToWind > 135) {
       // orient for a run
       controlMode = PROA_CONTROL_MODE_RUN;
       // set wing for maximum drag (orthogonal to localWind)
@@ -433,12 +434,14 @@ void ProaModule::update() {
     } else {
       // orient for optimal lift
       controlMode = PROA_CONTROL_MODE_NORMAL;
-      if (localWind < 180) {
-        // starboard wind
-        wingAng = (localWind - 180) - aoa;
+      wingAng = (localWind - 180);
+      // adding a positive AOA results in a CCW torque
+      if (err > 0) {
+        // CW torque
+        wingAng -= aoa;
       } else {
-        // port wind
-        wingAng = (localWind - 180) + aoa;
+        // CCW torque
+        wingAng += aoa;
       }
     }
   }
