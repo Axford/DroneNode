@@ -7,7 +7,6 @@
 RFM69Telemetry.new 3
   name "RFM69"
   status 1  // enable
-  .sub [@>0.0]  // subscribe to and transmit all traffic on this node
   .publish "RSSI"
 .done
 <<<
@@ -71,7 +70,6 @@ class RFM69TelemetryModule:  public NetworkInterfaceModule {
 protected:
   RH_RF69 *_radio;
   RHSoftwareSPI _spi;
-  DroneLinkMsg _receivedMsg;
   uint32_t _packetsReceived;
   uint32_t _packetsRejected;
   uint32_t _packetsSent;

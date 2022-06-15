@@ -252,7 +252,7 @@ struct DRONE_MESH_MSG_FS_WRITE_RESPONSE {
 // interface type codes
 #define DRONE_MESH_INTERFACE_TYPE_UDP        0
 #define DRONE_MESH_INTERFACE_TYPE_RFM69      1
-#define DRONE_MESH_INTERFACE_TYPE_PTP        2  // point to point telemetry radio
+#define DRONE_MESH_INTERFACE_TYPE_SERIAL     2  // serial interface, optionally via transparent telemetry radio
 #define DRONE_MESH_INTERFACE_TYPE_IRIDIUM    3
 
 

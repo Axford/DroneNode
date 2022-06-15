@@ -29,6 +29,7 @@
 #include "droneModules/ReceiverModule.h"
 #include "droneModules/RFM69TelemetryModule.h"
 #include "droneModules/SailorModule.h"
+#include "droneModules/SerialTelemetryModule.h"
 #include "droneModules/ServoModule.h"
 #include "droneModules/SpeedControlModule.h"
 #include "droneModules/StatusModule.h"
@@ -175,6 +176,7 @@ DroneExecutionManager::DroneExecutionManager(DroneModuleManager *dmm, DroneLinkM
   ns = ReceiverModule::registerNamespace(this); ReceiverModule::registerParams(ns, this);
   ns = RFM69TelemetryModule::registerNamespace(this); RFM69TelemetryModule::registerParams(ns, this);
   ns = SailorModule::registerNamespace(this); SailorModule::registerParams(ns, this);
+  ns = SerialTelemetryModule::registerNamespace(this); SerialTelemetryModule::registerParams(ns, this);
   ns = ServoModule::registerNamespace(this); ServoModule::registerParams(ns, this);
   ns = SpeedControlModule::registerNamespace(this); SpeedControlModule::registerParams(ns, this);
   ns = StatusModule::registerNamespace(this); StatusModule::registerParams(ns, this);
@@ -1470,6 +1472,8 @@ boolean DroneExecutionManager::mod_constructor(DEM_INSTRUCTION_COMPILED* instr, 
       newMod = new RFM69TelemetryModule(id, _dmm, _dlm, this, _fs);
     } else if (strcmp_P(instr->ns->name, SAILOR_STR_SAILOR) == 0) {
       newMod = new SailorModule(id, _dmm, _dlm, this, _fs);
+    } else if (strcmp_P(instr->ns->name, SERIAL_TELEMETRY_STR_SERIAL_TELEMETRY) == 0) {
+      newMod = new SerialTelemetryModule(id, _dmm, _dlm, this, _fs);
     } else if (strcmp_P(instr->ns->name, SERVO_STR_SERVO) == 0) {
       newMod = new ServoModule(id, _dmm, _dlm, this, _fs);
     } else if (strcmp_P(instr->ns->name, SPEED_CONTROL_STR_SPEED_CONTROL) == 0) {
