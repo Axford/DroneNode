@@ -150,7 +150,8 @@ void TurnRateModule::loop() {
 
     if (positiveError != _positiveError) {
       // reset to normal mode
-      newMode = TURN_RATE_MODE_NORMAL;
+      //newMode = TURN_RATE_MODE_NORMAL;
+      // dont reset to normal until error falls below threshold... i.e. gybe complete
     } else {
       if ( (updateTime - _gybeTimerStart)/1000.0 > _params[TURN_RATE_PARAM_TIMEOUT_E].data.f[0]) {
         // if in potential gybe and timer has exceed the timeout... switch to gybe mode
