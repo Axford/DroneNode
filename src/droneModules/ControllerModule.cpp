@@ -236,7 +236,7 @@ void ControllerModule::doShutdown() {
 void ControllerModule::arm() {
   // attempt to run the arm script on the bound node
   if (_isBound) {
-    Serial.println("[CM.a] Arming...");
+    Log.noticeln("[CM.a] Arming...");
     _sendMsg.node(_binding);
     _sendMsg.channel(1); // mgmt
     _sendMsg.param(17); // macro
@@ -252,7 +252,7 @@ void ControllerModule::arm() {
 void ControllerModule::disarm() {
   // attempt to run the disarm script on the bound node
   if (_isBound) {
-    Serial.println("[CM.d] Disarming...");
+    Log.noticeln("[CM.d] Disarming...");
     _sendMsg.node(_binding);
     _sendMsg.channel(1); // mgmt
     _sendMsg.param(17); // macro

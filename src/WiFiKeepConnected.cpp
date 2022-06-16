@@ -2,6 +2,7 @@
 #include "WiFiKeepConnected.h"
 #include "WiFi.h"
 #include "esp_wifi.h"
+#include <ArduinoLog.h>
 
 WiFiKeepConnected::WiFiKeepConnected() {
   _taskCore = 1;
@@ -13,7 +14,7 @@ void WiFiKeepConnected::start(const char * ssid, const char * pwd) {
   _ssid = ssid;
   _pwd = pwd;
 
-  Serial.println("[WIFI] Starting connection task");
+  Log.noticeln("[WIFI] Starting connection task");
 
   WiFi.setSleep(false);
 
@@ -32,22 +33,22 @@ void WiFiKeepConnected::keepWiFiAlive(void *pvParameters){
 
   for(;;){
     if(WiFi.status() == WL_CONNECTED){
-      Serial.print("[WIFI] Connected: ");
-      Serial.println(WiFi.localIP());
+      Log.noticeln("[WIFI] Connected: ");
+      Log.noticeln(WiFi.localIP());
       vTaskDelay(10000 / portTICK_PERIOD_MS);
       continue;
     }
 
     if (l_pThis->_connectionCounter > 0) {
-      Serial.println("[WIFI] Off");
+      Log.noticeln("[WIFI] Off");
       WiFi.mode(WIFI_OFF);
     	vTaskDelay(1);
     }
 
-    Serial.print("[WIFI] Connecting... SSID: ");
-    Serial.print(l_pThis->_ssid);
-    Serial.print(", pw: ");
-    Serial.println(l_pThis->_pwd);
+    Log.noticeln("[WIFI] Connecting... SSID: ");
+    Log.noticeln(l_pThis->_ssid);
+    Log.noticeln(", pw: ");
+    Log.noticeln(l_pThis->_pwd);
 
     WiFi.mode(WIFI_STA);
     //esp_wifi_set_ps (WIFI_PS_NONE);
@@ -58,7 +59,7 @@ void WiFiKeepConnected::keepWiFiAlive(void *pvParameters){
     unsigned long startAttemptTime = millis();
 
     // Keep looping while we're not connected and haven't reached the timeout
-    Serial.println("[WIFI] waiting for connection");
+    Log.noticeln("[WIFI] waiting for connection");
     while (WiFi.status() != WL_CONNECTED &&
     millis() < WIFI_TIMEOUT_MS + startAttemptTime){
       vTaskDelay(1);
@@ -67,7 +68,7 @@ void WiFiKeepConnected::keepWiFiAlive(void *pvParameters){
     // When we couldn't make a WiFi connection (or the timeout expired)
     // sleep for a while and then retry.
     if(WiFi.status() != WL_CONNECTED){
-      Serial.println("[WIFI] FAILED");
+      Log.noticeln("[WIFI] FAILED");
       vTaskDelay(WIFI_RECOVER_TIME_MS / portTICK_PERIOD_MS);
       continue;
     }

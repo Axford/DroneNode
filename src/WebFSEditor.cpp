@@ -1,6 +1,7 @@
 
 #include "WebFSEditor.h"
 #include <Arduino.h>
+#include <ArduinoLog.h>
 
 WebFSEditor::WebFSEditor(fs::FS &fs, boolean &doLoop):
   _fs(fs),
@@ -15,7 +16,7 @@ String WebFSEditor::listFiles(bool ishtml) {
   _doLoop = false;
   xSemaphoreTake( xSPISemaphore, portMAX_DELAY );
   String returnText = "";
-  Serial.println("Listing files stored on _fs");
+  Log.noticeln("Listing files stored on _fs");
   File root = _fs.open("/");
   File foundfile = root.openNextFile();
   if (ishtml) {
@@ -105,7 +106,7 @@ void WebFSEditor::configureWebServer(AsyncWebServer &server) {
   // presents a "you are now logged out webpage
   server.on("/logged-out", HTTP_GET, [](AsyncWebServerRequest * request) {
     String logmessage = "Client:" + request->client()->remoteIP().toString() + " " + request->url();
-    Serial.println(logmessage);
+    ////Log.noticeln(logmessage);
     request->send_P(401, "text/html", logout_html, processor);
   });
 
@@ -114,11 +115,11 @@ void WebFSEditor::configureWebServer(AsyncWebServer &server) {
 
     if (checkUserWebAuth(request)) {
       logmessage += " Auth: Success";
-      Serial.println(logmessage);
+      //Log.noticeln(logmessage);
       request->send_P(200, "text/html", index_html, processor);
     } else {
       logmessage += " Auth: Failed";
-      Serial.println(logmessage);
+      //Log.noticeln(logmessage);
       return request->requestAuthentication();
     }
 
@@ -130,12 +131,12 @@ void WebFSEditor::configureWebServer(AsyncWebServer &server) {
     if (checkUserWebAuth(request)) {
       request->send(200, "text/html", reboot_html);
       logmessage += " Auth: Success";
-      Serial.println(logmessage);
+      //Log.noticeln(logmessage);
       //shouldReboot = true;
       ESP.restart();
     } else {
       logmessage += " Auth: Failed";
-      Serial.println(logmessage);
+      //Log.noticeln(logmessage);
       return request->requestAuthentication();
     }
   });
@@ -145,12 +146,12 @@ void WebFSEditor::configureWebServer(AsyncWebServer &server) {
     String logmessage = "Client:" + request->client()->remoteIP().toString() + " " + request->url();
     if (checkUserWebAuth(request)) {
       logmessage += " Auth: Success";
-      Serial.println(logmessage);
+      //Log.noticeln(logmessage);
       boolean doHTML = !request->hasParam("json");
       request->send(200, doHTML ? "text/plain" : "application/json", listFiles(doHTML) );
     } else {
       logmessage += " Auth: Failed";
-      Serial.println(logmessage);
+      //Log.noticeln(logmessage);
       return request->requestAuthentication();
     }
   });
@@ -161,7 +162,7 @@ void WebFSEditor::configureWebServer(AsyncWebServer &server) {
       _doLoop = false;
       xSemaphoreTake( xSPISemaphore, portMAX_DELAY );
       logmessage += " Auth: Success";
-      Serial.println(logmessage);
+      //Log.noticeln(logmessage);
 
       if (request->hasParam("name") && request->hasParam("action")) {
         const char *fileName = request->getParam("name")->value().c_str();
@@ -170,10 +171,10 @@ void WebFSEditor::configureWebServer(AsyncWebServer &server) {
         logmessage = "Client:" + request->client()->remoteIP().toString() + " " + request->url() + "?name=" + String(fileName) + "&action=" + String(fileAction);
 
         if (!_fs.exists(fileName)) {
-          Serial.println(logmessage + " ERROR: file does not exist");
+          //Log.noticeln(logmessage + " ERROR: file does not exist");
           request->send(400, "text/plain", "ERROR: file does not exist");
         } else {
-          Serial.println(logmessage + " file exists");
+          //Log.noticeln(logmessage + " file exists");
           if (strcmp(fileAction, "download") == 0) {
             logmessage += " downloaded";
             request->send(_fs, fileName, "text/plain");
@@ -185,7 +186,7 @@ void WebFSEditor::configureWebServer(AsyncWebServer &server) {
             logmessage += " ERROR: invalid action param supplied";
             request->send(400, "text/plain", "ERROR: invalid action param supplied");
           }
-          Serial.println(logmessage);
+          //Log.noticeln(logmessage);
         }
       } else {
         request->send(400, "text/plain", "ERROR: name and action params required");
@@ -194,7 +195,7 @@ void WebFSEditor::configureWebServer(AsyncWebServer &server) {
       //xSemaphoreGive( xSPISemaphore );
     } else {
       logmessage += " Auth: Failed";
-      Serial.println(logmessage);
+      //Log.noticeln(logmessage);
       return request->requestAuthentication();
     }
   });
@@ -202,7 +203,7 @@ void WebFSEditor::configureWebServer(AsyncWebServer &server) {
 
 void WebFSEditor::notFound(AsyncWebServerRequest *request) {
   String logmessage = "Client:" + request->client()->remoteIP().toString() + " " + request->url();
-  Serial.println(logmessage);
+  //Log.noticeln(logmessage);
   request->send(404, "text/plain", "Not found");
 }
 
@@ -213,7 +214,7 @@ bool WebFSEditor::checkUserWebAuth(AsyncWebServerRequest * request) {
   return true;
 
   if (request->authenticate(httpuser.c_str(), httppassword.c_str())) {
-    Serial.println("is authenticated via username and password");
+    Log.noticeln("is authenticated via username and password");
     isAuthenticated = true;
   }
   return isAuthenticated;
@@ -228,27 +229,27 @@ void WebFSEditor::handleUpload(AsyncWebServerRequest *request, String filename, 
     xSemaphoreTake( xSPISemaphore, portMAX_DELAY );
     //Serial.println("taken 2");
     String logmessage = "Client:" + request->client()->remoteIP().toString() + " " + request->url();
-    Serial.println(logmessage);
+    //Log.noticeln(logmessage);
 
     if (!index) {
       logmessage = "Upload Start: " + String(filename);
       // open the file on first call and store the file handle in the request object
       request->_tempFile = _fs.open("/" + filename, "w");
-      Serial.println(logmessage);
+      //Log.noticeln(logmessage);
     }
 
     if (len) {
       // stream the incoming chunk to the opened file
       request->_tempFile.write(data, len);
       logmessage = "Writing file: " + String(filename) + " index=" + String(index) + " len=" + String(len);
-      Serial.println(logmessage);
+      //Log.noticeln(logmessage);
     }
 
     if (final) {
       logmessage = "Upload Complete: " + String(filename) + ",size: " + String(index + len);
       // close the file handle as the upload is now done
       request->_tempFile.close();
-      Serial.println(logmessage);
+      //Log.noticeln(logmessage);
       request->redirect("/");
     }
 
@@ -256,7 +257,7 @@ void WebFSEditor::handleUpload(AsyncWebServerRequest *request, String filename, 
     //Serial.println("give 2");
     //xSemaphoreGive( xSPISemaphore );
   } else {
-    Serial.println("Auth: Failed");
+    Log.noticeln("Auth: Failed");
     return request->requestAuthentication();
   }
 }

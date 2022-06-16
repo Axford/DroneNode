@@ -165,7 +165,7 @@ void handleOTAEVent(OTAManagerEvent event, float progress) {
   if (event == start) {
     dmm->shutdown();
   } else if (event == progress) {
-    Serial.print(F("OTA progress: "));  Serial.println(progress*100);
+    Log.noticeln(F("OTA progress: %f"), progress*100);
     dmm->onOTAProgress(progress);
   }
 }
@@ -271,7 +271,7 @@ void setup() {
   logFile = LITTLEFS.open("/startup.log", FILE_WRITE);
 
   // switch to logging to startup.log file on flash
-  Serial.println(F("[] Sending log to startup.log..."));
+  Log.noticeln(F("[] Sending log to startup.log..."));
   //Log.begin(LOG_LEVEL_VERBOSE, &logFile);
   //Log.begin(LOG_LEVEL_VERBOSE, &Serial);
   Log.noticeln(F("[] Starting..."));
@@ -398,50 +398,53 @@ void loop() {
 
 
   // serial command interface
-  if (Serial.available()) {
-    char c = Serial.read();
-    Serial.print(c);
+  // disable if logging is silent.. indicates we're using the serial port for telemtry
+  if (Log.getLevel() != LOG_LEVEL_SILENT) {
+    if (Serial.available()) {
+      char c = Serial.read();
+      Serial.print(c);
 
-    if (c == '\n' || c == '\r') {
-      // null terminate
-      serialCommand[serialCommandLen] = 0;
-      Serial.print("Executing: ");
-      Serial.println(serialCommand);
+      if (c == '\n' || c == '\r') {
+        // null terminate
+        serialCommand[serialCommandLen] = 0;
+        Serial.print("Executing: ");
+        Serial.println(serialCommand);
 
-      // clear boot flag and restart
-      if (strcmp(serialCommand, "execute")==0) {
-        Serial.println("restarting");
-        dem->setBootStatus(DEM_BOOT_SUCCESS);
-        dmm->restart();
+        // clear boot flag and restart
+        if (strcmp(serialCommand, "execute")==0) {
+          Serial.println("restarting");
+          dem->setBootStatus(DEM_BOOT_SUCCESS);
+          dmm->restart();
+        }
+
+        // format filesystem
+        if (strcmp(serialCommand, "format")==0) {
+          Serial.println("Formatting");
+          LITTLEFS.format();
+          dmm->restart();
+        }
+
+        // enable wifi
+        if (strcmp(serialCommand, "wifi")==0) {
+          Serial.println("Enabling WiFi");
+          dlm->enableWiFi();
+        }
+
+        // traceroute
+        if (strncmp(serialCommand, "trace", 5)==0) {
+          // read node address
+          uint8_t destNode = atoi(&serialCommand[6]);
+
+          Log.noticeln("Traceroute to %u", destNode);
+          dlm->generateTraceroute(destNode);
+        }
+
+        serialCommandLen = 0;
+
+      } else {
+        serialCommand[serialCommandLen] = c;
+        if (serialCommandLen < 29 ) serialCommandLen++;
       }
-
-      // format filesystem
-      if (strcmp(serialCommand, "format")==0) {
-        Serial.println("Formatting");
-        LITTLEFS.format();
-        dmm->restart();
-      }
-
-      // enable wifi
-      if (strcmp(serialCommand, "wifi")==0) {
-        Serial.println("Enabling WiFi");
-        dlm->enableWiFi();
-      }
-
-      // traceroute
-      if (strncmp(serialCommand, "trace", 5)==0) {
-        // read node address
-        uint8_t destNode = atoi(&serialCommand[6]);
-
-        Log.noticeln("Traceroute to %u", destNode);
-        dlm->generateTraceroute(destNode);
-      }
-
-      serialCommandLen = 0;
-
-    } else {
-      serialCommand[serialCommandLen] = c;
-      if (serialCommandLen < 29 ) serialCommandLen++;
     }
   }
 

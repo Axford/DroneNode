@@ -15,18 +15,17 @@ OTAManager::OTAManager(AsyncEventSource * events) {
 
 void OTAManager::init(String hostname) {
 
-  Serial.println(F("[OTA] Configuring OTA"));
+  Log.noticeln(F("[OTA] Configuring OTA"));
 
   //Send OTA events to the browser
   ArduinoOTA.onStart([&]() {
-    String type;
     if (ArduinoOTA.getCommand() == U_FLASH)
-      type = "sketch";
+      Log.noticeln("[OTA] Start updating sketch");
     else // U_SPIFFS
-      type = "filesystem";
+      Log.noticeln("[OTA] Start updating filesystem");
 
     LITTLEFS.end();
-    Serial.println("[OTA] Start updating " + type);
+
     isUpdating = true;
 
     // backoff watchdog
@@ -39,7 +38,7 @@ void OTAManager::init(String hostname) {
     if (onEvent) { onEvent(start, 0); }
   });
   ArduinoOTA.onEnd([&]() {
-    Serial.println(F("[OTA] End"));
+    Log.noticeln(F("[OTA] End"));
     _events->send("Update End", "ota");
     esp_task_wdt_init(5,0);
     isUpdating = false;

@@ -163,8 +163,7 @@ void WiFiManager::keepWiFiAlive(void *pvParameters){
 
     if (l_pThis->_enabled) {
       if(WiFi.status() == WL_CONNECTED){
-        Serial.print("[WIFI] Connected: ");
-        Serial.println(WiFi.localIP());
+        Log.noticeln("[WIFI] Connected: %p", WiFi.localIP());
         vTaskDelay(10000 / portTICK_PERIOD_MS);
         continue;
       } else if (!l_pThis->_scanActive && !l_pThis->_attemptingConnection) {
@@ -241,7 +240,7 @@ void WiFiManager::keepWiFiAlive(void *pvParameters){
         unsigned long startAttemptTime = millis();
 
         // Keep looping while we're not connected and haven't reached the timeout
-        Serial.println("[WIFI] waiting for connection");
+        Log.noticeln("[WIFI] waiting for connection");
         while (WiFi.status() != WL_CONNECTED &&
         millis() < WIFI_TIMEOUT_MS + startAttemptTime && l_pThis->_enabled){
           vTaskDelay(10);
@@ -268,7 +267,7 @@ void WiFiManager::keepWiFiAlive(void *pvParameters){
       }
     } else {
       // currently disabled, so sleep a while
-      Serial.println("~");
+      Log.noticeln("~");
       vTaskDelay(1000 / portTICK_PERIOD_MS);
     }
   }

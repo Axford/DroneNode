@@ -110,7 +110,7 @@ void RFM69TelemetryModule::setup() {
   } else {
 
     if (!_radio->setFrequency(915.0))
-      Serial.println("setFrequency failed");
+      Log.errorln("setFrequency failed");
 
 
     // maximum POWWWWAAAAAA!!
@@ -248,13 +248,14 @@ boolean RFM69TelemetryModule::sendPacket(uint8_t *buffer) {
   _buffer[0] = RFM69_START_OF_FRAME; // ensure this is set, given we reuse the buffer
   _buffer[txSize-1] = _CRC8.smbus(_buffer, txSize - 1);
 
+  /*
   Log.noticeln("[RFM.sP] sending %u bytes", txSize);
   for (uint8_t i=0; i<txSize; i++) {
     Serial.print("  ");
     Serial.print(_buffer[i], BIN);
   }
   Serial.println();
-
+  */
 
   _radio->send(_buffer, txSize);
   _radio->waitPacketSent(100);

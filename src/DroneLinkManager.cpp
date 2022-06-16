@@ -125,10 +125,12 @@ bool DroneLinkManager::publish(DroneLinkMsg &msg) {
 
   _publishedMessages++;
 
+  /*
   if (msg.type() == DRONE_LINK_MSG_TYPE_NAMEQUERY) {
     Serial.print("Publish: ");
     msg.print();
   }
+  */
   //Log.noticeln(F("Pub: %d>%d.%d"),msg.node(), msg.channel(), msg.param());
 
   // and publish to any matches

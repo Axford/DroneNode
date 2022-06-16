@@ -92,7 +92,7 @@ void UDPTelemetryModule::loop() {
 
   // deferred initialisation to allow for lack of wifi at start
   if (!_started && WiFi.status() == WL_CONNECTED) {
-    Serial.println("[UDP.l] .begin");
+    Log.noticeln("[UDP.l] .begin");
     // start UDP server
     _udp.begin(_params[UDP_PARAM_PORT_E].data.uint32[0]);
     _started = true;

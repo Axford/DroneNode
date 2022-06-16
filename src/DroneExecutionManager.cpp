@@ -1573,7 +1573,7 @@ boolean DroneExecutionManager::core_sub(DEM_INSTRUCTION_COMPILED* instr, DEM_CAL
   if (addr->node == 0) addr->node = _dlm->node();
 
   Log.warningln(F("[.sub] Creating sub for module %u"), module);
-  DroneLinkMsg::printAddress(addr);  Serial.print('\n');
+  //DroneLinkMsg::printAddress(addr);  Serial.print('\n');
 
   // should have a single addr value in instr->msg
   DroneModule* mod = _dmm->getModuleById(module);
