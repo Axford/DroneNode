@@ -225,18 +225,6 @@ void setup() {
   //xSemaphoreGive(xSPISemaphore);
 
 
-  /*
-  // direct log output to file in SPIFFS
-  Log.noticeln(F("[] Starting SPIFFS"));
-  if (!SPIFFS.begin(true)) { // formatonfail=true
-    Log.errorln(F("[] Unable to begin SPIFFS"));
-  }
-  Log.noticeln(F("  totalBytes %d"), SPIFFS.totalBytes());
-  Log.noticeln(F("  usedBytes %d"), SPIFFS.usedBytes());
-
-  File logFile = SPIFFS.open("/startup.log", FILE_WRITE);
-  */
-
   if(!LITTLEFS.begin(FORMAT_LITTLEFS_IF_FAILED)){
     Log.errorln("[] LITTLEFS Mount Failed");
     delay(1000);

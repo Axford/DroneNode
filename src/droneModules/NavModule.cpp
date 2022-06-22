@@ -36,7 +36,7 @@ NavModule::NavModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm,
    _subs[NAV_SUB_LOCATION_E].param.paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_FLOAT, 12);
 
    _subs[NAV_SUB_TARGET_E].addrParam = NAV_SUB_TARGET_ADDR;
-   _subs[NAV_SUB_TARGET_E].param.paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, NAV_SUB_TARGET);
+   _subs[NAV_SUB_TARGET_E].param.paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_HIGH, NAV_SUB_TARGET);
    _subs[NAV_SUB_TARGET_E].param.name = FPSTR(STRING_TARGET);
    _subs[NAV_SUB_TARGET_E].param.nameLen = sizeof(STRING_TARGET);
    _subs[NAV_SUB_TARGET_E].param.paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_FLOAT, 16);
@@ -56,7 +56,7 @@ NavModule::NavModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm,
    _params[NAV_PARAM_HEADING_E].nameLen = sizeof(STRING_HEADING);
    _params[NAV_PARAM_HEADING_E].paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 4);
 
-   _params[NAV_PARAM_DISTANCE_E].paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_HIGH, NAV_PARAM_DISTANCE);
+   _params[NAV_PARAM_DISTANCE_E].paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_MEDIUM, NAV_PARAM_DISTANCE);
    _params[NAV_PARAM_DISTANCE_E].name = FPSTR(STRING_DISTANCE);
    _params[NAV_PARAM_DISTANCE_E].nameLen = sizeof(STRING_DISTANCE);
    _params[NAV_PARAM_DISTANCE_E].paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 4);
