@@ -86,9 +86,12 @@ void SerialTelemetryModule::setup() {
     case 0:
       Log.noticeln(F("[Serial.s] Serial 0 at %u"), _params[SERIAL_TELEMETRY_PARAM_BAUD_E].data.uint32[0]);
       // disable logging to serial
-      Log.begin(LOG_LEVEL_SILENT, &Serial);
+
+      Log.noticeln(F("[Serial.s] Silent log"));
+      Log.setLevel(LOG_LEVEL_SILENT);
+      Log.noticeln(F("[Serial.s] Log level: %u"), Log.getLevel());
       // reset serial for telemetry
-      Serial.begin(_params[SERIAL_TELEMETRY_PARAM_BAUD_E].data.uint32[0], SERIAL_8N1, PIN_SERIAL0_RX, PIN_SERIAL0_TX);
+      Serial.updateBaudRate(_params[SERIAL_TELEMETRY_PARAM_BAUD_E].data.uint32[0]);
       setPort(&Serial);
       break;
     case 1:
@@ -105,7 +108,13 @@ void SerialTelemetryModule::setup() {
       _port = NULL;
       Log.errorln(F("[Serial.s] invalid port: %u"), _params[SERIAL_TELEMETRY_PARAM_PORT_E].data.uint8[0]);
       setError(1);
+      return;
   }
+
+  // register network interface
+  _dlm->registerInterface(this);
+
+  _interfaceState = true;
 }
 
 void SerialTelemetryModule::loop() {
@@ -143,26 +152,41 @@ void SerialTelemetryModule::loop() {
 
         case 2: // reading payload
           if (_msgLen == _receivedSize - 1) {
-            _decodeState =3;
-          }
-          _receivedSize++;
-          break;
-
-        case 3: // checking CRC
-          uint8_t crc = _CRC8.smbus(_buffer, _receivedSize-1);
-          if (crc == _buffer[_receivedSize]) {
             receivePacket(&_buffer[1], 1);
             _packetsReceived++;
-          } else {
-            Log.errorln("[Serial.rP] CRC fail");
-            _packetsRejected++;
+
+            _decodeState = 0;
+            _receivedSize = 0;
           }
-          _decodeState = 0;
-          _receivedSize = 0;
+          _receivedSize++;
           break;
       }
     }
     //Serial.print('\n');
+  }
+
+
+  // update and publish packet counters
+  if (millis() > _packetsTimer + 5000) {
+    uint32_t delta[3];
+    delta[0] = _packetsSent - _params[SERIAL_TELEMETRY_PARAM_PACKETS_E].data.uint32[0];
+    delta[1] = _packetsReceived - _params[SERIAL_TELEMETRY_PARAM_PACKETS_E].data.uint32[1];
+    delta[2] = _packetsRejected - _params[SERIAL_TELEMETRY_PARAM_PACKETS_E].data.uint32[2];
+
+
+    _params[SERIAL_TELEMETRY_PARAM_PACKETS_E].data.uint32[0] = _packetsSent;
+    _params[SERIAL_TELEMETRY_PARAM_PACKETS_E].data.uint32[1] = _packetsReceived;
+    _params[SERIAL_TELEMETRY_PARAM_PACKETS_E].data.uint32[2] = _packetsRejected;
+
+    publishParamEntry(&_params[SERIAL_TELEMETRY_PARAM_PACKETS_E]);
+
+    float dur = (millis() - _packetsTimer)/1000.0;
+    for (uint8_t i=0; i<3; i++) {
+      _params[SERIAL_TELEMETRY_PARAM_SPEED_E].data.f[i] = delta[i] / dur;
+    }
+    publishParamEntry(&_params[SERIAL_TELEMETRY_PARAM_SPEED_E]);
+
+    _packetsTimer = millis();
   }
 }
 
@@ -175,24 +199,12 @@ boolean SerialTelemetryModule::sendPacket(uint8_t *buffer) {
 
   if (!_enabled) return false;
 
-  // wrap the DroneMesh message in a start byte and end CRC
-  uint8_t txSize = getDroneMeshMsgTotalSize(buffer) + 2;
+  // prefix the DroneMesh message in a start byte
+  uint8_t txSize = getDroneMeshMsgTotalSize(buffer) + 1;
 
-
-  memcpy(_buffer + 1, buffer, txSize-2);
-  _buffer[0] = SERIAL_TELEMETRY_START_OF_FRAME; // ensure this is set, given we reuse the buffer
-  _buffer[txSize-1] = _CRC8.smbus(_buffer, txSize - 1);
-
-  /*
-  Log.noticeln("[RFM.sP] sending %u bytes", txSize);
-  for (uint8_t i=0; i<txSize; i++) {
-    Serial.print("  ");
-    Serial.print(_buffer[i], BIN);
-  }
-  Serial.println();
-  */
-
-  _port->write(_buffer, txSize);
+  _port->write(SERIAL_TELEMETRY_START_OF_FRAME);
+  _port->write(buffer, txSize-1);
+  _port->flush();
 
   _packetsSent++;
 

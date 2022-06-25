@@ -20,17 +20,19 @@ Management.new 1
 
 UDPTelemetry.new 2
   name "UDPT"
-  status 1
+  status 0
   port 8007
   broadcast 255 255 255 255
-  .sub [@>0.0]
+  .publish "packets"
+  .publish "speed"
 .done
 
 RFM69Telemetry.new 3
   name "RFM69"
-  status 1  // enable
-  .sub [@>0.0]
+  status 0
   .publish "RSSI"
+  .publish "packets"
+  .publish "speed"
 .done
 
 INA219.new 4
@@ -40,10 +42,19 @@ INA219.new 4
   interval 1000
   cells 1
   threshold 4.2
-  status 1
+  status 0
   .publish "current"
   .publish "power"
   .publish "loadV"
+.done
+
+SerialTelemetry.new 5
+  name "Serial"
+  status 1
+  port 0
+  baud 115200
+  .publish "packets"
+  .publish "speed"
 .done
 
 // finish setup

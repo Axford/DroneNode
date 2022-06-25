@@ -1346,8 +1346,8 @@ boolean DroneExecutionManager::core_setup(DEM_INSTRUCTION_COMPILED* instr, DEM_C
   Log.noticeln(F("[.s] Setup complete"));
 
   // redirect logging to serial
-  if (_logFile) _logFile.close();
-  Log.begin(LOG_LEVEL_VERBOSE, &Serial);
+  //if (_logFile) _logFile.close();
+  //Log.begin(LOG_LEVEL_VERBOSE, &Serial);
 
   return true;
 }
