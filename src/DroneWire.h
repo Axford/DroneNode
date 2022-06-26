@@ -19,9 +19,13 @@ namespace DroneWire {
 
   void setup();
 
+  uint8_t getMultiplexerVersion();
+
   void reset();
 
   void selectChannel(uint8_t chan);
+
+  boolean scanAddress(uint8_t addr);
 
   // scan current channel for devices
   void scan();

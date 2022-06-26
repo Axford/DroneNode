@@ -38,6 +38,7 @@ DroneSystem is the root of all Drone objects, keeping the main script as simple 
 #include "DroneWire.h"
 #include "DroneExecutionManager.h"
 #include "DroneFS.h"
+#include "DroneLED.h"
 #include "pinConfig.h"
 
 // file system
@@ -46,6 +47,7 @@ DroneSystem is the root of all Drone objects, keeping the main script as simple 
 
 // web services
 #include "WiFiManager.h"
+#include <ESPAsyncWebServer.h>
 
 // other
 #include <ESP32Servo.h>
@@ -53,6 +55,9 @@ DroneSystem is the root of all Drone objects, keeping the main script as simple 
 
 class DroneSystem {
 protected:
+  // motherboard version
+  uint8_t _motherboardVersion;
+
   // handle to logFile
   File _logFile;
 
@@ -67,17 +72,29 @@ protected:
   char _serialCommand[30];
   uint8_t _serialCommandLen;
 
+  // web server
+  AsyncWebServer _server;
+
 public:
 
   DroneFS dfs;
   DroneLinkManager *dlm;
   DroneModuleManager *dmm;
   DroneExecutionManager *dem;
+  DroneLED* dled;
 
   DroneSystem();
 
+  void detectMotherboardVersion();
+
+  uint8_t motherboardVersion();
+
+  void createDefaultConfig();
+
   // see if safeMode.txt exists, if not create it
   void createSafeModeScript();
+
+  void setupWebServer();
 
   // startup using safeMode.txt
   void startInSafeMode();

@@ -57,5 +57,15 @@ SerialTelemetry.new 5
   .publish "speed"
 .done
 
+NMEA.new 7
+  name "GPS"
+  interval 1000
+  port 1
+  baud 9600
+  .publish "location"
+  .publish "satellites"
+  .publish "HDOP"
+.done
+
 // finish setup
 .setup

@@ -271,7 +271,11 @@ DroneFSEntry* DroneFSEntry::getEntryById(uint8_t id) {
 DroneFS::DroneFS() {
   char rootName[2] = "/";
   _nextId = 0;
+  // create root entry
   _root = new DroneFSEntry(this, NULL, rootName, true);
+
+  // detect filesystem
+  
 }
 
 
