@@ -3,8 +3,8 @@
 #include "../DroneLinkManager.h"
 #include "strings.h"
 
-NunchuckJoystick::NunchuckJoystick(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm, DroneExecutionManager* dem, fs::FS &fs):
-  I2CBaseModule ( id, dmm, dlm, dem, fs )
+NunchuckJoystick::NunchuckJoystick(uint8_t id, DroneSystem* ds):
+  I2CBaseModule ( id, ds )
  {
    setTypeName(FPSTR(NunJOYSTICK_STR_NunJOYSTICK));
    //_pins[0] = 0;

@@ -3,8 +3,8 @@
 #include "../DroneLinkManager.h"
 #include "strings.h"
 
-SpeedControlModule::SpeedControlModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm, DroneExecutionManager* dem, fs::FS &fs):
-  DroneModule ( id, dmm, dlm, dem, fs )
+SpeedControlModule::SpeedControlModule(uint8_t id, DroneSystem* ds):
+  DroneModule ( id, ds )
  {
    setTypeName(FPSTR(SPEED_CONTROL_STR_SPEED_CONTROL));
 

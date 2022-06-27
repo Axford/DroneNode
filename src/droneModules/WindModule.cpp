@@ -6,8 +6,8 @@
 
 unsigned long _globalWindCounter;
 
-WindModule::WindModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm, DroneExecutionManager* dem, fs::FS &fs):
-  I2CBaseModule ( id, dmm, dlm, dem, fs )
+WindModule::WindModule(uint8_t id, DroneSystem* ds):
+  I2CBaseModule ( id, ds )
  {
    setTypeName(FPSTR(WIND_STR_WIND));
    //_params[I2CBASE_PARAM_ADDR_E].data.uint8[0] = WIND_I2C_ADDRESS;

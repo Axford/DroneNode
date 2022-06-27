@@ -10,6 +10,7 @@
 #include "FS.h"
 
 // forward declarations
+class DroneSystem;
 class DroneModule;
 class DroneLinkManager;
 class DroneModuleManager;
@@ -124,6 +125,7 @@ protected:
 
   boolean _safeMode;
 
+  DroneSystem* _ds;
   DroneLinkManager *_dlm;
   DroneModuleManager *_dmm;
 
@@ -142,7 +144,7 @@ protected:
   //DRONE_LINK_NODE_PAGE *_nodePages[DRONE_LINK_NODE_PAGES];
 
 public:
-    DroneExecutionManager(DroneModuleManager *dmm, DroneLinkManager *dlm, fs::FS &fs, File &logFile);
+    DroneExecutionManager(DroneSystem* ds, File &logFile);
 
     uint8_t getBootStatus();
     void setBootStatus(uint8_t v);

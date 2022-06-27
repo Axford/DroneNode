@@ -86,7 +86,7 @@ protected:
   QMC5883LCompass *_sensor;
 public:
 
-  QMC5883LModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm, DroneExecutionManager* dem, fs::FS &fs);
+  QMC5883LModule(uint8_t id, DroneSystem* ds);
   ~QMC5883LModule();
 
   static DEM_NAMESPACE* registerNamespace(DroneExecutionManager *dem);

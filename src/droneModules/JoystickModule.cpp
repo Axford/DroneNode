@@ -3,8 +3,8 @@
 #include "../DroneLinkManager.h"
 #include "strings.h"
 
-JoystickModule::JoystickModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm, DroneExecutionManager* dem, fs::FS &fs):
-  I2CBaseModule ( id, dmm, dlm, dem, fs )
+JoystickModule::JoystickModule(uint8_t id, DroneSystem* ds):
+  I2CBaseModule ( id, ds )
  {
    setTypeName(FPSTR(JOYSTICK_STR_JOYSTICK));
 

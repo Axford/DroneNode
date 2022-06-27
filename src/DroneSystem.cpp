@@ -281,7 +281,7 @@ void DroneSystem::setup() {
   //dlm->onEvent = handleDLMEvent;
   dmm = new DroneModuleManager(dlm);
   // TODO - refactor to use FS class
-  dem = new DroneExecutionManager(dmm, dlm, LITTLEFS, _logFile);
+  dem = new DroneExecutionManager(this, _logFile);
 
   // allocate PWM timers
   //ESP32PWM::allocateTimer(0);

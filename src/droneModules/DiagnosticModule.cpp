@@ -6,8 +6,8 @@
 #include <SPIFFS.h>
 
 
-DiagnosticModule::DiagnosticModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm, DroneExecutionManager* dem, fs::FS &fs):
-  I2CBaseModule ( id, dmm, dlm, dem, fs )
+DiagnosticModule::DiagnosticModule(uint8_t id, DroneSystem* ds):
+  I2CBaseModule ( id, ds )
  {
    setTypeName(FPSTR(DIAGNOSTIC_STR_DIAGNOSTIC));
    _display = NULL;

@@ -24,7 +24,7 @@ protected:
 
 public:
 
-  I2CBaseModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm, DroneExecutionManager* dem, fs::FS &fs);
+  I2CBaseModule(uint8_t id, DroneSystem* ds);
 
   void initBaseParams();
 

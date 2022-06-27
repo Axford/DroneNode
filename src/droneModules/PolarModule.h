@@ -162,7 +162,7 @@ protected:
   uint8_t  _region;
 public:
 
-  PolarModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm, DroneExecutionManager* dem, fs::FS &fs);
+  PolarModule(uint8_t id, DroneSystem* ds);
 
   static DEM_NAMESPACE* registerNamespace(DroneExecutionManager *dem);
   static void registerParams(DEM_NAMESPACE* ns, DroneExecutionManager *dem);

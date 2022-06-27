@@ -7,8 +7,9 @@ DroneSystem is the root of all Drone objects, keeping the main script as simple 
 * Hosts all the other Drone core objects (module mgr, execution mgr, etc)
 * HAL and underlying services
   * Status LEDs (neopixel strings)
-  * interrupt routines
   * filesystem (flash vs SD)
+  * IO pin registration
+  * interrupt routines
   * timers?
   * sleep system?
   * cpu freq?

@@ -5,8 +5,8 @@
 #include <SPIFFS.h>
 
 
-LSM9DS1Module::LSM9DS1Module(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm, DroneExecutionManager* dem, fs::FS &fs):
-  I2CBaseModule ( id, dmm, dlm, dem, fs )
+LSM9DS1Module::LSM9DS1Module(uint8_t id, DroneSystem* ds):
+  I2CBaseModule ( id, ds )
  {
    setTypeName(FPSTR(LSM9DS1_STR_LSM9DS1));
    //_params[I2CBASE_PARAM_ADDR_E].data.uint8[0] = LSM9DS1_I2C_ADDRESS;

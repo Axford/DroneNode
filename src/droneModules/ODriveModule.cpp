@@ -4,8 +4,8 @@
 #include "../pinConfig.h"
 #include "strings.h"
 
-ODriveModule::ODriveModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm, DroneExecutionManager* dem, fs::FS &fs):
-  DroneModule ( id, dmm, dlm, dem, fs )
+ODriveModule::ODriveModule(uint8_t id, DroneSystem* ds):
+  DroneModule ( id, ds )
  {
    setTypeName(FPSTR(ODRIVE_STR_ODRIVE));
 

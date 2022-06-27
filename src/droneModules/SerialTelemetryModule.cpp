@@ -3,8 +3,8 @@
 #include "../DroneLinkManager.h"
 #include "strings.h"
 
-SerialTelemetryModule::SerialTelemetryModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm, DroneExecutionManager* dem, fs::FS &fs):
-  NetworkInterfaceModule ( id, dmm, dlm, dem, fs )
+SerialTelemetryModule::SerialTelemetryModule(uint8_t id, DroneSystem* ds):
+  NetworkInterfaceModule ( id, ds )
  {
    setTypeName(FPSTR(SERIAL_TELEMETRY_STR_SERIAL_TELEMETRY));
    _buffer[0] = SERIAL_TELEMETRY_START_OF_FRAME;

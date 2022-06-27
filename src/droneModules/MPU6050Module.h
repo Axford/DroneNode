@@ -42,7 +42,7 @@ protected:
   Adafruit_MPU6050 *_sensor;
 public:
 
-  MPU6050Module(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm, DroneExecutionManager* dem, fs::FS &fs);
+  MPU6050Module(uint8_t id, DroneSystem* ds);
   ~MPU6050Module();
 
   static DEM_NAMESPACE* registerNamespace(DroneExecutionManager *dem);

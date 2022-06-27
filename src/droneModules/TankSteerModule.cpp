@@ -4,8 +4,8 @@
 #include "../strings.h"
 #include "../navMath.h"
 
-TankSteerModule::TankSteerModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm, DroneExecutionManager* dem, fs::FS &fs):
-  DroneModule ( id, dmm, dlm , dem, fs)
+TankSteerModule::TankSteerModule(uint8_t id, DroneSystem* ds):
+  DroneModule ( id, ds )
  {
    // set type
    setTypeName(FPSTR(TANK_STEER_STR_TANK_STEER));

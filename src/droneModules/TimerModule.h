@@ -21,7 +21,7 @@ protected:
 public:
   DroneLinkMsg _msg;
 
-  TimerModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm, DroneExecutionManager* dem, fs::FS &fs);
+  TimerModule(uint8_t id, DroneSystem* ds);
 
   virtual void handleLinkMessage(DroneLinkMsg *msg);
 

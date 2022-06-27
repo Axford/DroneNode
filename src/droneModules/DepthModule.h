@@ -88,7 +88,7 @@ protected:
   float _logPos[2];  // coordinates of last log entry
 public:
 
-  DepthModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm, DroneExecutionManager* dem, fs::FS &fs);
+  DepthModule(uint8_t id, DroneSystem* ds);
 
   static DEM_NAMESPACE* registerNamespace(DroneExecutionManager *dem);
   static void registerParams(DEM_NAMESPACE* ns, DroneExecutionManager *dem);

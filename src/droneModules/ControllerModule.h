@@ -175,7 +175,7 @@ protected:
   DroneLinkMsg _sendMsg;
 public:
 
-  ControllerModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm, DroneExecutionManager* dem, fs::FS &fs);
+  ControllerModule(uint8_t id, DroneSystem* ds);
   ~ControllerModule();
 
   static DEM_NAMESPACE* registerNamespace(DroneExecutionManager *dem);

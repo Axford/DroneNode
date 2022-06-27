@@ -4,8 +4,8 @@
 #include "strings.h"
 #include "../navMath.h"
 
-DepthModule::DepthModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm, DroneExecutionManager* dem, fs::FS &fs):
-  DroneModule ( id, dmm, dlm, dem, fs )
+DepthModule::DepthModule(uint8_t id, DroneSystem* ds):
+  DroneModule ( id, ds )
  {
    setTypeName(FPSTR(DEPTH_STR_DEPTH));
 

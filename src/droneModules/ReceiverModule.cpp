@@ -9,8 +9,8 @@ uint8_t _globalReceiverPins[4];
 unsigned long _globalReceiverRawTimers[4];
 unsigned long _globalLastReceiverSignal;
 
-ReceiverModule::ReceiverModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm, DroneExecutionManager* dem, fs::FS &fs):
-  DroneModule ( id, dmm, dlm, dem, fs )
+ReceiverModule::ReceiverModule(uint8_t id, DroneSystem* ds):
+  DroneModule ( id, ds )
  {
    setTypeName(FPSTR(RECEIVER_STR_RECEIVER));
 

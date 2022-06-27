@@ -4,8 +4,8 @@
 #include "strings.h"
 #include "../navMath.h"
 
-PolarModule::PolarModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm, DroneExecutionManager* dem, fs::FS &fs):
-  DroneModule ( id, dmm, dlm, dem, fs )
+PolarModule::PolarModule(uint8_t id, DroneSystem* ds):
+  DroneModule ( id, ds )
  {
    setTypeName(FPSTR(POLAR_STR_POLAR));
 

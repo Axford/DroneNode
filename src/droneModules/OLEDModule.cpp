@@ -5,8 +5,8 @@
 #include "OLEDTomThumbFont.h"
 #include "strings.h"
 
-OLEDModule::OLEDModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm, DroneExecutionManager* dem, fs::FS &fs):
-  I2CBaseModule ( id, dmm, dlm, dem, fs )
+OLEDModule::OLEDModule(uint8_t id, DroneSystem* ds):
+  I2CBaseModule ( id, ds )
  {
    setTypeName(FPSTR(OLED_STR_OLED));
 

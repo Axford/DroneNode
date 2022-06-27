@@ -22,7 +22,8 @@ DroneLED::DroneLED(DroneSystem* ds) {
 
     _strip->Begin();
     _strip->Show();
-    _strip->SetBrightness(25);
+    // default brightness is very low to save battery
+    _strip->SetBrightness(15);
   }
 
   // set initial state

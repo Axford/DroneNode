@@ -3,8 +3,8 @@
 #include "../DroneLinkManager.h"
 #include "strings.h"
 
-NetworkInterfaceModule::NetworkInterfaceModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm, DroneExecutionManager* dem, fs::FS &fs):
-  DroneModule ( id, dmm, dlm, dem, fs )
+NetworkInterfaceModule::NetworkInterfaceModule(uint8_t id, DroneSystem* ds):
+  DroneModule ( id, ds )
  {
    _interfaceState = false;  // start inactive
 }

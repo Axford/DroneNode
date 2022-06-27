@@ -1,3 +1,4 @@
+#include "DroneSystem.h"
 #include "DroneExecutionManager.h"
 #include "DroneLinkManager.h"
 #include "DroneModuleManager.h"
@@ -83,11 +84,12 @@ DEM_ENUM_MAPPING DRONE_PARAM_TABLE[] PROGMEM = {
 
 
 
-DroneExecutionManager::DroneExecutionManager(DroneModuleManager *dmm, DroneLinkManager *dlm, fs::FS &fs, File &logFile):
-  _fs(fs),
+DroneExecutionManager::DroneExecutionManager(DroneSystem* ds, File &logFile):
+  _ds(ds),
+  _fs(LITTLEFS),  // TODO - replace with dfs reference
   _logFile(logFile) {
-  _dmm = dmm;
-  _dlm = dlm;
+  _dmm = _ds->dmm;
+  _dlm = _ds->dlm;
   _call.p = -1;
   _data.p = -1;
 
@@ -108,7 +110,7 @@ DroneExecutionManager::DroneExecutionManager(DroneModuleManager *dmm, DroneLinkM
   _instruction.command[0] = '_';
   _instruction.command[1] = '_';
   _instruction.command[2] = 0;
-  _instruction.addr.node = dlm->node();
+  _instruction.addr.node = _dlm->node();
   _instruction.addr.channel = 0;
   _instruction.addr.paramPriority = 0;
   _instruction.dataType = DRONE_LINK_MSG_TYPE_UINT8_T;
@@ -1429,67 +1431,67 @@ boolean DroneExecutionManager::mod_constructor(DEM_INSTRUCTION_COMPILED* instr, 
     DroneModule *newMod;
 
     if (strcmp_P(instr->ns->name, CONTROLLER_STR_CONTROLLER) == 0) {
-      newMod = new ControllerModule(id, _dmm, _dlm, this, _fs);
+      newMod = new ControllerModule(id, _ds);
     } else if (strcmp_P(instr->ns->name, DEPTH_STR_DEPTH) == 0) {
-      newMod = new DepthModule(id, _dmm, _dlm, this, _fs);
+      newMod = new DepthModule(id, _ds);
     } else if (strcmp_P(instr->ns->name, DIAGNOSTIC_STR_DIAGNOSTIC) == 0) {
-      newMod = new DiagnosticModule(id, _dmm, _dlm, this, _fs);
+      newMod = new DiagnosticModule(id, _ds);
     } else if (strcmp_P(instr->ns->name, HMC5883L_STR_HMC5883L) == 0) {
-      newMod = new HMC5883LModule(id, _dmm, _dlm, this, _fs);
+      newMod = new HMC5883LModule(id, _ds);
     } else if (strcmp_P(instr->ns->name, INA219_STR_INA219) == 0) {
-      newMod = new INA219Module(id, _dmm, _dlm, this, _fs);
+      newMod = new INA219Module(id, _ds);
     } else if (strcmp_P(instr->ns->name, INA3221_STR_INA3221) == 0) {
-      newMod = new INA3221Module(id, _dmm, _dlm, this, _fs);
+      newMod = new INA3221Module(id, _ds);
     } else if (strcmp_P(instr->ns->name, JOYSTICK_STR_JOYSTICK) == 0) {
-      newMod = new JoystickModule(id, _dmm, _dlm, this, _fs);
+      newMod = new JoystickModule(id, _ds);
     } else if (strcmp_P(instr->ns->name, LSM9DS1_STR_LSM9DS1) == 0) {
-      newMod = new LSM9DS1Module(id, _dmm, _dlm, this, _fs);
+      newMod = new LSM9DS1Module(id, _ds);
     } else if (strcmp_P(instr->ns->name, MANAGEMENT_STR_MANAGEMENT) == 0) {
-      newMod = new ManagementModule(id, _dmm, _dlm, this, _fs);
+      newMod = new ManagementModule(id, _ds);
     } else if (strcmp_P(instr->ns->name, MOTOR_STR_MOTOR) == 0) {
-      newMod = new MotorModule(id, _dmm, _dlm, this, _fs);
+      newMod = new MotorModule(id, _ds);
     } else if (strcmp_P(instr->ns->name, MPU6050_STR_MPU6050) == 0) {
-      newMod = new MPU6050Module(id, _dmm, _dlm, this, _fs);
+      newMod = new MPU6050Module(id, _ds);
     } else if (strcmp_P(instr->ns->name, NMEA_STR_NMEA) == 0) {
-      newMod = new NMEAModule(id, _dmm, _dlm, this, _fs);
+      newMod = new NMEAModule(id, _ds);
     } else if (strcmp_P(instr->ns->name, NEOPIXEL_STR_NEOPIXEL) == 0) {
-      newMod = new NeopixelModule(id, _dmm, _dlm, this, _fs);
+      newMod = new NeopixelModule(id, _ds);
     } else if (strcmp_P(instr->ns->name, NunJOYSTICK_STR_NunJOYSTICK) == 0) {
-      newMod = new NunchuckJoystick(id, _dmm, _dlm, this, _fs);
+      newMod = new NunchuckJoystick(id, _ds);
     } else if (strcmp_P(instr->ns->name, ODRIVE_STR_ODRIVE) == 0) {
-      newMod = new ODriveModule(id, _dmm, _dlm, this, _fs);
+      newMod = new ODriveModule(id, _ds);
     } else if (strcmp_P(instr->ns->name, PAN_TILT_STR_PAN_TILT) == 0) {
-      newMod = new PanTiltModule(id, _dmm, _dlm, this, _fs);
+      newMod = new PanTiltModule(id, _ds);
     } else if (strcmp_P(instr->ns->name, POLAR_STR_POLAR) == 0) {
-      newMod = new PolarModule(id, _dmm, _dlm, this, _fs);
+      newMod = new PolarModule(id, _ds);
     } else if (strcmp_P(instr->ns->name, PROA_STR_PROA) == 0) {
-      newMod = new ProaModule(id, _dmm, _dlm, this, _fs);
+      newMod = new ProaModule(id, _ds);
     } else if (strcmp_P(instr->ns->name, QMC5883L_STR_QMC5883L) == 0) {
-      newMod = new QMC5883LModule(id, _dmm, _dlm, this, _fs);
+      newMod = new QMC5883LModule(id, _ds);
     } else if (strcmp_P(instr->ns->name, RECEIVER_STR_RECEIVER) == 0) {
-      newMod = new ReceiverModule(id, _dmm, _dlm, this, _fs);
+      newMod = new ReceiverModule(id, _ds);
     } else if (strcmp_P(instr->ns->name, RFM69_TELEMETRY_STR_RFM69_TELEMETRY) == 0) {
-      newMod = new RFM69TelemetryModule(id, _dmm, _dlm, this, _fs);
+      newMod = new RFM69TelemetryModule(id, _ds);
     } else if (strcmp_P(instr->ns->name, SAILOR_STR_SAILOR) == 0) {
-      newMod = new SailorModule(id, _dmm, _dlm, this, _fs);
+      newMod = new SailorModule(id, _ds);
     } else if (strcmp_P(instr->ns->name, SERIAL_TELEMETRY_STR_SERIAL_TELEMETRY) == 0) {
-      newMod = new SerialTelemetryModule(id, _dmm, _dlm, this, _fs);
+      newMod = new SerialTelemetryModule(id, _ds);
     } else if (strcmp_P(instr->ns->name, SERVO_STR_SERVO) == 0) {
-      newMod = new ServoModule(id, _dmm, _dlm, this, _fs);
+      newMod = new ServoModule(id, _ds);
     } else if (strcmp_P(instr->ns->name, SPEED_CONTROL_STR_SPEED_CONTROL) == 0) {
-      newMod = new SpeedControlModule(id, _dmm, _dlm, this, _fs);
+      newMod = new SpeedControlModule(id, _ds);
     } else if (strcmp_P(instr->ns->name, STATUS_STR_STATUS) == 0) {
-      newMod = new StatusModule(id, _dmm, _dlm, this, _fs);
+      newMod = new StatusModule(id, _ds);
     } else if (strcmp_P(instr->ns->name, TANK_STEER_STR_TANK_STEER) == 0) {
-      newMod = new TankSteerModule(id, _dmm, _dlm, this, _fs);
+      newMod = new TankSteerModule(id, _ds);
     } else if (strcmp_P(instr->ns->name, TURN_RATE_STR_TURN_RATE) == 0) {
-      newMod = new TurnRateModule(id, _dmm, _dlm, this, _fs);
+      newMod = new TurnRateModule(id, _ds);
     } else if (strcmp_P(instr->ns->name, UDP_TELEMETRY_STR_UDP_TELEMETRY) == 0) {
-      newMod = new UDPTelemetryModule(id, _dmm, _dlm, this, _fs);
+      newMod = new UDPTelemetryModule(id, _ds);
     } else if (strcmp_P(instr->ns->name, NAV_STR_NAV) == 0) {
-      newMod = new NavModule(id, _dmm, _dlm, this, _fs);
+      newMod = new NavModule(id, _ds);
     } else if (strcmp_P(instr->ns->name, WIND_STR_WIND) == 0) {
-      newMod = new WindModule(id, _dmm, _dlm, this, _fs);
+      newMod = new WindModule(id, _ds);
     } else {
       Log.errorln(F("[.c] Unknown type"));
     }

@@ -43,7 +43,7 @@ protected:
   Beastdevices_INA3221 *_sensor;
 public:
 
-  INA3221Module(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm, DroneExecutionManager* dem, fs::FS &fs);
+  INA3221Module(uint8_t id, DroneSystem* ds);
   ~INA3221Module();
 
   static DEM_NAMESPACE* registerNamespace(DroneExecutionManager *dem);
