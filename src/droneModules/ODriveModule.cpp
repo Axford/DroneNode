@@ -3,6 +3,7 @@
 #include "../DroneLinkManager.h"
 #include "../pinConfig.h"
 #include "strings.h"
+#include "DroneSystem.h"
 
 ODriveModule::ODriveModule(uint8_t id, DroneSystem* ds):
   DroneModule ( id, ds )
@@ -91,6 +92,14 @@ void ODriveModule::setPort(Stream *port) {
 
 void ODriveModule::setup() {
   DroneModule::setup();
+
+  // request the serial port
+  if (!_ds->requestSerialPort(_params[ODRIVE_PARAM_PORT_E].data.uint8[0], this)) {
+    _port = NULL;
+    Log.errorln(F("[ODRIVE.s] Unable to access serial port: %u"), _params[ODRIVE_PARAM_PORT_E].data.uint8[0]);
+    setError(1);
+    return;
+  }
 
   switch(_params[ODRIVE_PARAM_PORT_E].data.uint8[0]) {
     //case 0: Serial.begin(_baud, SERIAL_8N1, PIN_SERIAL2_RX, PIN_SERIAL2_TX); break;

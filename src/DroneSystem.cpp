@@ -10,6 +10,45 @@ DroneSystem::DroneSystem() : _server(80) {
   _doLoop = true;
 
   _serialCommandLen = 0;
+
+  // init serial ports
+  for (uint8_t i=0; i<DRONE_SYSTEM_SERIAL_PORTS; i++) {
+    _serialPorts[i].state = DRONE_SYSTEM_SERIAL_PORT_STATE_INACTIVE;
+    _serialPorts[i].module = NULL;
+  }
+}
+
+
+boolean DroneSystem::requestSerialPort(uint8_t port, DroneModule* module) {
+  // check in range
+  if (port < 0 || port >= DRONE_SYSTEM_SERIAL_PORTS ) {
+    Log.errorln("[ds.rSP] Port out of range %u", port);
+    return false;
+  }
+
+  // check port available
+  if (_serialPorts[port].state < DRONE_SYSTEM_SERIAL_PORT_STATE_ACTIVE_MODULE ) {
+    // module request for port 0?
+    if (port == 0 && module != NULL) {
+      // disable logging to serial
+      Log.noticeln(F("[ds.rSP] Silent log"));
+      Log.setLevel(LOG_LEVEL_SILENT);
+    }
+
+    if (module == NULL) {
+      // builtin registration
+      _serialPorts[port].state = DRONE_SYSTEM_SERIAL_PORT_STATE_ACTIVE_BUILTIN;
+    } else {
+      _serialPorts[port].state = DRONE_SYSTEM_SERIAL_PORT_STATE_ACTIVE_MODULE;
+    }
+    _serialPorts[port].module = module;
+
+    return true;
+
+  } else {
+    Log.errorln("[ds.rSP] Port unavailable %u", port);
+    return false;
+  }
 }
 
 

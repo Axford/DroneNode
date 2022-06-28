@@ -2,6 +2,7 @@
 #include "../DroneLinkMsg.h"
 #include "../DroneLinkManager.h"
 #include "strings.h"
+#include "../DroneSystem.h"
 
 SerialTelemetryModule::SerialTelemetryModule(uint8_t id, DroneSystem* ds):
   NetworkInterfaceModule ( id, ds )
@@ -82,14 +83,18 @@ uint8_t SerialTelemetryModule::getInterfaceType() {
 void SerialTelemetryModule::setup() {
   DroneModule::setup();
 
+  // request the serial port
+  if (!_ds->requestSerialPort(_params[SERIAL_TELEMETRY_PARAM_PORT_E].data.uint8[0], this)) {
+    _port = NULL;
+    Log.errorln(F("[Serial.s] Unable to access serial port: %u"), _params[SERIAL_TELEMETRY_PARAM_PORT_E].data.uint8[0]);
+    setError(1);
+    return;
+  }
+
   switch(_params[SERIAL_TELEMETRY_PARAM_PORT_E].data.uint8[0]) {
     case 0:
       Log.noticeln(F("[Serial.s] Serial 0 at %u"), _params[SERIAL_TELEMETRY_PARAM_BAUD_E].data.uint32[0]);
-      // disable logging to serial
 
-      Log.noticeln(F("[Serial.s] Silent log"));
-      Log.setLevel(LOG_LEVEL_SILENT);
-      Log.noticeln(F("[Serial.s] Log level: %u"), Log.getLevel());
       // reset serial for telemetry
       Serial.updateBaudRate(_params[SERIAL_TELEMETRY_PARAM_BAUD_E].data.uint32[0]);
       setPort(&Serial);
@@ -104,11 +109,6 @@ void SerialTelemetryModule::setup() {
       Serial2.begin(_params[SERIAL_TELEMETRY_PARAM_BAUD_E].data.uint32[0], SERIAL_8N1, PIN_SERIAL2_RX, PIN_SERIAL2_TX);
       setPort(&Serial2);
       break;
-    default:
-      _port = NULL;
-      Log.errorln(F("[Serial.s] invalid port: %u"), _params[SERIAL_TELEMETRY_PARAM_PORT_E].data.uint8[0]);
-      setError(1);
-      return;
   }
 
   // register network interface

@@ -55,10 +55,33 @@ DroneSystem is the root of all Drone objects, keeping the main script as simple 
 #include <ESP32Servo.h>
 #include <ArduinoLog.h>
 
+
+// ----------------------------------------------------------------------------
+// Serial port mgmt
+// ----------------------------------------------------------------------------
+
+#define DRONE_SYSTEM_SERIAL_PORT_STATE_INACTIVE        0
+#define DRONE_SYSTEM_SERIAL_PORT_STATE_ACTIVE_BUILTIN  1
+#define DRONE_SYSTEM_SERIAL_PORT_STATE_ACTIVE_MODULE   2
+
+struct DRONE_SYSTEM_SERIAL_PORT {
+  uint8_t state;
+  DroneModule* module;
+};
+
+#define DRONE_SYSTEM_SERIAL_PORTS  3   // 0..2
+
+
+// ----------------------------------------------------------------------------
+// DroneSystem
+// ----------------------------------------------------------------------------
 class DroneSystem {
 protected:
   // motherboard version
   uint8_t _motherboardVersion;
+
+  // serial port mgmt
+  DRONE_SYSTEM_SERIAL_PORT _serialPorts[DRONE_SYSTEM_SERIAL_PORTS];
 
   // handle to logFile
   File _logFile;
@@ -86,6 +109,8 @@ public:
   DroneLED* dled;
 
   DroneSystem();
+
+  boolean requestSerialPort(uint8_t port, DroneModule* module);
 
   void detectMotherboardVersion();
 
