@@ -21,6 +21,7 @@ Cache directory structure for fast enumeration
 
 // forward decl
 class DroneFS;
+class DroneSystem;
 
 //--------------------------------------------------------
 // DroneFSEntry
@@ -72,12 +73,13 @@ public:
 //--------------------------------------------------------
 class DroneFS {
 protected:
+  DroneSystem* _ds;
   uint8_t _nextId;
   DroneFSEntry* _root;  // root entry "/"
 
 
 public:
-  DroneFS();
+  DroneFS(DroneSystem* ds);
 
   void setup();
 

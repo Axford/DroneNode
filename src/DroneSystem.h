@@ -73,6 +73,31 @@ struct DRONE_SYSTEM_SERIAL_PORT {
 
 
 // ----------------------------------------------------------------------------
+// IO pin mgmt
+// ----------------------------------------------------------------------------
+
+// states
+#define DRONE_SYSTEM_PIN_STATE_UNAVAILABLE    0
+#define DRONE_SYSTEM_PIN_STATE_AVAILABLE      1
+#define DRONE_SYSTEM_PIN_STATE_ACTIVE         2
+
+// bit masks for capabilities
+#define DRONE_SYSTEM_PIN_CAP_OUTPUT     1
+#define DRONE_SYSTEM_PIN_CAP_INPUT      2
+#define DRONE_SYSTEM_PIN_CAP_ANALOG     4
+#define DRONE_SYSTEM_PIN_CAP_SERIAL     8
+#define DRONE_SYSTEM_PIN_CAP_LED        16
+
+struct DRONE_SYSTEM_PIN {
+  uint8_t state;
+  uint8_t capabilities;
+  DroneModule* module;
+};
+
+#define DRONE_SYSTEM_PINS   36    // 0..35
+
+
+// ----------------------------------------------------------------------------
 // DroneSystem
 // ----------------------------------------------------------------------------
 class DroneSystem {
@@ -82,6 +107,8 @@ protected:
 
   // serial port mgmt
   DRONE_SYSTEM_SERIAL_PORT _serialPorts[DRONE_SYSTEM_SERIAL_PORTS];
+
+  DRONE_SYSTEM_PIN _pins[DRONE_SYSTEM_PINS];
 
   // handle to logFile
   File _logFile;
@@ -100,6 +127,8 @@ protected:
   // web server
   AsyncWebServer _server;
 
+  void configurePin(uint8_t pin, uint8_t capabilities);
+
 public:
 
   DroneFS dfs;
@@ -111,6 +140,7 @@ public:
   DroneSystem();
 
   boolean requestSerialPort(uint8_t port, DroneModule* module);
+  boolean requestPin(uint8_t pin, uint8_t capabilities, DroneModule* module);
 
   void detectMotherboardVersion();
 

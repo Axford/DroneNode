@@ -3,6 +3,7 @@
 #include "../DroneLinkManager.h"
 #include "strings.h"
 #include <SPIFFS.h>
+#include "DroneSystem.h"
 
 unsigned long _globalWindCounter;
 
@@ -139,10 +140,15 @@ void WindModule::setup() {
   }
 
   if (_params[WIND_PARAM_PINS_E].data.uint8[0] > 0) {
-    pinMode(_params[WIND_PARAM_PINS_E].data.uint8[0], INPUT_PULLUP);
+    if (_ds->requestPin(_params[WIND_PARAM_PINS_E].data.uint8[0], DRONE_SYSTEM_PIN_CAP_INPUT, this)) {
+      pinMode(_params[WIND_PARAM_PINS_E].data.uint8[0], INPUT_PULLUP);
 
-    // attach interrupt
-    attachInterrupt( _params[WIND_PARAM_PINS_E].data.uint8[0], ISR, FALLING );
+      // attach interrupt
+      attachInterrupt( _params[WIND_PARAM_PINS_E].data.uint8[0], ISR, FALLING );
+
+    } else {
+      Log.errorln(F("[W.s] Speed pin unavailable %u"), _id);
+    }
 
   } else {
     Log.errorln(F("[W.s] Undefined speed pin %u"), _id);

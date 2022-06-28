@@ -1,6 +1,19 @@
 #include "DroneSystem.h"
 
-DroneSystem::DroneSystem() : _server(80) {
+// ----------------------------------------------------------------------------
+// protected
+// ----------------------------------------------------------------------------
+
+void DroneSystem::configurePin(uint8_t pin, uint8_t capabilities) {
+  _pins[pin].capabilities = capabilities;
+  _pins[pin].state = DRONE_SYSTEM_PIN_STATE_AVAILABLE;
+}
+
+// ----------------------------------------------------------------------------
+// public
+// ----------------------------------------------------------------------------
+
+DroneSystem::DroneSystem() : _server(80), dfs(this) {
   _motherboardVersion = 0;
 
   // create and give SPI Sempahore
@@ -16,6 +29,50 @@ DroneSystem::DroneSystem() : _server(80) {
     _serialPorts[i].state = DRONE_SYSTEM_SERIAL_PORT_STATE_INACTIVE;
     _serialPorts[i].module = NULL;
   }
+
+  // init pins
+  // set all to unavailble to start
+  for (uint8_t i=0; i<DRONE_SYSTEM_PINS; i++) {
+    _pins[i].state = DRONE_SYSTEM_PIN_STATE_UNAVAILABLE;
+    _pins[i].capabilities = 0;
+    _serialPorts[i].module = NULL;
+  }
+
+  // now set specific capabilities
+
+  // serial 0
+  configurePin(1, DRONE_SYSTEM_PIN_CAP_INPUT | DRONE_SYSTEM_PIN_CAP_OUTPUT | DRONE_SYSTEM_PIN_CAP_SERIAL);
+  configurePin(3, DRONE_SYSTEM_PIN_CAP_INPUT | DRONE_SYSTEM_PIN_CAP_OUTPUT | DRONE_SYSTEM_PIN_CAP_SERIAL);
+
+  // serial 1
+  configurePin(12, DRONE_SYSTEM_PIN_CAP_INPUT | DRONE_SYSTEM_PIN_CAP_OUTPUT | DRONE_SYSTEM_PIN_CAP_SERIAL);
+  configurePin(13, DRONE_SYSTEM_PIN_CAP_INPUT | DRONE_SYSTEM_PIN_CAP_OUTPUT | DRONE_SYSTEM_PIN_CAP_SERIAL);
+
+  // serial 2
+  configurePin(17, DRONE_SYSTEM_PIN_CAP_INPUT | DRONE_SYSTEM_PIN_CAP_OUTPUT | DRONE_SYSTEM_PIN_CAP_SERIAL);
+  configurePin(16, DRONE_SYSTEM_PIN_CAP_INPUT | DRONE_SYSTEM_PIN_CAP_OUTPUT | DRONE_SYSTEM_PIN_CAP_SERIAL);
+
+  // SD chip select (for RFM69)
+  configurePin(5, DRONE_SYSTEM_PIN_CAP_INPUT | DRONE_SYSTEM_PIN_CAP_OUTPUT);
+
+
+  // General IO, ADC1
+  configurePin(32, DRONE_SYSTEM_PIN_CAP_INPUT | DRONE_SYSTEM_PIN_CAP_OUTPUT | DRONE_SYSTEM_PIN_CAP_ANALOG);
+  configurePin(33, DRONE_SYSTEM_PIN_CAP_INPUT | DRONE_SYSTEM_PIN_CAP_OUTPUT | DRONE_SYSTEM_PIN_CAP_ANALOG);
+
+  // input only, ADC1
+  configurePin(34, DRONE_SYSTEM_PIN_CAP_INPUT | DRONE_SYSTEM_PIN_CAP_ANALOG);
+  configurePin(35, DRONE_SYSTEM_PIN_CAP_INPUT | DRONE_SYSTEM_PIN_CAP_ANALOG);
+
+  // LED
+  configurePin(2, DRONE_SYSTEM_PIN_CAP_INPUT | DRONE_SYSTEM_PIN_CAP_OUTPUT | DRONE_SYSTEM_PIN_CAP_LED);
+
+  // General IO, ADC2
+  configurePin(14, DRONE_SYSTEM_PIN_CAP_INPUT | DRONE_SYSTEM_PIN_CAP_OUTPUT | DRONE_SYSTEM_PIN_CAP_ANALOG);
+  configurePin(15, DRONE_SYSTEM_PIN_CAP_INPUT | DRONE_SYSTEM_PIN_CAP_OUTPUT | DRONE_SYSTEM_PIN_CAP_ANALOG);
+  configurePin(4, DRONE_SYSTEM_PIN_CAP_INPUT | DRONE_SYSTEM_PIN_CAP_OUTPUT | DRONE_SYSTEM_PIN_CAP_ANALOG);
+  configurePin(25, DRONE_SYSTEM_PIN_CAP_INPUT | DRONE_SYSTEM_PIN_CAP_OUTPUT | DRONE_SYSTEM_PIN_CAP_ANALOG);
+  configurePin(26, DRONE_SYSTEM_PIN_CAP_INPUT | DRONE_SYSTEM_PIN_CAP_OUTPUT | DRONE_SYSTEM_PIN_CAP_ANALOG);
 }
 
 
@@ -30,9 +87,30 @@ boolean DroneSystem::requestSerialPort(uint8_t port, DroneModule* module) {
   if (_serialPorts[port].state < DRONE_SYSTEM_SERIAL_PORT_STATE_ACTIVE_MODULE ) {
     // module request for port 0?
     if (port == 0 && module != NULL) {
+      // pins already registered at startup
       // disable logging to serial
       Log.noticeln(F("[ds.rSP] Silent log"));
       Log.setLevel(LOG_LEVEL_SILENT);
+    } else {
+      // register pins
+      boolean registered = false;
+
+      switch(port) {
+        case 0:
+          registered = requestPin(PIN_SERIAL0_TX, DRONE_SYSTEM_PIN_CAP_SERIAL, module) && requestPin(PIN_SERIAL0_RX, DRONE_SYSTEM_PIN_CAP_SERIAL, module);
+          break;
+        case 1:
+          registered = requestPin(PIN_SERIAL1_TX, DRONE_SYSTEM_PIN_CAP_SERIAL, module) && requestPin(PIN_SERIAL1_RX, DRONE_SYSTEM_PIN_CAP_SERIAL, module);
+          break;
+        case 2:
+          registered = requestPin(PIN_SERIAL2_TX, DRONE_SYSTEM_PIN_CAP_SERIAL, module) && requestPin(PIN_SERIAL2_RX, DRONE_SYSTEM_PIN_CAP_SERIAL, module);
+          break;
+      }
+
+      if (!registered) {
+        Log.errorln("[ds.rSP] Serial port pins unavailable %u", port);
+        return false;
+      }
     }
 
     if (module == NULL) {
@@ -47,6 +125,32 @@ boolean DroneSystem::requestSerialPort(uint8_t port, DroneModule* module) {
 
   } else {
     Log.errorln("[ds.rSP] Port unavailable %u", port);
+    return false;
+  }
+}
+
+
+boolean DroneSystem::requestPin(uint8_t pin, uint8_t capabilities, DroneModule* module) {
+  // check in range
+  if (pin < 0 || pin >= DRONE_SYSTEM_PINS ) {
+    Log.errorln("[ds.rP] Pin out of range %u", pin);
+    return false;
+  }
+
+  // check available
+  if (_pins[pin].state == DRONE_SYSTEM_PIN_STATE_AVAILABLE) {
+    // check pin has requested capabilities
+    if (_pins[pin].capabilities & capabilities == capabilities) {
+      _pins[pin].state = DRONE_SYSTEM_PIN_STATE_ACTIVE;
+      _pins[pin].module = module;
+      return true;
+    } else {
+      Log.errorln("[ds.rP] Pin does not have requested capabilities %u, %u", pin, capabilities);
+      return false;
+    }
+
+  } else {
+    Log.errorln("[ds.rP] Pin unavailable %u", pin);
     return false;
   }
 }
@@ -254,6 +358,7 @@ void DroneSystem::setup() {
   */
 
   // Start serial
+  requestSerialPort(0, NULL);
   Serial.begin(115200);
   while(!Serial) {  }
 
@@ -278,18 +383,6 @@ void DroneSystem::setup() {
   // Determine and setup filesystem
   Log.noticeln(F("[] Init DroneFS..."));
   dfs.setup();
-
-
-  // TODO - move to FS class
-  Log.noticeln(F("[] Mount filesystem..."));
-  // passing true to .begin triggers a format if required
-  if(!LITTLEFS.begin(true)){
-    Log.errorln("[] LITTLEFS Mount Failed");
-    dled->setState(DRONE_LED_STATE_ERROR);
-    delay(3000);
-    // Should be formatted and working after a reboot
-    ESP.restart();
-  }
 
   // TODO refactor FS class
   Log.noticeln(F("[] Opening startup.log..."));
@@ -372,7 +465,7 @@ void DroneSystem::loop() {
 
   // serial command interface
   // disable if logging is silent.. indicates we're using the serial port for telemtry
-  if (Log.getLevel() != LOG_LEVEL_SILENT) {
+  if (_serialPorts[0].state == DRONE_SYSTEM_SERIAL_PORT_STATE_ACTIVE_BUILTIN) {
     if (Serial.available()) {
       char c = Serial.read();
       Serial.print(c);

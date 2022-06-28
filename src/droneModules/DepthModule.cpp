@@ -3,6 +3,7 @@
 #include "../DroneLinkManager.h"
 #include "strings.h"
 #include "../navMath.h"
+#include "DroneSystem.h"
 
 DepthModule::DepthModule(uint8_t id, DroneSystem* ds):
   DroneModule ( id, ds )
@@ -97,7 +98,8 @@ void DepthModule::registerParams(DEM_NAMESPACE* ns, DroneExecutionManager *dem) 
 void DepthModule::setup() {
   DroneModule::setup();
 
-  if (_params[DEPTH_PARAM_PINS_E].data.uint8[0] > 0) {
+  if (_ds->requestPin(_params[DEPTH_PARAM_PINS_E].data.uint8[DEPTH_PIN_TRIGGER], DRONE_SYSTEM_PIN_CAP_OUTPUT, this) &&
+      _ds->requestPin(_params[DEPTH_PARAM_PINS_E].data.uint8[DEPTH_PIN_ECHO], DRONE_SYSTEM_PIN_CAP_INPUT, this)) {
 
     // set trigger to output
     pinMode(_params[DEPTH_PARAM_PINS_E].data.uint8[DEPTH_PIN_TRIGGER], OUTPUT);
@@ -107,7 +109,7 @@ void DepthModule::setup() {
     pinMode(_params[DEPTH_PARAM_PINS_E].data.uint8[DEPTH_PIN_ECHO], INPUT);
 
   } else {
-    Log.errorln(F("[DM.s] Undefined pins %u"), _id);
+    Log.errorln(F("[DM.s] Pins unavailable %u"), _id);
     setError(1);
     disable();
   }

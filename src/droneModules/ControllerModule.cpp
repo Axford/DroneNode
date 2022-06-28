@@ -4,6 +4,7 @@
 #include "../DroneModuleManager.h"
 #include "OLEDTomThumbFont.h"
 #include "strings.h"
+#include "DroneSystem.h"
 
 /*
 TODO
@@ -482,6 +483,10 @@ void ControllerModule::setup() {
   DroneModule::setup();
 
   // arm pin setup
+  if (!_ds->requestPin(CONTROLLER_ARM_BUTTON, DRONE_SYSTEM_PIN_CAP_INPUT, this)) {
+    setError(1);
+    return;
+  }
   pinMode(CONTROLLER_ARM_BUTTON, INPUT_PULLUP);
   _armed = false;
 
