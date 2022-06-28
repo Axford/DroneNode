@@ -2,7 +2,9 @@
 #include "Arduino.h"
 #include <WiFi.h>
 #include <HTTPClient.h>
-#include "LITTLEFS.h"
+#include "LittleFS.h"
+#define LITTLEFS LittleFS
+
 #include <ArduinoLog.h>
 #include <esp_task_wdt.h>
 

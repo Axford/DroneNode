@@ -9,12 +9,12 @@ DroneSystem is the root of all Drone objects, keeping the main script as simple 
   * Status LEDs (neopixel strings)
   * filesystem (flash vs SD)
   * IO pin registration
+  * Serial port registration
   * interrupt routines
   * timers?
   * sleep system?
   * cpu freq?
   * Logging
-  * Serial ports?
   * I2C multiplexer
   * SPI conflicts?
   * memory usage
@@ -44,7 +44,8 @@ DroneSystem is the root of all Drone objects, keeping the main script as simple 
 
 // file system
 #include "FS.h"
-#include <LITTLEFS.h>
+#include <LittleFS.h>
+#define LITTLEFS LittleFS
 
 // web services
 #include "WiFiManager.h"

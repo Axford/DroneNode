@@ -31,6 +31,11 @@ DroneLED::DroneLED(DroneSystem* ds) {
 }
 
 
+boolean DroneLED::isNeopixel() {
+  return (_hw == DRONE_LED_HW_NEOPIXEL);
+}
+
+
 void DroneLED::setState(uint8_t newState) {
   switch (newState) {
     case DRONE_LED_STATE_STARTUP:

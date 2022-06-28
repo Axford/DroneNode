@@ -4,6 +4,8 @@ Neopixel Modules
 
 Manage a strip of NEOPixels (WS2812B)
 
+TODO - rework alongside DroneLED to use the v4 LED header
+
 * Disable module will clear LEDs first (turn off) -so can be used to toggle on/off
 * Base settings:
   - Pin

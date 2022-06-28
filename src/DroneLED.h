@@ -57,6 +57,8 @@ protected:
 public:
   DroneLED(DroneSystem* ds);
 
+  boolean isNeopixel();
+
   void setState(uint8_t newState);
 
   void update();
