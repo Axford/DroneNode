@@ -71,10 +71,10 @@ void WiFiManager::loadConfiguration(fs::FS &fs) {
     Log.errorln(F("[WIFI] wifi.json file does not exist, adding defaults"));
     WiFiNetworkCredentials cred;
     // add default credentials
-    //cred.ssid = "Badger";
-    //cred.password = "LouisVuitton";
-    cred.ssid = "baladins";
-    cred.password = "lulutte2";
+    cred.ssid = "Badger";
+    cred.password = "LouisVuitton";
+    //cred.ssid = "baladins";
+    //cred.password = "lulutte2";
     _networks.add(cred);
   }
 }
