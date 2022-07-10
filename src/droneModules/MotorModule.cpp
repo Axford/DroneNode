@@ -48,6 +48,17 @@ MotorModule::MotorModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* 
    param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_FLOAT, 4);
    _params[MOTOR_PARAM_DEADBAND_E].data.f[0] = 0.3;
 
+   param = &_params[MOTOR_PARAM_MODE_E];
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, MOTOR_PARAM_MODE);
+   setParamName(FPSTR(STRING_MODE), param);
+   param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_UINT8_T, 1);
+   _params[MOTOR_PARAM_MODE_E].data.uint8[0] = 0;
+
+   param = &_params[MOTOR_PARAM_INVERT_E];
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, MOTOR_PARAM_INVERT);
+   setParamName(FPSTR(STRING_INVERT), param);
+   param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_UINT8_T, 1);
+   _params[MOTOR_PARAM_INVERT_E].data.uint8[0] = 0;
 }
 
 DEM_NAMESPACE* MotorModule::registerNamespace(DroneExecutionManager *dem) {
@@ -71,12 +82,39 @@ void MotorModule::registerParams(DEM_NAMESPACE* ns, DroneExecutionManager *dem) 
   dem->registerCommand(ns, STRING_PINS, DRONE_LINK_MSG_TYPE_UINT8_T, ph);
   dem->registerCommand(ns, STRING_DEADBAND, DRONE_LINK_MSG_TYPE_FLOAT, ph);
   dem->registerCommand(ns, STRING_LIMITS, DRONE_LINK_MSG_TYPE_FLOAT, ph);
+  dem->registerCommand(ns, STRING_MODE, DRONE_LINK_MSG_TYPE_UINT8_T, ph);
+  dem->registerCommand(ns, STRING_INVERT, DRONE_LINK_MSG_TYPE_UINT8_T, ph);
 }
 
 
 void MotorModule::setup() {
   DroneModule::setup();
 
+  uint8_t mode = _params[MOTOR_PARAM_MODE_E].data.uint8[0];
+
+  Log.errorln(F("[MM.s] Mode %u"), mode);
+
+  if (mode == 0) {
+    // standard H-bridge, A, B, PWM-EN
+    setupMode0();
+
+  } else if (mode == 1) {
+    // BTS7960 with PWM F & R
+    setupMode1();
+
+  } else if (mode == 2) {
+    // Cytron with PWM + DIR
+    setupMode2();
+
+  } else {
+    Log.errorln(F("[MM.s] Undefined mode"));
+    setError(1);
+    disable();
+  }
+}
+
+
+void MotorModule::setupMode0() {
   if (_params[MOTOR_PARAM_PINS_E].data.uint8[0] > 0) {
     // configure LED PWM functionalitites
     ledcSetup(_params[MOTOR_PARAM_PWMCHANNEL_E].data.uint8[0], 5000, 8);
@@ -84,16 +122,48 @@ void MotorModule::setup() {
     ledcAttachPin(_params[MOTOR_PARAM_PINS_E].data.uint8[MOTOR_PIN_EN], _params[MOTOR_PARAM_PWMCHANNEL_E].data.uint8[0]);
     ledcWrite(_params[MOTOR_PARAM_PWMCHANNEL_E].data.uint8[0], 0);  // turn off at start
 
-    pinMode(_params[MOTOR_PARAM_PINS_E].data.uint8[MOTOR_PIN_A], OUTPUT);
-    digitalWrite(_params[MOTOR_PARAM_PINS_E].data.uint8[MOTOR_PIN_A], LOW);
+    if (_params[MOTOR_PARAM_PINS_E].data.uint8[MOTOR_PIN_A] < 255) {
+      pinMode(_params[MOTOR_PARAM_PINS_E].data.uint8[MOTOR_PIN_A], OUTPUT);
+      digitalWrite(_params[MOTOR_PARAM_PINS_E].data.uint8[MOTOR_PIN_A], LOW);
+    }
 
-    pinMode(_params[MOTOR_PARAM_PINS_E].data.uint8[MOTOR_PIN_B], OUTPUT);
-    digitalWrite(_params[MOTOR_PARAM_PINS_E].data.uint8[MOTOR_PIN_B], LOW);
-
+    if (_params[MOTOR_PARAM_PINS_E].data.uint8[MOTOR_PIN_B] < 255) {
+      pinMode(_params[MOTOR_PARAM_PINS_E].data.uint8[MOTOR_PIN_B], OUTPUT);
+      digitalWrite(_params[MOTOR_PARAM_PINS_E].data.uint8[MOTOR_PIN_B], LOW);
+    }
   } else {
     Log.errorln(F("[MM.s] Undefined pins %u"), _id);
     setError(1);
     disable();
+  }
+}
+
+
+void MotorModule::setupMode1() {
+  // configure LED PWM functionalitites - Forward channel
+  ledcSetup(_params[MOTOR_PARAM_PWMCHANNEL_E].data.uint8[0], 5000, 8);
+
+  ledcAttachPin(_params[MOTOR_PARAM_PINS_E].data.uint8[MOTOR_PIN_F], _params[MOTOR_PARAM_PWMCHANNEL_E].data.uint8[0]);
+  ledcWrite(_params[MOTOR_PARAM_PWMCHANNEL_E].data.uint8[0], 0);  // turn off at start
+
+  // configure LED PWM functionalitites - Reverse channel
+  ledcSetup(_params[MOTOR_PARAM_PWMCHANNEL_E].data.uint8[0]+1, 5000, 8);
+
+  ledcAttachPin(_params[MOTOR_PARAM_PINS_E].data.uint8[MOTOR_PIN_R], _params[MOTOR_PARAM_PWMCHANNEL_E].data.uint8[0]+1);
+  ledcWrite(_params[MOTOR_PARAM_PWMCHANNEL_E].data.uint8[0]+1, 0);  // turn off at start
+}
+
+
+void MotorModule::setupMode2() {
+  // configure LED PWM functionalitites - Forward channel
+  ledcSetup(_params[MOTOR_PARAM_PWMCHANNEL_E].data.uint8[0], 5000, 8);
+
+  ledcAttachPin(_params[MOTOR_PARAM_PINS_E].data.uint8[MOTOR_PIN_PWM], _params[MOTOR_PARAM_PWMCHANNEL_E].data.uint8[0]);
+  ledcWrite(_params[MOTOR_PARAM_PWMCHANNEL_E].data.uint8[0], 0);  // turn off at start
+
+  if (_params[MOTOR_PARAM_PINS_E].data.uint8[MOTOR_PIN_DIR] < 255) {
+    pinMode(_params[MOTOR_PARAM_PINS_E].data.uint8[MOTOR_PIN_DIR], OUTPUT);
+    digitalWrite(_params[MOTOR_PARAM_PINS_E].data.uint8[MOTOR_PIN_DIR], LOW);
   }
 }
 
@@ -120,8 +190,47 @@ void MotorModule::update() {
   // check for deadband
   if (abs(v) < abs(_params[MOTOR_PARAM_DEADBAND_E].data.f[0])) v = 0;
 
-  ledcWrite(_params[MOTOR_PARAM_PWMCHANNEL_E].data.uint8[0], abs(v)*255);
+  // invert?
+  if (_params[MOTOR_PARAM_INVERT_E].data.uint8[0] > 0) {
+    v = -v;
+  }
 
-  digitalWrite(_params[MOTOR_PARAM_PINS_E].data.uint8[MOTOR_PIN_A], _subs[MOTOR_SUB_SPEED_E].param.data.f[0] > 0);
-  digitalWrite(_params[MOTOR_PARAM_PINS_E].data.uint8[MOTOR_PIN_B], _subs[MOTOR_SUB_SPEED_E].param.data.f[0] < 0);
+  uint8_t mode = _params[MOTOR_PARAM_MODE_E].data.uint8[0];
+
+  if (mode == 0) {
+    // standard H-bridge
+    ledcWrite(_params[MOTOR_PARAM_PWMCHANNEL_E].data.uint8[0], abs(v)*255);
+
+    if (_params[MOTOR_PARAM_PINS_E].data.uint8[MOTOR_PIN_A] < 255) {
+      digitalWrite(_params[MOTOR_PARAM_PINS_E].data.uint8[MOTOR_PIN_A], v > 0);
+    }
+
+    if (_params[MOTOR_PARAM_PINS_E].data.uint8[MOTOR_PIN_B] < 255) {
+      digitalWrite(_params[MOTOR_PARAM_PINS_E].data.uint8[MOTOR_PIN_B], v < 0);
+    }
+
+  } else if (mode == 1) {
+    // BTS7960
+
+    if (v > 0) {
+      // forward
+      ledcWrite(_params[MOTOR_PARAM_PWMCHANNEL_E].data.uint8[0], abs(v)*255);
+      ledcWrite(_params[MOTOR_PARAM_PWMCHANNEL_E].data.uint8[0]+1, 0);
+
+    } else {
+      // reverse
+      ledcWrite(_params[MOTOR_PARAM_PWMCHANNEL_E].data.uint8[0], 0);
+      ledcWrite(_params[MOTOR_PARAM_PWMCHANNEL_E].data.uint8[0]+1, abs(v)*255);
+    }
+
+  } else if (mode == 2) {
+    // Cytron
+
+    ledcWrite(_params[MOTOR_PARAM_PWMCHANNEL_E].data.uint8[0], abs(v)*255);
+
+    digitalWrite(_params[MOTOR_PARAM_PINS_E].data.uint8[MOTOR_PIN_DIR], v > 0);
+
+  }
+
+
 }
