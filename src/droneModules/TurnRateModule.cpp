@@ -92,6 +92,9 @@ void TurnRateModule::registerParams(DEM_NAMESPACE* ns, DroneExecutionManager *de
 
   dem->registerCommand(ns, STRING_PID, DRONE_LINK_MSG_TYPE_FLOAT, ph);
   dem->registerCommand(ns, PSTR("$PID"), DRONE_LINK_MSG_TYPE_FLOAT, pha);
+
+  dem->registerCommand(ns, STRING_TIMEOUT, DRONE_LINK_MSG_TYPE_FLOAT, ph);
+  dem->registerCommand(ns, STRING_THRESHOLD, DRONE_LINK_MSG_TYPE_FLOAT, ph);
 }
 
 
@@ -175,6 +178,13 @@ void TurnRateModule::loop() {
   // update I and D terms
   _iError += err * dt;
   _dError = (err - _lastError) / dt;
+
+  // clamp i error
+  if (_subs[TURN_RATE_SUB_PID_E].param.data.f[1] > 0) {
+    if (fabs(_iError) > 1 / _subs[TURN_RATE_SUB_PID_E].param.data.f[1]) {
+      _iError = (_iError > 0 ? 1 : -1) / _subs[TURN_RATE_SUB_PID_E].param.data.f[1];
+    }
+  }
 
   // apply PID cooefficients
   float tr =

@@ -78,6 +78,15 @@ HMC5883LModule::HMC5883LModule(uint8_t id, DroneModuleManager* dmm, DroneLinkMan
    _params[HMC5883L_PARAM_LIMITS_E].data.f[2] = 0;
    _params[HMC5883L_PARAM_LIMITS_E].data.f[3] = 0;
 
+   _params[HMC5883L_PARAM_SAMPLES_E].paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, HMC5883L_PARAM_SAMPLES);
+   _params[HMC5883L_PARAM_SAMPLES_E].name = FPSTR(STRING_SAMPLES);
+   _params[HMC5883L_PARAM_SAMPLES_E].nameLen = sizeof(STRING_SAMPLES);
+   _params[HMC5883L_PARAM_SAMPLES_E].paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_UINT32_T, 16);
+   _params[HMC5883L_PARAM_SAMPLES_E].data.uint32[0] = 0;
+   _params[HMC5883L_PARAM_SAMPLES_E].data.uint32[1] = 0;
+   _params[HMC5883L_PARAM_SAMPLES_E].data.uint32[2] = 0;
+   _params[HMC5883L_PARAM_SAMPLES_E].data.uint32[3] = 0;
+
 }
 
 HMC5883LModule::~HMC5883LModule() {
@@ -110,6 +119,7 @@ void HMC5883LModule::registerParams(DEM_NAMESPACE* ns, DroneExecutionManager *de
   dem->registerCommand(ns, STRING_CALIB_Y, DRONE_LINK_MSG_TYPE_FLOAT, ph);
   dem->registerCommand(ns, STRING_TRIM, DRONE_LINK_MSG_TYPE_FLOAT, ph);
   dem->registerCommand(ns, STRING_LIMITS, DRONE_LINK_MSG_TYPE_FLOAT, ph);
+  dem->registerCommand(ns, STRING_SAMPLES, DRONE_LINK_MSG_TYPE_UINT32_T, ph);
 }
 
 void HMC5883LModule::doReset() {
@@ -255,37 +265,24 @@ void HMC5883LModule::loop() {
   if (headingDegrees < 0) headingDegrees += 360;
 
   // update limits when within +-20 degrees of quadrant
-  float samples = 20;
   // y+
   if (headingDegrees > -20 && headingDegrees < 20) {
-    _params[HMC5883L_PARAM_LIMITS_E].data.f[0] =
-      (_params[HMC5883L_PARAM_LIMITS_E].data.f[0] * (samples-1) +
-      _params[HMC5883L_PARAM_VECTOR_E].data.f[1]
-    ) / samples;
+    updateQuadrant(0, _params[HMC5883L_PARAM_VECTOR_E].data.f[1]);
   }
 
   // y-
   if (headingDegrees > 160 && headingDegrees < 200) {
-    _params[HMC5883L_PARAM_LIMITS_E].data.f[2] =
-      (_params[HMC5883L_PARAM_LIMITS_E].data.f[2] * (samples-1) +
-      _params[HMC5883L_PARAM_VECTOR_E].data.f[1]
-    ) / samples;
+    updateQuadrant(2, _params[HMC5883L_PARAM_VECTOR_E].data.f[1]);
   }
 
   // x+
   if (headingDegrees > 70 && headingDegrees < 110) {
-    _params[HMC5883L_PARAM_LIMITS_E].data.f[3] =
-      (_params[HMC5883L_PARAM_LIMITS_E].data.f[3] * (samples-1) +
-      _params[HMC5883L_PARAM_VECTOR_E].data.f[0]
-    ) / samples;
+    updateQuadrant(3, _params[HMC5883L_PARAM_VECTOR_E].data.f[0]);
   }
 
   // x-
   if (headingDegrees > 250 && headingDegrees < 290) {
-    _params[HMC5883L_PARAM_LIMITS_E].data.f[1] =
-      (_params[HMC5883L_PARAM_LIMITS_E].data.f[1] * (samples-1) +
-      _params[HMC5883L_PARAM_VECTOR_E].data.f[0]
-    ) / samples;
+    updateQuadrant(1, _params[HMC5883L_PARAM_VECTOR_E].data.f[0]);
   }
 
   // add trim
@@ -316,4 +313,21 @@ void HMC5883LModule::loop() {
   // publish param entries
   publishParamEntries();
 
+}
+
+
+void HMC5883LModule::updateQuadrant(uint8_t quadrant, float v) {
+  float avgWindow = 20;
+
+  // start applying noise rejection after sufficient samples received
+  if (_params[HMC5883L_PARAM_SAMPLES_E].data.uint32[quadrant] > 100) {
+    float ratio = v / _params[HMC5883L_PARAM_LIMITS_E].data.f[quadrant];
+    if (ratio < 0.8 || ratio > 1.2) return;
+  }
+
+  _params[HMC5883L_PARAM_LIMITS_E].data.f[quadrant] =
+    (_params[HMC5883L_PARAM_LIMITS_E].data.f[quadrant] * (avgWindow-1) +  v
+  ) / avgWindow;
+
+  _params[HMC5883L_PARAM_SAMPLES_E].data.uint32[quadrant]++;
 }

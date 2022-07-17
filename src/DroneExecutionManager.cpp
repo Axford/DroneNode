@@ -7,6 +7,7 @@
 
 // drone modules
 #include "droneModules/ControllerModule.h"
+#include "droneModules/CylonModule.h"
 #include "droneModules/DepthModule.h"
 #include "droneModules/DiagnosticModule.h"
 #include "droneModules/HMC5883LModule.h"
@@ -155,6 +156,7 @@ DroneExecutionManager::DroneExecutionManager(DroneModuleManager *dmm, DroneLinkM
   //ns = DroneModule::registerNamespace(this);
 
   ns = ControllerModule::registerNamespace(this); ControllerModule::registerParams(ns, this);
+  ns = CylonModule::registerNamespace(this); CylonModule::registerParams(ns, this);
   ns = DepthModule::registerNamespace(this); DepthModule::registerParams(ns, this);
   ns = DiagnosticModule::registerNamespace(this); DiagnosticModule::registerParams(ns, this);
   ns = HMC5883LModule::registerNamespace(this); HMC5883LModule::registerParams(ns, this);
@@ -1432,6 +1434,8 @@ boolean DroneExecutionManager::mod_constructor(DEM_INSTRUCTION_COMPILED* instr, 
 
     if (strcmp_P(instr->ns->name, CONTROLLER_STR_CONTROLLER) == 0) {
       newMod = new ControllerModule(id, _dmm, _dlm, this, _fs);
+    } else if (strcmp_P(instr->ns->name, CYLON_STR_CYLON) == 0) {
+      newMod = new CylonModule(id, _dmm, _dlm, this, _fs);
     } else if (strcmp_P(instr->ns->name, DEPTH_STR_DEPTH) == 0) {
       newMod = new DepthModule(id, _dmm, _dlm, this, _fs);
     } else if (strcmp_P(instr->ns->name, DIAGNOSTIC_STR_DIAGNOSTIC) == 0) {

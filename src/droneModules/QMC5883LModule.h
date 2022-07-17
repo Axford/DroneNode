@@ -20,6 +20,7 @@ QMC5883L.new 6
   .publish "vector"
   .publish "calibX"
   .publish "calibY"
+  .publish "samples"
 .done
 <<<
 
@@ -53,6 +54,8 @@ QMC5883L.new 6
 #define QMC5883L_PARAM_TRIM            (I2CBASE_SUBCLASS_PARAM_START+5)  //15
 // @pub 18;f;4;limits;Averaged limits at the four quadrants, used to refine the calibration onoine
 #define QMC5883L_PARAM_LIMITS            (I2CBASE_SUBCLASS_PARAM_START+8)  // 18
+// @pub 19;u32;4;samples;Number of calibration samples per quadrant
+#define QMC5883L_PARAM_SAMPLES         (I2CBASE_SUBCLASS_PARAM_START+9)  // 19
 
 #define QMC5883L_PARAM_VECTOR_E          (I2CBASE_PARAM_ENTRIES+0)
 #define QMC5883L_PARAM_HEADING_E         (I2CBASE_PARAM_ENTRIES+1)
@@ -61,8 +64,9 @@ QMC5883L.new 6
 #define QMC5883L_PARAM_CALIB_Y_E         (I2CBASE_PARAM_ENTRIES+4)
 #define QMC5883L_PARAM_TRIM_E            (I2CBASE_PARAM_ENTRIES+5)
 #define QMC5883L_PARAM_LIMITS_E          (I2CBASE_PARAM_ENTRIES+6)
+#define QMC5883L_PARAM_SAMPLES_E         (I2CBASE_PARAM_ENTRIES+7)
 
-#define QMC5883L_PARAM_ENTRIES           (I2CBASE_PARAM_ENTRIES + 7)
+#define QMC5883L_PARAM_ENTRIES           (I2CBASE_PARAM_ENTRIES + 8)
 
 // subs
 // subs of form: <param address>;<addr param address>;<type>;<number of values>;<name>;description
@@ -100,6 +104,7 @@ public:
   void update();
   void loop();
 
+  void updateQuadrant(uint8_t quadrant, float v);
 
 };
 
