@@ -77,6 +77,11 @@ SailorModule::SailorModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager
    setParamName(FPSTR(STRING_SPEED), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_UINT8_T, 3);
 
+   param = &_params[SAILOR_PARAM_WING_E];
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_HIGH, SAILOR_PARAM_WING);
+   setParamName(FPSTR(STRING_WING), param);
+   param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 4);
+
    update();  // set defaults
 }
 
@@ -159,7 +164,8 @@ void SailorModule::update() {
   //boolean rightPolar = headingPolarIndex < 16;
 
   // calc sheet based on delta between heading and wind
-  float sheet = fabs(shortestSignedDistanceBetweenCircularValues(h, w)) / 180;
+  float wing = shortestSignedDistanceBetweenCircularValues(h, w);
+  float sheet = fabs(wing) / 180;
   if (sheet > 1) sheet = 1;
 
   if (_tackLocked && (_lastCrossTrackPositive ? ct < -1 : ct > 1)) _tackLocked = false;
@@ -267,6 +273,10 @@ void SailorModule::update() {
 
   updateAndPublishParam(&_params[SAILOR_PARAM_SHEET_E], (uint8_t*)&sheet, sizeof(sheet));
   updateAndPublishParam(&_params[SAILOR_PARAM_COURSE_E], (uint8_t*)&c, sizeof(c));
+
+  // rescale
+  wing = wing > 0 ? 1 : -1;
+  updateAndPublishParam(&_params[SAILOR_PARAM_WING_E], (uint8_t*)&wing, sizeof(wing));
 }
 
 

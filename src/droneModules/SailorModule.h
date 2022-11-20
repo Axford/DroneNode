@@ -60,10 +60,13 @@ config (pubs)
 #define SAILOR_PARAM_SPEED2            20   // polar plot of estimated speeds by heading - 180-360
 #define SAILOR_PARAM_SPEED2_E          4
 
-#define SAILOR_PARAM_FLAGS            21   // polar plot of estimated speeds by heading - 180-360
-#define SAILOR_PARAM_FLAGS_E          5
+#define SAILOR_PARAM_FLAGS             21   // polar plot of estimated speeds by heading - 180-360
+#define SAILOR_PARAM_FLAGS_E           5
 
-#define SAILOR_PARAM_ENTRIES           6
+#define SAILOR_PARAM_WING              22   // wingsail flap position.. either -1 or 1 depending on tack
+#define SAILOR_PARAM_WING_E            6
+
+#define SAILOR_PARAM_ENTRIES           7
 
 
 static const char SAILOR_STR_SAILOR[] PROGMEM = "Sailor";
