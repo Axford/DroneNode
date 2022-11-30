@@ -168,7 +168,10 @@ void TurnRateModule::loop() {
 
   // if gybe mode then invert err
   if (newMode == TURN_RATE_MODE_GYBE) {
-    err = -err;
+    // if _positiveError then when we first entered gybe we needed to turn clockwise to reach the targetHeading
+    if ((err > 0 && _positiveError) || (err < 0 && !_positiveError)) {
+      err = -err;
+    }
   }
 
   // limit to 90 for ease
