@@ -3,19 +3,24 @@
 @description Generate a turnRate command based on target vs current heading using a PID controller
 
 @guide >>>
-Steering commands are based on:
-   * Sub to target heading
-   * Sub to current heading
-   * Tuning parameters (PID)
-   * Generate turn rate
+<p>Steering commands are based on:<p>
 
-*Gybe control*
-If heading error stays large (and same sign) for extended period, then attempt to gybe (i.e. go the longer way round the circle), until the sign of the error changes.
+<ul>
+   <li>Sub to target heading</li>
+   <li>Sub to current heading</li>
+   <li>Tuning parameters (PID)</li>
+   <li>Generate turn rate</li>
+</ul>
 
-Control parameters are:
- * Error threshold to trigger the gybe timer (e.g. 30 degrees)
- * Timeout duration (e.g. 10 seconds) after which to initiate the gybe
+<h3>Gybe control</h3>
+<p>If heading error stays large (and same sign) for extended period, then attempt to gybe (i.e. go the longer way round the circle), until the sign of the error changes.</p>
 
+<p>Control parameters are:</p>
+
+<ul>
+ <li>Error threshold to trigger the gybe timer (e.g. 30 degrees)</li>
+ <li>Timeout duration (e.g. 10 seconds) after which to initiate the gybe</li>
+</ul>
 <<<
 
 @config >>>
@@ -45,12 +50,12 @@ TurnRate.new 8
 #define TURN_RATE_SUB_TARGET_ADDR     11
 #define TURN_RATE_SUB_TARGET_E        0
 
-// @sub 12;13;f;1;Current heading (e.g. from Compass)
+// @sub 12;13;f;1;heading;Current heading (e.g. from Compass)
 #define TURN_RATE_SUB_HEADING         12
 #define TURN_RATE_SUB_HEADING_ADDR    13
 #define TURN_RATE_SUB_HEADING_E       1
 
-// @sub 14;15;f;3;PID values (start with: 0.005 0.0 0.0001)
+// @sub 14;15;f;3;PID;PID values (start with: 0.005 0.0 0.0001)
 #define TURN_RATE_SUB_PID             14
 #define TURN_RATE_SUB_PID_ADDR        15
 #define TURN_RATE_SUB_PID_E           2

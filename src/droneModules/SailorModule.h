@@ -1,5 +1,8 @@
 /*
+@type Sailor
+@description Control a typical sailing boat
 
+@guide >>>
 Sailor controller
 
 subs
@@ -17,6 +20,13 @@ config (pubs)
    - modelled as 16 segments in the clockwise 180 degree region (assumes mirrored performance)
    - each segment is 180/16 degree = 11.25 degree arc, centre of segment should be considered the target heading to achieve associated performance
    - performance stored as a single uint8_t value = 0..255
+
+<<<
+
+@config >>>
+
+<<<
+
 */
 
 #ifndef SAILOR_MODULE_H
