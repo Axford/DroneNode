@@ -235,6 +235,10 @@ void SailorModule::update() {
     }
   }
 
+  // ensure course is in range 0.. 360
+  c = fmod(c, 360);
+  if (c < 0) c += 360;
+
   // if course is close to target, then just head to target
   if (fabs(c-t) < 11) {
     c = t;

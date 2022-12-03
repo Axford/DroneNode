@@ -98,6 +98,14 @@ NMEAModule::NMEAModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dl
    _params[NMEA_PARAM_FOLLOWME_E].data.f[0] = 0;
    _params[NMEA_PARAM_FOLLOWME_E].data.f[1] = 0;
    _params[NMEA_PARAM_FOLLOWME_E].data.f[2] = 5;
+
+   param = &_params[NMEA_PARAM_PACKETS_E];
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, NMEA_PARAM_PACKETS);
+   setParamName(FPSTR(STRING_PACKETS), param);
+   _params[NMEA_PARAM_PACKETS_E].paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_UINT32_T, 12);
+   _params[NMEA_PARAM_PACKETS_E].data.uint32[0] = 0;  // valid
+   _params[NMEA_PARAM_PACKETS_E].data.uint32[1] = 0;  // invalid
+   _params[NMEA_PARAM_PACKETS_E].data.uint32[2] = 0;  // unknown
 }
 
 
@@ -174,6 +182,8 @@ void NMEAModule::loop() {
         //Log.noticeln(F("Unknown NMEA Message: "));
         //Log.noticeln(_nmea->getSentence());
         //getSentence
+
+        _params[NMEA_PARAM_PACKETS_E].data.uint32[2]++;
 
         // TODO:
       } else {
@@ -273,10 +283,16 @@ void NMEAModule::loop() {
 
           uint8_t temp8 = _nmea->getHDOP();
           updateAndPublishParam(&_params[NMEA_PARAM_HDOP_E], (uint8_t*)&temp8, sizeof(temp8));
+
+          _params[NMEA_PARAM_PACKETS_E].data.uint32[0]++;
         } else {
           //Log.errorln(F("Invalid NMEA sentence"));
+          _params[NMEA_PARAM_PACKETS_E].data.uint32[1]++;
         }
+        
       }
+
+      publishParamEntry(&_params[NMEA_PARAM_PACKETS_E]);
 
     }
   }

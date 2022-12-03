@@ -50,6 +50,9 @@ NMEA.new 7
 // @pub 16;f;3;followMe;Location field with a small target radius
 #define NMEA_PARAM_FOLLOWME           16
 
+// @pub 17;u32;3;packets;Number of NMEA packets (sentences) received (valid, invalid, unknown)
+#define NMEA_PARAM_PACKETS            17
+
 #define NMEA_PARAM_LOCATION_E         0
 #define NMEA_PARAM_SATELLITES_E       1
 #define NMEA_PARAM_HEADING_E          2
@@ -59,8 +62,9 @@ NMEA.new 7
 #define NMEA_PARAM_BAUD_E             6
 #define NMEA_PARAM_FIX_E              7
 #define NMEA_PARAM_FOLLOWME_E         8
+#define NMEA_PARAM_PACKETS_E          9
 
-#define NMEA_PARAM_ENTRIES            9
+#define NMEA_PARAM_ENTRIES            10
 
 
 // subs
