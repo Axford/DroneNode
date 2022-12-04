@@ -284,7 +284,9 @@ void PolarModule::loopActive() {
       Serial.println(leeway);
 
       // if leeway less than threshold
-      if (leeway < _params[POLAR_PARAM_THRESHOLD_E].data.f[1]) {
+      // and we've travelled at least the target radius in distance
+      if (leeway < _params[POLAR_PARAM_THRESHOLD_E].data.f[1] &&
+         distTravelled > _params[POLAR_PARAM_RADIUS_E].data.f[0]) {
 
         // scale speed relative to wind speed
         float speedRatio = avgSpeed / _subs[POLAR_SUB_WIND_SPEED_E].param.data.f[0];
@@ -304,6 +306,9 @@ void PolarModule::loopActive() {
         updatePolar();
 
         // TODO - store leeway
+
+      } else {
+        // invalid run
 
       }
     }
