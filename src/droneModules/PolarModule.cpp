@@ -375,9 +375,9 @@ void PolarModule::loopActive() {
       if (relHeading < 0) relHeading += 360;
       
       uint8_t pi = polarIndexForAngle(relHeading);
-      int i1 = pi-5;
-      if (i1 < 0) i1=1;
-      int i2 = pi+5;
+      int i1 = pi-2;
+      if (i1 < 3) i1=3;
+      int i2 = pi+2;
       if (i2 > 15) i2 = 15;
 
       for (uint8_t i=i1; i<i2+1; i++) {
