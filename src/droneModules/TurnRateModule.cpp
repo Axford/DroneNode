@@ -12,6 +12,7 @@ TurnRateModule::TurnRateModule(uint8_t id, DroneModuleManager* dmm, DroneLinkMan
    _iError = 0;
    _dError = 0;
    _lastError = 0;
+   _lastHeading = 0;
 
    // mgmt
    _mgmtParams[DRONE_MODULE_PARAM_TYPE_E].paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_CHAR, sizeof(TURN_RATE_STR_TURN_RATE));
@@ -135,6 +136,13 @@ void TurnRateModule::loop() {
   float h = _subs[TURN_RATE_SUB_HEADING_E].param.data.f[0];
   float t = _subs[TURN_RATE_SUB_TARGET_E].param.data.f[0];
 
+  // check to see if heading has dramatically changed
+  if (fabs(getRotationDistance(_lastHeading, t)) > 45) {
+    // reset d and i errors
+    _iError = 0;
+    _dError = 0;
+  }
+
   // calc shortest signed distance
   // positive values indicate a clockwise turn
   float err = getRotationDistance( h, t );
@@ -205,4 +213,5 @@ void TurnRateModule::loop() {
 
   updateAndPublishParam(&_params[TURN_RATE_PARAM_MODE_E], (uint8_t*)&newMode, sizeof(newMode));
 
+  _lastHeading = h;
 }

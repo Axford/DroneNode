@@ -95,6 +95,7 @@ protected:
   float _iError;
   float _dError;
   float _lastError;
+  float _lastHeading;
 
   uint32_t _gybeTimerStart; // if we are in potential gybe conditions, when did the timer start
   boolean _positiveError;  // did the timer start whilst the error is positive

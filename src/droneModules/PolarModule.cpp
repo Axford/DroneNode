@@ -365,6 +365,35 @@ void PolarModule::loopActive() {
         _params[POLAR_PARAM_TARGET_E].data.f[1]
       );
 
+      // add a few degrees to the heading so the boat travels in a pointed star pattern
+      //newHeading += 15;
+      //newHeading = fmod(newHeading,360);
+
+      // search the polar bins around the tentative new heading and see if there's an empty bin close by
+      float relHeading = newHeading - _subs[POLAR_SUB_WIND_E].param.data.f[0];
+      relHeading = fmod(relHeading,360);
+      if (relHeading < 0) relHeading += 360;
+      
+      uint8_t pi = polarIndexForAngle(relHeading);
+      int i1 = pi-2;
+      if (i1 < 0) i1=1;
+      int i2 = pi+2;
+      if (i2 > 15) i2 = 15;
+
+      for (uint8_t i=i1; i<i2+1; i++) {
+        if (_params[POLAR_PARAM_SAMPLES_E].data.uint8[i] < _params[POLAR_PARAM_SAMPLES_E].data.uint8[pi]) {
+          // update pi
+          pi = i;
+        }
+      }
+
+      // calculate newHeading based on pi
+      relHeading = (relHeading > 180) ? 360 - pi * 11.25 : pi * 11.25;
+      newHeading = relHeading + _subs[POLAR_SUB_WIND_E].param.data.f[0];
+      newHeading = fmod(newHeading,360);
+      if (newHeading < 0) newHeading += 360;
+
+
       //Serial.print("[PM.lA] newHeading ");
       //Serial.println(newHeading);
 
