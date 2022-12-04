@@ -228,16 +228,15 @@ void PolarModule::loopActive() {
   }
 
   // see if we drifted outside our target area
-  if (newRegion == POLAR_REGION_OUT) {
+  if (newRegion != _region && newRegion == POLAR_REGION_OUT) {
     //Serial.println("[PM.lA] out");
     // switch to passthrough
-    /*
+    
     uint8_t newMode = POLAR_MODE_PASSTHROUGH;
     updateAndPublishParam(&_params[POLAR_PARAM_MODE_E], (uint8_t*)&newMode, sizeof(newMode));
 
     _region = newRegion;
     return;
-    */
   }
 
   // if in the mid region...
