@@ -38,6 +38,7 @@
 #include "droneModules/TankSteerModule.h"
 #include "droneModules/TurnRateModule.h"
 #include "droneModules/UDPTelemetryModule.h"
+#include "droneModules/WaypointModule.h"
 #include "droneModules/WindModule.h"
 
 /*
@@ -187,6 +188,7 @@ DroneExecutionManager::DroneExecutionManager(DroneModuleManager *dmm, DroneLinkM
   ns = TankSteerModule::registerNamespace(this);  TankSteerModule::registerParams(ns, this);
   ns = TurnRateModule::registerNamespace(this);  TurnRateModule::registerParams(ns, this);
   ns = UDPTelemetryModule::registerNamespace(this);  UDPTelemetryModule::registerParams(ns, this);
+  ns = WaypointModule::registerNamespace(this);  WaypointModule::registerParams(ns, this);
   ns = WindModule::registerNamespace(this);  WindModule::registerParams(ns, this);
 
 
@@ -1496,6 +1498,8 @@ boolean DroneExecutionManager::mod_constructor(DEM_INSTRUCTION_COMPILED* instr, 
       newMod = new UDPTelemetryModule(id, _dmm, _dlm, this, _fs);
     } else if (strcmp_P(instr->ns->name, NAV_STR_NAV) == 0) {
       newMod = new NavModule(id, _dmm, _dlm, this, _fs);
+    } else if (strcmp_P(instr->ns->name, WAYPOINT_STR_WAYPOINT) == 0) {
+      newMod = new WaypointModule(id, _dmm, _dlm, this, _fs);
     } else if (strcmp_P(instr->ns->name, WIND_STR_WIND) == 0) {
       newMod = new WindModule(id, _dmm, _dlm, this, _fs);
     } else {
