@@ -15,7 +15,7 @@ Cache directory structure for fast enumeration
 #include "FS.h"
 #include <LITTLEFS.h>
 
-#define DRONE_FS_MAX_NAME_SIZE    13  // 8.3 + null
+#define DRONE_FS_MAX_NAME_SIZE    14  // forward-slash plus 8.3 + null
 #define DRONE_FS_MAX_PATH_SIZE    24  // inc null termination
 
 // forward decl
