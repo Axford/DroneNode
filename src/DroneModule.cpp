@@ -197,6 +197,116 @@ DRONE_PARAM_SUB* DroneModule::getSubByName(const char* name) {
 }
 
 
+void DroneModule::publishParamsFromList(char * paramList) {
+  char buffer[20];
+  uint8_t bufLen=0;
+  // parse comma separated list of param names and publish them
+
+  uint8_t i=0;
+  char c;
+  do {
+    c = paramList[i];
+
+    // skip whitespace
+    if (c > 0 &&
+        c != ' ' && 
+        c != '\t' &&
+        c != ',' &&
+        bufLen < 19) {
+      buffer[bufLen] = c;
+      bufLen++;
+    } else if (c == ',' || c == 0) {
+      if (bufLen > 0) {
+        buffer[bufLen] = 0; // null terminate 
+
+        // see if we have a matching param
+        DRONE_PARAM_ENTRY* pe = getParamEntryByName(buffer);
+        if (pe) {
+          Log.noticeln("[DM.pPFL] Publish: %s", buffer);
+          pe->publish = true;
+        }
+      }
+      bufLen =0;
+    }
+
+    i++;
+  } while (c > 0);
+}
+
+
+void DroneModule::setParamFromList(DRONE_PARAM_ENTRY* pe, char * paramList) {
+  if (pe == NULL) return;
+
+  uint8_t numValues = 0; // how many values have we parsed
+  char buffer[20];
+  uint8_t bufLen=0;
+  // parse comma separated list of param values and set them
+
+  // param type
+  uint8_t t = (pe->paramTypeLength >> 4) & 0x07;
+
+  uint8_t i=0;
+  char c;
+  do {
+    c = paramList[i];
+
+    // skip whitespace
+    if (c > 0 &&
+        c != ' ' && 
+        c != '\t' &&
+        c != ',' &&
+        bufLen < 19) {
+      buffer[bufLen] = c;
+      bufLen++;
+    } else if (c == ',' || c == 0) {
+      if (bufLen > 0) {
+        buffer[bufLen] = 0; // null terminate 
+
+        switch(t) {
+          case DRONE_LINK_MSG_TYPE_UINT8_T:
+            pe->data.uint8[numValues] = atoi(buffer);
+            numValues++;
+            if (numValues >=16) break;
+            break;
+          case DRONE_LINK_MSG_TYPE_UINT32_T:
+            pe->data.uint32[numValues] = atoi(buffer);
+            numValues++;
+            if (numValues >=4) break;
+            break;
+          case DRONE_LINK_MSG_TYPE_FLOAT:
+            pe->data.f[numValues] = atof(buffer);
+            numValues++;
+            if (numValues >=4) break;
+            break;
+          case DRONE_LINK_MSG_TYPE_CHAR:
+            if (bufLen <= 16) {
+              // update string length
+              pe->paramTypeLength = (pe->paramTypeLength & 0xF0) | (bufLen-1);
+              memcpy(pe->data.c, buffer, bufLen);
+              numValues =bufLen;
+            }
+            break;
+        }
+      }
+      bufLen =0;
+    }
+
+    i++;
+  } while (c > 0);
+}
+
+
+void DroneModule::setSubAddr(DRONE_PARAM_SUB* ps, uint8_t nodeId, uint8_t channelId, uint8_t paramId) {
+  ps->addr.node = nodeId;
+  ps->addr.channel = channelId;
+  ps->addr.paramPriority = paramId;
+  
+  if (_setupDone) {
+    // update subscription
+    _dlm->subscribe(&ps->addr, this);
+  }
+}
+
 
 DEM_NAMESPACE* DroneModule::registerNamespace(DroneExecutionManager *dem) {
   // namespace for module type

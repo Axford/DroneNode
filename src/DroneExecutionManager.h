@@ -110,7 +110,23 @@ struct DEM_MACRO {
   IvanLinkedList::LinkedList<DEM_INSTRUCTION_COMPILED> *commands;
 };
 
+struct DEM_ADDRESS {
+  uint8_t moduleId;  // what module is subscribing
+  void* ps;  // what sub is this address value for 
+  char nodeAddress[20];
+  char moduleAddress[20];
+  char paramAddress[20];
+};
+
 static const char DEM_BOOT_FILENAME[] PROGMEM = "/boot.dat";
+
+
+#define DEM_PARSER_GENERAL 0
+#define DEM_PARSER_SECTION_TITLE 1
+#define DEM_PARSER_SECTION 2
+
+#define DEM_PARSER_NAME_BUFFER_SIZE 20
+#define DEM_PARSER_VALUE_BUFFER_SIZE 200
 
 class DroneExecutionManager
 {
@@ -121,6 +137,9 @@ protected:
   IvanLinkedList::LinkedList<DEM_MACRO*> _macros;
   IvanLinkedList::LinkedList<DEM_NAMESPACE*> _namespaces;
   IvanLinkedList::LinkedList<DEM_NAMESPACE*> _types; // registered module types
+
+  // queue of addresses that need to be resolved
+  IvanLinkedList::LinkedList<DEM_ADDRESS> _addressQueue;
 
   boolean _safeMode;
 
@@ -162,6 +181,11 @@ public:
     void registerCommand(DEM_NAMESPACE* ns, const char* command, uint8_t dataType, DEMCommandHandler handler);
 
     DEM_COMMAND getCommand(DEM_NAMESPACE* ns, const char* command);
+
+    void addToAddressQueue(DroneModule* newMod, char* subName, char* address);
+    void processAddressQueue();
+
+    void loadConfiguration(const char* filename);
 
     void callStackPush(DEM_CALLSTACK_ENTRY entry);
     void callStackPop();
@@ -207,9 +231,14 @@ public:
     boolean core_restart(DEM_INSTRUCTION_COMPILED* instr, DEM_CALLSTACK* cs, DEM_DATASTACK* ds, boolean continuation);
     boolean core_run(DEM_INSTRUCTION_COMPILED* instr, DEM_CALLSTACK* cs, DEM_DATASTACK* ds, boolean continuation);
     boolean core_send(DEM_INSTRUCTION_COMPILED* instr, DEM_CALLSTACK* cs, DEM_DATASTACK* ds, boolean continuation);
+    
+    void completeSetup();
+    
     boolean core_setup(DEM_INSTRUCTION_COMPILED* instr, DEM_CALLSTACK* cs, DEM_DATASTACK* ds, boolean continuation);
     boolean core_swap(DEM_INSTRUCTION_COMPILED* instr, DEM_CALLSTACK* cs, DEM_DATASTACK* ds, boolean continuation);
     boolean core_until(DEM_INSTRUCTION_COMPILED* instr, DEM_CALLSTACK* cs, DEM_DATASTACK* ds, boolean continuation);
+
+    DroneModule* instanceModule(char* typeName, uint8_t id);
 
     boolean mod_constructor(DEM_INSTRUCTION_COMPILED* instr, DEM_CALLSTACK* cs, DEM_DATASTACK* ds, boolean continuation);
     boolean mod_param(DEM_INSTRUCTION_COMPILED* instr, DEM_CALLSTACK* cs, DEM_DATASTACK* ds, boolean continuation);

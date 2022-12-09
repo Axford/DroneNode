@@ -139,6 +139,10 @@ public:
   DRONE_PARAM_ENTRY* getParamEntryByName(const char* name);
   DRONE_PARAM_SUB* getSubByName(const char* name);
 
+  void publishParamsFromList(char * paramList);
+  void setParamFromList(DRONE_PARAM_ENTRY* pe, char * paramList);
+  void setSubAddr(DRONE_PARAM_SUB* ps, uint8_t nodeId, uint8_t channelId, uint8_t paramId);
+
   static DEM_NAMESPACE* registerNamespace(DroneExecutionManager *dem);
   static void registerConstructor(DEM_NAMESPACE* ns, DroneExecutionManager *dem);
   static void registerMgmtParams(DEM_NAMESPACE* ns, DroneExecutionManager *dem);

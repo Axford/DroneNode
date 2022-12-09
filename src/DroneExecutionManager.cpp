@@ -132,6 +132,7 @@ DroneExecutionManager::DroneExecutionManager(DroneModuleManager *dmm, DroneLinkM
   using std::placeholders::_3;
   using std::placeholders::_4;
 
+  /*
   registerCommand(core, PSTR("counter"), DRONE_LINK_MSG_TYPE_UINT32_T, std::bind(&DroneExecutionManager::core_counter, this, _1, _2, _3, _4));
   registerCommand(core, STRING_DELAY, DRONE_LINK_MSG_TYPE_UINT32_T, std::bind(&DroneExecutionManager::core_delay, this, _1, _2, _3, _4));
   registerCommand(core, PSTR("done"), DEM_DATATYPE_NONE, std::bind(&DroneExecutionManager::core_done, this, _1, _2, _3, _4));
@@ -147,7 +148,7 @@ DroneExecutionManager::DroneExecutionManager(DroneModuleManager *dmm, DroneLinkM
   registerCommand(core, PSTR("sub"), DRONE_LINK_MSG_TYPE_ADDR, std::bind(&DroneExecutionManager::core_sub, this, _1, _2, _3, _4));
   registerCommand(core, PSTR("swap"), DEM_DATATYPE_NONE, std::bind(&DroneExecutionManager::core_swap, this, _1, _2, _3, _4));
   registerCommand(core, PSTR("until"), DEM_DATATYPE_NONE, std::bind(&DroneExecutionManager::core_until, this, _1, _2, _3, _4));
-
+  */
 
 
   // register modules
@@ -317,6 +318,332 @@ DEM_COMMAND DroneExecutionManager::getCommand(DEM_NAMESPACE* ns, const char* com
   cmd.handler = NULL;
   cmd.str = NULL;
   return cmd;
+}
+
+
+void DroneExecutionManager::addToAddressQueue(DroneModule* newMod, char* subName, char* address) {
+  // add to address parsing queue
+  DEM_ADDRESS addr;
+  DRONE_PARAM_SUB* ps = newMod->getSubByName(subName);
+  addr.moduleId = newMod->id();
+
+  if (ps == NULL) {
+    Log.errorln(F("[DEM.lC] unknown sub name %s"), subName);
+    return;
+  }
+    
+  addr.ps = ps;
+
+  // parse elements of address
+  char buffer[20];
+  uint8_t bufLen = 0;
+  uint8_t part = 0;
+  char c;
+  uint8_t i=0;
+
+  do {
+    c = address[i];
+    if (c == ' ' || c == '\t') {
+
+    } else if (c == '>') {
+      if (bufLen > 0) {
+        memcpy(addr.nodeAddress, buffer, bufLen);
+        addr.nodeAddress[bufLen] = 0;
+      }
+      bufLen = 0;
+      part = 1;
+    } else if (c == '.') {
+      if (bufLen > 0) {
+        memcpy(addr.moduleAddress, buffer, bufLen);
+        addr.moduleAddress[bufLen] = 0;
+      }
+      bufLen = 0;
+      part = 2;
+
+    }  else if (c == 0) {
+      if (bufLen > 0) {
+        memcpy(addr.paramAddress, buffer, bufLen);
+        addr.paramAddress[bufLen] = 0;
+      }
+      bufLen = 0;
+      part = 2;
+
+    } else {
+      if (bufLen < 19) {
+        buffer[bufLen] = c;
+        bufLen++;
+      }
+    }
+
+    i++;
+  } while (c > 0);
+
+  Log.noticeln("Adding addr to queue: %s,%s,%s", addr.nodeAddress, addr.moduleAddress, addr.paramAddress);
+  _addressQueue.add(addr);
+}
+
+
+void DroneExecutionManager::processAddressQueue() {
+  if (_addressQueue.size() == 0) return;
+
+  DEM_ADDRESS addr;
+  boolean resolved = false;
+  uint8_t nodeId = 0;
+  uint8_t moduleId = 0;
+  uint8_t paramId = 0;
+  
+  DRONE_PARAM_SUB* ps;
+
+  uint8_t i=0;
+  while (i < _addressQueue.size()) {
+
+    addr = _addressQueue.get(i);
+
+    nodeId = 0;
+    moduleId = 0;
+    paramId = 0;
+
+    resolved = false;
+
+    // try to resolve the node
+    if (addr.nodeAddress[0]== '@') {
+      nodeId = _dlm->node();
+      resolved = true;
+    } else {
+      // try to convert to an int
+      nodeId = atoi(addr.nodeAddress);
+      if (nodeId > 0) {
+        resolved = true;
+      } else {
+        // lookup in mesh routing table
+        nodeId = _dlm->getNodeByName(addr.nodeAddress);
+        if (nodeId > 0) resolved = true;
+      }
+    }
+
+    if (resolved) {
+      // now lets try to resolve the module name
+      // only works for local modules
+    
+      // try to convert to an int
+      moduleId = atoi(addr.moduleAddress);
+      if (moduleId > 0) { 
+        resolved = true;
+      } else {
+        if (nodeId == _dlm->node()) {
+          DroneModule* mod = _dmm->getModuleByName(addr.moduleAddress);
+          if (mod) {
+            resolved =true;
+            moduleId = mod->id();
+          } else {
+            resolved =false;
+          }
+        } else {
+          resolved =false;
+        }
+      }
+    }
+
+    if (resolved) {
+      // finally lets try to resolve the param id
+      paramId = atoi(addr.paramAddress);
+
+      if (paramId ==0 && nodeId == _dlm->node()) {
+        // if its a local address we can try and resolve names
+        DroneModule* mod = _dmm->getModuleById(moduleId);
+        if (mod) {
+          paramId = mod->getParamIdByName(addr.paramAddress);
+        }
+      }
+
+      resolved = (paramId > 0);
+    }
+
+    if (resolved) {
+      // set sub address value
+      DroneModule* mod = _dmm->getModuleById(addr.moduleId);
+
+      ps = (DRONE_PARAM_SUB*)addr.ps;
+
+      if (mod) {
+        mod->setSubAddr(ps, nodeId, moduleId, paramId);
+        Log.noticeln("[DEM.pAQ] Resolved: %s>%s.%s to %u>%d.%u", addr.nodeAddress, addr.moduleAddress, addr.paramAddress, nodeId, moduleId, paramId);
+      } else {
+        Log.errorln("[DEM.pAQ] Unable to resolve sub module %u", addr.moduleId);      }
+
+      _addressQueue.remove(i);
+    } else {
+      i++;
+    }
+  }
+}
+
+
+void DroneExecutionManager::loadConfiguration(const char* filename) {
+
+  uint8_t outerState = DEM_PARSER_GENERAL;
+  uint8_t inValue = false;  
+  boolean inString = false;
+  boolean inComment = false;
+  boolean addToBuffer = false;
+
+  uint8_t nodeId = 0;
+  uint8_t moduleId = 0;
+  DroneModule *newMod = NULL;
+
+  uint32_t line = 0;
+  char valueBuffer[DEM_PARSER_VALUE_BUFFER_SIZE];  // parsing buffer
+  uint8_t vBufLen = 0;  // how many valid chars are in the buffer
+  
+  char nameBuffer[DEM_PARSER_NAME_BUFFER_SIZE];
+  uint8_t nBufLen = 0;
+
+
+  if (LITTLEFS.exists(F(filename))) {
+    File file = LITTLEFS.open(F(filename), FILE_READ);
+
+    if (!file) {
+      Serial.print("[w.lW] Error opening: ");
+      Serial.println (filename);
+    } else {
+      
+      
+      
+      while (file.available()) {
+        char c = file.read();
+
+        addToBuffer = false;
+
+        if (!inComment) {
+          if (inString) {
+            // keep accumulating characters until we find a "
+            if (c == '"') {
+              inString = false;
+            } else {
+              addToBuffer = true;
+            }
+          } else {
+            addToBuffer = (c != '\t' && 
+                          c != ' ' && 
+                          c != '\r' && 
+                          c != '\n' &&
+                          c != '=' && 
+                          c != '[' &&
+                          c != ']' &&
+                          c != '"' &&
+                          c != ';');
+            if (c == '"') inString = true;
+            if (c == ';') inComment = true;
+          }
+
+          // accumulate string buffer
+          if (addToBuffer) {
+            if (inValue) {
+              if (vBufLen < DEM_PARSER_VALUE_BUFFER_SIZE-1) {
+                valueBuffer[vBufLen] = c;
+                vBufLen++;
+              }
+            } else {
+              if (nBufLen < DEM_PARSER_NAME_BUFFER_SIZE-1) {
+                nameBuffer[nBufLen] = c;
+                nBufLen++;
+              }
+            }
+          }
+
+          if (c == '=' && !inValue) {
+            inValue = true;
+            vBufLen = 0;
+          } else if (c == '[' && nBufLen == 0) {
+            outerState = DEM_PARSER_SECTION_TITLE;
+            nBufLen = 0;
+          }
+        }
+        
+
+        // if end of line or end of file
+        if (c == '\n' || !file.available()) {
+          
+          // see if we have a valid name=value pair
+          if (inValue && vBufLen > 0 && nBufLen > 0) {
+            // null terminate
+            nameBuffer[nBufLen] = 0;
+            valueBuffer[vBufLen] = 0;
+
+            // do the thing
+            switch(outerState) {
+              case DEM_PARSER_GENERAL:
+                  // do we have a node address
+                  if (strcmp(nameBuffer, "node") == 0) {
+                    nodeId = atoi(valueBuffer);
+                    if (nodeId > 0 && nodeId < 255) {
+                      // set node address
+                      _dmm->node(nodeId);
+                      _dlm->node(nodeId);
+                      Log.noticeln(F("[DEM.lC] node= %d ..."), nodeId);
+                    } else
+                      Log.errorln(F("[DEM.lC] invalid node address"));
+                  }
+                  
+                  break;
+
+              case DEM_PARSER_SECTION_TITLE:
+
+                  // parse module id
+                   moduleId= atoi(valueBuffer);
+                  if (moduleId > 0 && moduleId < 255) {
+                    // see if there is a matching module to instance
+                    newMod = instanceModule(nameBuffer, moduleId);
+
+                    Log.noticeln(F("[DEM.lC] module= %d ..."), moduleId);
+                  } else
+                    Log.errorln(F("[DEM.lC] invalid module address"));
+                  
+                  outerState = DEM_PARSER_SECTION;
+                  break;
+
+              case DEM_PARSER_SECTION:
+
+                  if (newMod) {
+                    if (strcmp(nameBuffer, "publish")==0) {
+                      // parse and publish list of params
+                      newMod->publishParamsFromList(valueBuffer);
+                    } else if (nameBuffer[0] == '$') {
+                      // parse sub
+                      addToAddressQueue(newMod, &nameBuffer[1], valueBuffer);
+
+                    } else {
+                      // regular param setting
+                      DRONE_PARAM_ENTRY* pe = newMod->getParamEntryByName(nameBuffer);
+                      if (pe) {
+                        newMod->setParamFromList(pe, valueBuffer);
+                      } else {
+                        Log.errorln(F("[DEM.lC] unknown param name %s"), nameBuffer);
+                      }
+                    }
+                    
+                  } else 
+                    Log.errorln(F("[DEM.lC] no valid module to configure"));
+                  break;
+            }
+          }
+          
+
+          nBufLen = 0;
+          vBufLen = 0;
+          inValue = false;
+          line++;
+          inString = false;
+          inComment = false;
+        }
+      }
+    }
+
+    file.close();
+  } else {
+    Serial.print("[W.lW] No: ");
+    Serial.println(filename);
+  }
 }
 
 
@@ -1342,7 +1669,8 @@ boolean DroneExecutionManager::core_send(DEM_INSTRUCTION_COMPILED* instr, DEM_CA
   return true;
 }
 
-boolean DroneExecutionManager::core_setup(DEM_INSTRUCTION_COMPILED* instr, DEM_CALLSTACK* cs, DEM_DATASTACK* ds, boolean continuation) {
+
+void DroneExecutionManager::completeSetup() {
   Log.noticeln(F("[.s] Completing module setup"));
   _dmm->setupModules();
 
@@ -1354,6 +1682,12 @@ boolean DroneExecutionManager::core_setup(DEM_INSTRUCTION_COMPILED* instr, DEM_C
   // redirect logging to serial
   if (_logFile) _logFile.close();
   Log.begin(LOG_LEVEL_VERBOSE, &Serial);
+}
+
+
+
+boolean DroneExecutionManager::core_setup(DEM_INSTRUCTION_COMPILED* instr, DEM_CALLSTACK* cs, DEM_DATASTACK* ds, boolean continuation) {
+  completeSetup();
 
   return true;
 }
@@ -1424,6 +1758,94 @@ boolean DroneExecutionManager::core_until(DEM_INSTRUCTION_COMPILED* instr, DEM_C
 
 
 /*
+  Instance a module by type name
+*/
+
+DroneModule* DroneExecutionManager::instanceModule(char* typeName, uint8_t id) {
+  Log.noticeln(F("[.c] Instantiating %s as %u"), typeName, id);
+  DroneModule *newMod;
+
+  if (id > 0 && id < 255) {
+    if (strcmp_P(typeName, CONTROLLER_STR_CONTROLLER) == 0) {
+      newMod = new ControllerModule(id, _dmm, _dlm, this, _fs);
+    } else if (strcmp_P(typeName, CYLON_STR_CYLON) == 0) {
+      newMod = new CylonModule(id, _dmm, _dlm, this, _fs);
+    } else if (strcmp_P(typeName, DEPTH_STR_DEPTH) == 0) {
+      newMod = new DepthModule(id, _dmm, _dlm, this, _fs);
+    } else if (strcmp_P(typeName, DIAGNOSTIC_STR_DIAGNOSTIC) == 0) {
+      newMod = new DiagnosticModule(id, _dmm, _dlm, this, _fs);
+    } else if (strcmp_P(typeName, HMC5883L_STR_HMC5883L) == 0) {
+      newMod = new HMC5883LModule(id, _dmm, _dlm, this, _fs);
+    } else if (strcmp_P(typeName, INA219_STR_INA219) == 0) {
+      newMod = new INA219Module(id, _dmm, _dlm, this, _fs);
+    } else if (strcmp_P(typeName, INA3221_STR_INA3221) == 0) {
+      newMod = new INA3221Module(id, _dmm, _dlm, this, _fs);
+    } else if (strcmp_P(typeName, JOYSTICK_STR_JOYSTICK) == 0) {
+      newMod = new JoystickModule(id, _dmm, _dlm, this, _fs);
+    } else if (strcmp_P(typeName, LSM9DS1_STR_LSM9DS1) == 0) {
+      newMod = new LSM9DS1Module(id, _dmm, _dlm, this, _fs);
+    } else if (strcmp_P(typeName, MANAGEMENT_STR_MANAGEMENT) == 0) {
+      newMod = new ManagementModule(id, _dmm, _dlm, this, _fs);
+    } else if (strcmp_P(typeName, MOTOR_STR_MOTOR) == 0) {
+      newMod = new MotorModule(id, _dmm, _dlm, this, _fs);
+    } else if (strcmp_P(typeName, MPU6050_STR_MPU6050) == 0) {
+      newMod = new MPU6050Module(id, _dmm, _dlm, this, _fs);
+    } else if (strcmp_P(typeName, NMEA_STR_NMEA) == 0) {
+      newMod = new NMEAModule(id, _dmm, _dlm, this, _fs);
+    } else if (strcmp_P(typeName, NEOPIXEL_STR_NEOPIXEL) == 0) {
+      newMod = new NeopixelModule(id, _dmm, _dlm, this, _fs);
+    } else if (strcmp_P(typeName, NunJOYSTICK_STR_NunJOYSTICK) == 0) {
+      newMod = new NunchuckJoystick(id, _dmm, _dlm, this, _fs);
+    } else if (strcmp_P(typeName, ODRIVE_STR_ODRIVE) == 0) {
+      newMod = new ODriveModule(id, _dmm, _dlm, this, _fs);
+    } else if (strcmp_P(typeName, PAN_SERIAL_STR_PAN_SERIAL) == 0) {
+      newMod = new PanSerialModule(id, _dmm, _dlm, this, _fs);
+    } else if (strcmp_P(typeName, PAN_TILT_STR_PAN_TILT) == 0) {
+      newMod = new PanTiltModule(id, _dmm, _dlm, this, _fs);
+    } else if (strcmp_P(typeName, POLAR_STR_POLAR) == 0) {
+      newMod = new PolarModule(id, _dmm, _dlm, this, _fs);
+    } else if (strcmp_P(typeName, PROA_STR_PROA) == 0) {
+      newMod = new ProaModule(id, _dmm, _dlm, this, _fs);
+    } else if (strcmp_P(typeName, QMC5883L_STR_QMC5883L) == 0) {
+      newMod = new QMC5883LModule(id, _dmm, _dlm, this, _fs);
+    } else if (strcmp_P(typeName, RECEIVER_STR_RECEIVER) == 0) {
+      newMod = new ReceiverModule(id, _dmm, _dlm, this, _fs);
+    } else if (strcmp_P(typeName, RFM69_TELEMETRY_STR_RFM69_TELEMETRY) == 0) {
+      newMod = new RFM69TelemetryModule(id, _dmm, _dlm, this, _fs);
+    } else if (strcmp_P(typeName, SAILOR_STR_SAILOR) == 0) {
+      newMod = new SailorModule(id, _dmm, _dlm, this, _fs);
+    } else if (strcmp_P(typeName, SERIAL_TELEMETRY_STR_SERIAL_TELEMETRY) == 0) {
+      newMod = new SerialTelemetryModule(id, _dmm, _dlm, this, _fs);
+    } else if (strcmp_P(typeName, SERVO_STR_SERVO) == 0) {
+      newMod = new ServoModule(id, _dmm, _dlm, this, _fs);
+    } else if (strcmp_P(typeName, SPEED_CONTROL_STR_SPEED_CONTROL) == 0) {
+      newMod = new SpeedControlModule(id, _dmm, _dlm, this, _fs);
+    } else if (strcmp_P(typeName, STATUS_STR_STATUS) == 0) {
+      newMod = new StatusModule(id, _dmm, _dlm, this, _fs);
+    } else if (strcmp_P(typeName, TANK_STEER_STR_TANK_STEER) == 0) {
+      newMod = new TankSteerModule(id, _dmm, _dlm, this, _fs);
+    } else if (strcmp_P(typeName, TURN_RATE_STR_TURN_RATE) == 0) {
+      newMod = new TurnRateModule(id, _dmm, _dlm, this, _fs);
+    } else if (strcmp_P(typeName, UDP_TELEMETRY_STR_UDP_TELEMETRY) == 0) {
+      newMod = new UDPTelemetryModule(id, _dmm, _dlm, this, _fs);
+    } else if (strcmp_P(typeName, NAV_STR_NAV) == 0) {
+      newMod = new NavModule(id, _dmm, _dlm, this, _fs);
+    } else if (strcmp_P(typeName, WAYPOINT_STR_WAYPOINT) == 0) {
+      newMod = new WaypointModule(id, _dmm, _dlm, this, _fs);
+    } else if (strcmp_P(typeName, WIND_STR_WIND) == 0) {
+      newMod = new WindModule(id, _dmm, _dlm, this, _fs);
+    } else {
+      Log.errorln(F("[.c] Unknown type"));
+    }
+
+  } else {
+    Log.errorln(F("[.c] Invalid id"));
+  }
+  return newMod;
+}
+
+
+/*
    Module Constructor
 */
 
@@ -1432,79 +1854,7 @@ boolean DroneExecutionManager::mod_constructor(DEM_INSTRUCTION_COMPILED* instr, 
   Log.noticeln(F("[.c] Instantiating %s as %u"), instr->ns->name, id);
 
   if (id > 0 && id < 255) {
-    DroneModule *newMod;
-
-    if (strcmp_P(instr->ns->name, CONTROLLER_STR_CONTROLLER) == 0) {
-      newMod = new ControllerModule(id, _dmm, _dlm, this, _fs);
-    } else if (strcmp_P(instr->ns->name, CYLON_STR_CYLON) == 0) {
-      newMod = new CylonModule(id, _dmm, _dlm, this, _fs);
-    } else if (strcmp_P(instr->ns->name, DEPTH_STR_DEPTH) == 0) {
-      newMod = new DepthModule(id, _dmm, _dlm, this, _fs);
-    } else if (strcmp_P(instr->ns->name, DIAGNOSTIC_STR_DIAGNOSTIC) == 0) {
-      newMod = new DiagnosticModule(id, _dmm, _dlm, this, _fs);
-    } else if (strcmp_P(instr->ns->name, HMC5883L_STR_HMC5883L) == 0) {
-      newMod = new HMC5883LModule(id, _dmm, _dlm, this, _fs);
-    } else if (strcmp_P(instr->ns->name, INA219_STR_INA219) == 0) {
-      newMod = new INA219Module(id, _dmm, _dlm, this, _fs);
-    } else if (strcmp_P(instr->ns->name, INA3221_STR_INA3221) == 0) {
-      newMod = new INA3221Module(id, _dmm, _dlm, this, _fs);
-    } else if (strcmp_P(instr->ns->name, JOYSTICK_STR_JOYSTICK) == 0) {
-      newMod = new JoystickModule(id, _dmm, _dlm, this, _fs);
-    } else if (strcmp_P(instr->ns->name, LSM9DS1_STR_LSM9DS1) == 0) {
-      newMod = new LSM9DS1Module(id, _dmm, _dlm, this, _fs);
-    } else if (strcmp_P(instr->ns->name, MANAGEMENT_STR_MANAGEMENT) == 0) {
-      newMod = new ManagementModule(id, _dmm, _dlm, this, _fs);
-    } else if (strcmp_P(instr->ns->name, MOTOR_STR_MOTOR) == 0) {
-      newMod = new MotorModule(id, _dmm, _dlm, this, _fs);
-    } else if (strcmp_P(instr->ns->name, MPU6050_STR_MPU6050) == 0) {
-      newMod = new MPU6050Module(id, _dmm, _dlm, this, _fs);
-    } else if (strcmp_P(instr->ns->name, NMEA_STR_NMEA) == 0) {
-      newMod = new NMEAModule(id, _dmm, _dlm, this, _fs);
-    } else if (strcmp_P(instr->ns->name, NEOPIXEL_STR_NEOPIXEL) == 0) {
-      newMod = new NeopixelModule(id, _dmm, _dlm, this, _fs);
-    } else if (strcmp_P(instr->ns->name, NunJOYSTICK_STR_NunJOYSTICK) == 0) {
-      newMod = new NunchuckJoystick(id, _dmm, _dlm, this, _fs);
-    } else if (strcmp_P(instr->ns->name, ODRIVE_STR_ODRIVE) == 0) {
-      newMod = new ODriveModule(id, _dmm, _dlm, this, _fs);
-    } else if (strcmp_P(instr->ns->name, PAN_SERIAL_STR_PAN_SERIAL) == 0) {
-      newMod = new PanSerialModule(id, _dmm, _dlm, this, _fs);
-    } else if (strcmp_P(instr->ns->name, PAN_TILT_STR_PAN_TILT) == 0) {
-      newMod = new PanTiltModule(id, _dmm, _dlm, this, _fs);
-    } else if (strcmp_P(instr->ns->name, POLAR_STR_POLAR) == 0) {
-      newMod = new PolarModule(id, _dmm, _dlm, this, _fs);
-    } else if (strcmp_P(instr->ns->name, PROA_STR_PROA) == 0) {
-      newMod = new ProaModule(id, _dmm, _dlm, this, _fs);
-    } else if (strcmp_P(instr->ns->name, QMC5883L_STR_QMC5883L) == 0) {
-      newMod = new QMC5883LModule(id, _dmm, _dlm, this, _fs);
-    } else if (strcmp_P(instr->ns->name, RECEIVER_STR_RECEIVER) == 0) {
-      newMod = new ReceiverModule(id, _dmm, _dlm, this, _fs);
-    } else if (strcmp_P(instr->ns->name, RFM69_TELEMETRY_STR_RFM69_TELEMETRY) == 0) {
-      newMod = new RFM69TelemetryModule(id, _dmm, _dlm, this, _fs);
-    } else if (strcmp_P(instr->ns->name, SAILOR_STR_SAILOR) == 0) {
-      newMod = new SailorModule(id, _dmm, _dlm, this, _fs);
-    } else if (strcmp_P(instr->ns->name, SERIAL_TELEMETRY_STR_SERIAL_TELEMETRY) == 0) {
-      newMod = new SerialTelemetryModule(id, _dmm, _dlm, this, _fs);
-    } else if (strcmp_P(instr->ns->name, SERVO_STR_SERVO) == 0) {
-      newMod = new ServoModule(id, _dmm, _dlm, this, _fs);
-    } else if (strcmp_P(instr->ns->name, SPEED_CONTROL_STR_SPEED_CONTROL) == 0) {
-      newMod = new SpeedControlModule(id, _dmm, _dlm, this, _fs);
-    } else if (strcmp_P(instr->ns->name, STATUS_STR_STATUS) == 0) {
-      newMod = new StatusModule(id, _dmm, _dlm, this, _fs);
-    } else if (strcmp_P(instr->ns->name, TANK_STEER_STR_TANK_STEER) == 0) {
-      newMod = new TankSteerModule(id, _dmm, _dlm, this, _fs);
-    } else if (strcmp_P(instr->ns->name, TURN_RATE_STR_TURN_RATE) == 0) {
-      newMod = new TurnRateModule(id, _dmm, _dlm, this, _fs);
-    } else if (strcmp_P(instr->ns->name, UDP_TELEMETRY_STR_UDP_TELEMETRY) == 0) {
-      newMod = new UDPTelemetryModule(id, _dmm, _dlm, this, _fs);
-    } else if (strcmp_P(instr->ns->name, NAV_STR_NAV) == 0) {
-      newMod = new NavModule(id, _dmm, _dlm, this, _fs);
-    } else if (strcmp_P(instr->ns->name, WAYPOINT_STR_WAYPOINT) == 0) {
-      newMod = new WaypointModule(id, _dmm, _dlm, this, _fs);
-    } else if (strcmp_P(instr->ns->name, WIND_STR_WIND) == 0) {
-      newMod = new WindModule(id, _dmm, _dlm, this, _fs);
-    } else {
-      Log.errorln(F("[.c] Unknown type"));
-    }
+    DroneModule *newMod = instanceModule(instr->ns->name, id);
 
     if ( newMod ) {
       // push id onto data stack for use by param and publish commands

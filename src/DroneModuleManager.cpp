@@ -8,10 +8,11 @@
 #include "strings.h"
 #include <ArduinoOTA.h>
 
-DroneModuleManager::DroneModuleManager(DroneLinkManager* dlm):
+DroneModuleManager::DroneModuleManager(DroneLinkManager* dlm, fs::FS &fs):
   _lastWatchdogCheck(0),
   _modules(IvanLinkedList::LinkedList<DroneModule*>()),
-  _dlm(dlm)
+  _dlm(dlm),
+  _fs(fs)
 {
   _hostname = "set_me";
   _buildCommit = GIT_COMMIT;
@@ -79,6 +80,7 @@ void DroneModuleManager::discovery(boolean v) { // set discovery state
 void DroneModuleManager::setSleep(uint32_t sleep) {
   _sleep = sleep;
 }
+
 
 String DroneModuleManager::buildCommit() {
   return _buildCommit;

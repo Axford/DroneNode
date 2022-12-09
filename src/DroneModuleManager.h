@@ -9,6 +9,7 @@ Manages all active modules.  Deals with the management channel (e.g. dynamic sub
 #include "LinkedList.h"
 #include <ESPAsyncWebServer.h>
 //#include <ArduinoJson.h>
+#include "FS.h"
 
 #define DRONE_MODULE_MANAGER_WATCHDOG_INTERVAL 10000
 #define DRONE_MODULE_MANAGER_DISCOVERY_INTERVAL 250
@@ -30,10 +31,11 @@ protected:
   uint8_t _lastDiscoveryIndex;
   IvanLinkedList::LinkedList<DroneModule*> _modules;
   DroneLinkManager* _dlm;
+  fs::FS &_fs;
   uint32_t _sleep;
 
 public:
-  DroneModuleManager(DroneLinkManager* dlm);
+  DroneModuleManager(DroneLinkManager* dlm, fs::FS &fs);
   void registerModule(DroneModule *m);
 
   DroneModule* getModuleByIndex(uint8_t index);
@@ -49,7 +51,6 @@ public:
   void discovery(boolean v); // set discovery state
   void setSleep(uint32_t sleep);
 
-  //void loadConfiguration();
   //void loadModulesFromJSON(const JsonArray &array);
 
   uint8_t moduleCount();

@@ -32,7 +32,7 @@ Steps to setup a new device:
 #include "DroneModule.h"
 #include "DroneModuleManager.h"
 #include "DroneWire.h"
-#include "DroneExecutionManager.h"
+//#include "DroneExecutionManager.h"
 #include "DroneFS.h"
 
 #define INC_WEB_SERVER
@@ -127,17 +127,17 @@ void setupWebServer() {
   // DEM handlers
   server.on("/macros", HTTP_GET, [](AsyncWebServerRequest *request){
     doLoop = false;
-    dem->serveMacroInfo(request);
+    //dem->serveMacroInfo(request);
     doLoop = true;
   });
   server.on("/execution", HTTP_GET, [](AsyncWebServerRequest *request){
     doLoop = false;
-    dem->serveExecutionInfo(request);
+    //dem->serveExecutionInfo(request);
     doLoop = true;
   });
   server.on("/commands", HTTP_GET, [](AsyncWebServerRequest *request){
     doLoop = false;
-    dem->serveCommandInfo(request);
+    //dem->serveCommandInfo(request);
     doLoop = true;
   });
 
@@ -200,7 +200,7 @@ void coreTask( void * pvParameters ) {
       yield();
 
       //Log.noticeln("[] e");
-      dem->execute();
+      //dem->execute();
     } else {
       digitalWrite(PIN_LED, HIGH);
     }
@@ -232,28 +232,23 @@ void setup() {
     ESP.restart();
   }
 
-  // see if safeMode.txt exists, if not create it
-  if (!LITTLEFS.exists("/safeMode.txt")) {
-    File file = LITTLEFS.open("/safeMode.txt", FILE_WRITE);
+  // see if safeMode.ini exists, if not create it
+  if (!LITTLEFS.exists("/safeMode.ini")) {
+    File file = LITTLEFS.open("/safeMode.ini", FILE_WRITE);
     if(!file){
-        Log.errorln("[] Failed to open safeMode.txt for writing");
+        Log.errorln("[] Failed to open safeMode.ini for writing");
         return;
     }
-    file.println("node 1");
-    file.println("Management.new 1");
-    file.println("  name \"safeMode\"");
-    file.println("  .publish \"hostname\"");
-    file.println("  .publish \"IP\"");
-    file.println(".done");
-    file.println("UDPTelemetry.new 2");
-    file.println("  port 8007");
-    file.println("  broadcast 255 255 255 255");
-    file.println(".done");
-    file.println(".setup");
+    file.println("node=1");
+    file.println("[Management=1]");
+    file.println("name=safeMode");
+    file.println("publish=hostname,IP");
+    file.println("[UDPTelemetry=2]");
+    file.println("port=8007");
+    file.println("broadcast=255,255,255,255");
 
     file.close();
   }
-
 
 
   logFile = LITTLEFS.open("/startup.log", FILE_WRITE);
@@ -285,56 +280,27 @@ void setup() {
   Log.noticeln(F("[] Init DroneLink core..."));
   dlm = new DroneLinkManager(&wifiManager, &dfs);
   dlm->onEvent = handleDLMEvent;
-  dmm = new DroneModuleManager(dlm);
+  dmm = new DroneModuleManager(dlm, LITTLEFS);
   dem = new DroneExecutionManager(dmm, dlm, LITTLEFS, logFile);
 
   //ESP32PWM::allocateTimer(0);
 	//ESP32PWM::allocateTimer(1);
 	ESP32PWM::allocateTimer(2);
 	ESP32PWM::allocateTimer(3);
-
+  
   if (dem->safeMode()) {
     Log.warningln(F("[] Starting in SAFE mode..."));
     // attempt to load and run safeMode script
-    // define root macro
-    DEM_MACRO * safeMode = dem->createMacro("safeMode");
-    DEM_INSTRUCTION_COMPILED instr;
-    if (dem->compileLine(PSTR("load \"/safeMode.txt\""), &instr))
-      safeMode->commands->add(instr);
-    if (dem->compileLine(PSTR("run \"/safeMode.txt\""), &instr))
-      safeMode->commands->add(instr);
-
-    // prep execution of safeMode
-    DEM_CALLSTACK_ENTRY cse;
-    cse.i=0;
-    cse.macro = safeMode;
-    cse.continuation = false;
-    dem->callStackPush(cse);
+    
+    dem->loadConfiguration("/safeMode.ini");
 
   } else {
     Log.warningln(F("[] Starting in NORMAL mode..."));
 
-    // prep and run normal boot process
-    // define root macro
-    DEM_MACRO * root = dem->createMacro("root");
-    DEM_INSTRUCTION_COMPILED instr;
-    if (dem->compileLine(PSTR("load \"/config.txt\""), &instr))
-      root->commands->add(instr);
-    dem->compileLine(PSTR("run \"/config.txt\""), &instr);
-    root->commands->add(instr);
-    dem->compileLine(PSTR("load \"/main.txt\""), &instr);
-    root->commands->add(instr);
-    // now execute main
-    dem->compileLine(PSTR("run \"/main.txt\""), &instr);
-    root->commands->add(instr);
-
-    // prep execution of root
-    DEM_CALLSTACK_ENTRY cse;
-    cse.i=0;
-    cse.macro = root;
-    cse.continuation = false;
-    dem->callStackPush(cse);
+    // run normal boot process
+    dem->loadConfiguration("/config.ini");
   }
+  
 
   OTAMgr.onEvent = handleOTAEVent;
   OTAMgr.init( dmm->hostname() );
@@ -352,6 +318,8 @@ void setup() {
 
   // setup FS
   dfs.setup();
+
+  dem->completeSetup();
 
   // start core task
   /*
@@ -457,8 +425,10 @@ void loop() {
 
     yield();
 
+    dem->processAddressQueue();
+
     //Log.noticeln("[] e");
-    dem->execute();
+    //dem->execute();
 
     //if (logFile) logFile.flush();
   } else {
