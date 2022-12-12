@@ -53,6 +53,12 @@ RFM69TelemetryModule::RFM69TelemetryModule(uint8_t id, DroneModuleManager* dmm, 
    setParamName(FPSTR(STRING_POWER), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_FLOAT, 4);
    param->data.f[0] = 20;
+
+   param = &_params[RFM69_TELEMETRY_PARAM_FREQUENCY_E];
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, RFM69_TELEMETRY_PARAM_FREQUENCY);
+   setParamName(FPSTR(STRING_FREQUENCY), param);
+   param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_UINT32_T, 4);
+   param->data.uint32[0] = 915;
 }
 
 DEM_NAMESPACE* RFM69TelemetryModule::registerNamespace(DroneExecutionManager *dem) {
@@ -109,7 +115,7 @@ void RFM69TelemetryModule::setup() {
     setError(1);
   } else {
 
-    if (!_radio->setFrequency(915.0))
+    if (!_radio->setFrequency(_params[RFM69_TELEMETRY_PARAM_FREQUENCY_E].data.uint32[0]))
       Log.errorln("setFrequency failed");
 
 

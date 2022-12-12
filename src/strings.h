@@ -55,6 +55,7 @@ static const char STRING_FALSE[] PROGMEM = "false";
 static const char STRING_FIX[] PROGMEM = "fix";
 static const char STRING_FLAGS[] PROGMEM = "flags";
 static const char STRING_FOLLOWME[] PROGMEM = "followMe";
+static const char STRING_FREQUENCY[] PROGMEM = "frequency";
 static const char STRING_GYRO[] PROGMEM = "gyro";
 static const char STRING_HDOP[] PROGMEM = "HDOP";
 static const char STRING_HEADING[] PROGMEM = "heading";

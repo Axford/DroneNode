@@ -55,7 +55,11 @@ byte    = value
 #define RFM69_TELEMETRY_PARAM_POWER          11
 #define RFM69_TELEMETRY_PARAM_POWER_E        3
 
-#define RFM69_TELEMETRY_PARAM_ENTRIES        4
+// @pub 12;u32;1;frequency;Operating frequency, default 915 Mhz
+#define RFM69_TELEMETRY_PARAM_FREQUENCY      12
+#define RFM69_TELEMETRY_PARAM_FREQUENCY_E    4
+
+#define RFM69_TELEMETRY_PARAM_ENTRIES        5
 
 
 #define RFM69_TELEMETRY_NETWORKID     66  //the same on all nodes that talk to each other
