@@ -1,7 +1,7 @@
 /*
 
 @type          INA219
-@inherits      Drone
+@inherits      I2CBase
 @description   Manages an INA219 I2C power monitoring module
 
 @config >>>

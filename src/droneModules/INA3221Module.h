@@ -1,7 +1,7 @@
 /*
 
 @type          INA3221
-@inherits      Drone
+@inherits      I2CBase
 @description   Manages a 3-channel INA3221 I2C power monitoring module
 
 @config >>>

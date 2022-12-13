@@ -9,28 +9,15 @@ Target waypoints are defined in terms of Lon Lat and target Radius in meters.
 <<<
 
 @config >>>
-Nav.new 9
-  name "Nav"
-  status 1
-  interval 50
-  $location [@>7.8]
-  target -1.7458734889 51.541622044 5
-  crosswind 0.2
-  correction 20
-  wind 0
-  .publish "target"
-  .publish "location"
-  .publish "heading"
-  .publish "distance"
-  .publish "mode"
-  .publish "last"
-  .publish "home"
-  .publish "crosstrack"
-  .publish "correction"
-  .publish "wind"
-  .publish "crosswind"
-  .publish "adjHeading"
-.done
+[Nav= 9]
+  name= "Nav"
+  interval= 50
+  crosswind = 0.2
+  correction = 20
+  $location= @>7.8
+  target= -1.82, 51.56, 100
+  publish = target, location, heading, distance, mode, last, home, crosstrack
+
 <<<
 
 */
@@ -41,14 +28,17 @@ Nav.new 9
 #include "../DroneModule.h"
 
 // subs
+// @sub 10;11;f;3;location;Current location from GPS.location
 #define NAV_SUB_LOCATION           10  // current location from GPS
 #define NAV_SUB_LOCATION_ADDR      11
 #define NAV_SUB_LOCATION_E         0
 
+// @sub 12;13;f;3;target;Target location, typically from Waypoint.target
 #define NAV_SUB_TARGET             12  // target location
 #define NAV_SUB_TARGET_ADDR        13
 #define NAV_SUB_TARGET_E           1
 
+// @sub 21;22;f;1;wind;Current wind direction to allow for crosswind compensation
 #define NAV_SUB_WIND               21
 #define NAV_SUB_WIND_ADDR          22
 #define NAV_SUB_WIND_E             2
@@ -57,30 +47,39 @@ Nav.new 9
 
 
 // pubs
+// @pub 8;f;1;heading;Target heading to reach target, feed to Sailor.target or TurnRate.target
 #define NAV_PARAM_HEADING        8  // required heading
 #define NAV_PARAM_HEADING_E      0
 
+// @pub 9;f;1;distance;Distance to target in meters
 #define NAV_PARAM_DISTANCE       9  // distance to go
 #define NAV_PARAM_DISTANCE_E     1
 
+// @pub 14;u8;1;mode;0=idle, 1=goto, 2=follow, 3=absolute course, 4=relative course, 5=backaway, 6=orbit
 #define NAV_PARAM_MODE           14  // mode
 #define NAV_PARAM_MODE_E         2
 
+// @pub 15;f;3;last;Location when we last received a new target, used to plan track
 #define NAV_PARAM_LAST           15  // last waypoint/location
 #define NAV_PARAM_LAST_E         3
 
+// @pub 16;f;3;home;First valid location received since boot, used as home location
 #define NAV_PARAM_HOME           16  // home waypoint/location
 #define NAV_PARAM_HOME_E         4
 
+// @pub 17;f;1;crosstrack;crosstrack ratio indicating distance from ideal track
 #define NAV_PARAM_CROSSTRACK     17  // cross-track ratio
 #define NAV_PARAM_CROSSTRACK_E   5
 
+// @pub 18;f;1;correction;How much to adjust heading to stay on ideal track
 #define NAV_PARAM_CORRECTION     18  // cross-track correction factor
 #define NAV_PARAM_CORRECTION_E   6
 
+// @pub 19;f;1;crosswind;How much crosswind effect to account for - larger values cause heading to turn into the wind
 #define NAV_PARAM_CROSSWIND      19  // how much crosswind effect to account for
 #define NAV_PARAM_CROSSWIND_E    7
 
+// @pub 20;f;1;adjHeading;Heading adjusted for crosswind, feed to Sailor.target or TurnRate.target
 #define NAV_PARAM_ADJ_HEADING     20  // heading adj for crosswind
 #define NAV_PARAM_ADJ_HEADING_E   8
 

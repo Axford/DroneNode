@@ -1,27 +1,21 @@
 /*
 
 @type          HMC5883L
-@inherits      I2CBaseModule
+@inherits      I2CBase
 @description   Manages a HMC5883L I2C Compass
 
 @config >>>
-HMC5883L.new 6
-  name "Compass"
-  interval 200
-  bus 0
-  status 1
-  calibX -3.5 0 2.3
-  calibY -3.6 0 1.7
-  // default location
-  location -1.8 52 100
-  //$location [@>GPS.location]
-  $location [@>5.8]
-  .publish "heading"
-  .publish "vector"
-  .publish "calibX"
-  .publish "calibY"
-  .publish "samples"
-.done
+[HMC5883L= 8]
+  name= "Compass"
+  interval= 100
+  bus= 3
+  status= 1
+  calibX= -0.06, 2.88, 5.82
+  calibY= -6.4, -3.48, -0.56
+  trim= 0
+  location= -1.8, 52, 100
+  $location= @>7.8
+  publish = heading, vector, calibX, calibY
 <<<
 
 */

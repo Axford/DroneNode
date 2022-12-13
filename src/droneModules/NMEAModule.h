@@ -5,15 +5,12 @@
 @description   Manages a serial NMEA GPS device
 
 @config >>>
-NMEA.new 7
-  name "GPS"
-  interval 1000
-  port 2
-  baud 9600
-  .publish "location"
-  .publish "satellites"
-  .publish "HDOP"
-.done
+[NMEA= 7]
+  name= "GPS"
+  interval= 500
+  port= 2
+  baud= 9600
+  publish =location, satellites, HDOP, followMe
 <<<
 
 */

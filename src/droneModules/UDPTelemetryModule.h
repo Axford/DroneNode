@@ -2,15 +2,13 @@
 
 @type UDPTelemetry
 @description Manages DroneLink telemetry using UDP broadcast over WiFi
+@inherits Drone
 
 @config >>>
-UDPTelemetry.new 2
-  name "UDPT"
-  status 1 // enable
-  port 8007
-  broadcast 255 255 255 255
-  .sub [@>0.0]
-.done
+[UDPTelemetry=2]
+  name=UDPT
+  port =8007
+  broadcast =255, 255, 255, 255
 <<<
 
 Publishes received messages
@@ -35,8 +33,10 @@ byte    = value
 [0...n] = DroneLinkMsg raw data
 */
 
-
+// @pub 8;u32;1;port;UDP port to broadcast to, default 8007
 #define UDP_PARAM_PORT               8
+
+// @pub 9;u8;4;broadcast;IP address to broadcast to, default: 255,255,255,255
 #define UDP_PARAM_BROADCAST          9
 
 #define UDP_PARAM_PORT_E             0

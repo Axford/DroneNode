@@ -1,6 +1,8 @@
 /*
 
-Manages a I2CBASE I2C power monitor
+@type I2CBase
+@inherits Drone
+@description Base class for I2C devices
 
 */
 #ifndef I2CBASE_MODULE_H
@@ -9,7 +11,10 @@ Manages a I2CBASE I2C power monitor
 #include "../DroneModule.h"
 #include "../DroneWire.h"
 
+// @pub 8;u8;1;bus;I2C Bus 0..7
 #define I2CBASE_PARAM_BUS      8
+
+// @pub 9;u32;1;addr;I2C address
 #define I2CBASE_PARAM_ADDR     9
 
 #define I2CBASE_PARAM_BUS_E      0

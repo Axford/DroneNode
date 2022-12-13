@@ -29,11 +29,23 @@ things that would be useful for all modules
 #include "SSD1306Wire.h"
 
 // defines for common params
-#define DRONE_MODULE_PARAM_STATUS      1  // 0=disabled, 1=enabled, write a value of 2 or above to trigger reset
-#define DRONE_MODULE_PARAM_NAME        2  // text
-#define DRONE_MODULE_PARAM_ERROR       3  // text or error code, module defined implementation
-#define DRONE_MODULE_PARAM_RESETCOUNT  4  // resetCount
-#define DRONE_MODULE_PARAM_TYPE        5  // classname - text
+
+// @pub 1;u8;1;status;0=disabled, 1=enabled, write a value of 2 or above to trigger reset
+#define DRONE_MODULE_PARAM_STATUS      1 
+
+// @pub 2;c;16;name;Module name
+#define DRONE_MODULE_PARAM_NAME        2 
+
+// @pub 3;u8;1;1=error, 0=no error
+#define DRONE_MODULE_PARAM_ERROR       3 
+
+// @pub 4;u32;1;resetCount;Module reset count, e.g. for I2C errors
+#define DRONE_MODULE_PARAM_RESETCOUNT  4
+
+// @pub 5;c;16;type;Module type name (class name)
+#define DRONE_MODULE_PARAM_TYPE        5
+
+// @pub 6;u32;1;interval;Number of milliseconds between updates
 #define DRONE_MODULE_PARAM_INTERVAL    6
 
 // indices

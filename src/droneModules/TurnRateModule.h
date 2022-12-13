@@ -1,5 +1,6 @@
 /*
 @type TurnRate
+@inherits Drone
 @description Generate a turnRate command based on target vs current heading using a PID controller
 
 @guide >>>
@@ -24,17 +25,15 @@
 <<<
 
 @config >>>
-TurnRate.new 8
-  name "TurnRate"
-  PID (f) 0.005 0.0 0.0001
-  interval 50
-  $target [@>22.14]
-  $heading [@>50.8]
-  .publish "target"
-  .publish "heading"
-  .publish "PID"
-  .publish "turnRate"
-.done
+[TurnRate=8]
+  name=TurnRate
+  PID=0.005, 0.0, 0.0001
+  interval=50
+  threshold=30
+  timeout=25
+  $target=@>Polar.adjHeading
+  $heading=@>50.8
+  publish=target, heading, PID, turnRate, mode
 <<<
 
 */
@@ -71,7 +70,7 @@ TurnRate.new 8
 #define TURN_RATE_PARAM_THRESHOLD       17
 #define TURN_RATE_PARAM_THRESHOLD_E     1
 
-// @pub 18;f;1;tiumeout;Timeout duration in seconds after which to initiate the gybe (default 10s)
+// @pub 18;f;1;timeout;Timeout duration in seconds after which to initiate the gybe (default 10s)
 #define TURN_RATE_PARAM_TIMEOUT         18
 #define TURN_RATE_PARAM_TIMEOUT_E       2
 

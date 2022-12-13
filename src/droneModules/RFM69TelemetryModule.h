@@ -1,14 +1,13 @@
 /*
 
 @type RFM69Telemetry
+@inherits Drone
 @description Manages DroneLink telemetry using an RFM69HW radio module
 
 @config >>>
-RFM69Telemetry.new 3
-  name "RFM69"
-  status 1  // enable
-  .publish "RSSI"
-.done
+[RFM69Telemetry=3]
+  name= RFM69
+  publish= RSSI,packets,speed,power
 <<<
 
 Publishes received messages

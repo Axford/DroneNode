@@ -2,7 +2,7 @@
 /*
 
 @type          Wind
-@inherits      I2CBaseModule
+@inherits      I2CBase
 @description   Manages a Wind speed and direction sensor.
 
 @guide >>>
@@ -12,15 +12,14 @@
 <<<
 
 @config >>>
-Wind.new 14
-   bus 4
-   interval 100
-   $heading [@>8.11]
-   centre 0
+[Wind= 14]
+  name= "Wind"
+  interval= 100
+  bus= 4
+  $heading= @>8.11
+  centre= -10
+  publish= heading, direction, centre, wind
 
-   .publish "wind" // .14
-   .publish "centre"
-.done
 <<<
 */
 

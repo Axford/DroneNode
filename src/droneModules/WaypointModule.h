@@ -1,26 +1,27 @@
 /*
 @type Waypoint
+@inherits Drone
 @description Load and manage a series of waypoints from a CSV file
 
 @guide >>>
 
-pub
-mode 0 = normal, 1 = reload waypoints
-current waypoint number u8
-number of waypoints u8
-target - current loaded waypoint
+<p>Load and manage stepping through a series of waypoints, defined in /waypoint.csv.</p>
 
-sub
-location
-
-xxx
+<p>Example:</p>
+<pre>
+lon,lat,radius
+-1.744739150337,51.541523406305,10.0
+-1.744404186599,51.542305699213,15.0
+-1.746584868898,51.542284441432,10.0
+-1.746516508951,51.541510651418,10.0
+</pre>
 <<<
 
 @config >>>
-Waypoint.new x
-  name "Waypoint"
-  
-.done
+[Waypoint=4]
+  name=Waypoint
+  $location=@>50.9
+  publish =mode, waypoint, waypoints, target, location
 <<<
 
 */
@@ -52,7 +53,7 @@ Waypoint.new x
 #define WAYPOINT_PARAM_WAYPOINT         10
 #define WAYPOINT_PARAM_WAYPOINT_E       2
 
-// @pub 11;f;3;target;Target location of current waypoint
+// @pub 11;f;3;target;Target location of current waypoint, feed to Nav.target
 #define WAYPOINT_PARAM_TARGET         11
 #define WAYPOINT_PARAM_TARGET_E       3
 
