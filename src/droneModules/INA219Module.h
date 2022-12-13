@@ -1,6 +1,20 @@
 /*
 
-Manages a INA219 I2C power monitor
+@type          INA219
+@inherits      Drone
+@description   Manages an INA219 I2C power monitoring module
+
+@config >>>
+[INA219= 4]
+  name= "Power"
+  bus= 1
+  addr= 64
+  interval= 1000
+  cells= 2
+  threshold= 6.4
+  status= 1
+  publish =current, power, loadV, alarm, shuntV, busV, cellV
+<<<
 
 */
 #ifndef INA219_MODULE_H
@@ -15,14 +29,31 @@ Manages a INA219 I2C power monitor
 
 #define INA219_I2C_ADDRESS  0x40
 
+// @pub 10;f;1;shuntV;Voltage across shunt
 #define INA219_PARAM_SHUNTV          (I2CBASE_SUBCLASS_PARAM_START+0) // 10
+
+// @pub 11;f;1;busV;Bus voltage
 #define INA219_PARAM_BUSV            (I2CBASE_SUBCLASS_PARAM_START+1)
+
+// @pub 12;f;1;current;Current (Amps)
 #define INA219_PARAM_CURRENT         (I2CBASE_SUBCLASS_PARAM_START+2)
+
+// @pub 13;f;1;power;Power (Watts)
 #define INA219_PARAM_POWER           (I2CBASE_SUBCLASS_PARAM_START+3)
+
+// @pub 14;f;1;loadV;Load voltage
 #define INA219_PARAM_LOADV           (I2CBASE_SUBCLASS_PARAM_START+4)
+
+// @pub 15;f;1;cellV;Cell voltage (loadV / cells)
 #define INA219_PARAM_CELLV           (I2CBASE_SUBCLASS_PARAM_START+5)
+
+// @pub 16;u8;1;alarm;Set to 1 when alarm triggered, 0 otherwise
 #define INA219_PARAM_ALARM           (I2CBASE_SUBCLASS_PARAM_START+6)
+
+// @pub 17;u8;1;cells;Number of cells (e.g. for a liPo pack)
 #define INA219_PARAM_CELLS           (I2CBASE_SUBCLASS_PARAM_START+7)
+
+// @pub 18;f;1;threshold;Threshold voltage below which alarm is triggered (loadV < threshold)
 #define INA219_PARAM_THRESHOLD       (I2CBASE_SUBCLASS_PARAM_START+8)
 
 #define INA219_PARAM_SHUNTV_E          (I2CBASE_PARAM_ENTRIES+0)
