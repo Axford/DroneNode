@@ -63,6 +63,8 @@ public:
   DroneFSEntry* getEntryByPath(char* path);
   DroneFSEntry* getEntryByIndex(uint8_t index);
   DroneFSEntry* getEntryById(uint8_t id);
+
+  DroneFSEntry* createEntryByPath(char* path);
 };
 
 
@@ -85,6 +87,7 @@ public:
   DroneFSEntry* getEntryByIndex(char* path, uint8_t index);
   DroneFSEntry* getEntryById(uint8_t id);
 
+  DroneFSEntry* createEntryByPath(char* path);
 };
 
 #endif

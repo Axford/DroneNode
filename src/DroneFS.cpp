@@ -264,6 +264,27 @@ DroneFSEntry* DroneFSEntry::getEntryById(uint8_t id) {
   return entry;
 }
 
+DroneFSEntry* DroneFSEntry::createEntryByPath(char* path) {
+  // check to see if this node matches the path and return self
+  if (matchesPath(path)) return this;
+
+  DroneFSEntry* entry = NULL;
+
+  // should we be creating a file in this dir?  
+  // or in a child dir?  ... that potentially doesn't exist yet?
+  // TODO
+/*
+
+  if (_isDir) {
+    for (uint8_t i=0; i<_children.size(); i++) {
+      entry = _children.get(i)->getEntryByPath(path);
+      if (entry) break;
+    }
+  }
+*/
+  return entry;
+}
+
 //--------------------------------------------------------
 // DroneFS
 //--------------------------------------------------------
@@ -305,4 +326,8 @@ DroneFSEntry* DroneFS::getEntryByIndex(char* path, uint8_t index) {
 
 DroneFSEntry* DroneFS::getEntryById(uint8_t id) {
   return _root->getEntryById(id);
+}
+
+DroneFSEntry* DroneFS::createEntryByPath(char* path) {
+  return _root->createEntryByPath(path);
 }
