@@ -89,7 +89,7 @@ config (pubs)
 #define SAILOR_PARAM_SPEED2            20   
 #define SAILOR_PARAM_SPEED2_E          4
 
-// @pub 21;u8;3;flags;[0] = onStarboardTack;  [1] = tackLocked;  [2] = lastCrossTrackPositive
+// @pub 21;u8;3;flags;[0] = onStarboardTack,  [1] = tackLocked,  [2] = lastCrossTrackPositive
 #define SAILOR_PARAM_FLAGS             21  
 #define SAILOR_PARAM_FLAGS_E           5
 
