@@ -123,6 +123,11 @@ void TurnRateModule::loop() {
   unsigned long updateTime = millis();
   float dt = (updateTime - _lastUpdate) / 1000.0;
 
+  // don't bother updating if dt too small
+  if (dt < 0.05) return;
+
+  _lastUpdate = updateTime;
+
   // calc and publish new speeds
 
   // check we've received valid heading and target
@@ -192,8 +197,8 @@ void TurnRateModule::loop() {
 
   // clamp i error
   if (_subs[TURN_RATE_SUB_PID_E].param.data.f[1] > 0) {
-    if (fabs(_iError) > 1 / _subs[TURN_RATE_SUB_PID_E].param.data.f[1]) {
-      _iError = (_iError > 0 ? 1 : -1) / _subs[TURN_RATE_SUB_PID_E].param.data.f[1];
+    if (fabs(_iError) > 100 / _subs[TURN_RATE_SUB_PID_E].param.data.f[1]) {
+      _iError = (_iError > 0 ? 100 : -100) / _subs[TURN_RATE_SUB_PID_E].param.data.f[1];
     }
   }
 
