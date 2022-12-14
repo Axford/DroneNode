@@ -14,8 +14,8 @@ WaypointModule::WaypointModule(uint8_t id, DroneModuleManager* dmm, DroneLinkMan
 
 
    // mgmt
-   _mgmtParams[DRONE_MODULE_PARAM_TYPE_E].paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_CHAR, sizeof(WAYPOINT_STR_WAYPOINT));
-   strncpy_P(_mgmtParams[DRONE_MODULE_PARAM_TYPE_E].data.c, WAYPOINT_STR_WAYPOINT, sizeof(WAYPOINT_STR_WAYPOINT));
+   //_mgmtParams[DRONE_MODULE_PARAM_TYPE_E].paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_CHAR, sizeof(WAYPOINT_STR_WAYPOINT));
+   //strncpy_P(_mgmtParams[DRONE_MODULE_PARAM_TYPE_E].data.c, WAYPOINT_STR_WAYPOINT, sizeof(WAYPOINT_STR_WAYPOINT));
 
 
    // subs
@@ -62,6 +62,8 @@ WaypointModule::WaypointModule(uint8_t id, DroneModuleManager* dmm, DroneLinkMan
    _params[WAYPOINT_PARAM_LOOP_E].nameLen = sizeof(STRING_LOOP);
    _params[WAYPOINT_PARAM_LOOP_E].paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_UINT8_T, 1);
    _params[WAYPOINT_PARAM_LOOP_E].data.uint8[0] = 0;
+
+   loadWaypoints();
 }
 
 

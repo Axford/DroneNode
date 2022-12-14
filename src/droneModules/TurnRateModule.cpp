@@ -15,8 +15,8 @@ TurnRateModule::TurnRateModule(uint8_t id, DroneModuleManager* dmm, DroneLinkMan
    _lastHeading = 0;
 
    // mgmt
-   _mgmtParams[DRONE_MODULE_PARAM_TYPE_E].paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_CHAR, sizeof(TURN_RATE_STR_TURN_RATE));
-   strncpy_P(_mgmtParams[DRONE_MODULE_PARAM_TYPE_E].data.c, TURN_RATE_STR_TURN_RATE, sizeof(TURN_RATE_STR_TURN_RATE));
+   //_mgmtParams[DRONE_MODULE_PARAM_TYPE_E].paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_CHAR, sizeof(TURN_RATE_STR_TURN_RATE));
+   //strncpy_P(_mgmtParams[DRONE_MODULE_PARAM_TYPE_E].data.c, TURN_RATE_STR_TURN_RATE, sizeof(TURN_RATE_STR_TURN_RATE));
 
 
    // subs

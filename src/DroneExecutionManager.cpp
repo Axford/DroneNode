@@ -647,6 +647,32 @@ void DroneExecutionManager::loadConfiguration(const char* filename) {
 }
 
 
+void DroneExecutionManager::saveConfiguration() {
+
+  File f = LITTLEFS.open("/live.ini", "w");
+  if (f) {
+    // save node id
+    f.print("node = ");
+    f.println(_dmm->node());
+
+    f.println("");
+
+    // for each module
+    for (uint8_t i=0; i<_dmm->moduleCount(); i++) {
+      DroneModule *m = _dmm->getModuleByIndex(i);
+      if (m) {
+        m->saveConfiguration(&f);
+
+        f.println("");
+      }
+    }
+
+    f.close();
+    
+  }
+}
+
+
 void DroneExecutionManager::callStackPush(DEM_CALLSTACK_ENTRY entry) {
   if (_call.p < DEM_CALLSTACK_SIZE-1) {
     _call.p++;

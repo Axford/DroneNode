@@ -76,11 +76,11 @@ ManagementModule::ManagementModule(uint8_t id, DroneModuleManager* dmm, DroneLin
    _params[MANAGEMENT_PARAM_DISCOVERY_E].paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_UINT8_T, 1);
    _params[MANAGEMENT_PARAM_DISCOVERY_E].data.uint8[0] = _dmm->discovery() ? 1 : 0;
 
-   _params[MANAGEMENT_PARAM_MACRO_E].paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, MANAGEMENT_PARAM_MACRO);
-   _params[MANAGEMENT_PARAM_MACRO_E].name = FPSTR(STRING_MACRO);
-   _params[MANAGEMENT_PARAM_MACRO_E].nameLen = sizeof(STRING_MACRO);
-   _params[MANAGEMENT_PARAM_MACRO_E].paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_CHAR, 1);
-   _params[MANAGEMENT_PARAM_MACRO_E].data.c[0] = 0;
+   _params[MANAGEMENT_PARAM_SAVE_E].paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, MANAGEMENT_PARAM_SAVE);
+   _params[MANAGEMENT_PARAM_SAVE_E].name = FPSTR(STRING_SAVE);
+   _params[MANAGEMENT_PARAM_SAVE_E].nameLen = sizeof(STRING_SAVE);
+   _params[MANAGEMENT_PARAM_SAVE_E].paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_UINT8_T, 1);
+   _params[MANAGEMENT_PARAM_SAVE_E].data.uint8[0] = 0;
 
    _params[MANAGEMENT_PARAM_SLEEP_E].paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, MANAGEMENT_PARAM_SLEEP);
    _params[MANAGEMENT_PARAM_SLEEP_E].name = FPSTR(STRING_SLEEP);
@@ -140,13 +140,15 @@ void ManagementModule::onParamWrite(DRONE_PARAM_ENTRY *param) {
     _dmm->discovery( _params[MANAGEMENT_PARAM_DISCOVERY_E].data.uint8[0] > 0 );
   }
 
-  if (getDroneLinkMsgParam(param->paramPriority) == MANAGEMENT_PARAM_MACRO) {
-    // attempt to execute the macro requested
-    // null terminate to be safe
-    uint8_t len = min(DRONE_LINK_MSG_MAX_PAYLOAD-1, (_params[MANAGEMENT_PARAM_MACRO_E].paramTypeLength & 0xF) + 1   );
-    _params[MANAGEMENT_PARAM_MACRO_E].data.c[len] = 0;
-    Log.noticeln(F("[MM.oPW] macro... "));
-    _dem->runMacro(_params[MANAGEMENT_PARAM_MACRO_E].data.c, false);
+  if (getDroneLinkMsgParam(param->paramPriority) == MANAGEMENT_PARAM_SAVE) {
+    if (_params[MANAGEMENT_PARAM_SAVE_E].data.uint8[0] == 1) {
+
+      // write param back to 0
+      _params[MANAGEMENT_PARAM_SAVE_E].data.uint8[0] = 0;
+
+      // save live config
+      _dem->saveConfiguration();
+    }
   }
 
   if (getDroneLinkMsgParam(param->paramPriority) == MANAGEMENT_PARAM_HOSTNAME) {

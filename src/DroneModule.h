@@ -148,6 +148,7 @@ public:
 
   uint8_t getParamIdByName(const char* name);
   uint8_t getSubIdByName(const char* name);
+  DRONE_PARAM_ENTRY* getParamEntryById(uint8_t id);
   DRONE_PARAM_ENTRY* getParamEntryByName(const char* name);
   DRONE_PARAM_SUB* getSubByName(const char* name);
 
@@ -158,6 +159,10 @@ public:
   static DEM_NAMESPACE* registerNamespace(DroneExecutionManager *dem);
   static void registerConstructor(DEM_NAMESPACE* ns, DroneExecutionManager *dem);
   static void registerMgmtParams(DEM_NAMESPACE* ns, DroneExecutionManager *dem);
+
+  void saveParamValue(DRONE_PARAM_ENTRY* p, File *f);
+  void saveParam(DRONE_PARAM_ENTRY* p, File *f);
+  void saveConfiguration(File *f);
 
   void reset();
   virtual void doReset();

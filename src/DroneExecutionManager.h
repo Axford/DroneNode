@@ -186,6 +186,7 @@ public:
     void processAddressQueue();
 
     void loadConfiguration(const char* filename);
+    void saveConfiguration();
 
     void callStackPush(DEM_CALLSTACK_ENTRY entry);
     void callStackPop();

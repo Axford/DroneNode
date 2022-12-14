@@ -39,8 +39,8 @@
 // @pub 16;u8;1;discovery;Enable/disable node discovery process.  Set to 1 to enable, or 0 to disable.
 #define MANAGEMENT_PARAM_DISCOVERY     16
 
-// @pub 17;c;1;macro;Set to the path to a macro file (.txt file) to run the associated macro.  Note - the macro must be loaded first (e.g. via config.txt).
-#define MANAGEMENT_PARAM_MACRO         17
+// @pub 17;u8;1;save;Set to 1 to save the live config
+#define MANAGEMENT_PARAM_SAVE          17
 
 // @pub 18;u8;1;wifi;Enable/disable wifi. Set to 1 to enable, or 0 to disable.
 #define MANAGEMENT_PARAM_WIFI          18
@@ -48,7 +48,7 @@
 // @pub 19;u32;1;sleep;How long to sleep in main loop - uses light sleep
 #define MANAGEMENT_PARAM_SLEEP         19
 
-// @pub 20;u32;1;cpu;CPU freq in MHz, valid values 240, 160, 80
+// @pub 20;u32;1;CPU;CPU freq in MHz, valid values 240, 160, 80
 #define MANAGEMENT_PARAM_CPU           20
 
 #define MANAGEMENT_PARAM_HOSTNAME_E     0
@@ -60,7 +60,7 @@
 #define MANAGEMENT_PARAM_PUBLISHRATE_E  6
 #define MANAGEMENT_PARAM_CHOKED_E       7
 #define MANAGEMENT_PARAM_DISCOVERY_E    8
-#define MANAGEMENT_PARAM_MACRO_E        9
+#define MANAGEMENT_PARAM_SAVE_E         9
 #define MANAGEMENT_PARAM_WIFI_E         10
 #define MANAGEMENT_PARAM_SLEEP_E        11
 #define MANAGEMENT_PARAM_CPU_E          12

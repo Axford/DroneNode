@@ -96,6 +96,8 @@ void DroneModule::setTypeName( const __FlashStringHelper * name) {
   int len = strlen_P((PGM_P)name);
   _mgmtParams[DRONE_MODULE_PARAM_TYPE_E].paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_CHAR, len);
   strncpy_P(_mgmtParams[DRONE_MODULE_PARAM_TYPE_E].data.c, (PGM_P)name, len);
+  // null terminate
+  _mgmtParams[DRONE_MODULE_PARAM_TYPE_E].data.c[len] = 0;
 }
 
 
@@ -160,6 +162,30 @@ uint8_t DroneModule::getSubIdByName(const char* name) {
     return p->addrParam;
   }
   return 0;
+}
+
+
+DRONE_PARAM_ENTRY* DroneModule::getParamEntryById(uint8_t id) {
+  // check mgmt params first
+  for (uint8_t i=0; i<DRONE_MGMT_PARAM_ENTRIES; i++) {
+    if ((_mgmtParams[i].paramPriority & 0b00111111) == id) {
+      return &_mgmtParams[i];
+    }
+  }
+
+  for (uint8_t i=0; i<_numParamEntries; i++) {
+    if ((_params[i].paramPriority & 0b00111111) == id) {
+      return &_params[i];
+    }
+  }
+
+  for (uint8_t i=0; i<_numSubs; i++) {
+    if ((_subs[i].param.paramPriority & 0b00111111) == id) {
+      return &_subs[i].param;
+    }
+  }
+
+  return NULL;
 }
 
 
@@ -327,6 +353,166 @@ void DroneModule::registerMgmtParams(DEM_NAMESPACE* ns, DroneExecutionManager *d
     dem->registerCommand(ns, STRING_NAME, DRONE_LINK_MSG_TYPE_CHAR, ph);
     dem->registerCommand(ns, STRING_INTERVAL, DRONE_LINK_MSG_TYPE_UINT32_T, ph);
 }
+
+
+void DroneModule::saveParamValue(DRONE_PARAM_ENTRY* p, File *f) {
+  uint8_t ty = (p->paramTypeLength >> 4) & 0x7;
+  uint8_t len = (p->paramTypeLength & 0xF) + 1;
+
+  uint8_t numValues = len / DRONE_LINK_MSG_TYPE_SIZES[ty];
+
+  // quick check to see if we need to quote a string
+  boolean quoteString = false;
+  if (ty == DRONE_LINK_MSG_TYPE_CHAR) {
+    for (uint8_t i=0; i<numValues; i++) {
+      if (p->data.c[i] == ' ') {
+        quoteString = true;
+        break;
+      }
+    }
+
+    if (quoteString) f->print('"');
+  }
+
+  for (uint8_t i=0; i<numValues; i++) {
+    if (ty != DRONE_LINK_MSG_TYPE_CHAR && i > 0) f->print(", ");
+    switch(ty) {
+      case DRONE_LINK_MSG_TYPE_UINT8_T: f->print(p->data.uint8[i]); break;
+      case DRONE_LINK_MSG_TYPE_UINT32_T: f->print(p->data.uint32[i]); break;
+      case DRONE_LINK_MSG_TYPE_FLOAT: f->print(p->data.f[i], 6); break;
+      case DRONE_LINK_MSG_TYPE_CHAR: if (p->data.c[i] > 0) f->print(char(p->data.c[i])); 
+           break;
+    }
+  }
+
+  if (quoteString && ty == DRONE_LINK_MSG_TYPE_CHAR) f->print('"');
+}
+
+
+void DroneModule::saveParam(DRONE_PARAM_ENTRY* p, File *f) {
+  if ((p->paramTypeLength & DRONE_LINK_MSG_WRITABLE)>0) {
+    f->print("  ");
+    f->print((PGM_P)p->name);
+    f->print(" = ");
+    saveParamValue(p, f);
+    f->println("");
+  }
+}
+
+
+void DroneModule::saveConfiguration(File *f) {
+  //DRONE_PARAM_ENTRY *p;
+
+  // module header
+  f->print("[ ");
+  saveParamValue(&_mgmtParams[DRONE_MODULE_PARAM_TYPE_E], f);
+  f->print(" = ");
+  f->print(_id);
+  f->println(" ]");
+
+  // save writable mgmt params
+  for (uint8_t i=0; i<DRONE_MGMT_PARAM_ENTRIES; i++) {
+    saveParam(&_mgmtParams[i], f);
+  }
+
+  // save other pubs
+  for (uint8_t i=0; i<_numParamEntries; i++) {
+     saveParam(&_params[i], f);
+  }
+
+  // save sub addresses (or values)
+  DRONE_PARAM_SUB *s;
+  for (uint8_t i=0; i<_numSubs; i++) {
+    s = &_subs[i];
+
+    if (s->addr.node > 0) {
+      // save address
+      f->print("  $");
+      f->print((PGM_P)s->param.name);
+      f->print(" = ");
+      
+      // local address?
+      if (s->addr.node == _dmm->node()) {
+        f->print(" @>");
+        // module name
+        DroneModule* m = _dmm->getModuleById(s->addr.channel);
+        if (m) {
+          f->print(m->getName());
+
+          f->print(".");
+
+          // param name
+          DRONE_PARAM_ENTRY* pe = m->getParamEntryById(s->addr.paramPriority & 0b00111111);
+          if (pe) {
+            f->print(pe->name);
+          } else {
+            // probably invalid... but write the address anyway
+            f->print(s->addr.paramPriority & 0b00111111);
+          }
+        } else {
+          // invalid... but write the address anyway
+          f->print(s->addr.channel);
+          f->print(".");
+          f->print(s->addr.paramPriority & 0b00111111);
+        }
+
+      } else {
+        // just store the numeric address
+        f->print(s->addr.node);
+        f->print(">");
+        f->print(s->addr.channel);
+        f->print(".");
+        f->print(s->addr.paramPriority & 0b00111111);
+      }
+
+      f->println("");
+    } else {
+      // save value
+      saveParam(&s->param, f);
+    }
+  }
+
+  // published params
+  uint8_t published = 0;
+
+  // pubs
+  for (uint8_t i=0; i<_numParamEntries; i++) {
+     if (_params[i].publish) {
+      if (published ==0) { 
+        f->print("  publish = ");
+      } else {
+        f->print(", ");
+      }
+      f->print(_params[i].name);
+      published++;
+      if (published > 5) {
+        published = 0;
+        f->println("");
+      }
+    }
+  } 
+
+  // subs
+  for (uint8_t i=0; i<_numSubs; i++) {
+    s = &_subs[i];
+    if (s->param.publish) {
+      if (published ==0) { 
+        f->print("  publish = ");
+      } else {
+        f->print(", ");
+      }
+      f->print(s->param.name);
+      published++;
+      if (published > 5) {
+        published = 0;
+        f->println("");
+      }
+    }
+  }
+
+  f->println("");
+}
+
 
 void DroneModule::reset() {
   unsigned long loopTime = millis();

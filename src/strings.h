@@ -107,6 +107,7 @@ static const char STRING_RSSI[] PROGMEM = "RSSI";
 static const char STRING_SAMPLES[] PROGMEM = "samples";
 static const char STRING_SAMPLEINTERVAL[] PROGMEM = "sampleInterval";
 static const char STRING_SATELLITES[] PROGMEM = "satellites";
+static const char STRING_SAVE[] PROGMEM = "save";
 static const char STRING_SCENE[] PROGMEM = "scene";
 static const char STRING_SCENES[] PROGMEM = "scenes";
 static const char STRING_SHEET[] PROGMEM = "sheet";
