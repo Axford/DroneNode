@@ -57,7 +57,11 @@ lon,lat,radius
 #define WAYPOINT_PARAM_TARGET         11
 #define WAYPOINT_PARAM_TARGET_E       3
 
-#define WAYPOINT_PARAM_ENTRIES         4
+// @pub 12;u8;1;loop;0=stop at end of file, 1=loop
+#define WAYPOINT_PARAM_LOOP         14
+#define WAYPOINT_PARAM_LOOP_E       4
+
+#define WAYPOINT_PARAM_ENTRIES         5
 
 
 #define WAYPOINT_MODE_NORMAL           0

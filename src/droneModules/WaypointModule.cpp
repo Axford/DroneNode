@@ -56,6 +56,12 @@ WaypointModule::WaypointModule(uint8_t id, DroneModuleManager* dmm, DroneLinkMan
    _params[WAYPOINT_PARAM_TARGET_E].data.f[0] = 0;
    _params[WAYPOINT_PARAM_TARGET_E].data.f[1] = 0;
    _params[WAYPOINT_PARAM_TARGET_E].data.f[2] = 0;
+
+   _params[WAYPOINT_PARAM_LOOP_E].paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, WAYPOINT_PARAM_LOOP);
+   _params[WAYPOINT_PARAM_LOOP_E].name = FPSTR(STRING_LOOP);
+   _params[WAYPOINT_PARAM_LOOP_E].nameLen = sizeof(STRING_LOOP);
+   _params[WAYPOINT_PARAM_LOOP_E].paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_UINT8_T, 1);
+   _params[WAYPOINT_PARAM_LOOP_E].data.uint8[0] = 0;
 }
 
 
@@ -222,8 +228,14 @@ void WaypointModule::loop() {
 
     if (d < _params[WAYPOINT_PARAM_TARGET_E].data.f[2]) {
       // select next waypoint
-      if (waypoints > 0 && waypoint < waypoints) {
-        waypoint++;
+      if (waypoints > 0) {
+        if (waypoint == waypoints-1) {
+          // we've reached the last waypoint
+          // should we loop?
+          if (_params[WAYPOINT_PARAM_LOOP_E].data.uint8[0] == 1) {
+            waypoint = 0;
+          }
+        } else waypoint++;
       }
     }
 

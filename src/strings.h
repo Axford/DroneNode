@@ -77,6 +77,7 @@ static const char STRING_LIMITS[] PROGMEM = "limits";
 static const char STRING_LOADV[] PROGMEM = "loadV";
 static const char STRING_LOCATION[] PROGMEM = "location";
 static const char STRING_LOG[] PROGMEM = "log";
+static const char STRING_LOOP[] PROGMEM = "loop";
 static const char STRING_LOOPTO[] PROGMEM = "loopTo";
 static const char STRING_MACRO[] PROGMEM = "macro";
 static const char STRING_MAP[] PROGMEM = "map";
