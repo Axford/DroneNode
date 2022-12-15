@@ -80,6 +80,7 @@ static const char WAYPOINT_STR_WAYPOINT[] PROGMEM = "Waypoint";
 
 class WaypointModule:  public DroneModule {
 protected:
+    uint8_t _lastStoredWaypoint;
     IvanLinkedList::LinkedList<WAYPOINT_MODULE_WAYPOINT> _waypoints;
 
 public:
@@ -90,6 +91,7 @@ public:
   static void registerParams(DEM_NAMESPACE* ns, DroneExecutionManager *dem);
 
   void loadWaypoints();
+  void setup();
 
   void loop();
 };

@@ -4,6 +4,7 @@
 #include "strings.h"
 #include "../navMath.h"
 #include <LITTLEFS.h>
+#include "Preferences.h"
 
 WaypointModule::WaypointModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm, DroneExecutionManager* dem, fs::FS &fs):
   DroneModule ( id, dmm, dlm, dem, fs )
@@ -11,7 +12,7 @@ WaypointModule::WaypointModule(uint8_t id, DroneModuleManager* dmm, DroneLinkMan
    setTypeName(FPSTR(WAYPOINT_STR_WAYPOINT));
 
    _waypoints = IvanLinkedList::LinkedList<WAYPOINT_MODULE_WAYPOINT>();
-
+   _lastStoredWaypoint = 0;
 
    // mgmt
    //_mgmtParams[DRONE_MODULE_PARAM_TYPE_E].paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_CHAR, sizeof(WAYPOINT_STR_WAYPOINT));
@@ -62,8 +63,6 @@ WaypointModule::WaypointModule(uint8_t id, DroneModuleManager* dmm, DroneLinkMan
    _params[WAYPOINT_PARAM_LOOP_E].nameLen = sizeof(STRING_LOOP);
    _params[WAYPOINT_PARAM_LOOP_E].paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_UINT8_T, 1);
    _params[WAYPOINT_PARAM_LOOP_E].data.uint8[0] = 0;
-
-   loadWaypoints();
 }
 
 
@@ -87,6 +86,9 @@ void WaypointModule::registerParams(DEM_NAMESPACE* ns, DroneExecutionManager *de
 
   dem->registerCommand(ns, STRING_MODE, DRONE_LINK_MSG_TYPE_FLOAT, ph);
 }
+
+
+
 
 
 void WaypointModule::loadWaypoints() {
@@ -201,6 +203,24 @@ void WaypointModule::loadWaypoints() {
 }
 
 
+void WaypointModule::setup() {
+  DroneModule::setup();
+
+  loadWaypoints();
+
+  // see if we have a stored waypoint number to jump to
+  Preferences pref; 
+  // use module name as preference namespace
+  pref.begin(_mgmtParams[DRONE_MODULE_PARAM_NAME_E].data.c, true);
+  uint16_t w = pref.getUShort("waypoint", 1000);
+  if (w < _params[WAYPOINT_PARAM_WAYPOINTS_E].data.uint8[0]) {
+    _params[WAYPOINT_PARAM_WAYPOINT_E].data.uint8[0] = w;
+    _lastStoredWaypoint = w;
+  }
+  pref.end();
+}
+
+
 void WaypointModule::loop() {
   if (!_setupDone) return;
 
@@ -253,6 +273,15 @@ void WaypointModule::loop() {
     // update new target
     WAYPOINT_MODULE_WAYPOINT t = _waypoints.get(waypoint);
     updateAndPublishParam(&_params[WAYPOINT_PARAM_TARGET_E], (uint8_t*)&t, sizeof(t));
+
+    // do we need to store the waypoint in flash?
+    if (waypoint != _lastStoredWaypoint) {
+      _lastStoredWaypoint = waypoint;
+      Preferences pref;
+      pref.begin(_mgmtParams[DRONE_MODULE_PARAM_NAME_E].data.c, false);
+      pref.putUShort("waypoint", waypoint);
+      pref.end();
+    }
   }
 
   // update params
