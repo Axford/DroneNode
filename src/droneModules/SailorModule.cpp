@@ -78,7 +78,7 @@ SailorModule::SailorModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager
    param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_UINT8_T, 3);
 
    param = &_params[SAILOR_PARAM_WING_E];
-   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_HIGH, SAILOR_PARAM_WING);
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_CRITICAL, SAILOR_PARAM_WING);
    setParamName(FPSTR(STRING_WING), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 4);
 
@@ -288,4 +288,5 @@ void SailorModule::loop() {
   DroneModule::loop();
   publishParamEntry(&_params[SAILOR_PARAM_SPEED_E]);
   publishParamEntry(&_params[SAILOR_PARAM_SPEED2_E]);
+  publishParamEntry(&_params[SAILOR_PARAM_WING_E]);
 }
