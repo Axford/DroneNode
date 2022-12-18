@@ -608,6 +608,10 @@ void DroneModule::onParamWrite(DRONE_PARAM_ENTRY *param) {
   }
 }
 
+void DroneModule::onSubReceived(DRONE_PARAM_SUB *sub) {
+  // override to handle sub receipts
+}
+
 
 void DroneModule::updateAndPublishParam(DRONE_PARAM_ENTRY *param, uint8_t *newPayload, uint8_t length) {
   if (memcmp(param->data.c, newPayload, length) != 0) {
@@ -726,20 +730,26 @@ void DroneModule::handleLinkMessage(DroneLinkMsg *msg) {
 
         // check the type matches what's expected
         if (msg->type() == ((_subs[i].param.paramTypeLength >> 4) & 0x7)) {
-          // handle the subscription updating
-          memcpy(_subs[i].param.data.c, msg->_msg.payload.c, msg->length());
-
           _subs[i].received = true;
 
-          // match the param length
-          _subs[i].param.paramTypeLength = (_subs[i].param.paramTypeLength & 0xF0) | (msg->length()-1);
+          // see if the value has actually changed
+          if (memcmp(_subs[i].param.data.c, msg->_msg.payload.c, msg->length()) != 0) {
+            // handle the subscription updating
+            memcpy(_subs[i].param.data.c, msg->_msg.payload.c, msg->length());
 
-          // publish the change to this param
-          if (_subs[i].param.publish) publishParamEntry(&_subs[i].param);
+            // match the param length
+            _subs[i].param.paramTypeLength = (_subs[i].param.paramTypeLength & 0xF0) | (msg->length()-1);
 
-          // trigger an update
-          //update();
-          _updateNeeded = true;
+            // publish the change to this param
+            if (_subs[i].param.publish) publishParamEntry(&_subs[i].param);
+
+            // trigger handler
+            onSubReceived(&_subs[i]);
+
+            // trigger an update
+            //update();
+            _updateNeeded = true;
+          }
         }
       }
     }

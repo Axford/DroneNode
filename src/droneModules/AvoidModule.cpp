@@ -198,14 +198,24 @@ void AvoidModule::update() {
 void AvoidModule::loop() {
   DroneModule::loop();
 
+  // copy course to adjHeading as default
+  float adjHeading = _subs[AVOID_SUB_COURSE_E].param.data.f[0];
+
   uint8_t inRange =0;
   uint8_t colliding = 0;
 
   AvoidModuleVessel* avoidV = NULL;
+  float avoidD = _params[AVOID_PARAM_THRESHOLD_E].data.f[0];
+  float avoidHeading = 0;
+
+  boolean calcCrosstrack;
+  boolean calcAvoidHeading;
 
   AvoidModuleVessel* v;
   for (uint8_t i=0; i<_vessels.size(); i++) {
     v = _vessels.get(i);
+    calcCrosstrack = false;
+    calcAvoidHeading = false;
 
     float d = calculateDistanceBetweenCoordinates(
       v->location[0],
@@ -216,49 +226,134 @@ void AvoidModule::loop() {
 
     // if within range threshold
     if (d < _params[AVOID_PARAM_THRESHOLD_E].data.f[0]) {
+
       // see if we're already too close!
-      if (d < _params[AVOID_PARAM_THRESHOLD_E].data.f[1]) {
-        avoidV = v;
-        colliding++;
-      } else {
+      if (d < _params[AVOID_PARAM_THRESHOLD_E].data.f[1] && d < avoidD) {
+        //avoidHeading = vesselToNode;
+        calcCrosstrack = true;
+        calcAvoidHeading = true;
+      } 
+      
+      
+      if (!calcAvoidHeading) {
+        // calc angle between vessel heading vector and vector from vessel to node, if subtended angle is >90 then node is behind vessel
+        float vesselToNode = calculateInitialBearingBetweenCoordinates(
+          v->location[0],
+          v->location[1],
+          _subs[AVOID_SUB_LOCATION_E].param.data.f[0],
+          _subs[AVOID_SUB_LOCATION_E].param.data.f[1]
+        );
+
+        float vesselToNodeToHeading = shortestSignedDistanceBetweenCircularValues(v->courseOverGround, vesselToNode);
+
         // see if we're in front of the vessel
+        if (abs(vesselToNodeToHeading) < 90) {
+          // in front
+          Serial.println("AIS - in front");
 
+          // calculate cross track info
+          calcCrosstrack = true;
+        } else {
+          //behind
+          Serial.println("AIS - behind");
+        }
+      }
 
+      if (calcCrosstrack) {
+        CrosstrackInfo ci;
 
+        // calculate distant point for vessel based on current heading
+        GeographicPoint p2;
+        p2 = calculateDestinationFromDistanceAndBearing2(
+          v->location[0],
+          v->location[1],
+          1000, 
+          v->courseOverGround
+        );
+
+        ci = calculateCrosstrackInfo(
+          v->location[0],
+          v->location[1],
+          p2.lon,
+          p2.lat,
+          _subs[AVOID_SUB_LOCATION_E].param.data.f[0],
+          _subs[AVOID_SUB_LOCATION_E].param.data.f[1]
+        );
+
+        if (abs(ci.across) < _params[AVOID_PARAM_THRESHOLD_E].data.f[1]) {
+
+          if (v->speedOverGround > 0 && 
+              _subs[AVOID_SUB_SOG_E].param.data.f[0] > 0) {
+
+            // calc how long until vessel reaches the crosstrack point
+            float timeUntilVesselReachesCrosstrackPoint = min(ci.along, d ) / 
+                                                          (v->speedOverGround / 1.94384);
+            
+            // calc time to exit lane at current SOG vs time until collision
+            // plan for worst case where we're heading all the way across the lane
+            float timeUntilWeCanEscapeTheLane = (_params[AVOID_PARAM_THRESHOLD_E].data.f[1] + abs(ci.across)) /
+                                                ( _subs[AVOID_SUB_SOG_E].param.data.f[0] / 1.94384);
+
+            if (timeUntilVesselReachesCrosstrackPoint < timeUntilWeCanEscapeTheLane) {
+              calcAvoidHeading = true;
+            }
+          }
+        }
+
+        if (calcAvoidHeading) {
+          avoidV = v;
+          avoidD = d;
+          colliding++;
+
+          // calc course orthogonal to vessel heading, based on crosstrack sign
+          // negative crosstrack means node is to starboard of vessel's lane
+          avoidHeading = v->courseOverGround;
+          if (ci.across < 0) {
+            // add 90 degrees
+            avoidHeading += 90;
+          } else {
+            avoidHeading -= 90;
+          }
+          // ensure in range
+          avoidHeading = fmod(avoidHeading, 360);
+          if (avoidHeading < 0) avoidHeading += 360;
+        }
       }
 
       inRange++;
     }
   }
 
-  _params[AVOID_PARAM_VESSEL_E].data.uint32[1] = inRange;
-  _params[AVOID_PARAM_VESSEL_E].data.uint32[2] = colliding;
+  uint32_t newVessel[4];
+  newVessel[0] = _params[AVOID_PARAM_VESSEL_E].data.uint32[0];
+  newVessel[1] = inRange;
+  newVessel[2] = colliding;
+
+  float newTarget[4];
 
   if (avoidV) {
+    adjHeading = avoidHeading;
+
     // mmsi
-    _params[AVOID_PARAM_VESSEL_E].data.uint32[3] = avoidV->mmsi;
+    newVessel[3] = avoidV->mmsi;
 
     // target info
-    _params[AVOID_PARAM_TARGET_E].data.f[0] = avoidV->location[0];
-    _params[AVOID_PARAM_TARGET_E].data.f[1] = avoidV->location[1];
-    _params[AVOID_PARAM_TARGET_E].data.f[2] = avoidV->courseOverGround;
-    _params[AVOID_PARAM_TARGET_E].data.f[3] = avoidV->speedOverGround;
+    newTarget[0] = avoidV->location[0];
+    newTarget[1] = avoidV->location[1];
+    newTarget[2] = avoidV->courseOverGround;
+    newTarget[3] = avoidV->speedOverGround;
 
   } else {
-    _params[AVOID_PARAM_VESSEL_E].data.uint32[3] = 0;
-    _params[AVOID_PARAM_TARGET_E].data.f[0] = 0;
-    _params[AVOID_PARAM_TARGET_E].data.f[1] = 0;
-    _params[AVOID_PARAM_TARGET_E].data.f[2] = 0;
-    _params[AVOID_PARAM_TARGET_E].data.f[3] = 0;
+    newVessel[3] = 0;
+    newTarget[0] = 0;
+    newTarget[1] = 0;
+    newTarget[2] = 0;
+    newTarget[3] = 0;
   }
 
-  // copy course to adjHeading for interim
-  float adjHeading = _subs[AVOID_SUB_COURSE_E].param.data.f[0];
   updateAndPublishParam(&_params[AVOID_PARAM_ADJ_HEADING_E], (uint8_t*)&adjHeading, sizeof(adjHeading));
-
-
-  publishParamEntry(&_params[AVOID_PARAM_VESSEL_E]);
-  publishParamEntry(&_params[AVOID_PARAM_TARGET_E]);
+  updateAndPublishParam(&_params[AVOID_PARAM_VESSEL_E], (uint8_t*)&newVessel, sizeof(newVessel));
+  updateAndPublishParam(&_params[AVOID_PARAM_TARGET_E], (uint8_t*)&newTarget, sizeof(newTarget));
 
   publishParamEntry(&_params[AVOID_PARAM_PACKETS_E]);
 }

@@ -110,6 +110,7 @@ public:
   static void registerParams(DEM_NAMESPACE* ns, DroneExecutionManager *dem);
 
   void onParamWrite(DRONE_PARAM_ENTRY *param);
+  void onSubReceived(DRONE_PARAM_SUB *sub);
 
   void setup();
   void loop();

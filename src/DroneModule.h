@@ -186,6 +186,7 @@ public:
   virtual boolean publishSubs();
 
   virtual void onParamWrite(DRONE_PARAM_ENTRY *param);
+  virtual void onSubReceived(DRONE_PARAM_SUB *sub);
 
   // write new value(s) to a param, and publish if it has changed
   void updateAndPublishParam(DRONE_PARAM_ENTRY *param, uint8_t *newPayload, uint8_t length);

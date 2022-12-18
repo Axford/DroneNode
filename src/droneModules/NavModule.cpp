@@ -152,6 +152,16 @@ void NavModule::onParamWrite(DRONE_PARAM_ENTRY *param) {
 }
 
 
+void NavModule::onSubReceived(DRONE_PARAM_SUB *sub) {
+  DroneModule::onSubReceived(sub);
+
+  if (sub->addrParam == NAV_SUB_TARGET_ADDR) {
+    // target changed, so update last
+    updateLast(false);
+  }
+}
+
+
 void NavModule::setup() {
   DroneModule::setup();
 
