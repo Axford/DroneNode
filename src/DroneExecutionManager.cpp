@@ -6,6 +6,7 @@
 #include "DroneModule.h"
 
 // drone modules
+#include "droneModules/AvoidModule.h"
 #include "droneModules/ControllerModule.h"
 #include "droneModules/CylonModule.h"
 #include "droneModules/DepthModule.h"
@@ -157,6 +158,7 @@ DroneExecutionManager::DroneExecutionManager(DroneModuleManager *dmm, DroneLinkM
   // register namespaces
   //ns = DroneModule::registerNamespace(this);
 
+  ns = AvoidModule::registerNamespace(this); AvoidModule::registerParams(ns, this);
   ns = ControllerModule::registerNamespace(this); ControllerModule::registerParams(ns, this);
   ns = CylonModule::registerNamespace(this); CylonModule::registerParams(ns, this);
   ns = DepthModule::registerNamespace(this); DepthModule::registerParams(ns, this);
@@ -1792,7 +1794,9 @@ DroneModule* DroneExecutionManager::instanceModule(char* typeName, uint8_t id) {
   DroneModule *newMod;
 
   if (id > 0 && id < 255) {
-    if (strcmp_P(typeName, CONTROLLER_STR_CONTROLLER) == 0) {
+    if (strcmp_P(typeName, AVOID_STR_AVOID) == 0) {
+      newMod = new AvoidModule(id, _dmm, _dlm, this, _fs);
+    } else if (strcmp_P(typeName, CONTROLLER_STR_CONTROLLER) == 0) {
       newMod = new ControllerModule(id, _dmm, _dlm, this, _fs);
     } else if (strcmp_P(typeName, CYLON_STR_CYLON) == 0) {
       newMod = new CylonModule(id, _dmm, _dlm, this, _fs);

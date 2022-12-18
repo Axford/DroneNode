@@ -138,6 +138,7 @@ static const char STRING_VALUE2[] PROGMEM = "value2";
 static const char STRING_VALUE3[] PROGMEM = "value3";
 static const char STRING_VALUE4[] PROGMEM = "value4";
 static const char STRING_VECTOR[] PROGMEM = "vector";
+static const char STRING_VESSEL[] PROGMEM = "vessel";
 static const char STRING_WAYPOINTS[] PROGMEM = "waypoints";
 static const char STRING_WAYPOINT[] PROGMEM = "waypoint";
 static const char STRING_WIFI[] PROGMEM = "wifi";
