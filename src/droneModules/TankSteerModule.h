@@ -1,6 +1,7 @@
 /*
 
 @type TankSteer
+@inherits Drone
 @description Generate left and right motor speeds from speed and turnRate inputs
 
 @guide >>>

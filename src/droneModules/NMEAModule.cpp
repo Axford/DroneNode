@@ -246,6 +246,7 @@ void NMEAModule::loop() {
               _historyCount++;
             } else {
               // calc and publish speed/heading
+              // compare current location to oldest location in the history buffer
               float t = (_history[NMEA_HISTORY_DEPTH-1][2] - _history[0][2])/1000;
               float d = calculateDistanceBetweenCoordinates(
                 _history[NMEA_HISTORY_DEPTH-1][0],
@@ -253,7 +254,7 @@ void NMEAModule::loop() {
                 _history[0][0],
                 _history[0][1]
               );
-              float speed = d / t;
+              float speed = (d / t) * 1.94384;  // in knots
               updateAndPublishParam(&_params[NMEA_PARAM_SPEED_E], (uint8_t*)&speed, 4);
             }
 

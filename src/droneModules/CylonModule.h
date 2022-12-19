@@ -1,8 +1,8 @@
 /*
 
-Cylon Modules
-
-Manage a strip of NEOPixels (WS2812B) - originally created for the Kit speedboat
+@type Cylon
+@inherits Drone
+@description Manage a strip of NEOPixels (WS2812B) - originally created for the Kit speedboat
 
 */
 #ifndef CYLON_MODULE_H
@@ -13,9 +13,11 @@ Manage a strip of NEOPixels (WS2812B) - originally created for the Kit speedboat
 
 
 //pubs
+// @pub 12;u8;1;pins;Which output pin is connected to the pixel strip
 #define CYLON_PARAM_PINS            12
 #define CYLON_PARAM_PINS_E          0
 
+// @pub 13;u8;1;numPixels;How many pixels in the strip
 #define CYLON_PARAM_NUMPIXELS       13
 #define CYLON_PARAM_NUMPIXELS_E     1
 

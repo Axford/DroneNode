@@ -1,7 +1,7 @@
 /*
 
 @type          NMEA
-@inherits      Drone
+@inherits      I2CBase
 @description   Manages a serial NMEA GPS device
 
 @config >>>

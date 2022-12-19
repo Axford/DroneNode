@@ -1,7 +1,7 @@
 /*
 
 @type          QMC5883L
-@inherits      I2CBaseModule
+@inherits      I2CBase
 @description   Manages a QMC5883L I2C Compass
 
 @config >>>
