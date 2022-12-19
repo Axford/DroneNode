@@ -51,6 +51,7 @@ static const char STRING_DISCOVERY[] PROGMEM = "discovery";
 static const char STRING_DRONE[] PROGMEM = "Drone";
 static const char STRING_ERROR[] PROGMEM = "error";
 static const char STRING_ENABLE[] PROGMEM = "enable";
+static const char STRING_ETC[] PROGMEM = "ETC";
 static const char STRING_FALSE[] PROGMEM = "false";
 static const char STRING_FIX[] PROGMEM = "fix";
 static const char STRING_FLAGS[] PROGMEM = "flags";

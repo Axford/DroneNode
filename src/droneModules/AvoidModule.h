@@ -45,7 +45,11 @@ Pubs
 #define AVOID_PARAM_PACKETS        12
 #define AVOID_PARAM_PACKETS_E      4
 
-#define AVOID_PARAM_ENTRIES        5
+// @pub 13;f;1;ETC;estimated time to collision
+#define AVOID_PARAM_ETC            13
+#define AVOID_PARAM_ETC_E          5
+
+#define AVOID_PARAM_ENTRIES        6
 
 /*
 Subs
@@ -90,6 +94,7 @@ class AvoidModule:  public DroneModule {
 protected:
   AisSentence _sentence;
   AsyncUDP _udp;
+  uint32_t _newPackets[2];
   IvanLinkedList::LinkedList<AvoidModuleVessel*> _vessels;
 public:
 

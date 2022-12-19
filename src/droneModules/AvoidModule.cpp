@@ -13,6 +13,9 @@ AvoidModule::AvoidModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* 
    // set default interval to 1000
    _mgmtParams[DRONE_MODULE_PARAM_INTERVAL_E].data.uint32[0] = 1000;
 
+   _newPackets[0] = 0;
+   _newPackets[1] = 0;
+
    // subs
    initSubs(AVOID_SUBS);
 
@@ -68,8 +71,6 @@ AvoidModule::AvoidModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* 
    param->data.f[0] = 10000;  // range beyond which vessels will be ignored in meters
    param->data.f[1] = 50;  // radius within which to treat as a collision
 
- 
-
    param = &_params[AVOID_PARAM_VESSEL_E];
    param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_MEDIUM, AVOID_PARAM_VESSEL);
    setParamName(FPSTR(STRING_VESSEL), param);
@@ -79,13 +80,17 @@ AvoidModule::AvoidModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* 
    param->data.uint32[2] = 0; // colliding vessels
    param->data.uint32[3] = 0; // mmsi of most urgent colliding vessel
 
-
    param = &_params[AVOID_PARAM_PACKETS_E];
    param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_MEDIUM, AVOID_PARAM_PACKETS);
    setParamName(FPSTR(STRING_PACKETS), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_UINT32_T, 8);
    param->data.uint32[0] = 0; // total NMEA packets
    param->data.uint32[1] = 0; // succesfully parsed AIS messages
+
+   param = &_params[AVOID_PARAM_ETC_E];
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, AVOID_PARAM_ETC);
+   setParamName(FPSTR(STRING_ETC), param);
+   param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 4 );
    
 }
 
@@ -158,7 +163,7 @@ void AvoidModule::setup() {
 
       packet.printf("Got %u bytes of data", packet.length());
       */
-      _params[AVOID_PARAM_PACKETS_E].data.uint32[0]++;
+      _newPackets[0]++;
 
       // attempt to parse NMEA sentence
       if (_sentence.parse((char*)packet.data(), packet.length())) {
@@ -174,11 +179,9 @@ void AvoidModule::setup() {
             v->location[1] = _sentence._m18.lat;
             v->speedOverGround = _sentence._m18.speedOverGround;
           }
-          // update params
-          _params[AVOID_PARAM_VESSEL_E].data.uint32[0] = _vessels.size();
           //_params[AVOID_PARAM_VESSEL_E].data.uint32[3] = _sentence._m18.mmsi;
 
-          _params[AVOID_PARAM_PACKETS_E].data.uint32[1]++;
+          _newPackets[1]++;
         }
       }
 
@@ -205,8 +208,8 @@ void AvoidModule::loop() {
   uint8_t colliding = 0;
 
   AvoidModuleVessel* avoidV = NULL;
-  float avoidD = _params[AVOID_PARAM_THRESHOLD_E].data.f[0];
   float avoidHeading = 0;
+  float earliestEstimatedTimeToCollision = 0;
 
   boolean calcCrosstrack;
   boolean calcAvoidHeading;
@@ -216,6 +219,7 @@ void AvoidModule::loop() {
     v = _vessels.get(i);
     calcCrosstrack = false;
     calcAvoidHeading = false;
+    float estimatedTimeToCollision = 24*3600;
 
     float d = calculateDistanceBetweenCoordinates(
       v->location[0],
@@ -228,10 +232,12 @@ void AvoidModule::loop() {
     if (d < _params[AVOID_PARAM_THRESHOLD_E].data.f[0]) {
 
       // see if we're already too close!
-      if (d < _params[AVOID_PARAM_THRESHOLD_E].data.f[1] && d < avoidD) {
+      if (d < _params[AVOID_PARAM_THRESHOLD_E].data.f[1]) {
         //avoidHeading = vesselToNode;
         calcCrosstrack = true;
         calcAvoidHeading = true;
+        if (_subs[AVOID_SUB_SOG_E].param.data.f[0] > 0)
+          estimatedTimeToCollision = d / ( _subs[AVOID_SUB_SOG_E].param.data.f[0] / 1.94384);
       } 
       
       
@@ -286,7 +292,7 @@ void AvoidModule::loop() {
               _subs[AVOID_SUB_SOG_E].param.data.f[0] > 0) {
 
             // calc how long until vessel reaches the crosstrack point
-            float timeUntilVesselReachesCrosstrackPoint = min(ci.along, d ) / 
+            float timeUntilVesselReachesCrosstrackPoint = max(min(ci.along - 50, d ), 0.0f) / 
                                                           (v->speedOverGround / 1.94384);
             
             // calc time to exit lane at current SOG vs time until collision
@@ -295,14 +301,16 @@ void AvoidModule::loop() {
                                                 ( _subs[AVOID_SUB_SOG_E].param.data.f[0] / 1.94384);
 
             if (timeUntilVesselReachesCrosstrackPoint < timeUntilWeCanEscapeTheLane) {
+              estimatedTimeToCollision = timeUntilVesselReachesCrosstrackPoint;
               calcAvoidHeading = true;
             }
           }
         }
 
-        if (calcAvoidHeading) {
+        if (calcAvoidHeading && 
+            estimatedTimeToCollision < earliestEstimatedTimeToCollision) {
           avoidV = v;
-          avoidD = d;
+          earliestEstimatedTimeToCollision = estimatedTimeToCollision;
           colliding++;
 
           // calc course orthogonal to vessel heading, based on crosstrack sign
@@ -314,9 +322,6 @@ void AvoidModule::loop() {
           } else {
             avoidHeading -= 90;
           }
-          // ensure in range
-          avoidHeading = fmod(avoidHeading, 360);
-          if (avoidHeading < 0) avoidHeading += 360;
         }
       }
 
@@ -325,13 +330,17 @@ void AvoidModule::loop() {
   }
 
   uint32_t newVessel[4];
-  newVessel[0] = _params[AVOID_PARAM_VESSEL_E].data.uint32[0];
+  newVessel[0] = _vessels.size();
   newVessel[1] = inRange;
   newVessel[2] = colliding;
 
   float newTarget[4];
 
   if (avoidV) {
+    // ensure in range
+    avoidHeading = fmod(avoidHeading, 360);
+    if (avoidHeading < 0) avoidHeading += 360;
+    
     adjHeading = avoidHeading;
 
     // mmsi
@@ -345,6 +354,7 @@ void AvoidModule::loop() {
 
   } else {
     newVessel[3] = 0;
+    
     newTarget[0] = 0;
     newTarget[1] = 0;
     newTarget[2] = 0;
@@ -354,8 +364,8 @@ void AvoidModule::loop() {
   updateAndPublishParam(&_params[AVOID_PARAM_ADJ_HEADING_E], (uint8_t*)&adjHeading, sizeof(adjHeading));
   updateAndPublishParam(&_params[AVOID_PARAM_VESSEL_E], (uint8_t*)&newVessel, sizeof(newVessel));
   updateAndPublishParam(&_params[AVOID_PARAM_TARGET_E], (uint8_t*)&newTarget, sizeof(newTarget));
-
-  publishParamEntry(&_params[AVOID_PARAM_PACKETS_E]);
+  updateAndPublishParam(&_params[AVOID_PARAM_ETC_E], (uint8_t*)&earliestEstimatedTimeToCollision, sizeof(earliestEstimatedTimeToCollision));
+  updateAndPublishParam(&_params[AVOID_PARAM_PACKETS_E], (uint8_t*)&_newPackets, sizeof(_newPackets));
 }
 
 
