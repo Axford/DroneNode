@@ -29,6 +29,8 @@ void AisBitField::parse(char * msg) {
 
 
 long AisBitField::getInt(uint8_t start, uint8_t len) {
+  if (start + len > _numBits) return 0;
+
   long value = 0;
   for (int i=0; i< len; i++)  
   {

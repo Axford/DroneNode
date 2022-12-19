@@ -1,7 +1,9 @@
 #include "AisMessage.h"
 
 AisMessage::AisMessage() {
-  
+  rep = 0;
+  mmsi = 0;
+  type = 0;
 }
 
 void AisMessage::parseFromBitField(AisBitField * bitField) {
