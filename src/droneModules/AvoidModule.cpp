@@ -209,7 +209,8 @@ void AvoidModule::loop() {
 
   AvoidModuleVessel* avoidV = NULL;
   float avoidHeading = 0;
-  float earliestEstimatedTimeToCollision = 0;
+  float earliestEstimatedTimeToCollision = 24*3600;
+  float estimatedTimeToCollision = 24*3600;
 
   boolean calcCrosstrack;
   boolean calcAvoidHeading;
@@ -219,7 +220,7 @@ void AvoidModule::loop() {
     v = _vessels.get(i);
     calcCrosstrack = false;
     calcAvoidHeading = false;
-    float estimatedTimeToCollision = 24*3600;
+    estimatedTimeToCollision = 24*3600;
 
     float d = calculateDistanceBetweenCoordinates(
       v->location[0],
