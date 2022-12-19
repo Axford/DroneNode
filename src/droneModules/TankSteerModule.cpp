@@ -6,53 +6,85 @@
 
 TankSteerModule::TankSteerModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm, DroneExecutionManager* dem, fs::FS &fs):
   DroneModule ( id, dmm, dlm , dem, fs)
- {
-   // set type
-   setTypeName(FPSTR(TANK_STEER_STR_TANK_STEER));
+{
+  // set type
+  setTypeName(FPSTR(TANK_STEER_STR_TANK_STEER));
 
-   // subs
-   initSubs(TANK_STEER_SUBS);
+  _lastUpdate = 0;
+  _iError = 0;
+  _dError = 0;
+  _lastError = 0;
+  _lastHeading = 0;
 
-   DRONE_PARAM_SUB *sub;
+  // subs
+  initSubs(TANK_STEER_SUBS);
 
-   sub = &_subs[TANK_STEER_SUB_TURN_RATE_E];
-   sub->addrParam = TANK_STEER_SUB_TURN_RATE_ADDR;
-   sub->param.paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, TANK_STEER_SUB_TURN_RATE);
-   setParamName(FPSTR(STRING_TURN_RATE), &sub->param);
+  DRONE_PARAM_SUB *sub;
 
-   sub = &_subs[TANK_STEER_SUB_SPEED_E];
-   sub->addrParam = TANK_STEER_SUB_SPEED_ADDR;
-   sub->param.paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, TANK_STEER_SUB_SPEED);
-   setParamName(FPSTR(STRING_SPEED), &sub->param);
+  sub = &_subs[TANK_STEER_SUB_TARGET_E];
+  sub->addrParam = TANK_STEER_SUB_TARGET_ADDR;
+  sub->param.paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, TANK_STEER_SUB_TARGET);
+  setParamName(FPSTR(STRING_TARGET), &sub->param);
+  sub->param.data.f[0] = 0;
+  sub->param.data.f[1] = 0;
 
-   sub = &_subs[TANK_STEER_SUB_TRIM_E];
-   sub->addrParam = TANK_STEER_SUB_TRIM_ADDR;
-   sub->param.paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, TANK_STEER_SUB_TRIM);
-   setParamName(FPSTR(STRING_TRIM), &sub->param);
+  sub = &_subs[TANK_STEER_SUB_HEADING_E];
+  sub->addrParam = TANK_STEER_SUB_HEADING_ADDR;
+  sub->param.paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, TANK_STEER_SUB_HEADING);
+  setParamName(FPSTR(STRING_HEADING), &sub->param);
+
+  sub = &_subs[TANK_STEER_SUB_DISTANCE_E];
+  sub->addrParam = TANK_STEER_SUB_DISTANCE_ADDR;
+  sub->param.paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, TANK_STEER_SUB_DISTANCE);
+  setParamName(FPSTR(STRING_DISTANCE), &sub->param);
 
 
-   // pubs
-   initParams(TANK_STEER_PARAM_ENTRIES);
+  // pubs
+  initParams(TANK_STEER_PARAM_ENTRIES);
 
-   DRONE_PARAM_ENTRY *param;
+  DRONE_PARAM_ENTRY *param;
 
-   param = &_params[TANK_STEER_PARAM_LEFT_E];
-   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_MEDIUM, TANK_STEER_PARAM_LEFT);
-   setParamName(FPSTR(STRING_LEFT), param);
-   param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 4);
+  param = &_params[TANK_STEER_PARAM_LEFT_E];
+  param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_HIGH, TANK_STEER_PARAM_LEFT);
+  setParamName(FPSTR(STRING_LEFT), param);
+  param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 4);
 
-   param = &_params[TANK_STEER_PARAM_RIGHT_E];
-   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_MEDIUM, TANK_STEER_PARAM_RIGHT);
-   setParamName(FPSTR(STRING_RIGHT), param);
-   param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 4);
+  param = &_params[TANK_STEER_PARAM_RIGHT_E];
+  param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_HIGH, TANK_STEER_PARAM_RIGHT);
+  setParamName(FPSTR(STRING_RIGHT), param);
+  param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 4);
 
-   param = &_params[TANK_STEER_PARAM_MODE_E];
-   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_HIGH, TANK_STEER_PARAM_MODE);
-   setParamName(FPSTR(STRING_MODE), param);
-   param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_UINT8_T, 1);
-   param->data.uint8[0] = TANK_STEER_MODE_MANUAL;  // default to manual
+  param = &_params[TANK_STEER_PARAM_MODE_E];
+  param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_HIGH, TANK_STEER_PARAM_MODE);
+  setParamName(FPSTR(STRING_MODE), param);
+  param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_UINT8_T, 1);
+  param->data.uint8[0] = TANK_STEER_MODE_MANUAL;  // default to manual
 
-   update();  // set defaults
+  param = &_params[TANK_STEER_PARAM_TRIM_E];
+  param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, TANK_STEER_PARAM_TRIM);
+  setParamName(FPSTR(STRING_TRIM), param);
+  param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_FLOAT, 4);
+
+  param = &_params[TANK_STEER_PARAM_PID_E];
+  param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, TANK_STEER_PARAM_PID);
+  setParamName(FPSTR(STRING_PID), param);
+  param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_FLOAT, 12);
+  param->data.f[0] = 0.01;
+  param->data.f[1] = 0;
+  param->data.f[2] = 0;
+
+  param = &_params[TANK_STEER_PARAM_LIMITS_E];
+  param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, TANK_STEER_PARAM_LIMITS);
+  setParamName(FPSTR(STRING_LIMITS), param);
+  param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_FLOAT, 8);
+  param->data.f[0] = 0.2;
+  param->data.f[1] = 0.7;
+
+  param = &_params[TANK_STEER_PARAM_THRESHOLD_E];
+  param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, TANK_STEER_PARAM_THRESHOLD);
+  setParamName(FPSTR(STRING_THRESHOLD), param);
+  param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_FLOAT, 4);
+  param->data.f[0] = 15;  // 15m
 }
 
 
@@ -71,15 +103,19 @@ void TankSteerModule::registerParams(DEM_NAMESPACE* ns, DroneExecutionManager *d
   DEMCommandHandler ph = std::bind(&DroneExecutionManager::mod_param, dem, _1, _2, _3, _4);
   DEMCommandHandler pha = std::bind(&DroneExecutionManager::mod_subAddr, dem, _1, _2, _3, _4);
 
-  dem->registerCommand(ns, STRING_TURN_RATE, DRONE_LINK_MSG_TYPE_FLOAT, ph);
-  dem->registerCommand(ns, PSTR("$turnRate"), DRONE_LINK_MSG_TYPE_ADDR, pha);
+  dem->registerCommand(ns, STRING_TARGET, DRONE_LINK_MSG_TYPE_FLOAT, ph);
+  dem->registerCommand(ns, PSTR("$target"), DRONE_LINK_MSG_TYPE_ADDR, pha);
 
-  dem->registerCommand(ns, STRING_SPEED, DRONE_LINK_MSG_TYPE_FLOAT, ph);
-  dem->registerCommand(ns, PSTR("$speed"), DRONE_LINK_MSG_TYPE_ADDR, pha);
+  dem->registerCommand(ns, STRING_HEADING, DRONE_LINK_MSG_TYPE_FLOAT, ph);
+  dem->registerCommand(ns, PSTR("$heading"), DRONE_LINK_MSG_TYPE_ADDR, pha);
+
+  dem->registerCommand(ns, STRING_DISTANCE, DRONE_LINK_MSG_TYPE_FLOAT, ph);
+  dem->registerCommand(ns, PSTR("$distance"), DRONE_LINK_MSG_TYPE_ADDR, pha);
 
   dem->registerCommand(ns, STRING_TRIM, DRONE_LINK_MSG_TYPE_FLOAT, ph);
-  dem->registerCommand(ns, PSTR("$trim"), DRONE_LINK_MSG_TYPE_ADDR, pha);
-
+  dem->registerCommand(ns, STRING_LIMITS, DRONE_LINK_MSG_TYPE_FLOAT, ph);
+  dem->registerCommand(ns, STRING_THRESHOLD, DRONE_LINK_MSG_TYPE_FLOAT, ph);
+  dem->registerCommand(ns, STRING_PID, DRONE_LINK_MSG_TYPE_FLOAT, ph);
   dem->registerCommand(ns, STRING_MODE, DRONE_LINK_MSG_TYPE_UINT8_T, ph);
 }
 
@@ -87,30 +123,121 @@ void TankSteerModule::registerParams(DEM_NAMESPACE* ns, DroneExecutionManager *d
 void TankSteerModule::update() {
   if (!_setupDone) return;
 
-  // update mode
+  // TODO - mode!
+  /*
   if (_params[TANK_STEER_PARAM_MODE_E].data.uint8[0] == TANK_STEER_MODE_MANUAL) {
-    _subs[TANK_STEER_SUB_TURN_RATE_E].enabled = false;
+    _subs[TANK_STEER_SUB_TANK_STEER_E].enabled = false;
     _subs[TANK_STEER_SUB_SPEED_E].enabled = false;
   } else {
-    _subs[TANK_STEER_SUB_TURN_RATE_E].enabled = true;
+    _subs[TANK_STEER_SUB_TANK_STEER_E].enabled = true;
     _subs[TANK_STEER_SUB_SPEED_E].enabled = true;
   }
+  */
+
+  // calc and publish new speeds
+  float turnRate = 0;
+  float speed = 0;
+
+  /*
+    TURNRATE
+  */
+  unsigned long updateTime = millis();
+  float dt = (updateTime - _lastUpdate) / 1000.0;
+
+  // don't bother updating if dt too small
+  if (dt < 0.05) return;
+
+  // clamp dt, to avoid massive jumps
+  if (dt > 1) dt = 1;
+
+  _lastUpdate = updateTime;
 
   // calc and publish new speeds
 
+  // check we've received valid heading and target
+  // this is actually very annoying, as it prevents manual control until a subscriber input is heard
+  /*
+  if (!_subs[TANK_STEER_SUB_HEADING_E].received ||
+      !_subs[TANK_STEER_SUB_TARGET_E].received) return;
+  */
+
   // local shortcuts
-  float x = _subs[TANK_STEER_SUB_TURN_RATE_E].param.data.f[0];
+  float h = _subs[TANK_STEER_SUB_HEADING_E].param.data.f[0];
+  float t = _subs[TANK_STEER_SUB_TARGET_E].param.data.f[0];
+
+  // check to see if heading has dramatically changed
+  if (fabs(shortestSignedDistanceBetweenCircularValues(_lastHeading, t)) > 45) {
+    // reset d and i errors
+    _iError = 0;
+    _dError = 0;
+  }
+
+  // calc shortest signed distance
+  // positive values indicate a clockwise turn
+  float err = shortestSignedDistanceBetweenCircularValues( h, t );
+  boolean positiveError = err > 0;
+
+  // limit to 90 for ease
+  if (err > 90) err = 90;
+  if (err < -90) err = -90;
+
+  // update I and D terms
+  _iError += err * dt;
+  _dError = (err - _lastError) / dt;
+
+  // clamp i error
+  if (_params[TANK_STEER_PARAM_PID_E].data.f[1] > 0) {
+    if (fabs(_iError) > 100 / _params[TANK_STEER_PARAM_PID_E].data.f[1]) {
+      _iError = (_iError > 0 ? 100 : -100) / _params[TANK_STEER_PARAM_PID_E].data.f[1];
+    }
+  }
+
+  // apply PID cooefficients
+  turnRate =
+    err * _params[TANK_STEER_PARAM_PID_E].data.f[0] +
+    _iError * _params[TANK_STEER_PARAM_PID_E].data.f[1] +
+    _dError * _params[TANK_STEER_PARAM_PID_E].data.f[2];
+
+  _lastError = err;
+
+  // apply limits
+  if (turnRate > 10) turnRate = 10;
+  if (turnRate < -10) turnRate = -10;
+
+  _lastHeading = h;
+
+  /*
+    SPEED
+  */
+  // check we've received valid distance to go
+  if (_subs[TANK_STEER_SUB_DISTANCE_E].received) {
+    // local shortcuts
+    float d = _subs[TANK_STEER_SUB_DISTANCE_E].param.data.f[0];
+    float smin = _params[TANK_STEER_PARAM_LIMITS_E].data.f[0];
+    float smax = _params[TANK_STEER_PARAM_LIMITS_E].data.f[1];
+    float t = _params[TANK_STEER_PARAM_THRESHOLD_E].data.f[0];
+
+    if (d > t) {
+      speed = smax;
+    } else {
+      // lerp
+      speed = (d/t) * (smax-smin) + smin;
+    }
+  }
+
+  // local shortcuts
+  float x = turnRate;
   // limit turnRate
   if (x > 1) x = 1;
   if (x < -1) x = -1;
 
-  float y = _subs[TANK_STEER_SUB_SPEED_E].param.data.f[0];
+  float y = speed;
   // limit speed
   if (y > 1) y = 1;
   if (y < -1) y = -1;
 
   // use trim as offset to x value
-  x += _subs[TANK_STEER_SUB_TRIM_E].param.data.f[0];
+  x += _params[TANK_STEER_PARAM_TRIM_E].data.f[0];
 
   x = -x;
   float v = (1- abs(x)) * y + y;
