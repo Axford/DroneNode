@@ -123,20 +123,24 @@ void TankSteerModule::registerParams(DEM_NAMESPACE* ns, DroneExecutionManager *d
 void TankSteerModule::update() {
   if (!_setupDone) return;
 
-  // TODO - mode!
-  /*
   if (_params[TANK_STEER_PARAM_MODE_E].data.uint8[0] == TANK_STEER_MODE_MANUAL) {
-    _subs[TANK_STEER_SUB_TANK_STEER_E].enabled = false;
-    _subs[TANK_STEER_SUB_SPEED_E].enabled = false;
+    _subs[TANK_STEER_SUB_TARGET_E].enabled = false;
+    _subs[TANK_STEER_SUB_DISTANCE_E].enabled = false;
   } else {
-    _subs[TANK_STEER_SUB_TANK_STEER_E].enabled = true;
-    _subs[TANK_STEER_SUB_SPEED_E].enabled = true;
+    _subs[TANK_STEER_SUB_TARGET_E].enabled = true;
+    _subs[TANK_STEER_SUB_DISTANCE_E].enabled = true;
   }
-  */
+  
 
   // calc and publish new speeds
   float turnRate = 0;
   float speed = 0;
+
+  // get distance to go
+  float d = _subs[TANK_STEER_SUB_DISTANCE_E].param.data.f[0];
+  float threshold = _params[TANK_STEER_PARAM_THRESHOLD_E].data.f[0];
+  boolean considerReversing = d < threshold;
+  boolean reversing = false;
 
   /*
     TURNRATE
@@ -175,6 +179,14 @@ void TankSteerModule::update() {
   // calc shortest signed distance
   // positive values indicate a clockwise turn
   float err = shortestSignedDistanceBetweenCircularValues( h, t );
+
+  if (considerReversing && fabs(err) > 90) {
+    reversing = true;
+    h += 180;
+    h = fmod(h, 360);
+    err = shortestSignedDistanceBetweenCircularValues( h, t );
+  }
+
   boolean positiveError = err > 0;
 
   // limit to 90 for ease
@@ -206,24 +218,22 @@ void TankSteerModule::update() {
 
   _lastHeading = h;
 
+
   /*
     SPEED
   */
-  // check we've received valid distance to go
-  if (_subs[TANK_STEER_SUB_DISTANCE_E].received) {
-    // local shortcuts
-    float d = _subs[TANK_STEER_SUB_DISTANCE_E].param.data.f[0];
-    float smin = _params[TANK_STEER_PARAM_LIMITS_E].data.f[0];
-    float smax = _params[TANK_STEER_PARAM_LIMITS_E].data.f[1];
-    float t = _params[TANK_STEER_PARAM_THRESHOLD_E].data.f[0];
 
-    if (d > t) {
-      speed = smax;
-    } else {
-      // lerp
-      speed = (d/t) * (smax-smin) + smin;
-    }
+  // local shortcuts
+  float smin = _params[TANK_STEER_PARAM_LIMITS_E].data.f[0];
+  float smax = _params[TANK_STEER_PARAM_LIMITS_E].data.f[1];
+
+  if (d > threshold) {
+    speed = smax;
+  } else {
+    // lerp
+    speed = (d/threshold) * (smax-smin) + smin;
   }
+
 
   // local shortcuts
   float x = turnRate;
@@ -231,7 +241,7 @@ void TankSteerModule::update() {
   if (x > 1) x = 1;
   if (x < -1) x = -1;
 
-  float y = speed;
+  float y = reversing ? -speed : speed;
   // limit speed
   if (y > 1) y = 1;
   if (y < -1) y = -1;
