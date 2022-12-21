@@ -1770,7 +1770,7 @@ boolean DroneLinkManager::generateSubscriptionRequest(NetworkInterfaceModule *in
   //if (!getInterfaceState()) return false;
 
   // request a new buffer in the transmit queue
-  DRONE_MESH_MSG_BUFFER *buffer = getTransmitBuffer(interface, DRONE_MESH_MSG_PRIORITY_MEDIUM);
+  DRONE_MESH_MSG_BUFFER *buffer = getTransmitBuffer(interface, DRONE_MESH_MSG_PRIORITY_CRITICAL);
 
   // if successful
   if (buffer) {
@@ -1784,7 +1784,7 @@ boolean DroneLinkManager::generateSubscriptionRequest(NetworkInterfaceModule *in
     subBuffer->header.destNode = dest;
     subBuffer->header.seq = _gSeq++;
     //subBuffer->header.type = DRONE_MESH_MSG_TYPE_SUBSCRIPTION_REQUEST;
-    setDroneMeshMsgPriorityAndPayloadType(buffer->data, DRONE_MESH_MSG_PRIORITY_MEDIUM, DRONE_MESH_MSG_TYPE_SUBSCRIPTION_REQUEST);
+    setDroneMeshMsgPriorityAndPayloadType(buffer->data, DRONE_MESH_MSG_PRIORITY_CRITICAL, DRONE_MESH_MSG_TYPE_SUBSCRIPTION_REQUEST);
     subBuffer->channel = channel;
     subBuffer->param = param;
 
