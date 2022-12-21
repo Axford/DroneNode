@@ -3,8 +3,8 @@
 #include "../DroneLinkManager.h"
 #include "strings.h"
 
-CylonModule::CylonModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm, DroneExecutionManager* dem, fs::FS &fs):
-  DroneModule ( id, dmm, dlm, dem, fs)
+CylonModule::CylonModule(uint8_t id, DroneSystem* ds):
+  DroneModule ( id, ds )
  {
    setTypeName(FPSTR(CYLON_STR_CYLON));
    _strip = NULL;
@@ -123,7 +123,7 @@ void CylonModule::loop() {
 
 
     // update left strip (LEDs 0..7 + 1)
-    uint8_t numLit = max(1.0,round(perSide * fabs(_subs[CYLON_SUB_LEFT_E].param.data.f[0])));
+    uint8_t numLit = max(1.0f,round(perSide * fabs(_subs[CYLON_SUB_LEFT_E].param.data.f[0])));
     HsbColor blk = HsbColor(0,0,0);
     HsbColor c = HsbColor(0,0,0.5);
 
@@ -146,7 +146,7 @@ void CylonModule::loop() {
     // update right strip (LEDs 15..8 + 1)
     c = HsbColor(0,0,0.5);
     if (_subs[CYLON_SUB_RIGHT_E].param.data.f[0] < 0) c = HsbColor(0,1,0.5);
-    numLit = max(1.0,round(perSide * fabs(_subs[CYLON_SUB_RIGHT_E].param.data.f[0])));
+    numLit = max(1.0f,round(perSide * fabs(_subs[CYLON_SUB_RIGHT_E].param.data.f[0])));
     for (uint8_t i=0; i<perSide; i++) {
       if (_subs[CYLON_SUB_RIGHT_E].param.data.f[0] < 0) {
         // reverse = red

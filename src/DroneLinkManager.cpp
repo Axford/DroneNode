@@ -1321,7 +1321,7 @@ void DroneLinkManager::receiveRouterResponse(NetworkInterfaceModule *interface, 
 void DroneLinkManager::receiveLinkCheckRequest(NetworkInterfaceModule *interface, uint8_t *buffer, uint8_t metric) {
   DRONE_MESH_MSG_HEADER *header = (DRONE_MESH_MSG_HEADER*)buffer;
 
-  Log.noticeln("[DLM.rT] Link Check request from %u to %u", header->srcNode, header->destNode);
+  //Log.noticeln("[DLM.rT] Link Check request from %u to %u", header->srcNode, header->destNode);
 
   // ignore if we're not the next node
   if (header->nextNode == _node) {
@@ -1377,7 +1377,7 @@ void DroneLinkManager::generateResponse(uint8_t *buffer, uint8_t newType) {
 
   DRONE_MESH_MSG_HEADER *header = (DRONE_MESH_MSG_HEADER*)buffer;
 
-  Log.noticeln("[DLM.gR] Responding %u --> %u", header->destNode, header->srcNode);
+  //Log.noticeln("[DLM.gR] Responding %u --> %u", header->destNode, header->srcNode);
 
   // flip src and dest
   uint8_t oldSrc = header->srcNode;

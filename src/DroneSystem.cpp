@@ -177,24 +177,19 @@ uint8_t DroneSystem::motherboardVersion() {
 
 void DroneSystem::createDefaultConfig() {
   // TODO - adapt to use FS class for file handle
-  // see if config.txt exists, if not create it
-  if (!LITTLEFS.exists("/config.txt")) {
-    File file = LITTLEFS.open("/config.txt", FILE_WRITE);
+  // see if config.ini exists, if not create it
+  if (!LITTLEFS.exists("/config.ini")) {
+    File file = LITTLEFS.open("/config.ini", FILE_WRITE);
     if(!file){
-        Log.errorln("[] Failed to open config.txt for writing");
+        Log.errorln("[] Failed to open config.ini for writing");
         return;
     }
-    file.println("node 1");
-    file.println("Management.new 1");
-    file.println("  name \"set me\"");
-    file.println("  .publish \"hostname\"");
-    file.println("  .publish \"IP\"");
-    file.println(".done");
-    file.println("UDPTelemetry.new 2");
-    file.println("  port 8007");
-    file.println("  broadcast 255 255 255 255");
-    file.println(".done");
-    file.println(".setup");
+    file.println("node= 1");
+    file.println("[Management = 1]");
+    file.println("  name =setMe");
+    file.println("  publish =hostname, IP");
+
+    file.println("[UDPTelemetry = 2]");
 
     file.close();
   }
@@ -203,24 +198,19 @@ void DroneSystem::createDefaultConfig() {
 
 void DroneSystem::createSafeModeScript() {
   // TODO - adapt to use FS class for file handle
-  // see if safeMode.txt exists, if not create it
-  if (!LITTLEFS.exists("/safeMode.txt")) {
-    File file = LITTLEFS.open("/safeMode.txt", FILE_WRITE);
+  // see if safeMode.ini exists, if not create it
+  if (!LITTLEFS.exists("/safeMode.ini")) {
+    File file = LITTLEFS.open("/safeMode.ini", FILE_WRITE);
     if(!file){
-        Log.errorln("[] Failed to open safeMode.txt for writing");
+        Log.errorln("[] Failed to open config.ini for writing");
         return;
     }
-    file.println("node 1");
-    file.println("Management.new 1");
-    file.println("  name \"safeMode\"");
-    file.println("  .publish \"hostname\"");
-    file.println("  .publish \"IP\"");
-    file.println(".done");
-    file.println("UDPTelemetry.new 2");
-    file.println("  port 8007");
-    file.println("  broadcast 255 255 255 255");
-    file.println(".done");
-    file.println(".setup");
+    file.println("node= 1");
+    file.println("[Management = 1]");
+    file.println("  name =safeMode");
+    file.println("  publish =hostname, IP");
+
+    file.println("[UDPTelemetry = 2]");
 
     file.close();
   }
@@ -252,6 +242,7 @@ void DroneSystem::setupWebServer() {
   });
 
   // DEM handlers
+  /*
   _server.on("/macros", HTTP_GET, [&](AsyncWebServerRequest *request){
     _doLoop = false;
     dem->serveMacroInfo(request);
@@ -267,6 +258,7 @@ void DroneSystem::setupWebServer() {
     dem->serveCommandInfo(request);
     _doLoop = true;
   });
+  */
 
   /*
   _server.onNotFound([](AsyncWebServerRequest *request){
@@ -291,47 +283,13 @@ void DroneSystem::setupWebServer() {
 
 void DroneSystem::startInSafeMode() {
   Log.warningln(F("[] Prep SAFE start..."));
-  // attempt to load and run safeMode script
-  // define root macro
-  DEM_MACRO * safeMode = dem->createMacro("safeMode");
-  DEM_INSTRUCTION_COMPILED instr;
-  if (dem->compileLine(PSTR("load \"/safeMode.txt\""), &instr))
-    safeMode->commands->add(instr);
-  if (dem->compileLine(PSTR("run \"/safeMode.txt\""), &instr))
-    safeMode->commands->add(instr);
-
-  // prep execution of safeMode
-  DEM_CALLSTACK_ENTRY cse;
-  cse.i=0;
-  cse.macro = safeMode;
-  cse.continuation = false;
-  dem->callStackPush(cse);
+  dem->loadConfiguration("/safeMode.ini");
 }
 
 
 void DroneSystem::start() {
   Log.warningln(F("[] Prep NORMAL start..."));
-
-  // prep and run normal boot process
-  // define root macro
-  DEM_MACRO * root = dem->createMacro("root");
-  DEM_INSTRUCTION_COMPILED instr;
-  if (dem->compileLine(PSTR("load \"/config.txt\""), &instr))
-    root->commands->add(instr);
-  dem->compileLine(PSTR("run \"/config.txt\""), &instr);
-  root->commands->add(instr);
-  dem->compileLine(PSTR("load \"/main.txt\""), &instr);
-  root->commands->add(instr);
-  // now execute main
-  dem->compileLine(PSTR("run \"/main.txt\""), &instr);
-  root->commands->add(instr);
-
-  // prep execution of root
-  DEM_CALLSTACK_ENTRY cse;
-  cse.i=0;
-  cse.macro = root;
-  cse.continuation = false;
-  dem->callStackPush(cse);
+  dem->loadConfiguration("/config.ini");
 }
 
 
@@ -411,7 +369,7 @@ void DroneSystem::setup() {
   dlm = new DroneLinkManager(&_wifiManager, &dfs);
   // TODO - rework event handling
   //dlm->onEvent = handleDLMEvent;
-  dmm = new DroneModuleManager(dlm);
+  dmm = new DroneModuleManager(dlm, LITTLEFS);
   // TODO - refactor to use FS class
   dem = new DroneExecutionManager(this, _logFile);
 
@@ -427,6 +385,8 @@ void DroneSystem::setup() {
   } else {
     start();
   }
+
+  dem->completeSetup();
 
   // scan I2C buses
   // TODO - make this a serial or web interface function - no need todo on every boot
@@ -530,7 +490,7 @@ void DroneSystem::loop() {
 
     yield();
 
-    dem->execute();
+    dem->processAddressQueue();
 
     //if (logFile) logFile.flush();
   } else {

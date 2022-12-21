@@ -5,8 +5,8 @@
 #include "../navMath.h"
 #include "../pinConfig.h"
 
-PanSerialModule::PanSerialModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm, DroneExecutionManager* dem, fs::FS &fs):
-  DroneModule ( id, dmm, dlm, dem, fs )
+PanSerialModule::PanSerialModule(uint8_t id, DroneSystem* ds):
+  DroneModule ( id, ds )
  {
    setTypeName(FPSTR(PAN_SERIAL_STR_PAN_SERIAL));
 

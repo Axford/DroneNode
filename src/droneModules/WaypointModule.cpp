@@ -6,8 +6,8 @@
 #include <LITTLEFS.h>
 #include "Preferences.h"
 
-WaypointModule::WaypointModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm, DroneExecutionManager* dem, fs::FS &fs):
-  DroneModule ( id, dmm, dlm, dem, fs )
+WaypointModule::WaypointModule(uint8_t id, DroneSystem* ds):
+  DroneModule ( id, ds )
  {
    setTypeName(FPSTR(WAYPOINT_STR_WAYPOINT));
 

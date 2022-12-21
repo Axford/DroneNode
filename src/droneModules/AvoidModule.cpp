@@ -5,8 +5,8 @@
 #include "../navMath.h"
 #include "AsyncUDP.h"
 
-AvoidModule::AvoidModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm, DroneExecutionManager* dem, fs::FS &fs):
-  DroneModule ( id, dmm, dlm, dem, fs )
+AvoidModule::AvoidModule(uint8_t id, DroneSystem* ds):
+  DroneModule ( id, ds )
  {
    setTypeName(FPSTR(AVOID_STR_AVOID));
 

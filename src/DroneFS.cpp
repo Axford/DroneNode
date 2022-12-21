@@ -65,12 +65,11 @@ void DroneFSEntry::getPath(char * path, uint8_t maxLen) {
   uint8_t len = 0;
 
   // get path to this entry (will inc trailing /)
-  /*
+  
   if (_parent) {
     _parent->getPath(path, maxLen);
     len  = strlen(path);
   }
-  */
 
   // add our name to the path
   strncpy(&path[len], _name, maxLen - len);
