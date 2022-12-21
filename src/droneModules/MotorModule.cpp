@@ -171,13 +171,15 @@ void MotorModule::setupMode2() {
 
 void MotorModule::disable() {
   DroneModule::disable();
-  _subs[MOTOR_SUB_SPEED_E].param.data.f[0] = 0;
   update();
 }
 
 
 void MotorModule::update() {
   if (_error > 0 || !_setupDone) return;
+
+  // enforce zero speed if module disabled
+  if (!_enabled) _subs[MOTOR_SUB_SPEED_E].param.data.f[0] = 0;
 
   float v = _subs[MOTOR_SUB_SPEED_E].param.data.f[0];
 
