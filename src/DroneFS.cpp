@@ -1,5 +1,6 @@
 
 #include "DroneFS.h"
+#include "DroneSystem.h"
 #include <ArduinoLog.h>
 
 //--------------------------------------------------------
@@ -289,15 +290,30 @@ DroneFSEntry* DroneFSEntry::createEntryByPath(char* path) {
 // DroneFS
 //--------------------------------------------------------
 
-DroneFS::DroneFS() {
+DroneFS::DroneFS(DroneSystem* ds): _ds(ds) {
   char rootName[2] = "/";
   _nextId = 0;
+  // create root entry
   _root = new DroneFSEntry(this, NULL, rootName, true);
+
+  // detect filesystem
+
 }
 
 
 void DroneFS::setup() {
   Log.noticeln(F("DroneFS setup..."));
+
+  // TODO - move to FS class
+  Log.noticeln(F("[] Mount filesystem..."));
+  // passing true to .begin triggers a format if required
+  if(!LITTLEFS.begin(true)){
+    Log.errorln("[] LITTLEFS Mount Failed");
+    _ds->dled->setState(DRONE_LED_STATE_ERROR);
+    delay(3000);
+    // Should be formatted and working after a reboot
+    ESP.restart();
+  }
 
   _root->enumerate(); // will not recurse
 

@@ -49,7 +49,7 @@ protected:
   IvanLinkedList::LinkedList<DroneModule*> _mods; // modules to display
 public:
 
-  DiagnosticModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm, DroneExecutionManager* dem, fs::FS &fs);
+  DiagnosticModule(uint8_t id, DroneSystem* ds);
   ~DiagnosticModule();
 
   static DEM_NAMESPACE* registerNamespace(DroneExecutionManager *dem);

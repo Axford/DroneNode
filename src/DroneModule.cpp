@@ -1,4 +1,5 @@
 #include "DroneModule.h"
+#include "DroneSystem.h"
 #include "DroneLinkMsg.h"
 #include "DroneLinkManager.h"
 #include "DroneModuleManager.h"
@@ -12,12 +13,15 @@ using std::placeholders::_3;
 using std::placeholders::_4;
 
 
-DroneModule::DroneModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm, DroneExecutionManager* dem, fs::FS &fs):
-_dlm(dlm),
-_dmm(dmm),
-_dem(dem),
+DroneModule::DroneModule(uint8_t id, DroneSystem* ds):
+_ds(ds),
 _id(id),
-_fs(fs) {
+_fs(LITTLEFS) // TODO - replace with dfs reference
+ {
+  _dmm = _ds->dmm;
+  _dlm = _ds->dlm;
+  _dem = _ds->dem;
+
   _dmm->registerModule(this);
   _enabled = true;
   _error = 0;

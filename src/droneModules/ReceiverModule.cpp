@@ -2,6 +2,7 @@
 #include "../DroneLinkMsg.h"
 #include "../DroneLinkManager.h"
 #include "strings.h"
+#include "DroneSystem.h"
 
 // globals for use in ISRs
 uint8_t _globalReceiveMode = RECEIVER_MODE_PPM;
@@ -9,8 +10,8 @@ uint8_t _globalReceiverPins[4];
 unsigned long _globalReceiverRawTimers[4];
 unsigned long _globalLastReceiverSignal;
 
-ReceiverModule::ReceiverModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm, DroneExecutionManager* dem, fs::FS &fs):
-  DroneModule ( id, dmm, dlm, dem, fs )
+ReceiverModule::ReceiverModule(uint8_t id, DroneSystem* ds):
+  DroneModule ( id, ds )
  {
    setTypeName(FPSTR(RECEIVER_STR_RECEIVER));
 
@@ -237,7 +238,7 @@ void ReceiverModule::setup() {
 
   if (_params[RECEIVER_PARAM_MODE_E].data.uint8[0] == RECEIVER_MODE_PPM) {
 
-    if (_params[RECEIVER_PARAM_PINS_E].data.uint8[0] > 0) {
+    if (_ds->requestPin(_params[RECEIVER_PARAM_PINS_E].data.uint8[0], DRONE_SYSTEM_PIN_CAP_INPUT, this)) {
       _globalReceiverPins[0] = _params[RECEIVER_PARAM_PINS_E].data.uint8[0];
       _globalReceiverRawTimers[0] = 0;
       pinMode(_params[RECEIVER_PARAM_PINS_E].data.uint8[0], INPUT);
@@ -247,7 +248,7 @@ void ReceiverModule::setup() {
 
   } else {
 
-    if (_params[RECEIVER_PARAM_PINS_E].data.uint8[0] > 0) {
+    if (_ds->requestPin(_params[RECEIVER_PARAM_PINS_E].data.uint8[0], DRONE_SYSTEM_PIN_CAP_INPUT, this)) {
       _globalReceiverPins[0] = _params[RECEIVER_PARAM_PINS_E].data.uint8[0];
       _globalReceiverRawTimers[0] = 0;
       pinMode(_params[RECEIVER_PARAM_PINS_E].data.uint8[0], INPUT);
@@ -256,7 +257,7 @@ void ReceiverModule::setup() {
       //Log.errorln(F("Undefined pin 0 %d"), _params[RECEIVER_PARAM_PINS_E].data.uint8[0]);
     }
 
-    if (_params[RECEIVER_PARAM_PINS_E].data.uint8[1] > 0) {
+    if (_ds->requestPin(_params[RECEIVER_PARAM_PINS_E].data.uint8[1], DRONE_SYSTEM_PIN_CAP_INPUT, this)) {
       _globalReceiverPins[1] = _params[RECEIVER_PARAM_PINS_E].data.uint8[1];
       _globalReceiverRawTimers[1] = 0;
       pinMode(_params[RECEIVER_PARAM_PINS_E].data.uint8[1], INPUT);
@@ -266,7 +267,7 @@ void ReceiverModule::setup() {
       //Log.errorln(F("Undefined pin 1 %d"), _params[RECEIVER_PARAM_PINS_E].data.uint8[1]);
     }
 
-    if (_params[RECEIVER_PARAM_PINS_E].data.uint8[2] > 0) {
+    if (_ds->requestPin(_params[RECEIVER_PARAM_PINS_E].data.uint8[2], DRONE_SYSTEM_PIN_CAP_INPUT, this)) {
       _globalReceiverPins[2] = _params[RECEIVER_PARAM_PINS_E].data.uint8[2];
       _globalReceiverRawTimers[2] = 0;
       pinMode(_params[RECEIVER_PARAM_PINS_E].data.uint8[2], INPUT);
@@ -274,7 +275,7 @@ void ReceiverModule::setup() {
 
     }
 
-    if (_params[RECEIVER_PARAM_PINS_E].data.uint8[3] > 0) {
+    if (_ds->requestPin(_params[RECEIVER_PARAM_PINS_E].data.uint8[3], DRONE_SYSTEM_PIN_CAP_INPUT, this)) {
       _globalReceiverPins[3] = _params[RECEIVER_PARAM_PINS_E].data.uint8[3];
       _globalReceiverRawTimers[3] = 0;
       pinMode(_params[RECEIVER_PARAM_PINS_E].data.uint8[3], INPUT);

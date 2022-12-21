@@ -13,13 +13,15 @@ Cache directory structure for fast enumeration
 #include "Arduino.h"
 #include "LinkedList.h"
 #include "FS.h"
-#include <LITTLEFS.h>
+#include <LittleFS.h>
+#define LITTLEFS LittleFS
 
 #define DRONE_FS_MAX_NAME_SIZE    14  // forward-slash plus 8.3 + null
 #define DRONE_FS_MAX_PATH_SIZE    24  // inc null termination
 
 // forward decl
 class DroneFS;
+class DroneSystem;
 
 //--------------------------------------------------------
 // DroneFSEntry
@@ -73,12 +75,13 @@ public:
 //--------------------------------------------------------
 class DroneFS {
 protected:
+  DroneSystem* _ds;
   uint8_t _nextId;
   DroneFSEntry* _root;  // root entry "/"
 
 
 public:
-  DroneFS();
+  DroneFS(DroneSystem* ds);
 
   void setup();
 

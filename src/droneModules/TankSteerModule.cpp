@@ -4,6 +4,7 @@
 #include "../strings.h"
 #include "../navMath.h"
 
+
 TankSteerModule::TankSteerModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm, DroneExecutionManager* dem, fs::FS &fs):
   DroneModule ( id, dmm, dlm , dem, fs)
 {
@@ -89,6 +90,7 @@ TankSteerModule::TankSteerModule(uint8_t id, DroneModuleManager* dmm, DroneLinkM
   setParamName(FPSTR(STRING_THRESHOLD), param);
   param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_FLOAT, 4);
   param->data.f[0] = 15;  // 15m
+
 }
 
 

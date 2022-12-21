@@ -92,7 +92,7 @@ protected:
   unsigned long _lastSampleTime;
 public:
 
-  WindModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm, DroneExecutionManager* dem, fs::FS &fs);
+  WindModule(uint8_t id, DroneSystem* ds);
   ~WindModule();
 
   static DEM_NAMESPACE* registerNamespace(DroneExecutionManager *dem);

@@ -103,7 +103,7 @@ protected:
 
 public:
 
-  NavModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm, DroneExecutionManager* dem, fs::FS &fs);
+  NavModule(uint8_t id, DroneSystem* ds);
   ~NavModule();
 
   static DEM_NAMESPACE* registerNamespace(DroneExecutionManager *dem);

@@ -79,7 +79,7 @@ protected:
   Adafruit_INA219 *_sensor;
 public:
 
-  INA219Module(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm, DroneExecutionManager* dem, fs::FS &fs);
+  INA219Module(uint8_t id, DroneSystem* ds);
   ~INA219Module();
 
   static DEM_NAMESPACE* registerNamespace(DroneExecutionManager *dem);

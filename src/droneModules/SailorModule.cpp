@@ -4,8 +4,8 @@
 #include "../strings.h"
 #include "../navMath.h"
 
-SailorModule::SailorModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm, DroneExecutionManager* dem, fs::FS &fs):
-  DroneModule ( id, dmm, dlm , dem, fs)
+SailorModule::SailorModule(uint8_t id, DroneSystem* ds):
+  DroneModule ( id, ds )
  {
    // set type
    setTypeName(FPSTR(SAILOR_STR_SAILOR));

@@ -26,7 +26,7 @@ void DroneWire::setup() {
   Wire.beginTransmission(TCAADDR_V2);
   error = Wire.endTransmission();
   if (error == 0) {
-    Log.noticeln("[DW.s] Found v2 Multiplexer");
+    Log.noticeln("[DW.s] Found v2+ Multiplexer");
     _TCAADDR = TCAADDR_V2;
   }
 
@@ -34,6 +34,14 @@ void DroneWire::setup() {
     Log.errorln("[DW.s] Multiplexer not found");
   }
 }
+
+
+uint8_t DroneWire::getMultiplexerVersion() {
+  if (_TCAADDR == TCAADDR_V1) return 1;
+  if (_TCAADDR == TCAADDR_V2) return 2;
+  return 0;
+}
+
 
 void DroneWire::reset() {
   Log.noticeln(F("[DW.r] Reset multiplexer"));
@@ -47,11 +55,13 @@ void DroneWire::reset() {
   _lastChan = 8;  // to ensure the correct channel is reselected
 
   // check comms to multiplexer
+  /*
   Wire.beginTransmission(_TCAADDR);
   byte error = Wire.endTransmission();
   if (error != 0) {
     Log.noticeln("[DW.r] Multiplexer not responding");
   }
+  */
 }
 
 void DroneWire::selectChannel(uint8_t chan) {
@@ -64,6 +74,20 @@ void DroneWire::selectChannel(uint8_t chan) {
 
   _lastChan = chan;
 }
+
+
+// scan a specific address on current channel, return true if found
+boolean DroneWire::scanAddress(uint8_t addr) {
+  Wire.beginTransmission(addr);
+  byte error = Wire.endTransmission();
+  if (error == 0) {
+    return true;
+  } else if (error == 4) {
+    // unknown I2C response
+  }
+  return false;
+}
+
 
 // scan current channel for devices
 void DroneWire::scan() {

@@ -4,6 +4,8 @@ Neopixel Modules
 
 Manage a strip of NEOPixels (WS2812B)
 
+TODO - rework alongside DroneLED to use the v4 LED header
+
 * Disable module will clear LEDs first (turn off) -so can be used to toggle on/off
 * Base settings:
   - Pin
@@ -89,7 +91,7 @@ protected:
   NEOPIXEL_COLOUR _blackout;
 public:
 
-  NeopixelModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm, DroneExecutionManager* dem, fs::FS &fs);
+  NeopixelModule(uint8_t id, DroneSystem* ds);
 
   static DEM_NAMESPACE* registerNamespace(DroneExecutionManager *dem);
   static void registerParams(DEM_NAMESPACE* ns, DroneExecutionManager *dem);

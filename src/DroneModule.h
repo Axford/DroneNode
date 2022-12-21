@@ -94,6 +94,7 @@ enum DRONE_MODULE_DISCOVERY_STATE {
 };
 
 // forward declarations
+class DroneSystem;
 class DroneLinkManager;
 class DroneModuleManager;
 class DroneExecutionManager;
@@ -103,6 +104,7 @@ class DroneExecutionManager;
 // DroneModule
 class DroneModule {
 protected:
+  DroneSystem* _ds;
   DroneLinkManager* _dlm;
   DroneModuleManager* _dmm;
   DroneExecutionManager* _dem;
@@ -134,7 +136,7 @@ public:
   long hLMDuration;
   long loopDuration;
 
-  DroneModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm, DroneExecutionManager* dem, fs::FS &fs);
+  DroneModule(uint8_t id, DroneSystem* ds);
   ~DroneModule();
 
   uint8_t id();

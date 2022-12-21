@@ -3,8 +3,8 @@
 #include "../DroneLinkManager.h"
 #include "WiFi.h"
 
-UDPTelemetryModule::UDPTelemetryModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm, DroneExecutionManager* dem, fs::FS &fs):
-  NetworkInterfaceModule ( id, dmm, dlm, dem, fs )
+UDPTelemetryModule::UDPTelemetryModule(uint8_t id, DroneSystem* ds):
+  NetworkInterfaceModule ( id, ds )
  {
    setTypeName(FPSTR(UDP_TELEMETRY_STR_UDP_TELEMETRY));
    _receivedSize = 0;

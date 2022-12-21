@@ -1,3 +1,4 @@
+#include "DroneSystem.h"
 #include "DroneExecutionManager.h"
 #include "DroneLinkManager.h"
 #include "DroneModuleManager.h"
@@ -87,11 +88,12 @@ DEM_ENUM_MAPPING DRONE_PARAM_TABLE[] PROGMEM = {
 
 
 
-DroneExecutionManager::DroneExecutionManager(DroneModuleManager *dmm, DroneLinkManager *dlm, fs::FS &fs, File &logFile):
-  _fs(fs),
+DroneExecutionManager::DroneExecutionManager(DroneSystem* ds, File &logFile):
+  _ds(ds),
+  _fs(LITTLEFS),  // TODO - replace with dfs reference
   _logFile(logFile) {
-  _dmm = dmm;
-  _dlm = dlm;
+  _dmm = _ds->dmm;
+  _dlm = _ds->dlm;
   _call.p = -1;
   _data.p = -1;
 
@@ -112,7 +114,7 @@ DroneExecutionManager::DroneExecutionManager(DroneModuleManager *dmm, DroneLinkM
   _instruction.command[0] = '_';
   _instruction.command[1] = '_';
   _instruction.command[2] = 0;
-  _instruction.addr.node = dlm->node();
+  _instruction.addr.node = _dlm->node();
   _instruction.addr.channel = 0;
   _instruction.addr.paramPriority = 0;
   _instruction.dataType = DRONE_LINK_MSG_TYPE_UINT8_T;
@@ -1708,6 +1710,7 @@ void DroneExecutionManager::completeSetup() {
   Log.noticeln(F("[.s] Setup complete"));
 
   // redirect logging to serial
+
   if (_logFile) _logFile.close();
   Log.begin(LOG_LEVEL_VERBOSE, &Serial);
 }

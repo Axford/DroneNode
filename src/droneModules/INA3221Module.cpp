@@ -4,8 +4,8 @@
 #include "strings.h"
 #include "OLEDTomThumbFont.h"
 
-INA3221Module::INA3221Module(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm, DroneExecutionManager* dem, fs::FS &fs):
-  I2CBaseModule ( id, dmm, dlm, dem, fs )
+INA3221Module::INA3221Module(uint8_t id, DroneSystem* ds):
+  I2CBaseModule ( id, ds )
  {
    setTypeName(FPSTR(INA3221_STR_INA3221));
    _sensor = NULL;

@@ -1728,7 +1728,7 @@ boolean DroneLinkManager::generateAck(NetworkInterfaceModule *interface, uint8_t
 
 
 void DroneLinkManager::generateHellos() {
-  Serial.println("[DLM.gH]");
+  //Serial.println("[DLM.gH]");
 
   uint32_t loopTime = millis();
 

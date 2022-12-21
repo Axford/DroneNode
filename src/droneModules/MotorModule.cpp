@@ -2,9 +2,10 @@
 #include "../DroneLinkMsg.h"
 #include "../DroneLinkManager.h"
 #include "strings.h"
+#include "DroneSystem.h"
 
-MotorModule::MotorModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm, DroneExecutionManager* dem, fs::FS &fs):
-  DroneModule ( id, dmm, dlm, dem, fs )
+MotorModule::MotorModule(uint8_t id, DroneSystem* ds):
+  DroneModule ( id, ds )
  {
    setTypeName(FPSTR(MOTOR_STR_MOTOR));
 
@@ -116,7 +117,13 @@ void MotorModule::setup() {
 
 
 void MotorModule::setupMode0() {
-  if (_params[MOTOR_PARAM_PINS_E].data.uint8[0] > 0) {
+  // register pins
+  boolean registered = true;
+  for (uint8_t i=0; i<3; i++) {
+    registered &= _ds->requestPin(_params[MOTOR_PARAM_PINS_E].data.uint8[i], DRONE_SYSTEM_PIN_CAP_OUTPUT, this);
+  }
+
+  if (registered) {
     // configure LED PWM functionalitites
     ledcSetup(_params[MOTOR_PARAM_PWMCHANNEL_E].data.uint8[0], 5000, 8);
 
@@ -133,7 +140,7 @@ void MotorModule::setupMode0() {
       digitalWrite(_params[MOTOR_PARAM_PINS_E].data.uint8[MOTOR_PIN_B], LOW);
     }
   } else {
-    Log.errorln(F("[MM.s] Undefined pins %u"), _id);
+    Log.errorln(F("[MM.s] Pins unavailable %u"), _id);
     setError(1);
     disable();
   }

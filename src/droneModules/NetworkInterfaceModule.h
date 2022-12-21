@@ -19,7 +19,7 @@ protected:
 
 public:
 
-  NetworkInterfaceModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm, DroneExecutionManager* dem, fs::FS &fs);
+  NetworkInterfaceModule(uint8_t id, DroneSystem* ds);
 
   virtual void loop();
 

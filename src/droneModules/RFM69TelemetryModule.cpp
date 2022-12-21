@@ -4,11 +4,12 @@
 #include "WiFi.h"
 #include "../pinConfig.h"
 #include "strings.h"
+#include "DroneSystem.h"
 
 //#include "RFM69registers.h"
 
-RFM69TelemetryModule::RFM69TelemetryModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm, DroneExecutionManager* dem, fs::FS &fs):
-  NetworkInterfaceModule ( id, dmm, dlm, dem, fs )
+RFM69TelemetryModule::RFM69TelemetryModule(uint8_t id, DroneSystem* ds):
+  NetworkInterfaceModule ( id, ds )
  {
    setTypeName(FPSTR(RFM69_TELEMETRY_STR_RFM69_TELEMETRY));
    _packetsReceived = 0;
@@ -104,6 +105,14 @@ void RFM69TelemetryModule::setup() {
   if (_mgmtParams[DRONE_MODULE_PARAM_STATUS_E].data.uint8[0] == 0) return;
 
   //pinMode(PIN_IN0_0, INPUT);
+
+  // register CS and INT pins
+  if (!_ds->requestPin(PIN_SD_6, DRONE_SYSTEM_PIN_CAP_OUTPUT, this) ||
+      !_ds->requestPin(PIN_IN0_0, DRONE_SYSTEM_PIN_CAP_INPUT, this) ) {
+    Log.errorln(F("[RFM.s] Pins unavailable"));
+    setError(1);
+    disable();
+  }
 
   if (!_radio) {
     _spi.setPins(19, 23, 18);  // MISO, MOSI, CLK

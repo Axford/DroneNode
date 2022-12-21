@@ -73,6 +73,8 @@ void WiFiManager::loadConfiguration(fs::FS &fs) {
     // add default credentials
     cred.ssid = "Badger";
     cred.password = "LouisVuitton";
+    //cred.ssid = "baladins";
+    //cred.password = "lulutte2";
     _networks.add(cred);
   }
 }

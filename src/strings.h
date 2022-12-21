@@ -4,12 +4,13 @@
 #include <Arduino.h>
 
 // strings
-static const char STRING_D[] PROGMEM = " %d ";
-static const char STRING_F[] PROGMEM = " %F ";
-static const char STRING_S[] PROGMEM = " %s ";
-static const char STRING_X[] PROGMEM = " %X ";
+static const char STRING_D[]  = " %d ";
+static const char STRING_F[]  = " %F ";
+static const char STRING_S[]  = " %s ";
+static const char STRING_X[]  = " %X ";
 
-static const char STRING_BLANK[] PROGMEM = "";
+static const char STRING_BLANK[]  = "";
+
 
 static const char STRING_ACCEL[] PROGMEM = "accel";
 static const char STRING_ACTIVESCENE[] PROGMEM = "activeScene";
@@ -149,6 +150,7 @@ static const char STRING_WING[] PROGMEM = "wing";
 static const char STRING_XAXIS[] PROGMEM = "xAxis";
 static const char STRING_YAXIS[] PROGMEM = "yAxis";
 static const char STRING_ZAXIS[] PROGMEM = "zAxis";
+
 
 
 

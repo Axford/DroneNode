@@ -93,7 +93,7 @@ protected:
   float _history[NMEA_HISTORY_DEPTH][3];
 public:
 
-  NMEAModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm, DroneExecutionManager* dem, fs::FS &fs);
+  NMEAModule(uint8_t id, DroneSystem* ds);
 
   static DEM_NAMESPACE* registerNamespace(DroneExecutionManager *dem);
   static void registerParams(DEM_NAMESPACE* ns, DroneExecutionManager *dem);

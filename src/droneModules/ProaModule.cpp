@@ -4,8 +4,8 @@
 #include "../strings.h"
 #include "../navMath.h"
 
-ProaModule::ProaModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm, DroneExecutionManager* dem, fs::FS &fs):
-  DroneModule ( id, dmm, dlm , dem, fs)
+ProaModule::ProaModule(uint8_t id, DroneSystem* ds):
+  DroneModule ( id, ds )
  {
    // set type
    setTypeName(FPSTR(PROA_STR_PROA));

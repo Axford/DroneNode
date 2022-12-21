@@ -88,7 +88,7 @@ protected:
   Adafruit_LSM9DS1 *_sensor;
 public:
 
-  LSM9DS1Module(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm, DroneExecutionManager* dem, fs::FS &fs);
+  LSM9DS1Module(uint8_t id, DroneSystem* ds);
   ~LSM9DS1Module();
 
   static DEM_NAMESPACE* registerNamespace(DroneExecutionManager *dem);

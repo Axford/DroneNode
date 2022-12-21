@@ -3,11 +3,12 @@
 #include "../DroneLinkManager.h"
 #include "strings.h"
 #include <SPIFFS.h>
+#include "DroneSystem.h"
 
 unsigned long _globalWindCounter;
 
-WindModule::WindModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm, DroneExecutionManager* dem, fs::FS &fs):
-  I2CBaseModule ( id, dmm, dlm, dem, fs )
+WindModule::WindModule(uint8_t id, DroneSystem* ds):
+  I2CBaseModule ( id, ds )
  {
    setTypeName(FPSTR(WIND_STR_WIND));
    //_params[I2CBASE_PARAM_ADDR_E].data.uint8[0] = WIND_I2C_ADDRESS;
@@ -139,10 +140,15 @@ void WindModule::setup() {
   }
 
   if (_params[WIND_PARAM_PINS_E].data.uint8[0] > 0) {
-    pinMode(_params[WIND_PARAM_PINS_E].data.uint8[0], INPUT_PULLUP);
+    if (_ds->requestPin(_params[WIND_PARAM_PINS_E].data.uint8[0], DRONE_SYSTEM_PIN_CAP_INPUT, this)) {
+      pinMode(_params[WIND_PARAM_PINS_E].data.uint8[0], INPUT_PULLUP);
 
-    // attach interrupt
-    attachInterrupt( _params[WIND_PARAM_PINS_E].data.uint8[0], ISR, FALLING );
+      // attach interrupt
+      attachInterrupt( _params[WIND_PARAM_PINS_E].data.uint8[0], ISR, FALLING );
+
+    } else {
+      Log.errorln(F("[W.s] Speed pin unavailable %u"), _id);
+    }
 
   } else {
     Log.errorln(F("[W.s] Undefined speed pin %u"), _id);

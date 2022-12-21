@@ -4,6 +4,7 @@
 #include "../DroneModuleManager.h"
 #include "OLEDTomThumbFont.h"
 #include "strings.h"
+#include "DroneSystem.h"
 
 /*
 TODO
@@ -49,8 +50,8 @@ Root = info for active binding OR indicator that is unbound
 
 
 
-ControllerModule::ControllerModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* dlm, DroneExecutionManager* dem, fs::FS &fs):
-  I2CBaseModule ( id, dmm, dlm, dem, fs )
+ControllerModule::ControllerModule(uint8_t id, DroneSystem* ds):
+  I2CBaseModule ( id, ds )
  {
    setTypeName(FPSTR(CONTROLLER_STR_CONTROLLER));
 
@@ -482,6 +483,10 @@ void ControllerModule::setup() {
   DroneModule::setup();
 
   // arm pin setup
+  if (!_ds->requestPin(CONTROLLER_ARM_BUTTON, DRONE_SYSTEM_PIN_CAP_INPUT, this)) {
+    setError(1);
+    return;
+  }
   pinMode(CONTROLLER_ARM_BUTTON, INPUT_PULLUP);
   _armed = false;
 
