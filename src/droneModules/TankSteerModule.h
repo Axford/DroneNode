@@ -82,6 +82,7 @@ protected:
   float _dError;
   float _lastError;
   float _lastHeading;
+  uint8_t _lastMode;
 
 public:
 

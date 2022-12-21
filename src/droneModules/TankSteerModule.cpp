@@ -15,6 +15,7 @@ TankSteerModule::TankSteerModule(uint8_t id, DroneModuleManager* dmm, DroneLinkM
   _dError = 0;
   _lastError = 0;
   _lastHeading = 0;
+  _lastMode = TANK_STEER_MODE_MANUAL;
 
   // subs
   initSubs(TANK_STEER_SUBS);
@@ -37,6 +38,9 @@ TankSteerModule::TankSteerModule(uint8_t id, DroneModuleManager* dmm, DroneLinkM
   sub->addrParam = TANK_STEER_SUB_DISTANCE_ADDR;
   sub->param.paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, TANK_STEER_SUB_DISTANCE);
   setParamName(FPSTR(STRING_DISTANCE), &sub->param);
+
+  _subs[TANK_STEER_SUB_TARGET_E].enabled = false;
+  _subs[TANK_STEER_SUB_DISTANCE_E].enabled = false;
 
 
   // pubs
@@ -122,6 +126,15 @@ void TankSteerModule::registerParams(DEM_NAMESPACE* ns, DroneExecutionManager *d
 
 void TankSteerModule::update() {
   if (!_setupDone) return;
+
+  if (_lastMode != _params[TANK_STEER_PARAM_MODE_E].data.uint8[0]) {
+    if (_params[TANK_STEER_PARAM_MODE_E].data.uint8[0] == TANK_STEER_MODE_AUTOMATIC) {
+      // zero distance to stop motors when entering manual
+      _subs[TANK_STEER_SUB_DISTANCE_E].param.data.f[0] = 0;
+
+    }
+    _lastMode = _params[TANK_STEER_PARAM_MODE_E].data.uint8[0];
+  }
 
   if (_params[TANK_STEER_PARAM_MODE_E].data.uint8[0] == TANK_STEER_MODE_MANUAL) {
     _subs[TANK_STEER_SUB_TARGET_E].enabled = false;
@@ -234,6 +247,11 @@ void TankSteerModule::update() {
     speed = (d/threshold) * (smax-smin) + smin;
   }
 
+  // check for zero distance.... and disable motors
+  if (_subs[TANK_STEER_SUB_DISTANCE_E].param.data.f[0] < 0.1) {
+    speed = 0;
+    turnRate = 0;
+  }
 
   // local shortcuts
   float x = turnRate;
