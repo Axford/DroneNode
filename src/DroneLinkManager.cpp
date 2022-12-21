@@ -158,6 +158,16 @@ void DroneLinkManager::processChannels() {
 }
 
 
+void DroneLinkManager::resetExternalSubscriptions(uint8_t extNode) {
+  // reset state on any external subscriptions to extNode
+  DroneLinkChannel* c;
+  for(int i = 0; i < _channels.size(); i++){
+    c = _channels.get(i);
+    c->resetExternalSubscriptions(extNode);
+  }
+}
+
+
 void DroneLinkManager::processExternalSubscriptions() {
   // check for pending subscriptions
 
@@ -653,7 +663,7 @@ void DroneLinkManager::receiveHello(NetworkInterfaceModule *interface, uint8_t *
 
   unsigned long loopTime = millis();
 
-  Log.noticeln("[DLM.rP] Hello from %u tx by %u", header->srcNode, header->txNode);
+  //Log.noticeln("[DLM.rP] Hello from %u tx by %u", header->srcNode, header->txNode);
 
   DRONE_MESH_MSG_HELLO *hello = (DRONE_MESH_MSG_HELLO*)buffer;
 
@@ -695,7 +705,10 @@ void DroneLinkManager::receiveHello(NetworkInterfaceModule *interface, uint8_t *
     // if new uptime is significantly less than current uptime
     if (hello->uptime < nodeInfo->uptime * 0.9) {
       feasibleRoute = true;
-      Log.noticeln("Lower uptime %u", hello->uptime);
+      //Log.noticeln("Lower uptime %u", hello->uptime);
+
+      // probably means the remote node reset...  renew any subscriptions to it!!
+      resetExternalSubscriptions(header->srcNode);
     }
 
     // if the interface has changed and there's a lower metric
@@ -705,19 +718,19 @@ void DroneLinkManager::receiveHello(NetworkInterfaceModule *interface, uint8_t *
       // is this a new sequence (allow for wrap-around)
       if ((header->seq > nodeInfo->seq) || (nodeInfo->seq > 128 && (header->seq < nodeInfo->seq - 128))) {
         feasibleRoute = true;
-        Log.noticeln("New seq %u", header->seq);
+        //Log.noticeln("New seq %u", header->seq);
       }
 
       // or is it the same seq, but with a better metric
       if (header->seq == nodeInfo->seq &&
           newMetric < nodeInfo->metric) {
         feasibleRoute = true;
-        Log.noticeln("Better metric %u", newMetric);
+        //Log.noticeln("Better metric %u", newMetric);
       }
     }
 
     if (feasibleRoute) {
-      Log.noticeln("Updating route info");
+      //Log.noticeln("Updating route info");
       nodeInfo->seq = header->seq;
       nodeInfo->metric = newMetric;
       nodeInfo->helloMetric = hello->metric;
@@ -735,7 +748,7 @@ void DroneLinkManager::receiveHello(NetworkInterfaceModule *interface, uint8_t *
       }
 
     } else {
-      Log.noticeln("New route infeasible");
+      //Log.noticeln("New route infeasible");
 
       if (loopTime > nodeInfo->lastBroadcast + DRONE_LINK_MANAGER_HELLO_INTERVAL) {
         // retransmit our current best route on all interfaces
@@ -757,13 +770,13 @@ void DroneLinkManager::receiveSubscriptionRequest(NetworkInterfaceModule *interf
   DRONE_MESH_MSG_HEADER *header = (DRONE_MESH_MSG_HEADER*)buffer;
   DRONE_MESH_MSG_SUBCSRIPTION_REQUEST *subBuffer = (DRONE_MESH_MSG_SUBCSRIPTION_REQUEST*)buffer;
 
-  Log.noticeln("[DLM.rS] Sub request from %u to %u", header->srcNode, header->destNode);
+  //Log.noticeln("[DLM.rS] Sub request from %u to %u", header->srcNode, header->destNode);
 
   // check if we are the nextNode... otherwise ignore it
   if (header->nextNode == _node) {
     // are we the destination?
     if (header->destNode == _node) {
-      Log.noticeln("[DLM.rS] Reached destination");
+      //Log.noticeln("[DLM.rS] Reached destination");
 
       // make a note that we need to send stuff to the subscribing (src) node
       subscribeExt(header->srcNode, subBuffer->channel, subBuffer->param);
@@ -772,7 +785,7 @@ void DroneLinkManager::receiveSubscriptionRequest(NetworkInterfaceModule *interf
       generateResponse(buffer, DRONE_MESH_MSG_TYPE_SUBSCRIPTION_RESPONSE);
 
     } else {
-      Log.noticeln("[DLM.rS] Intermediate hop");
+      //Log.noticeln("[DLM.rS] Intermediate hop");
 
       hopAlong(buffer);
     }
@@ -786,7 +799,7 @@ void DroneLinkManager::receiveSubscriptionResponse(NetworkInterfaceModule *inter
   DRONE_MESH_MSG_HEADER *header = (DRONE_MESH_MSG_HEADER*)buffer;
   DRONE_MESH_MSG_SUBCSRIPTION_REQUEST *subBuffer = (DRONE_MESH_MSG_SUBCSRIPTION_REQUEST*)buffer;
 
-  Log.noticeln("[DLM.rS] Sub response from %u to %u", header->srcNode, header->destNode);
+  //Log.noticeln("[DLM.rS] Sub response from %u to %u", header->srcNode, header->destNode);
 
   // check if we are the destination... otherwise ignore it
   if (header->destNode == _node) {
@@ -807,13 +820,13 @@ void DroneLinkManager::receiveSubscriptionResponse(NetworkInterfaceModule *inter
 void DroneLinkManager::receiveDroneLinkMsg(NetworkInterfaceModule *interface, uint8_t *buffer, uint8_t metric) {
   DRONE_MESH_MSG_HEADER *header = (DRONE_MESH_MSG_HEADER*)buffer;
 
-  Log.noticeln("[DLM.rDlM] DLM from %u to %u", header->srcNode, header->destNode);
+  //Log.noticeln("[DLM.rDlM] DLM from %u to %u", header->srcNode, header->destNode);
 
   // check if we are the nextNode... otherwise ignore it
   if (header->nextNode == _node) {
     // are we the destination?
     if (header->destNode == _node) {
-      Log.noticeln("[DLM.rDlM] Reached destination");
+      //Log.noticeln("[DLM.rDlM] Reached destination");
 
       // upwrap contained msg
       uint8_t payloadSize = getDroneMeshMsgPayloadSize(buffer);
@@ -824,7 +837,7 @@ void DroneLinkManager::receiveDroneLinkMsg(NetworkInterfaceModule *interface, ui
       publish(_receivedMsg);
 
     } else {
-      Log.noticeln("[DLM.rDlM] Intermediate hop");
+      //Log.noticeln("[DLM.rDlM] Intermediate hop");
 
       hopAlong(buffer);
     }
@@ -835,14 +848,14 @@ void DroneLinkManager::receiveDroneLinkMsg(NetworkInterfaceModule *interface, ui
 void DroneLinkManager::receiveRouterRequest(NetworkInterfaceModule *interface, uint8_t *buffer, uint8_t metric) {
   DRONE_MESH_MSG_HEADER *header = (DRONE_MESH_MSG_HEADER*)buffer;
 
-  Log.noticeln("[DLM.rT] Router request from %u to %u", header->srcNode, header->destNode);
+  //Log.noticeln("[DLM.rT] Router request from %u to %u", header->srcNode, header->destNode);
 
   // check if we are the nextNode... otherwise ignore it
   if (header->nextNode == _node) {
 
     // are we the destination?
     if (header->destNode == _node) {
-      Log.noticeln("  Reached destination");
+      //Log.noticeln("  Reached destination");
 
       //DRONE_MESH_MSG_ROUTER_REQUEST* req = (DRONE_MESH_MSG_ROUTER_REQUEST*)buffer;
 
@@ -861,7 +874,7 @@ void DroneLinkManager::receiveRouterRequest(NetworkInterfaceModule *interface, u
 
 
     } else {
-      Log.noticeln("  Intermediate hop");
+      //Log.noticeln("  Intermediate hop");
       hopAlong(buffer);
     }
   }
@@ -1326,7 +1339,7 @@ void DroneLinkManager::receiveLinkCheckRequest(NetworkInterfaceModule *interface
 void DroneLinkManager::hopAlong(uint8_t *buffer) {
   DRONE_MESH_MSG_HEADER *header = (DRONE_MESH_MSG_HEADER*)buffer;
 
-  Log.noticeln("[DLM.hA] %u --> %u", header->srcNode, header->destNode);
+  //] %u --> %u", header->srcNode, header->destNode);
 
   // check if we are the nextNode... otherwise ignore it
   if (header->nextNode == _node) {
@@ -1475,17 +1488,19 @@ DRONE_MESH_MSG_BUFFER* DroneLinkManager::getTransmitBuffer(NetworkInterfaceModul
     _txQueue.add(buffer);
   }
 
-  // failing that, lets see if there's one of lower priority we can repurpose
+  // failing that, lets see if there's one of lower priority we can repurpose - find the lowest priority to kick
   if (!buffer) {
+    uint8_t lowestPriority = priority;
     for (uint8_t i=0; i<_txQueue.size(); i++) {
       DRONE_MESH_MSG_BUFFER *b = _txQueue.get(i);
       // if not an Ack and lower priority
       if (getDroneMeshMsgPriority(b->data) < priority &&
+          getDroneMeshMsgPriority(b->data) < lowestPriority &&
           !isDroneMeshMsgAck(b->data)) {
         buffer = b;
+        lowestPriority = priority;
         _kicked++;
         isKicked = true;
-        break;
       }
     }
   }
@@ -1942,21 +1957,34 @@ boolean DroneLinkManager::sendDroneLinkMessage(NetworkInterfaceModule *interface
   uint8_t payloadSize = msg->totalSize();
   uint8_t totalSize = payloadSize + sizeof(DRONE_MESH_MSG_HEADER) + 1;
 
+  uint8_t priority = msg->priority();
+  uint32_t timeout = 1000;
+  switch (priority) {
+    case DRONE_LINK_MSG_PRIORITY_CRITICAL: timeout = 1000; break;
+    case DRONE_LINK_MSG_PRIORITY_HIGH:     timeout = 2000; break;
+    case DRONE_LINK_MSG_PRIORITY_MEDIUM:   timeout = 4000; break;
+    case DRONE_LINK_MSG_PRIORITY_LOW:      timeout = 8000; break;
+  }
+
   // ignore anything where the source node is not this node
-  if (msg->source() != _node) return true;
+  if (msg->source() != _node) {
+    return true;
+  }
 
   // param filter check only relevant to local address space
   // and can be ignored for name responses
   if (msg->node() == _node && msg->type() < DRONE_LINK_MSG_TYPE_NAME) {
     // calc hashmap index
-    int index = (msg->_msg.channel << 8) | getDroneLinkMsgParam(msg->_msg.paramPriority);
+    uint32_t index = (destNode << 16) | (msg->_msg.channel << 8) | getDroneLinkMsgParam(msg->_msg.paramPriority);
 
     // see if we already have an entry in the hasmap
     struct DRONE_LINK_PARAM_FILTER *pf;
     HASH_FIND_INT(_paramFilter, &index, pf);
     if (pf) {
       // check last tx time
-      if (millis() <= pf->lastTxTime + 1000) return true; // abandon packet
+      if (millis() <= pf->lastTxTime + timeout) {
+        return true; // abandon packet
+      }
 
       // update lastTxTime
       pf->lastTxTime = millis();

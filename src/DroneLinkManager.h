@@ -163,6 +163,7 @@ public:
 
     void processChannels();
     void processExternalSubscriptions();
+    void resetExternalSubscriptions(uint8_t extNode);
 
     void removeRoute(uint8_t node);
 

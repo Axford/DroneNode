@@ -22,7 +22,8 @@ ServoModule::ServoModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* 
 
    sub = &_subs[SERVO_SUB_POSITION_E];
    sub->addrParam = SERVO_SUB_POSITION_ADDR;
-   sub->param.paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, SERVO_SUB_POSITION);
+   // set to high priority so we can monitor its value easily from the server
+   sub->param.paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_HIGH, SERVO_SUB_POSITION);
    setParamName(FPSTR(STRING_POSITION), &sub->param);
 
    // pubs
@@ -59,7 +60,7 @@ ServoModule::ServoModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* 
    _params[SERVO_PARAM_CENTRE_E].data.f[0] = 0;
 
    param = &_params[SERVO_PARAM_OUTPUT_E];
-   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, SERVO_PARAM_OUTPUT);
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_MEDIUM, SERVO_PARAM_OUTPUT);
    setParamName(FPSTR(STRING_OUTPUT), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 4);
    _params[SERVO_PARAM_OUTPUT_E].data.f[0] = _targetPos;

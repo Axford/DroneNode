@@ -15,7 +15,8 @@ MotorModule::MotorModule(uint8_t id, DroneModuleManager* dmm, DroneLinkManager* 
 
    sub = &_subs[MOTOR_SUB_SPEED_E];
    sub->addrParam = MOTOR_SUB_SPEED_ADDR;
-   sub->param.paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, MOTOR_SUB_SPEED);
+   // set to high priority so we can easily monitor from the server
+   sub->param.paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_HIGH, MOTOR_SUB_SPEED);
    setParamName(FPSTR(STRING_SPEED), &sub->param);
 
    // pubs

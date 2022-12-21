@@ -13,6 +13,7 @@
 
 #define DRONE_LINK_CHANNEL_SUB_PENDING_RETRY_INTERVAL  1000
 #define DRONE_LINK_CHANNEL_SUB_REQUESTED_RETRY_INTERVAL  5000
+#define DRONE_LINK_CHANNEL_SUB_REDO_INTERVAL 60000
 
 
 // subs are either internal modules or external (via the mesh)
@@ -40,6 +41,7 @@ protected:
   uint8_t _node; // which node is associated with this channel
   uint8_t _id;  // channel id
   uint32_t _choked;
+  uint8_t _maxSize;
   IvanLinkedList::LinkedList<DroneLinkChannelSubscription*> _subs;
   IvanLinkedList::LinkedList<DroneLinkMsg*> _queue;
   uint8_t _peakSize;
@@ -63,6 +65,7 @@ public:
 
     void subscribe(uint8_t extNode, DroneModule* subscriber, uint8_t param);
 
+    void resetExternalSubscriptions(uint8_t extNode);
     void processExternalSubscriptions();
     void confirmExternalSubscription(uint8_t param);
     void removeExternalSubscriptions(uint8_t node);

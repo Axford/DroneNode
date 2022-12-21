@@ -188,7 +188,7 @@ void NMEAModule::loop() {
         // TODO:
       } else {
         if (_nmea->isValid()) {
-          Log.noticeln(F("Fresh GPS"));
+          //Log.noticeln(F("Fresh GPS"));
 
           float tempf[3];
           tempf[1] = _nmea->getLatitude() / 1000000.;
