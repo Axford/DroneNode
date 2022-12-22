@@ -13,7 +13,7 @@ void DroneSystem::configurePin(uint8_t pin, uint8_t capabilities) {
 // public
 // ----------------------------------------------------------------------------
 
-DroneSystem::DroneSystem() : _server(80), dfs(this) {
+DroneSystem::DroneSystem() : _server(80), dfs(this), _fsEditor(LITTLEFS, _doLoop) {
   _motherboardVersion = 0;
 
   // create and give SPI Sempahore
@@ -140,12 +140,12 @@ boolean DroneSystem::requestPin(uint8_t pin, uint8_t capabilities, DroneModule* 
   // check available
   if (_pins[pin].state == DRONE_SYSTEM_PIN_STATE_AVAILABLE) {
     // check pin has requested capabilities
-    if (_pins[pin].capabilities & capabilities == capabilities) {
+    if ((_pins[pin].capabilities & capabilities) == capabilities) {
       _pins[pin].state = DRONE_SYSTEM_PIN_STATE_ACTIVE;
       _pins[pin].module = module;
       return true;
     } else {
-      Log.errorln("[ds.rP] Pin does not have requested capabilities %u, %u", pin, capabilities);
+      Log.errorln("[ds.rP] Pin does not have requested capabilities %u, %u != %u", pin, _pins[pin].capabilities, capabilities);
       return false;
     }
 
@@ -266,16 +266,16 @@ void DroneSystem::setupWebServer() {
   });
   */
 
-  /*
-  fsEditor.httpuser = "admin";
-  fsEditor.httppassword = "admin";
-  fsEditor.xSPISemaphore = xSPISemaphore;
-  fsEditor.configureWebServer(_server);
-  */
+  
+  _fsEditor.httpuser = "admin";
+  _fsEditor.httppassword = "admin";
+  _fsEditor.xSPISemaphore = _xSPISemaphore;
+  _fsEditor.configureWebServer(_server);
+  
 
   DefaultHeaders::Instance().addHeader("Access-Control-Allow-Origin", "*");
 
-  _server.serveStatic("/", LITTLEFS, "/").setDefaultFile("index.htm");
+  //_server.serveStatic("/", LITTLEFS, "/").setDefaultFile("index.htm");
 
   _server.begin();
 }
@@ -348,7 +348,7 @@ void DroneSystem::setup() {
 
   // switch to logging to startup.log file on flash
   Log.noticeln(F("[] Sending log to startup.log..."));
-  Log.begin(LOG_LEVEL_VERBOSE, &_logFile);
+  //Log.begin(LOG_LEVEL_VERBOSE, &_logFile);
   //Log.begin(LOG_LEVEL_VERBOSE, &Serial);
 
   createDefaultConfig();
@@ -392,11 +392,10 @@ void DroneSystem::setup() {
   // TODO - make this a serial or web interface function - no need todo on every boot
   //DroneWire::scanAll();
 
-  // TODO - integrate OTA
-  /*
-  OTAMgr.onEvent = handleOTAEVent;
-  OTAMgr.init( dmm->hostname() );
-  */
+  // TODO - handle update events
+  //_OTAMgr->onEvent = handleOTAEVent;
+  //_OTAMgr->init( dmm->hostname() );
+
 
   // flush and close _logFile
   _logFile.flush();
@@ -415,7 +414,6 @@ void DroneSystem::loop() {
   // TODO - add an FPS timer
   //loopTime = millis();
 
-  // TODO - rework status LED
   if (_wifiManager.isEnabled() && WiFi.status() == WL_CONNECTED) {
     dled->setState(DRONE_LED_STATE_RUNNING_WIFI);
   } else {
@@ -474,8 +472,6 @@ void DroneSystem::loop() {
     }
   }
 
-  // TODO
-  //if (!OTAMgr.isUpdating && doLoop) {
   if (_doLoop) {
 
     dmm->watchdog();
@@ -494,13 +490,11 @@ void DroneSystem::loop() {
 
     //if (logFile) logFile.flush();
   } else {
-    // TODO - need an updating state
-    //digitalWrite(PIN_LED, HIGH);
+    //dled->setState(DRONE_LED_STATE_UPDATING);
   }
+
+  //_OTAMgr->loop();
 
   // return SPI semaphore
   xSemaphoreGive( _xSPISemaphore );
-
-  //TODO
-  //OTAMgr.loop();
 }

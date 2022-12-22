@@ -11,6 +11,7 @@
 RFM69TelemetryModule::RFM69TelemetryModule(uint8_t id, DroneSystem* ds):
   NetworkInterfaceModule ( id, ds )
  {
+   Log.noticeln("[RFM69] a");
    setTypeName(FPSTR(RFM69_TELEMETRY_STR_RFM69_TELEMETRY));
    _packetsReceived = 0;
    _packetsRejected = 0;
@@ -22,6 +23,8 @@ RFM69TelemetryModule::RFM69TelemetryModule(uint8_t id, DroneSystem* ds):
    }
 
    _radio = NULL;
+
+   Log.noticeln("[RFM69] b");
 
    // pubs
    initParams(RFM69_TELEMETRY_PARAM_ENTRIES);
@@ -58,8 +61,10 @@ RFM69TelemetryModule::RFM69TelemetryModule(uint8_t id, DroneSystem* ds):
    param = &_params[RFM69_TELEMETRY_PARAM_FREQUENCY_E];
    param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, RFM69_TELEMETRY_PARAM_FREQUENCY);
    setParamName(FPSTR(STRING_FREQUENCY), param);
-   param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_UINT32_T, 4);
+   param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_UINT32_T, 4);
    param->data.uint32[0] = 915;
+
+   Log.noticeln("[RFM69]");
 }
 
 DEM_NAMESPACE* RFM69TelemetryModule::registerNamespace(DroneExecutionManager *dem) {
@@ -107,23 +112,29 @@ void RFM69TelemetryModule::setup() {
   //pinMode(PIN_IN0_0, INPUT);
 
   // register CS and INT pins
+  Log.noticeln("[RFM.s] Registering pins...");
   if (!_ds->requestPin(PIN_SD_6, DRONE_SYSTEM_PIN_CAP_OUTPUT, this) ||
-      !_ds->requestPin(PIN_IN0_0, DRONE_SYSTEM_PIN_CAP_INPUT, this) ) {
+      !_ds->requestPin(34, DRONE_SYSTEM_PIN_CAP_INPUT, this) ) {
     Log.errorln(F("[RFM.s] Pins unavailable"));
     setError(1);
     disable();
+    return;
   }
 
   if (!_radio) {
+    Log.noticeln("[RFM.s] Configuring SPI...");
     _spi.setPins(19, 23, 18);  // MISO, MOSI, CLK
-    _radio = new RH_RF69(PIN_SD_6, PIN_IN0_0, _spi);   // CS, INT
+    Log.noticeln("[RFM.s] Create RFM object...");
+    _radio = new RH_RF69(PIN_SD_6, 34, _spi);   // CS, INT
   }
 
+  Log.noticeln("[RFM.s] Init radio...");
   if (!_radio->init()) {
     Log.errorln(F("Failed to init RFM69 radio"));
     setError(1);
   } else {
 
+    Log.noticeln("[RFM.s] Set frequency, power, etc...");
     if (!_radio->setFrequency(_params[RFM69_TELEMETRY_PARAM_FREQUENCY_E].data.uint32[0]))
       Log.errorln("setFrequency failed");
 
@@ -138,7 +149,7 @@ void RFM69TelemetryModule::setup() {
 
     _interfaceState = true;
 
-    Log.noticeln(F("RFM69 initialised"));
+    Log.noticeln(F("[RFM.s] RFM69 initialised"));
   }
 }
 
@@ -254,7 +265,7 @@ void RFM69TelemetryModule::loop() {
 
 boolean RFM69TelemetryModule::sendPacket(uint8_t *buffer) {
 
-  if (!_enabled) return false;
+  if (!_enabled || !_radio) return false;
 
   // wrap the DroneMesh message in a start byte and end CRC
   uint8_t txSize = getDroneMeshMsgTotalSize(buffer) + 2;

@@ -90,6 +90,8 @@ public:
 
   virtual void setup();
 
+  boolean requestMotorPins(uint8_t num);
+
   void setupMode0();
   void setupMode1();
   void setupMode2();

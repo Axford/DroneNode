@@ -50,10 +50,12 @@ DroneSystem is the root of all Drone objects, keeping the main script as simple 
 // web services
 #include "WiFiManager.h"
 #include <ESPAsyncWebServer.h>
+#include "WebFSEditor.h"
 
 // other
 #include <ESP32Servo.h>
 #include <ArduinoLog.h>
+
 
 
 // ----------------------------------------------------------------------------
@@ -126,6 +128,7 @@ protected:
 
   // web server
   AsyncWebServer _server;
+  WebFSEditor _fsEditor;
 
   void configurePin(uint8_t pin, uint8_t capabilities);
 

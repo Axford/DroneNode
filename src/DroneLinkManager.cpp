@@ -86,12 +86,13 @@ void DroneLinkManager::subscribe(uint8_t node, uint8_t channel, DroneModule *sub
   // locate a matching channel (or create it if it doesn't exist)
   DroneLinkChannel* c = findChannel(node, channel);
   if (!c) {
-    Log.noticeln(F("Creating channel: %u > %u"), node, channel);
+    Log.noticeln(F("[DLM.s] Creating channel: %u > %u"), node, channel);
     c = new DroneLinkChannel(this, node, channel);
     _channels.add(c);
   }
 
   // wire up the subscriber to the channel
+  Log.noticeln("[DLM.s] Wiring subscriber...");
   c->subscribe(_node, subscriber, getDroneLinkMsgParam(param));
 
   // print new set of subscribers

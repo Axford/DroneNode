@@ -16,14 +16,13 @@ class OTAManager {
     OTAManagerCallback onEvent;
 
     boolean isUpdating;
-    OTAManager(AsyncEventSource * events);
+    OTAManager();
 
     void init(String hostname);
     void loop();
 
     //void execOTA();
   private:
-    AsyncEventSource *_events;
     //String _firmwareUrl;
 };
 

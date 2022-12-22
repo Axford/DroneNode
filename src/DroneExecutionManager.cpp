@@ -596,10 +596,12 @@ void DroneExecutionManager::loadConfiguration(const char* filename) {
                   // parse module id
                    moduleId= atoi(valueBuffer);
                   if (moduleId > 0 && moduleId < 255) {
+                    Log.noticeln(F("[DEM.lC] module= %d ..."), moduleId);
+
                     // see if there is a matching module to instance
                     newMod = instanceModule(nameBuffer, moduleId);
 
-                    Log.noticeln(F("[DEM.lC] module= %d ..."), moduleId);
+                    yield();
                   } else
                     Log.errorln(F("[DEM.lC] invalid module address"));
                   
@@ -610,14 +612,17 @@ void DroneExecutionManager::loadConfiguration(const char* filename) {
 
                   if (newMod) {
                     if (strcmp(nameBuffer, "publish")==0) {
+                      Log.noticeln("[DEM.lC] publishing...");
                       // parse and publish list of params
                       newMod->publishParamsFromList(valueBuffer);
                     } else if (nameBuffer[0] == '$') {
+                      Log.noticeln("[DEM.lC] Address to queue");
                       // parse sub
                       addToAddressQueue(newMod, &nameBuffer[1], valueBuffer);
 
                     } else {
                       // regular param setting
+                      Log.noticeln("[DEM.lC] Setting param");
                       DRONE_PARAM_ENTRY* pe = newMod->getParamEntryByName(nameBuffer);
                       if (pe) {
                         newMod->setParamFromList(pe, valueBuffer);

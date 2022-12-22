@@ -30,6 +30,8 @@ MotorModule::MotorModule(uint8_t id, DroneSystem* ds):
    setParamName(FPSTR(STRING_PINS), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_UINT8_T, 3);
    _params[MOTOR_PARAM_PINS_E].data.uint8[0] = 0;
+   _params[MOTOR_PARAM_PINS_E].data.uint8[1] = 0;
+   _params[MOTOR_PARAM_PINS_E].data.uint8[2] = 0;
 
    param = &_params[MOTOR_PARAM_PWMCHANNEL_E];
    param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, MOTOR_PARAM_PWMCHANNEL);
@@ -116,14 +118,23 @@ void MotorModule::setup() {
 }
 
 
-void MotorModule::setupMode0() {
-  // register pins
+boolean MotorModule::requestMotorPins(uint8_t num) {
   boolean registered = true;
-  for (uint8_t i=0; i<3; i++) {
+  for (uint8_t i=0; i<num; i++) {
     registered &= _ds->requestPin(_params[MOTOR_PARAM_PINS_E].data.uint8[i], DRONE_SYSTEM_PIN_CAP_OUTPUT, this);
   }
+  if (!registered) {
+    Log.errorln(F("[MM.s] Pins unavailable %u"), _id);
+    setError(1);
+    disable();
+  }
+  return registered;
+}
 
-  if (registered) {
+
+void MotorModule::setupMode0() {
+  // register pins
+  if (requestMotorPins(3)) {
     // configure LED PWM functionalitites
     ledcSetup(_params[MOTOR_PARAM_PWMCHANNEL_E].data.uint8[0], 5000, 8);
 
@@ -139,39 +150,39 @@ void MotorModule::setupMode0() {
       pinMode(_params[MOTOR_PARAM_PINS_E].data.uint8[MOTOR_PIN_B], OUTPUT);
       digitalWrite(_params[MOTOR_PARAM_PINS_E].data.uint8[MOTOR_PIN_B], LOW);
     }
-  } else {
-    Log.errorln(F("[MM.s] Pins unavailable %u"), _id);
-    setError(1);
-    disable();
   }
 }
 
 
 void MotorModule::setupMode1() {
-  // configure LED PWM functionalitites - Forward channel
-  ledcSetup(_params[MOTOR_PARAM_PWMCHANNEL_E].data.uint8[0], 5000, 8);
+  if (requestMotorPins(2)) {
+    // configure LED PWM functionalitites - Forward channel
+    ledcSetup(_params[MOTOR_PARAM_PWMCHANNEL_E].data.uint8[0], 5000, 8);
 
-  ledcAttachPin(_params[MOTOR_PARAM_PINS_E].data.uint8[MOTOR_PIN_F], _params[MOTOR_PARAM_PWMCHANNEL_E].data.uint8[0]);
-  ledcWrite(_params[MOTOR_PARAM_PWMCHANNEL_E].data.uint8[0], 0);  // turn off at start
+    ledcAttachPin(_params[MOTOR_PARAM_PINS_E].data.uint8[MOTOR_PIN_F], _params[MOTOR_PARAM_PWMCHANNEL_E].data.uint8[0]);
+    ledcWrite(_params[MOTOR_PARAM_PWMCHANNEL_E].data.uint8[0], 0);  // turn off at start
 
-  // configure LED PWM functionalitites - Reverse channel
-  ledcSetup(_params[MOTOR_PARAM_PWMCHANNEL_E].data.uint8[0]+1, 5000, 8);
+    // configure LED PWM functionalitites - Reverse channel
+    ledcSetup(_params[MOTOR_PARAM_PWMCHANNEL_E].data.uint8[0]+1, 5000, 8);
 
-  ledcAttachPin(_params[MOTOR_PARAM_PINS_E].data.uint8[MOTOR_PIN_R], _params[MOTOR_PARAM_PWMCHANNEL_E].data.uint8[0]+1);
-  ledcWrite(_params[MOTOR_PARAM_PWMCHANNEL_E].data.uint8[0]+1, 0);  // turn off at start
+    ledcAttachPin(_params[MOTOR_PARAM_PINS_E].data.uint8[MOTOR_PIN_R], _params[MOTOR_PARAM_PWMCHANNEL_E].data.uint8[0]+1);
+    ledcWrite(_params[MOTOR_PARAM_PWMCHANNEL_E].data.uint8[0]+1, 0);  // turn off at start
+  }
 }
 
-
+ 
 void MotorModule::setupMode2() {
-  // configure LED PWM functionalitites - Forward channel
-  ledcSetup(_params[MOTOR_PARAM_PWMCHANNEL_E].data.uint8[0], 5000, 8);
+  if (requestMotorPins(2)) {
+    // configure LED PWM functionalitites - Forward channel
+    ledcSetup(_params[MOTOR_PARAM_PWMCHANNEL_E].data.uint8[0], 5000, 8);
 
-  ledcAttachPin(_params[MOTOR_PARAM_PINS_E].data.uint8[MOTOR_PIN_PWM], _params[MOTOR_PARAM_PWMCHANNEL_E].data.uint8[0]);
-  ledcWrite(_params[MOTOR_PARAM_PWMCHANNEL_E].data.uint8[0], 0);  // turn off at start
+    ledcAttachPin(_params[MOTOR_PARAM_PINS_E].data.uint8[MOTOR_PIN_PWM], _params[MOTOR_PARAM_PWMCHANNEL_E].data.uint8[0]);
+    ledcWrite(_params[MOTOR_PARAM_PWMCHANNEL_E].data.uint8[0], 0);  // turn off at start
 
-  if (_params[MOTOR_PARAM_PINS_E].data.uint8[MOTOR_PIN_DIR] < 255) {
-    pinMode(_params[MOTOR_PARAM_PINS_E].data.uint8[MOTOR_PIN_DIR], OUTPUT);
-    digitalWrite(_params[MOTOR_PARAM_PINS_E].data.uint8[MOTOR_PIN_DIR], LOW);
+    if (_params[MOTOR_PARAM_PINS_E].data.uint8[MOTOR_PIN_DIR] < 255) {
+      pinMode(_params[MOTOR_PARAM_PINS_E].data.uint8[MOTOR_PIN_DIR], OUTPUT);
+      digitalWrite(_params[MOTOR_PARAM_PINS_E].data.uint8[MOTOR_PIN_DIR], LOW);
+    }
   }
 }
 

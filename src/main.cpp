@@ -30,22 +30,26 @@ Steps to setup a new device:
 #include <AsyncTCP.h>
 #include <ESPmDNS.h>
 
-//#include "OTAManager.h"
+#include "OTAManager.h"
 
 DroneSystem ds;
+OTAManager OTAMgr;
 
-/*
-void handleOTAEVent(OTAManagerEvent event, float progress) {
+
+void handleOTAEVent(OTAManagerEvent event, float p) {
   if (event == start) {
-    // TODO
-    //dmm->shutdown();
+    ds.dmm->shutdown();
+    ds.dled->setState(DRONE_LED_STATE_UPDATING);
   } else if (event == progress) {
-    Log.noticeln(F("OTA progress: %f"), progress*100);
-    // TODO
-    //dmm->onOTAProgress(progress);
+    //Log.noticeln(F("OTA progress: %f"), p*100);
+    ds.dmm->onOTAProgress(p);
+    ds.dled->loop();
+  } else  {
+    // end
+    ds.dled->setState(DRONE_LED_STATE_RESTART);
   }
 }
-*/
+
 
 void handleDLMEvent( DroneLinkManagerEvent event, float progress) {
   if (event == DRONE_LINK_MANAGER_FIRMWARE_UPDATE_START) {
@@ -60,10 +64,24 @@ void handleDLMEvent( DroneLinkManagerEvent event, float progress) {
 
 
 void setup() {
+  disableCore0WDT();
+  disableCore1WDT();
+  disableLoopWDT();
+  
   ds.setup();
+
+  OTAMgr.init(ds.dmm->hostname());
+  OTAMgr.onEvent = handleOTAEVent;
 }
 
 
 void loop() {
-  ds.loop();
+  
+  if (!OTAMgr.isUpdating) {
+    ds.loop();
+  } else {
+    ds.dled->loop();
+  }
+
+  OTAMgr.loop();
 }
