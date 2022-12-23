@@ -32,6 +32,7 @@ Steps to setup a new device:
 
 #include "OTAManager.h"
 
+
 DroneSystem ds;
 OTAManager OTAMgr;
 

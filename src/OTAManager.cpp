@@ -10,6 +10,7 @@
 
 OTAManager::OTAManager() {
   isUpdating = false;
+  _lastProg = 0;
   //_firmwareUrl = "http://192.168.0.23/firmware";
 }
 
@@ -46,13 +47,25 @@ void OTAManager::init(String hostname) {
   });
 
   ArduinoOTA.onProgress([&](unsigned int prog, unsigned int total) {
-    char p[32];
+    char p[40];
     //float progress = (float) prog / total;
 
     if (onEvent) { onEvent(progress, (float) prog / total); }
 
-    sprintf(p, "Progress: %u%%\n", (prog/(total/100)));
-    Log.noticeln(p, "ota");
+    uint8_t newProg = round(100.0f * prog / total) / 5;
+
+    if (newProg != _lastProg) {
+      uint8_t progChars = newProg;
+      _lastProg = newProg;
+      strcpy(p, "Downloading: [");
+      for (uint8_t i=0; i<20; i++) {
+        p[14+i] = (i <= progChars) ? '=' : ' ';
+      } 
+      p[34] = ']';
+      p[35] = 0;
+
+      Log.noticeln(p);
+    }
     //Serial.println(p);
   });
   ArduinoOTA.onError([&](ota_error_t error) {

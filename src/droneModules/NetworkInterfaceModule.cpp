@@ -7,7 +7,6 @@ NetworkInterfaceModule::NetworkInterfaceModule(uint8_t id, DroneSystem* ds):
   DroneModule ( id, ds )
  {
    _interfaceState = false;  // start inactive
-   Log.noticeln("[NIM]");
 }
 
 

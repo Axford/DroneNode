@@ -2,6 +2,7 @@
 #include "DroneLinkManager.h"
 #include "WiFiManager.h"
 #include <Update.h>
+#include "DroneLogger.h"
 
 DroneLinkManager::DroneLinkManager(WiFiManager *wifiManager, DroneFS* fs):
   _wifiManager(wifiManager),
@@ -528,6 +529,9 @@ void DroneLinkManager::receivePacket(NetworkInterfaceModule *interface, uint8_t 
 
   // ignore it if this packet is from us
   if (getDroneMeshMsgSrcNode(buffer) == _node || getDroneMeshMsgTxNode(buffer) == _node) return;
+
+  // store packets that have passed CRC
+  DroneLog.write(buffer, len);
 
   // ignore it if this packet is not destined for us (unless its a broadcast)
   uint8_t nn = getDroneMeshMsgNextNode(buffer);

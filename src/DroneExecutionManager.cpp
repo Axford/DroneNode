@@ -382,7 +382,7 @@ void DroneExecutionManager::addToAddressQueue(DroneModule* newMod, char* subName
     i++;
   } while (c > 0);
 
-  Log.noticeln("Adding addr to queue: %s,%s,%s", addr.nodeAddress, addr.moduleAddress, addr.paramAddress);
+  Log.noticeln("[DEM.aTAQ] Adding addr to queue: %s,%s,%s", addr.nodeAddress, addr.moduleAddress, addr.paramAddress);
   _addressQueue.add(addr);
 }
 
@@ -612,22 +612,21 @@ void DroneExecutionManager::loadConfiguration(const char* filename) {
 
                   if (newMod) {
                     if (strcmp(nameBuffer, "publish")==0) {
-                      Log.noticeln("[DEM.lC] publishing...");
+                      Log.noticeln("[DEM.lC] publishing: %s", valueBuffer);
                       // parse and publish list of params
                       newMod->publishParamsFromList(valueBuffer);
                     } else if (nameBuffer[0] == '$') {
-                      Log.noticeln("[DEM.lC] Address to queue");
                       // parse sub
                       addToAddressQueue(newMod, &nameBuffer[1], valueBuffer);
 
                     } else {
                       // regular param setting
-                      Log.noticeln("[DEM.lC] Setting param");
+                      Log.noticeln("[DEM.lC] Setting param: %s", nameBuffer);
                       DRONE_PARAM_ENTRY* pe = newMod->getParamEntryByName(nameBuffer);
                       if (pe) {
                         newMod->setParamFromList(pe, valueBuffer);
                       } else {
-                        Log.errorln(F("[DEM.lC] unknown param name %s"), nameBuffer);
+                        Log.errorln(F("[DEM.lC] Unknown param: %s"), nameBuffer);
                       }
                     }
                     

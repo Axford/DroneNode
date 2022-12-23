@@ -13,6 +13,7 @@ typedef void (*OTAManagerCallback) (const OTAManagerEvent event, const float pro
 
 class OTAManager {
   public:
+    uint8_t _lastProg;
     OTAManagerCallback onEvent;
 
     boolean isUpdating;

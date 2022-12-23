@@ -46,6 +46,8 @@ DroneSystem is the root of all Drone objects, keeping the main script as simple 
 #include "FS.h"
 #include <LittleFS.h>
 #define LITTLEFS LittleFS
+#include <SPI.h>
+#include <SD.h>
 
 // web services
 #include "WiFiManager.h"

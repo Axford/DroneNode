@@ -11,7 +11,6 @@
 RFM69TelemetryModule::RFM69TelemetryModule(uint8_t id, DroneSystem* ds):
   NetworkInterfaceModule ( id, ds )
  {
-   Log.noticeln("[RFM69] a");
    setTypeName(FPSTR(RFM69_TELEMETRY_STR_RFM69_TELEMETRY));
    _packetsReceived = 0;
    _packetsRejected = 0;
@@ -23,8 +22,6 @@ RFM69TelemetryModule::RFM69TelemetryModule(uint8_t id, DroneSystem* ds):
    }
 
    _radio = NULL;
-
-   Log.noticeln("[RFM69] b");
 
    // pubs
    initParams(RFM69_TELEMETRY_PARAM_ENTRIES);
@@ -63,8 +60,6 @@ RFM69TelemetryModule::RFM69TelemetryModule(uint8_t id, DroneSystem* ds):
    setParamName(FPSTR(STRING_FREQUENCY), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_UINT32_T, 4);
    param->data.uint32[0] = 915;
-
-   Log.noticeln("[RFM69]");
 }
 
 DEM_NAMESPACE* RFM69TelemetryModule::registerNamespace(DroneExecutionManager *dem) {

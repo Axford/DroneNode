@@ -1,4 +1,5 @@
 #include "DroneSystem.h"
+#include "DroneLogger.h"
 
 // ----------------------------------------------------------------------------
 // protected
@@ -35,7 +36,6 @@ DroneSystem::DroneSystem() : _server(80), dfs(this), _fsEditor(LITTLEFS, _doLoop
   for (uint8_t i=0; i<DRONE_SYSTEM_PINS; i++) {
     _pins[i].state = DRONE_SYSTEM_PIN_STATE_UNAVAILABLE;
     _pins[i].capabilities = 0;
-    _serialPorts[i].module = NULL;
   }
 
   // now set specific capabilities
@@ -337,6 +337,10 @@ void DroneSystem::setup() {
 
   // Setup status LED
   dled = new DroneLED(this);
+
+  // init DroneLogger
+  DroneLog.begin();
+  DroneLog.enable();
 
   // Determine and setup filesystem
   Log.noticeln(F("[] Init DroneFS..."));
