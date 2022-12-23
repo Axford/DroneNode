@@ -20,6 +20,9 @@ Manage logging of DroneMesh packets to an SD card.
 #define LF "\r"
 #define NL "\n\r"
 
+#define DRONE_LOGGER_MAX_LOG_SIZE   (1024*1024)
+#define DRONE_LOGGER_MAX_LOG_AGE    (60*60*1000)
+
 class DroneLogger
 {
 protected:
@@ -29,9 +32,14 @@ protected:
   uint8_t _cardType;
   File _file;
   uint32_t _lastFlush;
+  char _logPath[32];
+  uint32_t _bytesWrittenToLog;
+  uint32_t _logStartTime;
 
 public:
   DroneLogger();
+
+  void updateLogPath();
 
   boolean begin();
 

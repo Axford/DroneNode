@@ -4,6 +4,7 @@
 #include "ArduinoLog.h"
 #include "SD.h"
 #include <SPI.h>
+#include "Preferences.h"
 
 
 DroneLogger::DroneLogger() {
@@ -12,6 +13,33 @@ DroneLogger::DroneLogger() {
   _cardSize = 0;
   _cardType = 0;
   _lastFlush = 0;
+  _logPath[0]= 0;
+  _bytesWrittenToLog = 0;
+}
+
+
+void DroneLogger::updateLogPath() {
+  Preferences pref; 
+  pref.begin("DroneLog", false);
+
+  uint32_t i = pref.getULong("index", 0);
+  i++;
+  pref.putULong("index", i);
+  pref.end();
+
+  Log.noticeln("[DL] Next logIndex: ,%u", i);
+
+  // update _logPath
+  strcpy(_logPath, "/logs/");
+  sprintf(&_logPath[strlen(_logPath)],"%lu", i);
+  strcpy(&_logPath[strlen(_logPath)], ".log");
+
+  // create log file
+  if (!SD.exists(_logPath)) {
+    Log.noticeln("Creating log file %s", _logPath);
+    File f = SD.open(_logPath, FILE_WRITE);
+    f.close();
+  }
 }
 
 
@@ -49,12 +77,7 @@ boolean DroneLogger::begin() {
 
   _SDAvailable = true;
 
-  // create log file if doesn't already exist
-  if (!SD.exists("/test.log")) {
-    Log.noticeln("Creating log file");
-    File f = SD.open("/test.log", FILE_WRITE);
-    f.close();
-  }
+  updateLogPath();
 
   // start a new log file, ready for appending
   //_file = SD.open("/test.log", FILE_APPEND);
@@ -62,6 +85,8 @@ boolean DroneLogger::begin() {
   //  Log.errorln("Failed to open log for appending");
   //  return false;
   //}
+
+  _logStartTime = millis();
 
   return true;
 }
@@ -80,20 +105,32 @@ void DroneLogger::write(uint8_t * buffer, uint32_t len) {
   if (_SDAvailable && _enabled) {
     Log.noticeln("Logging packet: %u bytes", len);
 
-    File f = SD.open("/test.log", FILE_APPEND);
+    File f = SD.open(_logPath, FILE_APPEND);
     if (f) {
-      /*
       uint32_t bytesWritten = f.write(buffer, len);
       if (bytesWritten != len) {
         Log.errorln("  write fail, only %u bytes written", bytesWritten);
+      } else {
+        _bytesWrittenToLog += bytesWritten;
       }
-      */
-      f.println("test");
 
       f.close();
     } else {
-      Log.errorln("Unable to append to test.log");
+      Log.errorln("Unable to append to log");
     }
+
+    // have we exceeded log size or time?
+    uint32_t loopTime = millis();
+    if (_bytesWrittenToLog > DRONE_LOGGER_MAX_LOG_SIZE ||
+        loopTime > _logStartTime + DRONE_LOGGER_MAX_LOG_AGE) {
+
+      // generate a new log path
+      updateLogPath();
+
+      _logStartTime = loopTime;
+      _bytesWrittenToLog = 0;
+    }
+
   }
   yield();
 }
