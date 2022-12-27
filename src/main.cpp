@@ -65,6 +65,11 @@ void handleDLMEvent( DroneLinkManagerEvent event, float progress) {
 
 
 void setup() {
+  // ensure pull ups on SPI pins
+  pinMode(18,INPUT_PULLUP); 
+  pinMode(19,INPUT_PULLUP); 
+  pinMode(23,INPUT_PULLUP); 
+
   disableCore0WDT();
   disableCore1WDT();
   disableLoopWDT();

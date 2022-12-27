@@ -44,9 +44,6 @@ void DroneLogger::updateLogPath() {
 
 
 boolean DroneLogger::begin() {
-  // ensure pullUo on MISO pin
-  // ref: pinMode(23,INPUT_PULLUP); 
-  pinMode(23,INPUT_PULLUP); 
 
   if (!SD.begin(4)) {
     Log.errorln("Card Mount Failed");
