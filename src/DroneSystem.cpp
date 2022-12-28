@@ -339,8 +339,13 @@ void DroneSystem::setup() {
   dled = new DroneLED(this);
 
   // init DroneLogger
-  DroneLog.begin();
-  DroneLog.enable();
+  if (_motherboardVersion >= 4) {
+    // ensure pull ups on SPI pins
+    pinMode(23,INPUT_PULLUP); 
+
+    DroneLog.begin();
+    DroneLog.enable();
+  }
 
   // Determine and setup filesystem
   Log.noticeln(F("[] Init DroneFS..."));
@@ -418,6 +423,7 @@ void DroneSystem::loop() {
   // TODO - add an FPS timer
   //loopTime = millis();
 
+
   if (_wifiManager.isEnabled() && WiFi.status() == WL_CONNECTED) {
     dled->setState(DRONE_LED_STATE_RUNNING_WIFI);
   } else {
@@ -491,6 +497,7 @@ void DroneSystem::loop() {
     yield();
 
     dem->processAddressQueue();
+
 
     //if (logFile) logFile.flush();
   } else {

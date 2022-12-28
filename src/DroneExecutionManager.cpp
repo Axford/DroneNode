@@ -1798,7 +1798,7 @@ boolean DroneExecutionManager::core_until(DEM_INSTRUCTION_COMPILED* instr, DEM_C
 
 DroneModule* DroneExecutionManager::instanceModule(char* typeName, uint8_t id) {
   Log.noticeln(F("[.c] Instantiating %s as %u"), typeName, id);
-  DroneModule *newMod;
+  DroneModule *newMod = NULL;
 
   if (id > 0 && id < 255) {
     if (strcmp_P(typeName, AVOID_STR_AVOID) == 0) {

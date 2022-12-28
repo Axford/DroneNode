@@ -9,7 +9,7 @@
 
 DroneLogger::DroneLogger() {
   _SDAvailable = false;
-  _enabled = true; // enable by default
+  _enabled = false;
   _cardSize = 0;
   _cardType = 0;
   _lastFlush = 0;
@@ -84,6 +84,7 @@ boolean DroneLogger::begin() {
   //}
 
   _logStartTime = millis();
+  _enabled = true;
 
   return true;
 }
@@ -127,9 +128,8 @@ void DroneLogger::write(uint8_t * buffer, uint32_t len) {
       _logStartTime = loopTime;
       _bytesWrittenToLog = 0;
     }
-
+    //yield();
   }
-  yield();
 }
 
 /*

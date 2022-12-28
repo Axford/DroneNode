@@ -145,7 +145,7 @@ void DroneModuleManager::loopModules() {
   DroneModule* m;
   for(int i = 0; i < _modules.size(); i++) {
     m = _modules.get(i);
-    //Serial.print(m->getName());
+    //Log.noticeln(m->getName());
     unsigned long start= millis();
 
     // see if update needed

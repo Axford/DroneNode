@@ -2,7 +2,7 @@
 #include "../DroneLinkMsg.h"
 #include "../DroneLinkManager.h"
 #include "strings.h"
-#include <SPIFFS.h>
+#include <LittleFS.h>
 
 
 HMC5883LModule::HMC5883LModule(uint8_t id, DroneSystem* ds):
@@ -139,16 +139,46 @@ void HMC5883LModule::doReset() {
 
 
 void HMC5883LModule::setup() {
+  Log.noticeln("_1");
   I2CBaseModule::setup();
 
   if (!_sensor) {
+    Log.noticeln("_2");
+
     DroneWire::selectChannel(_params[I2CBASE_PARAM_BUS_E].data.uint8[0]);
     /*_sensor = new Adafruit_HMC5883_Unified(_params[I2CBASE_PARAM_ADDR_E].data.uint8[0]);
     if (!_sensor->begin() ){
       Log.errorln("Failed to init HMC5883L");
     }*/
-    _sensor = new HMC5883L();
+
+    Log.noticeln("_3");
+
+    // test to see if sensor responds on correct address:
+    if (!DroneWire::scanAddress(_params[I2CBASE_PARAM_ADDR_E].data.uint8[0])) {
+      Log.errorln("[HMC5883L] Module not detected on I2C bus");
+      setError(1);
+      disable();
+      return;
+    }
+
+    Log.noticeln("_4");
+
+    _sensor = new HMC5883L(_params[I2CBASE_PARAM_ADDR_E].data.uint8[0]);
+
+    Log.noticeln("_5");
+
     _sensor->initialize();
+
+    Log.noticeln("_6");
+
+    if (!_sensor->testConnection()) {
+      Log.errorln("[HMC5883L] Failed comms test");
+      setError(1);
+      disable();
+      return;
+    }
+
+    Log.noticeln("_7");
 
     // initialise limits to match calibration limits - clockwise from North
     // y+
@@ -176,6 +206,7 @@ void HMC5883LModule::update() {
     _location[1] = newLat;
 
     // read declination value from mag.dat file
+    /*
     if (SPIFFS.exists(F("/mag.dat"))) {
       File file = SPIFFS.open(F("/mag.dat"), FILE_READ);
 
@@ -195,6 +226,7 @@ void HMC5883LModule::update() {
 
       file.close();
     }
+    */
   }
 }
 

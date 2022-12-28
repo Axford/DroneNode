@@ -9,29 +9,38 @@ MPU6050Module::MPU6050Module(uint8_t id, DroneSystem* ds):
    setTypeName(FPSTR(MPU6050_STR_MPU6050));
    _sensor = NULL;
 
-   initParams(MPU6050_PARAM_ENTRIES);
+   _mgmtParams[DRONE_MODULE_PARAM_INTERVAL_E].data.uint32[0] = 1000;  
 
-   // defaults
-   for (uint8_t i=0; i<_numParamEntries; i++) {
-     _params[i].paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 12);
-     _params[i].publish = false;
-     _params[i].data.f[0] = 0;
-     _params[i].data.f[1] = 0;
-     _params[i].data.f[2] = 0;
-   }
+   initParams(MPU6050_PARAM_ENTRIES);
 
    I2CBaseModule::initBaseParams();
    _params[I2CBASE_PARAM_ADDR_E].data.uint8[0] = MPU6050_I2C_ADDRESS;
+   
+
+   DRONE_PARAM_ENTRY *param;
 
    // init param entries
-   _params[MPU6050_PARAM_ACCEL_E].paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, MPU6050_PARAM_ACCEL);
-   _params[MPU6050_PARAM_ACCEL_E].name = FPSTR(STRING_ACCEL);
-   _params[MPU6050_PARAM_ACCEL_E].nameLen = sizeof(STRING_ACCEL);
+   param = &_params[MPU6050_PARAM_ACCEL_E];
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_HIGH, MPU6050_PARAM_ACCEL);
+   setParamName(FPSTR(STRING_ACCEL), param);
+   param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 12);
+   param->data.f[0] = 0;
+   param->data.f[1] = 0;
+   param->data.f[2] = 0;
 
-   _params[MPU6050_PARAM_GYRO_E].paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, MPU6050_PARAM_GYRO);
-   _params[MPU6050_PARAM_GYRO_E].name = FPSTR(STRING_GYRO);
-   _params[MPU6050_PARAM_GYRO_E].nameLen = sizeof(STRING_GYRO);
+   param = &_params[MPU6050_PARAM_GYRO_E];
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, MPU6050_PARAM_GYRO);
+   setParamName(FPSTR(STRING_GYRO), param);
+   param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 12);
+   param->data.f[0] = 0;
+   param->data.f[1] = 0;
+   param->data.f[2] = 0;
 
+   param = &_params[MPU6050_PARAM_TEMPERATURE_E];
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, MPU6050_PARAM_TEMPERATURE);
+   setParamName(FPSTR(STRING_TEMPERATURE), param);
+   param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 4);
+   
 }
 
 
@@ -80,7 +89,16 @@ void MPU6050Module::setup() {
   if (!_sensor) {
     DroneWire::selectChannel(_params[I2CBASE_PARAM_BUS_E].data.uint8[0]);
     _sensor = new Adafruit_MPU6050();
-    _sensor->begin();
+    if (!_sensor->begin()) {
+      setError(1);
+      disable();
+      return;
+    }
+
+    // configure
+    _sensor->setFilterBandwidth(MPU6050_BAND_5_HZ);
+
+    _sensor->setAccelerometerRange(MPU6050_RANGE_8_G);
   }
 }
 
@@ -102,6 +120,7 @@ void MPU6050Module::loop() {
   _params[MPU6050_PARAM_GYRO_E].data.f[1] = g.gyro.y;
   _params[MPU6050_PARAM_GYRO_E].data.f[2] = g.gyro.z;
 
+  _params[MPU6050_PARAM_TEMPERATURE_E].data.f[0] = temp.temperature;
 
   // error check
   if (isnan(_params[MPU6050_PARAM_ACCEL_E].data.f[0])) {
