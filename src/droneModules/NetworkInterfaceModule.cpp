@@ -7,6 +7,8 @@ NetworkInterfaceModule::NetworkInterfaceModule(uint8_t id, DroneSystem* ds):
   DroneModule ( id, ds )
  {
    _interfaceState = false;  // start inactive
+   _broadcastCapable = false;  // over-ridden by impl classes
+   _peerId = 0;
 }
 
 
@@ -24,6 +26,21 @@ boolean NetworkInterfaceModule::getInterfaceState() {
 uint8_t NetworkInterfaceModule::getInterfaceType() {
   // to be overridden
   return DRONE_MESH_INTERFACE_TYPE_UDP;
+}
+
+
+boolean NetworkInterfaceModule::isBroadcastCapable() {
+  return _broadcastCapable;
+}
+
+
+void NetworkInterfaceModule::setPeerId(uint8_t id) {
+  _peerId = id;
+}
+
+
+uint8_t NetworkInterfaceModule::getPeerId() {
+  return _peerId;
 }
 
 

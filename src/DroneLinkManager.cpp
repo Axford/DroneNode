@@ -371,14 +371,14 @@ DRONE_LINK_NODE_INFO* DroneLinkManager::getNodeInfo(uint8_t source, boolean hear
       page->nodeInfo[i].metric = 255;
       page->nodeInfo[i].helloMetric = 255;
       page->nodeInfo[i].name = NULL;
-      page->nodeInfo[i].interface = NULL;
+      page->nodeInfo[i].interface = NULL;  // interface for current best route to node
       page->nodeInfo[i].nextHop = 0;
       page->nodeInfo[i].givenUp = 0;
       page->nodeInfo[i].avgAttempts = 0;
       page->nodeInfo[i].avgTxTime = 0;
       page->nodeInfo[i].lastAck = 0;
       page->nodeInfo[i].lastHello = 0;
-      page->nodeInfo[i].helloInterface = NULL;
+      page->nodeInfo[i].helloInterface = NULL;  // set to the interface we last received a hello via a tx Node - i.e. directly connected
       page->nodeInfo[i].avgAckTime = 0;
       page->nodeInfo[i].gSequencer = NULL;
     }
@@ -448,6 +448,14 @@ void DroneLinkManager::serveNodeInfo(AsyncWebServerRequest *request) {
     response->print(", ");
 
     response->print(inter->getInterfaceState() ? "Up" : "Down");
+
+    response->print(", ");
+
+    response->print(inter->isBroadcastCapable() ? "Broadcast" : "P2P");
+
+    if (!inter->isBroadcastCapable() ) {
+      response->printf(" -> %u", inter->getPeerId());
+    }
 
     response->print("\n");
   }
@@ -557,6 +565,11 @@ void DroneLinkManager::receivePacket(NetworkInterfaceModule *interface, uint8_t 
 
   // store packets that have passed CRC
   DroneLog.write(buffer, len);
+
+  // update PeerId for point to point interfaces
+  if (!interface->isBroadcastCapable() && interface->getPeerId() == 0) {
+    interface->setPeerId(getDroneMeshMsgTxNode(buffer));
+  }
 
   // ignore it if this packet is not destined for us (unless its a broadcast)
   uint8_t nn = getDroneMeshMsgNextNode(buffer);
@@ -759,6 +772,7 @@ void DroneLinkManager::receiveHello(NetworkInterfaceModule *interface, uint8_t *
       }
     }
 
+
     if (feasibleRoute) {
       //Log.noticeln("Updating route info");
       nodeInfo->seq = header->seq;
@@ -770,10 +784,15 @@ void DroneLinkManager::receiveHello(NetworkInterfaceModule *interface, uint8_t *
       nodeInfo->uptime = hello->uptime;
 
       // if metric < 255 then retransmit the Hello on all interfaces
+      // unless this is a directly connected node on a point to point interface, in which case we'd just be sending its own packet back to it!
       if (newMetric < 255) {
         for (uint8_t i=0; i < _interfaces.size(); i++) {
           NetworkInterfaceModule* interface = _interfaces.get(i);
-          generateHello(interface, header->srcNode, header->seq, newMetric, hello->uptime);
+
+          if (!interface->isBroadcastCapable() && interface->getPeerId() == header->srcNode) {
+            // skip
+          } else 
+            generateHello(interface, header->srcNode, header->seq, newMetric, hello->uptime);
         }
       }
 
@@ -784,7 +803,10 @@ void DroneLinkManager::receiveHello(NetworkInterfaceModule *interface, uint8_t *
         // retransmit our current best route on all interfaces
         for (uint8_t i=0; i < _interfaces.size(); i++) {
           NetworkInterfaceModule* interface = _interfaces.get(i);
-          generateHello(interface, header->srcNode, nodeInfo->seq, nodeInfo->metric, nodeInfo->uptime);
+          if (!interface->isBroadcastCapable() && interface->getPeerId() == header->srcNode) {
+            // skip
+          } else 
+            generateHello(interface, header->srcNode, nodeInfo->seq, nodeInfo->metric, nodeInfo->uptime);
         }
 
         nodeInfo->lastBroadcast = loopTime;

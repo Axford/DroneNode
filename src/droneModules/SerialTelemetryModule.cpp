@@ -12,7 +12,9 @@ SerialTelemetryModule::SerialTelemetryModule(uint8_t id, DroneSystem* ds):
    _decodeState = 0;
    _receivedSize = 0;
    _portNum = 2;
-   _baud = 57600;
+   _baud = 115200;
+
+   _broadcastCapable = false;
 
    _packetsReceived = 0;
    _packetsRejected = 0;

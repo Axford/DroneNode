@@ -17,6 +17,8 @@ RFM69TelemetryModule::RFM69TelemetryModule(uint8_t id, DroneSystem* ds):
    _packetsSent = 0;
    _packetsTimer = 0;
 
+   _broadcastCapable = true;
+
    for (uint8_t i=0; i<sizeof(_encryptKey); i++) {
      _encryptKey[i] = i + 10;
    }
