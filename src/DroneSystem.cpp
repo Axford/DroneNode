@@ -351,14 +351,9 @@ void DroneSystem::setup() {
   Log.noticeln(F("[] Init DroneFS..."));
   dfs.setup();
 
-  // TODO refactor FS class
-  Log.noticeln(F("[] Opening startup.log..."));
-  _logFile = LITTLEFS.open("/startup.log", FILE_WRITE);
-
-  // switch to logging to startup.log file on flash
-  Log.noticeln(F("[] Sending log to startup.log..."));
-  //Log.begin(LOG_LEVEL_VERBOSE, &_logFile);
-  //Log.begin(LOG_LEVEL_VERBOSE, &Serial);
+  // I2C scan
+  Log.noticeln(F("[] I2C bus scan..."));
+  DroneWire::scanAll();
 
   createDefaultConfig();
   createSafeModeScript();
@@ -387,6 +382,16 @@ void DroneSystem::setup() {
 	//ESP32PWM::allocateTimer(1);
 	ESP32PWM::allocateTimer(2);
 	ESP32PWM::allocateTimer(3);
+
+  // TODO refactor FS class
+  // switch to logging to startup.log file on flash if not in safeMode
+  if (!dem->safeMode()) {
+    Log.noticeln(F("[] Opening startup.log..."));
+    _logFile = LITTLEFS.open("/startup.log", FILE_WRITE);
+
+    Log.noticeln(F("[] Sending log to startup.log..."));
+    Log.begin(LOG_LEVEL_VERBOSE, &_logFile);
+  }
 
   // prep the startup scripts (will not execute until loop begins)
   if (dem->safeMode()) {
