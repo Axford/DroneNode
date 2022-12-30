@@ -824,6 +824,10 @@ void DroneModule::setup() {
   for (uint8_t i=0; i<_numSubs; i++) {
     _dlm->subscribe(&_subs[i].addr, this);
   }
+  // read status param, disable if needed
+  if (_mgmtParams[DRONE_MODULE_PARAM_STATUS_E].data.uint8[0] == 0) {
+    disable();
+  }
   _setupDone = true;
 }
 

@@ -23,6 +23,8 @@ Steps to setup a new device:
 #include <functional>
 #include <Arduino.h>
 
+#include <ArduinoLog.h>
+
 // drone core
 #include "DroneSystem.h"
 

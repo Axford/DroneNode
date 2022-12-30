@@ -412,13 +412,18 @@ void DroneSystem::setup() {
 
 
   // flush and close _logFile
-  _logFile.flush();
-  _logFile.close();
+  if (_logFile) {
+    _logFile.flush();
+    _logFile.close();
+  }
 
-  // switch to serial logging
-  Log.begin(Log.getLevel(), &Serial);
-
-  Log.noticeln(F("[] End of setup"));
+  // switch to serial logging, unless we have telemetry enabled
+  if (_serialPorts[0].state == DRONE_SYSTEM_SERIAL_PORT_STATE_ACTIVE_MODULE) {
+    Log.begin(LOG_LEVEL_SILENT, &Serial);
+  } else {
+    Log.begin(LOG_LEVEL_VERBOSE, &Serial);
+    Log.noticeln("[] End of Setup");
+  }
 }
 
 

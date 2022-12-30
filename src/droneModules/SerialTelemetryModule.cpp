@@ -202,7 +202,9 @@ boolean SerialTelemetryModule::sendPacket(uint8_t *buffer) {
   // prefix the DroneMesh message in a start byte
   uint8_t txSize = getDroneMeshMsgTotalSize(buffer) + 1;
 
-  _port->write(SERIAL_TELEMETRY_START_OF_FRAME);
+  uint8_t startByte = SERIAL_TELEMETRY_START_OF_FRAME;
+
+  _port->write(&startByte, 1);
   _port->write(buffer, txSize-1);
   _port->flush();
 

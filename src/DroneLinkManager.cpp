@@ -427,9 +427,34 @@ void DroneLinkManager::serveNodeInfo(AsyncWebServerRequest *request) {
   AsyncResponseStream *response = request->beginResponseStream("text/text");
   response->addHeader("Server","ESP Async Web Server");
 
-  response->print(F("Routing table: \n"));
-
   unsigned long loopTime = millis();
+
+
+  response->print(F("Interfaces: \n"));
+
+  NetworkInterfaceModule* inter;
+  for (uint8_t i=0; i< _interfaces.size(); i++) {
+    inter =_interfaces.get(i);
+
+    response->printf("  %u > %s : ", inter->id(), inter->getName());
+
+    switch(inter->getInterfaceType()) {
+      case DRONE_MESH_INTERFACE_TYPE_UDP: response->print("UDP"); break;
+      case DRONE_MESH_INTERFACE_TYPE_RFM69: response->print("RFM69"); break;
+      case DRONE_MESH_INTERFACE_TYPE_SERIAL: response->print("Serial"); break;
+      case DRONE_MESH_INTERFACE_TYPE_IRIDIUM: response->print("Iridium"); break;
+    }
+
+    response->print(", ");
+
+    response->print(inter->getInterfaceState() ? "Up" : "Down");
+
+    response->print("\n");
+  }
+
+
+  response->print(F("\nRouting table: \n"));
+
 
   DRONE_LINK_NODE_PAGE *page;
   for (uint8_t i=0; i<DRONE_LINK_NODE_PAGES; i++) {
