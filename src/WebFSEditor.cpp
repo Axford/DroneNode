@@ -7,14 +7,14 @@ WebFSEditor::WebFSEditor(fs::FS &fs, boolean &doLoop):
   _fs(fs),
   _doLoop(doLoop) {
 
-
+  useSemaphore = true;
 }
 
 
 // list all of the files, if ishtml=true, return html else json
 String WebFSEditor::listFiles(bool ishtml) {
   _doLoop = false;
-  xSemaphoreTake( xSPISemaphore, portMAX_DELAY );
+  if (useSemaphore) xSemaphoreTake( xSPISemaphore, portMAX_DELAY );
   String returnText = "";
   Log.noticeln("Listing files stored on _fs");
   File root = _fs.open("/");
@@ -160,7 +160,7 @@ void WebFSEditor::configureWebServer(AsyncWebServer &server) {
     String logmessage = "Client:" + request->client()->remoteIP().toString() + " " + request->url();
     if (checkUserWebAuth(request)) {
       _doLoop = false;
-      xSemaphoreTake( xSPISemaphore, portMAX_DELAY );
+      if (useSemaphore) xSemaphoreTake( xSPISemaphore, portMAX_DELAY );
       logmessage += " Auth: Success";
       //Log.noticeln(logmessage);
 
@@ -230,7 +230,7 @@ void WebFSEditor::handleUpload(AsyncWebServerRequest *request, String filename, 
   if (checkUserWebAuth(request)) {
     _doLoop = false;
     //Serial.println("take 2");
-    xSemaphoreTake( xSPISemaphore, portMAX_DELAY );
+    if (useSemaphore) xSemaphoreTake( xSPISemaphore, portMAX_DELAY );
     //Serial.println("taken 2");
     String logmessage = "Client:" + request->client()->remoteIP().toString() + " " + request->url();
     //Log.noticeln(logmessage);

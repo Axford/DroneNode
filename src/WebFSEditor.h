@@ -15,6 +15,7 @@ public:
   String httpuser;           // username to access web admin
   String httppassword;       // password to access web admin
   SemaphoreHandle_t xSPISemaphore;
+  boolean useSemaphore;
 
   WebFSEditor(fs::FS &fs, boolean &doLoop);
 

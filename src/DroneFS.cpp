@@ -303,7 +303,6 @@ DroneFS::DroneFS(DroneSystem* ds): _ds(ds) {
 void DroneFS::setup() {
   Log.noticeln(F("DroneFS setup..."));
 
-  // TODO - move to FS class
   Log.noticeln(F("[] Mount filesystem..."));
   // passing true to .begin triggers a format if required
   if(!LITTLEFS.begin(true)){
