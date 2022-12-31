@@ -8,6 +8,7 @@
 
 // drone modules
 #include "droneModules/AvoidModule.h"
+#include "droneModules/CMPS12Module.h"
 #include "droneModules/ControllerModule.h"
 #include "droneModules/CylonModule.h"
 #include "droneModules/DepthModule.h"
@@ -161,6 +162,7 @@ DroneExecutionManager::DroneExecutionManager(DroneSystem* ds, File &logFile):
   //ns = DroneModule::registerNamespace(this);
 
   ns = AvoidModule::registerNamespace(this); AvoidModule::registerParams(ns, this);
+  ns = CMPS12Module::registerNamespace(this); CMPS12Module::registerParams(ns, this);
   ns = ControllerModule::registerNamespace(this); ControllerModule::registerParams(ns, this);
   ns = CylonModule::registerNamespace(this); CylonModule::registerParams(ns, this);
   ns = DepthModule::registerNamespace(this); DepthModule::registerParams(ns, this);
@@ -1803,6 +1805,8 @@ DroneModule* DroneExecutionManager::instanceModule(char* typeName, uint8_t id) {
   if (id > 0 && id < 255) {
     if (strcmp_P(typeName, AVOID_STR_AVOID) == 0) {
       newMod = new AvoidModule(id, _ds);
+    } else if (strcmp_P(typeName, CMPS12_STR_CMPS12) == 0) {
+      newMod = new CMPS12Module(id, _ds);
     } else if (strcmp_P(typeName, CONTROLLER_STR_CONTROLLER) == 0) {
       newMod = new ControllerModule(id, _ds);
     } else if (strcmp_P(typeName, CYLON_STR_CYLON) == 0) {

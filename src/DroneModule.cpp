@@ -264,7 +264,7 @@ void DroneModule::publishParamsFromList(char * paramList) {
 
 
 void DroneModule::setParamFromList(DRONE_PARAM_ENTRY* pe, char * paramList) {
-  if (pe == NULL) return;
+  if (pe == NULL || paramList[0] == 0) return;
 
   uint8_t numValues = 0; // how many values have we parsed
   char buffer[20];

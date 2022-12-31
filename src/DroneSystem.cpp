@@ -331,6 +331,10 @@ void DroneSystem::setup() {
   Log.noticeln(F("[] Init DroneWire..."));
   DroneWire::setup();
 
+  // I2C scan
+  Log.noticeln(F("[] I2C bus scan..."));
+  DroneWire::scanAll();
+
   // Detect motherboard version
   detectMotherboardVersion();
   Log.noticeln(F("[] Motherboard v%u"), _motherboardVersion);
@@ -350,10 +354,6 @@ void DroneSystem::setup() {
   // Determine and setup filesystem
   Log.noticeln(F("[] Init DroneFS..."));
   dfs.setup();
-
-  // I2C scan
-  Log.noticeln(F("[] I2C bus scan..."));
-  DroneWire::scanAll();
 
   createDefaultConfig();
   createSafeModeScript();
@@ -385,7 +385,7 @@ void DroneSystem::setup() {
 
   // TODO refactor FS class
   // switch to logging to startup.log file on flash if not in safeMode
-  if (!dem->safeMode()) {
+  if (!dem->safeMode() && false) {
     Log.noticeln(F("[] Opening startup.log..."));
     _logFile = LITTLEFS.open("/startup.log", FILE_WRITE);
 
