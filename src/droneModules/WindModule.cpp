@@ -181,6 +181,9 @@ void WindModule::loop() {
 
   DroneWire::selectChannel(_params[I2CBASE_PARAM_BUS_E].data.uint8[0]);
 
+  // update local Wind direction
+  // ---------------------------------
+
   float ang = 360 * _sensor->getRawAngle() / 4095;
 
   if (_params[WIND_PARAM_MODE_E].data.uint8[0] == WIND_MODE_INVERTED) {
@@ -192,33 +195,12 @@ void WindModule::loop() {
   ang = fmod(ang, 360);
   if (ang < 0) ang += 360;
 
-  // update moving average for Direction
-  // -----------------------------------
-  //
-  // update sample count
-  if (_dirSample < _params[WIND_PARAM_SAMPLES_E].data.uint8[0]) _dirSample++;
-  if (_dirSample < 1) _dirSample = 1;
-
-  // recalculate ang as shortest circular distance from current average... normal moving average won't work otherwise!
-  float ang1 = shortestSignedDistanceBetweenCircularValues(_params[WIND_PARAM_DIRECTION_E].data.f[0], ang);
-  // then add back to current average to get as a angle we can average
-  ang = _params[WIND_PARAM_DIRECTION_E].data.f[0] + ang1;
-
-  float variance = abs(ang1);
-
-  // calc moving average variance
-  variance = ((_params[WIND_PARAM_STATS_E].data.f[0] * (_dirSample-1)) + variance) / _dirSample;
-
-  // update moving average
-  ang = ((_params[WIND_PARAM_DIRECTION_E].data.f[0] * (_dirSample-1)) + ang) / _dirSample;
-
   updateAndPublishParam(&_params[WIND_PARAM_DIRECTION_E], (uint8_t*)&ang, sizeof(ang));
-  updateAndPublishParam(&_params[WIND_PARAM_STATS_E], (uint8_t*)&variance, sizeof(variance));
 
 
   // update moving average for Speed
   // -----------------------------------
-  //
+  
   _speedSamples[_speedSample] = _globalWindCounter / dt;
   _globalWindCounter = 0;
 
@@ -240,9 +222,35 @@ void WindModule::loop() {
 
   updateAndPublishParam(&_params[WIND_PARAM_SPEED_E], (uint8_t*)&speed, sizeof(speed));
 
-  // update world direction
+
+  // update moving average for World Direction
+  // -------------------------------------------
+
   float w = _subs[WIND_SUB_HEADING_E].param.data.f[0] + ang;
   w = fmod(w, 360);
   if (w < 0) w += 360;
+
+  // update sample count
+  if (_dirSample < _params[WIND_PARAM_SAMPLES_E].data.uint8[0]) _dirSample++;
+  if (_dirSample < 1) _dirSample = 1;
+
+  // recalculate w as shortest circular distance from current average... normal moving average won't work otherwise!
+  float w1 = shortestSignedDistanceBetweenCircularValues(_params[WIND_PARAM_WIND_E].data.f[0], w);
+  // then add back to current average to get as a angle we can average
+  w1 = _params[WIND_PARAM_WIND_E].data.f[0] + w1;
+
+  float variance = abs(w1);
+
+  // calc moving average variance
+  variance = ((_params[WIND_PARAM_STATS_E].data.f[0] * (_dirSample-1)) + variance) / _dirSample;
+
+  // update moving average
+  w = ((_params[WIND_PARAM_WIND_E].data.f[0] * (_dirSample-1)) + w1) / _dirSample;
+  
+  w = fmod(w, 360);
+  if (w < 0) w += 360;
+
   updateAndPublishParam(&_params[WIND_PARAM_WIND_E], (uint8_t*)&w, sizeof(w));
+
+  updateAndPublishParam(&_params[WIND_PARAM_STATS_E], (uint8_t*)&variance, sizeof(variance));
 }
