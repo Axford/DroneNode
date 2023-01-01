@@ -8,7 +8,7 @@
 @guide >>>
 - Wind direction using I2C AS5600 sensor
 - Wind speed from cup anemometor on an digital input with internal pullup
-
+- Optional moving average with adjustable sample depth, 1 per interval
 <<<
 
 @config >>>
@@ -18,6 +18,7 @@
   bus= 4
   $heading= @>8.11
   centre= -10
+  samples=10
   publish= heading, direction, centre, wind
 
 <<<
@@ -56,14 +57,22 @@
 // @pub 15;u8;1;mode;Operation mode 0=standard, 1=inverted (upside down, e.g. for water direction sensor), 2=anemometer
 #define WIND_PARAM_MODE            (I2CBASE_SUBCLASS_PARAM_START+5)  // 15
 
+// @pub 18;u8;1;samples;Sample depth for moving average, 1 per interval (default 1, max 60)
+#define WIND_PARAM_SAMPLES         (I2CBASE_SUBCLASS_PARAM_START+8)  // 18
+
+// @pub 19;f;1;stats;Average variance relative to the moving average
+#define WIND_PARAM_STATS           (I2CBASE_SUBCLASS_PARAM_START+9)  // 19
+
 #define WIND_PARAM_DIRECTION_E     (I2CBASE_PARAM_ENTRIES+0)
 #define WIND_PARAM_SPEED_E         (I2CBASE_PARAM_ENTRIES+1)
 #define WIND_PARAM_PINS_E          (I2CBASE_PARAM_ENTRIES+2)
 #define WIND_PARAM_CENTRE_E        (I2CBASE_PARAM_ENTRIES+3)
 #define WIND_PARAM_WIND_E          (I2CBASE_PARAM_ENTRIES+4)
 #define WIND_PARAM_MODE_E          (I2CBASE_PARAM_ENTRIES+5)
+#define WIND_PARAM_SAMPLES_E       (I2CBASE_PARAM_ENTRIES+6)
+#define WIND_PARAM_STATS_E         (I2CBASE_PARAM_ENTRIES+7)
 
-#define WIND_PARAM_ENTRIES         (I2CBASE_PARAM_ENTRIES + 6)
+#define WIND_PARAM_ENTRIES         (I2CBASE_PARAM_ENTRIES + 8)
 
 // subs
 // @sub 16;17;f;1;heading;Sub to compass heading to work out world wind direction
@@ -76,7 +85,8 @@
 // strings
 static const char WIND_STR_WIND[] PROGMEM = "Wind";
 
-#define WIND_SAMPLES  5 // moving average over 5 seconds
+#define WIND_DIR_MAX_SAMPLES 250 // max 250 interval moving average
+#define WIND_SPEED_SAMPLES   5 // moving average over 5 seconds
 
 #define WIND_MODE_STANDARD   0
 #define WIND_MODE_INVERTED   1
@@ -87,9 +97,11 @@ class WindModule:  public I2CBaseModule {
 protected:
   AMS_5600 *_sensor;
 
-  float _samples[WIND_SAMPLES];
-  uint8_t _sample;
-  unsigned long _lastSampleTime;
+  uint8_t _dirSample;
+
+  float _speedSamples[WIND_SPEED_SAMPLES];
+  uint8_t _speedSample;
+  unsigned long _lastSpeedSampleTime;
 public:
 
   WindModule(uint8_t id, DroneSystem* ds);

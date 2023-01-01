@@ -4,6 +4,7 @@
 #include "strings.h"
 #include <SPIFFS.h>
 #include "DroneSystem.h"
+#include "../navMath.h"
 
 unsigned long _globalWindCounter;
 
@@ -13,12 +14,15 @@ WindModule::WindModule(uint8_t id, DroneSystem* ds):
    setTypeName(FPSTR(WIND_STR_WIND));
    //_params[I2CBASE_PARAM_ADDR_E].data.uint8[0] = WIND_I2C_ADDRESS;
    _sensor = NULL;
-   _globalWindCounter = 0;
-   _sample = 0;
-   _lastSampleTime = 0;
 
-   for (uint8_t i=0; i<WIND_SAMPLES; i++) {
-     _samples[i] = 0;
+  _dirSample =0;
+
+   _globalWindCounter = 0;
+   _speedSample = 0;
+   _lastSpeedSampleTime = 0;
+
+   for (uint8_t i=0; i<WIND_SPEED_SAMPLES; i++) {
+     _speedSamples[i] = 0;
    }
 
    // subs
@@ -70,6 +74,18 @@ WindModule::WindModule(uint8_t id, DroneSystem* ds):
    _params[WIND_PARAM_MODE_E].nameLen = sizeof(STRING_MODE);
    _params[WIND_PARAM_MODE_E].paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_UINT8_T, 1);
    _params[WIND_PARAM_MODE_E].data.uint8[0] = WIND_MODE_STANDARD;
+
+   _params[WIND_PARAM_SAMPLES_E].paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, WIND_PARAM_SAMPLES);
+   _params[WIND_PARAM_SAMPLES_E].name = FPSTR(STRING_SAMPLES);
+   _params[WIND_PARAM_SAMPLES_E].nameLen = sizeof(STRING_SAMPLES);
+   _params[WIND_PARAM_SAMPLES_E].paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_UINT8_T, 1);
+   _params[WIND_PARAM_SAMPLES_E].data.uint8[0] = 1;
+
+   _params[WIND_PARAM_STATS_E].paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, WIND_PARAM_STATS);
+   _params[WIND_PARAM_STATS_E].name = FPSTR(STRING_STATS);
+   _params[WIND_PARAM_STATS_E].nameLen = sizeof(STRING_STATS);
+   _params[WIND_PARAM_STATS_E].paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 4);
+   _params[WIND_PARAM_STATS_E].data.f[0] = 0;
 
 }
 
@@ -160,8 +176,8 @@ void WindModule::loop() {
   I2CBaseModule::loop();
 
   unsigned long loopTime = millis();
-  float dt = (loopTime - _lastSampleTime) / 1000.0;
-  _lastSampleTime = loopTime;
+  float dt = (loopTime - _lastSpeedSampleTime) / 1000.0;
+  _lastSpeedSampleTime = loopTime;
 
   DroneWire::selectChannel(_params[I2CBASE_PARAM_BUS_E].data.uint8[0]);
 
@@ -176,22 +192,45 @@ void WindModule::loop() {
   ang = fmod(ang, 360);
   if (ang < 0) ang += 360;
 
+  // update moving average for Direction
+  // -----------------------------------
+  //
+  // update sample count
+  if (_dirSample < _params[WIND_PARAM_SAMPLES_E].data.uint8[0]) _dirSample++;
+  if (_dirSample < 1) _dirSample = 1;
+
+  // recalculate ang as shortest circular distance from current average... normal moving average won't work otherwise!
+  float ang1 = shortestSignedDistanceBetweenCircularValues(_params[WIND_PARAM_DIRECTION_E].data.f[0], ang);
+  // then add back to current average to get as a angle we can average
+  ang = _params[WIND_PARAM_DIRECTION_E].data.f[0] + ang1;
+
+  float variance = abs(ang1);
+
+  // calc moving average variance
+  variance = ((_params[WIND_PARAM_STATS_E].data.f[0] * (_dirSample-1)) + variance) / _dirSample;
+
+  // update moving average
+  ang = ((_params[WIND_PARAM_DIRECTION_E].data.f[0] * (_dirSample-1)) + ang) / _dirSample;
+
   updateAndPublishParam(&_params[WIND_PARAM_DIRECTION_E], (uint8_t*)&ang, sizeof(ang));
+  updateAndPublishParam(&_params[WIND_PARAM_STATS_E], (uint8_t*)&variance, sizeof(variance));
 
 
-
-  _samples[_sample] = _globalWindCounter / dt;
+  // update moving average for Speed
+  // -----------------------------------
+  //
+  _speedSamples[_speedSample] = _globalWindCounter / dt;
   _globalWindCounter = 0;
 
-  _sample++;
-  if (_sample >= WIND_SAMPLES) _sample = 0;
+  _speedSample++;
+  if (_speedSample >= WIND_SPEED_SAMPLES) _speedSample = 0;
 
   // add up all the windcount rates to get the average
   float speed = 0;
-  for (uint8_t i=0; i<WIND_SAMPLES; i++) {
-    speed += _samples[i];
+  for (uint8_t i=0; i<WIND_SPEED_SAMPLES; i++) {
+    speed += _speedSamples[i];
   }
-  speed = speed / WIND_SAMPLES;
+  speed = speed / WIND_SPEED_SAMPLES;
 
   // convert to actual speed, based on 1.25m per revolution (count)
   speed = speed * 1.25;

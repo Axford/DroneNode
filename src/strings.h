@@ -117,6 +117,7 @@ static const char STRING_SHUNTV[] = "shuntV";
 static const char STRING_SLEEP[] = "sleep";
 static const char STRING_SOG[] = "SOG";
 static const char STRING_SPEED[] = "speed";
+static const char STRING_STATS[] = "stats";
 static const char STRING_STATUS[] = "status";
 static const char STRING_SUBSCRIBETO[] = "subs";
 static const char STRING_SUB1[] = "sub1";
