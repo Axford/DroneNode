@@ -42,7 +42,7 @@ TurnRateModule::TurnRateModule(uint8_t id, DroneSystem* ds):
    // pubs
    initParams(TURN_RATE_PARAM_ENTRIES);
 
-   _params[TURN_RATE_PARAM_TURN_RATE_E].paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_MEDIUM, TURN_RATE_PARAM_TURN_RATE);
+   _params[TURN_RATE_PARAM_TURN_RATE_E].paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_CRITICAL, TURN_RATE_PARAM_TURN_RATE);
    _params[TURN_RATE_PARAM_TURN_RATE_E].name = FPSTR(STRING_TURN_RATE);
    _params[TURN_RATE_PARAM_TURN_RATE_E].nameLen = sizeof(STRING_TURN_RATE);
    _params[TURN_RATE_PARAM_TURN_RATE_E].paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 4);
@@ -59,7 +59,7 @@ TurnRateModule::TurnRateModule(uint8_t id, DroneSystem* ds):
    _params[TURN_RATE_PARAM_TIMEOUT_E].paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_FLOAT, 4);
    _params[TURN_RATE_PARAM_TIMEOUT_E].data.f[0] = 10;
 
-   _params[TURN_RATE_PARAM_MODE_E].paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_MEDIUM, TURN_RATE_PARAM_MODE);
+   _params[TURN_RATE_PARAM_MODE_E].paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_CRITICAL, TURN_RATE_PARAM_MODE);
    _params[TURN_RATE_PARAM_MODE_E].name = FPSTR(STRING_MODE);
    _params[TURN_RATE_PARAM_MODE_E].nameLen = sizeof(STRING_MODE);
    _params[TURN_RATE_PARAM_MODE_E].paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_UINT8_T, 1);

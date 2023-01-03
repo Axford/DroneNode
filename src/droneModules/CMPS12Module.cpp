@@ -48,7 +48,7 @@ CMPS12Module::CMPS12Module(uint8_t id, DroneSystem* ds):
    _params[CMPS12_PARAM_TRIM_E].paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_FLOAT, 4);
    _params[CMPS12_PARAM_TRIM_E].data.f[0] = 0;
 
-   _params[CMPS12_PARAM_VECTOR_E].paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_MEDIUM, CMPS12_PARAM_VECTOR);
+   _params[CMPS12_PARAM_VECTOR_E].paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_HIGH, CMPS12_PARAM_VECTOR);
    _params[CMPS12_PARAM_VECTOR_E].name = FPSTR(STRING_VECTOR);
    _params[CMPS12_PARAM_VECTOR_E].nameLen = sizeof(STRING_VECTOR);
    _params[CMPS12_PARAM_VECTOR_E].paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 8);
