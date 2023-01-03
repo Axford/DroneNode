@@ -42,8 +42,8 @@
 #define WIND_FROM_WING_PARAM_AOA_E         0
 
 // @pub 15;f;1;wind;Estimated Wind angle (world coordinates)
-#define WIND_FROM_WING_PARAM_WIND          14
-#define WIND_FROM_WING_PARAM_WIND_E        0
+#define WIND_FROM_WING_PARAM_WIND          15
+#define WIND_FROM_WING_PARAM_WIND_E        1
 
 
 #define WIND_FROM_WING_PARAM_ENTRIES       2
