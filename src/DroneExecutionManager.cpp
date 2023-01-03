@@ -43,6 +43,7 @@
 #include "droneModules/UDPTelemetryModule.h"
 #include "droneModules/WaypointModule.h"
 #include "droneModules/WindModule.h"
+#include "droneModules/WindFromWingModule.h"
 
 /*
 #include "droneModules/TimerModule.h"
@@ -197,6 +198,7 @@ DroneExecutionManager::DroneExecutionManager(DroneSystem* ds, File &logFile):
   ns = UDPTelemetryModule::registerNamespace(this);  UDPTelemetryModule::registerParams(ns, this);
   ns = WaypointModule::registerNamespace(this);  WaypointModule::registerParams(ns, this);
   ns = WindModule::registerNamespace(this);  WindModule::registerParams(ns, this);
+  ns = WindFromWingModule::registerNamespace(this);  WindFromWingModule::registerParams(ns, this);
 
 
   // register constructors and mgmtParams for all module namespaces
@@ -1875,6 +1877,8 @@ DroneModule* DroneExecutionManager::instanceModule(char* typeName, uint8_t id) {
       newMod = new WaypointModule(id, _ds);
     } else if (strcmp_P(typeName, WIND_STR_WIND) == 0) {
       newMod = new WindModule(id, _ds);
+    } else if (strcmp_P(typeName, WIND_FROM_WING_STR_WIND_FROM_WING) == 0) {
+      newMod = new WindFromWingModule(id, _ds);
     } else {
       Log.errorln(F("[.c] Unknown type"));
     }
