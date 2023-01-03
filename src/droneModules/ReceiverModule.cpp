@@ -6,8 +6,8 @@
 
 // globals for use in ISRs
 uint8_t _globalReceiveMode = RECEIVER_MODE_PPM;
-uint8_t _globalReceiverPins[4];
-unsigned long _globalReceiverRawTimers[4];
+uint8_t _globalReceiverPins[6];
+unsigned long _globalReceiverRawTimers[6];
 unsigned long _globalLastReceiverSignal;
 
 ReceiverModule::ReceiverModule(uint8_t id, DroneSystem* ds):
@@ -69,23 +69,33 @@ ReceiverModule::ReceiverModule(uint8_t id, DroneSystem* ds):
 
 
    param = &_params[RECEIVER_PARAM_VALUE1_E];
-   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, RECEIVER_PARAM_VALUE1);
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_HIGH, RECEIVER_PARAM_VALUE1);
    setParamName(FPSTR(STRING_VALUE1), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 4);
 
    param = &_params[RECEIVER_PARAM_VALUE2_E];
-   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, RECEIVER_PARAM_VALUE2);
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_HIGH, RECEIVER_PARAM_VALUE2);
    setParamName(FPSTR(STRING_VALUE2), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 4);
 
    param = &_params[RECEIVER_PARAM_VALUE3_E];
-   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, RECEIVER_PARAM_VALUE3);
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_HIGH, RECEIVER_PARAM_VALUE3);
    setParamName(FPSTR(STRING_VALUE3), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 4);
 
    param = &_params[RECEIVER_PARAM_VALUE4_E];
-   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, RECEIVER_PARAM_VALUE4);
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_HIGH, RECEIVER_PARAM_VALUE4);
    setParamName(FPSTR(STRING_VALUE4), param);
+   param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 4);
+
+   param = &_params[RECEIVER_PARAM_VALUE5_E];
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_HIGH, RECEIVER_PARAM_VALUE5);
+   setParamName(FPSTR(STRING_VALUE5), param);
+   param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 4);
+
+   param = &_params[RECEIVER_PARAM_VALUE6_E];
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_HIGH, RECEIVER_PARAM_VALUE6);
+   setParamName(FPSTR(STRING_VALUE6), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 4);
 
    param = &_params[RECEIVER_PARAM_LIMITS_E];
@@ -96,12 +106,12 @@ ReceiverModule::ReceiverModule(uint8_t id, DroneSystem* ds):
    param->data.uint32[1] = 2000;
 
    param = &_params[RECEIVER_PARAM_INPUT_E];
-   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, RECEIVER_PARAM_INPUT);
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_HIGH, RECEIVER_PARAM_INPUT);
    setParamName(FPSTR(STRING_INPUT), param);
-   param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_UINT32_T, 16);
+   param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_UINT8_T, 6);
 
    param = &_params[RECEIVER_PARAM_MODE_E];
-   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, RECEIVER_PARAM_MODE);
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_CRITICAL, RECEIVER_PARAM_MODE);
    setParamName(FPSTR(STRING_MODE), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_UINT8_T, 1);
    param->data.uint8[0] = RECEIVER_MODE_PPM;
@@ -163,7 +173,7 @@ void IRAM_ATTR ReceiverModule::ISR1() {
 
     } else {
       // new pulse
-      if (pulseCounter < 4) {
+      if (pulseCounter < 6) {
         if (pulseTime > 500 && pulseTime < 2500) {
           // moving average of 5 samples
         _globalReceiverRawTimers[pulseCounter] = (4 * _globalReceiverRawTimers[pulseCounter]  + pulseTime) / 5;
@@ -309,7 +319,11 @@ void ReceiverModule::loop() {
   boolean validSignal = (millis() - _globalLastReceiverSignal) < 5000;
 
   // raw values
-  updateAndPublishParam(&_params[RECEIVER_PARAM_INPUT_E], (uint8_t*)&_globalReceiverRawTimers, sizeof(_globalReceiverRawTimers));
+  uint8_t rawU8[6];
+  for (uint8_t i=0; i<6; i++) {
+    rawU8[i] = _globalReceiverRawTimers[i] / 10;
+  }
+  updateAndPublishParam(&_params[RECEIVER_PARAM_INPUT_E], (uint8_t*)&rawU8, sizeof(rawU8));
 
   boolean passthroughMode = _subs[RECEIVER_SUB_SWITCH_E].param.data.f[0] < 0.5;
 
@@ -351,6 +365,12 @@ void ReceiverModule::loop() {
   }
   updateAndPublishParam(&_params[RECEIVER_PARAM_VALUE4_E], (uint8_t*)&v, sizeof(v));
 
+  // channel 5
+  v = validSignal ? rawToValue(4) : 0;
+  updateAndPublishParam(&_params[RECEIVER_PARAM_VALUE5_E], (uint8_t*)&v, sizeof(v));
 
+  // channel 6
+  v = validSignal ? rawToValue(5) : 0;
+  updateAndPublishParam(&_params[RECEIVER_PARAM_VALUE6_E], (uint8_t*)&v, sizeof(v));
 
 }
