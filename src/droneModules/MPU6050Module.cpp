@@ -3,6 +3,8 @@
 #include "../DroneLinkManager.h"
 #include "strings.h"
 
+#define SQR(x) (x*x) 
+
 MPU6050Module::MPU6050Module(uint8_t id, DroneSystem* ds):
   I2CBaseModule ( id, ds )
  {
@@ -40,7 +42,11 @@ MPU6050Module::MPU6050Module(uint8_t id, DroneSystem* ds):
    param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, MPU6050_PARAM_TEMPERATURE);
    setParamName(FPSTR(STRING_TEMPERATURE), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 4);
-   
+
+   param = &_params[MPU6050_PARAM_PITCH_E];
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_HIGH, MPU6050_PARAM_PITCH);
+   setParamName(FPSTR(STRING_PITCH), param);
+   param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 4);  
 }
 
 
@@ -121,6 +127,12 @@ void MPU6050Module::loop() {
   _params[MPU6050_PARAM_GYRO_E].data.f[2] = g.gyro.z;
 
   _params[MPU6050_PARAM_TEMPERATURE_E].data.f[0] = temp.temperature;
+
+  // calc pitch - assume standard orientation with Y+ forward
+  //float mag = sqrt(SQR(a.acceleration.x) + SQR(a.acceleration.y) + SQR(a.acceleration.z));
+
+  float pitch = atan2(a.acceleration.y, a.acceleration.z) * 180 / PI;
+  _params[MPU6050_PARAM_PITCH_E].data.f[0] = pitch;
 
   // error check
   if (isnan(_params[MPU6050_PARAM_ACCEL_E].data.f[0])) {

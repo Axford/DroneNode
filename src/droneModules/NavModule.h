@@ -80,10 +80,18 @@ Target waypoints are defined in terms of Lon Lat and target Radius in meters.
 #define NAV_PARAM_CROSSWIND_E    7
 
 // @pub 20;f;1;adjHeading;Heading adjusted for crosswind, feed to Sailor.target or TurnRate.target
-#define NAV_PARAM_ADJ_HEADING     20  // heading adj for crosswind
-#define NAV_PARAM_ADJ_HEADING_E   8
+#define NAV_PARAM_ADJ_HEADING    20  // heading adj for crosswind
+#define NAV_PARAM_ADJ_HEADING_E  8
 
-#define NAV_PARAM_ENTRIES        9
+// @pub 23;f;1;pitch;Pitch to target - assuming elevation in both location and target
+#define NAV_PARAM_PITCH          23 
+#define NAV_PARAM_PITCH_E        9
+
+// @pub 24;f;2;limits;Pitch limits (min, max)
+#define NAV_PARAM_LIMITS         24
+#define NAV_PARAM_LIMITS_E       10
+
+#define NAV_PARAM_ENTRIES        11
 
 static const char NAV_STR_NAV[] PROGMEM = "Nav";
 

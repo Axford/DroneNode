@@ -105,6 +105,18 @@ NavModule::NavModule(uint8_t id, DroneSystem* ds):
    param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_MEDIUM, NAV_PARAM_ADJ_HEADING);
    setParamName(FPSTR(STRING_ADJ_HEADING), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 4);
+
+   param = &_params[NAV_PARAM_PITCH_E];
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_HIGH, NAV_PARAM_PITCH);
+   setParamName(FPSTR(STRING_PITCH), param);
+   param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 4);
+
+   param = &_params[NAV_PARAM_LIMITS_E];
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, NAV_PARAM_LIMITS);
+   setParamName(FPSTR(STRING_LIMITS), param);
+   param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_FLOAT, 8);
+   param->data.f[0] = -25;
+   param->data.f[1] = 10;
 }
 
 NavModule::~NavModule() {
@@ -328,6 +340,19 @@ void NavModule::update() {
 
   //_params[NAV_PARAM_DISTANCE_E].data.f[0] = d;
   updateAndPublishParam(&_params[NAV_PARAM_DISTANCE_E], (uint8_t*)&d, sizeof(d));
+
+  // calc pitch to target - negative pitches are down (target below location), positive are up
+  if (d != 0) {
+    // negative distances mean target is below location
+    float elevationDifference = _subs[NAV_SUB_TARGET_E].param.data.f[2] - _subs[NAV_SUB_LOCATION_E].param.data.f[2];
+    
+    float pitch = atan2(elevationDifference, d) * 180 / PI;
+
+    // constrain pitch
+    pitch = constrain(pitch, _params[NAV_PARAM_LIMITS_E].data.f[0], _params[NAV_PARAM_LIMITS_E].data.f[1]);
+
+    updateAndPublishParam(&_params[NAV_PARAM_PITCH_E], (uint8_t*)&pitch, sizeof(pitch));
+  }
 
   // check to see if we've reached the waypoint
   // by comparing d (distance to go) to the target radius [2]
