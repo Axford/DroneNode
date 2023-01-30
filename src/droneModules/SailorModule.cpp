@@ -141,6 +141,13 @@ void SailorModule::update() {
   DroneModule::update();
   if (!_setupDone) return;
 
+}
+
+
+void SailorModule::loop() {
+  DroneModule::loop();
+
+
   /*
   Notes
    * negative cross-track means the target is to the left, positive to the right
@@ -273,20 +280,16 @@ void SailorModule::update() {
   flags[1] = _tackLocked ? 1 : 0;
   flags[2] = _lastCrossTrackPositive ? 1 : 0;
 
-  updateAndPublishParam(&_params[SAILOR_PARAM_FLAGS_E], (uint8_t*)&flags, sizeof(flags));
-
   updateAndPublishParam(&_params[SAILOR_PARAM_SHEET_E], (uint8_t*)&sheet, sizeof(sheet));
   updateAndPublishParam(&_params[SAILOR_PARAM_COURSE_E], (uint8_t*)&c, sizeof(c));
 
   // rescale
   wing = wing > 0 ? 1 : -1;
   updateAndPublishParam(&_params[SAILOR_PARAM_WING_E], (uint8_t*)&wing, sizeof(wing));
-}
 
+  updateAndPublishParam(&_params[SAILOR_PARAM_FLAGS_E], (uint8_t*)&flags, sizeof(flags));
 
-void SailorModule::loop() {
-  DroneModule::loop();
   publishParamEntry(&_params[SAILOR_PARAM_SPEED_E]);
   publishParamEntry(&_params[SAILOR_PARAM_SPEED2_E]);
-  publishParamEntry(&_params[SAILOR_PARAM_WING_E]);
+  //publishParamEntry(&_params[SAILOR_PARAM_WING_E]);
 }
