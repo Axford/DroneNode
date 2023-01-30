@@ -46,7 +46,12 @@
 #define WIND_FROM_WING_PARAM_WIND_E        1
 
 
-#define WIND_FROM_WING_PARAM_ENTRIES       2
+// @pub 16;u8;1;samples;Sample depth for moving average, 1 per interval (default 10)
+#define WIND_FROM_WING_PARAM_SAMPLES       16
+#define WIND_FROM_WING_PARAM_SAMPLES_E     2
+
+
+#define WIND_FROM_WING_PARAM_ENTRIES       3
 
 
 
@@ -54,6 +59,7 @@ static const char WIND_FROM_WING_STR_WIND_FROM_WING[] PROGMEM = "WindFromWing";
 
 class WindFromWingModule:  public DroneModule {
 protected:
+  uint8_t _dirSample;  // how many wind samples have we accumulated
 
 public:
 

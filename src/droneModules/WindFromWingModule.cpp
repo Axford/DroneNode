@@ -2,11 +2,14 @@
 #include "../DroneLinkMsg.h"
 #include "../DroneLinkManager.h"
 #include "strings.h"
+#include "../navMath.h"
 
 WindFromWingModule::WindFromWingModule(uint8_t id, DroneSystem* ds):
   DroneModule ( id, ds )
  {
    setTypeName(FPSTR(WIND_FROM_WING_STR_WIND_FROM_WING));
+
+   _dirSample = 0;
 
    // subs
    initSubs(WIND_FROM_WING_SUBS);
@@ -39,6 +42,12 @@ WindFromWingModule::WindFromWingModule(uint8_t id, DroneSystem* ds):
    param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_CRITICAL, WIND_FROM_WING_PARAM_WIND);
    setParamName(FPSTR(STRING_WIND), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 4);
+
+   param = &_params[WIND_FROM_WING_PARAM_SAMPLES_E];
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, WIND_FROM_WING_PARAM_SAMPLES);
+   setParamName(FPSTR(STRING_SAMPLES), param);
+   param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_UINT8_T, 1);
+    _params[WIND_FROM_WING_PARAM_SAMPLES_E].data.uint8[0] = 10;
 }
 
 
@@ -65,11 +74,36 @@ void WindFromWingModule::loop() {
   if (!_setupDone) return;
 
   // shortcuts
-  float w = _subs[WIND_FROM_WING_SUB_WING_E].param.data.f[0];
-  float h = _subs[WIND_FROM_WING_SUB_HEADING_E].param.data.f[0];
-  float AOA = _params[WIND_FROM_WING_PARAM_AOA_E].data.f[0];
+  float wingTailPosition = _subs[WIND_FROM_WING_SUB_WING_E].param.data.f[0];  // which orientation is the tail servo in, either -1 or +1
+  float wingHeading = _subs[WIND_FROM_WING_SUB_HEADING_E].param.data.f[0];  // heading of the the wing from its onboard compass in world coordinates
+  float AOA = _params[WIND_FROM_WING_PARAM_AOA_E].data.f[0];  // angle of attack
 
-  float windAng = h + AOA * w;
+  float windAng = wingHeading + AOA * wingTailPosition;  // wind angle is the wing heading offset by the AOA
 
-  updateAndPublishParam(&_params[WIND_FROM_WING_PARAM_WIND_E], (uint8_t*)&windAng, sizeof(windAng));
+  //updateAndPublishParam(&_params[WIND_FROM_WING_PARAM_WIND_E], (uint8_t*)&windAng, sizeof(windAng));
+
+
+  // update moving average (World coordinates)
+  // -------------------------------------------
+
+  float w = windAng;
+  w = fmod(w, 360);
+  if (w < 0) w += 360;
+
+  // update sample count
+  if (_dirSample < _params[WIND_FROM_WING_PARAM_SAMPLES_E].data.uint8[0]) _dirSample++;
+  if (_dirSample < 1) _dirSample = 1;
+
+  // recalculate w as shortest circular distance from current average... normal moving average won't work otherwise!
+  float w1 = shortestSignedDistanceBetweenCircularValues(_params[WIND_FROM_WING_PARAM_WIND_E].data.f[0], w);
+  // then add back to current average to get as a angle we can average
+  w1 = _params[WIND_FROM_WING_PARAM_WIND_E].data.f[0] + w1;
+
+  // update moving average
+  w = ((_params[WIND_FROM_WING_PARAM_WIND_E].data.f[0] * (_dirSample-1)) + w1) / _dirSample;
+  
+  w = fmod(w, 360);
+  if (w < 0) w += 360;
+
+  updateAndPublishParam(&_params[WIND_FROM_WING_PARAM_WIND_E], (uint8_t*)&w, sizeof(w));
 }
