@@ -163,47 +163,9 @@ DroneExecutionManager::DroneExecutionManager(DroneSystem* ds, File &logFile):
   // register namespaces
   //ns = DroneModule::registerNamespace(this);
 
-  ns = AnemometerModule::registerNamespace(this); AnemometerModule::registerParams(ns, this);
-  ns = AvoidModule::registerNamespace(this); AvoidModule::registerParams(ns, this);
-  ns = CMPS12Module::registerNamespace(this); CMPS12Module::registerParams(ns, this);
-  ns = ControllerModule::registerNamespace(this); ControllerModule::registerParams(ns, this);
-  ns = CylonModule::registerNamespace(this); CylonModule::registerParams(ns, this);
-  ns = DepthModule::registerNamespace(this); DepthModule::registerParams(ns, this);
-  ns = DiagnosticModule::registerNamespace(this); DiagnosticModule::registerParams(ns, this);
-  ns = HMC5883LModule::registerNamespace(this); HMC5883LModule::registerParams(ns, this);
-  ns = INA219Module::registerNamespace(this); INA219Module::registerParams(ns, this);
-  ns = INA3221Module::registerNamespace(this); INA3221Module::registerParams(ns, this);
-  ns = JoystickModule::registerNamespace(this); JoystickModule::registerParams(ns, this);
-  ns = LSM9DS1Module::registerNamespace(this); LSM9DS1Module::registerParams(ns, this);
-  ns = ManagementModule::registerNamespace(this); ManagementModule::registerParams(ns, this);
-  ns = MotorModule::registerNamespace(this);  MotorModule::registerParams(ns, this);
-  ns = MPU6050Module::registerNamespace(this);  MPU6050Module::registerParams(ns, this);
-  ns = NavModule::registerNamespace(this);  NavModule::registerParams(ns, this);
-  ns = NMEAModule::registerNamespace(this); NMEAModule::registerParams(ns, this);
-  ns = NeopixelModule::registerNamespace(this); NeopixelModule::registerParams(ns, this);
-  ns = NunchuckJoystick::registerNamespace(this); NunchuckJoystick::registerParams(ns, this);
-  ns = ODriveModule::registerNamespace(this); ODriveModule::registerParams(ns, this);
-  ns = PanSerialModule::registerNamespace(this); PanSerialModule::registerParams(ns, this);
-  ns = PanTiltModule::registerNamespace(this); PanTiltModule::registerParams(ns, this);
-  ns = PolarModule::registerNamespace(this); PolarModule::registerParams(ns, this);
-  ns = ProaModule::registerNamespace(this); ProaModule::registerParams(ns, this);
-  ns = QMC5883LModule::registerNamespace(this); QMC5883LModule::registerParams(ns, this);
-  ns = ReceiverModule::registerNamespace(this); ReceiverModule::registerParams(ns, this);
-  ns = RFM69TelemetryModule::registerNamespace(this); RFM69TelemetryModule::registerParams(ns, this);
-  ns = SailorModule::registerNamespace(this); SailorModule::registerParams(ns, this);
-  ns = SerialTelemetryModule::registerNamespace(this); SerialTelemetryModule::registerParams(ns, this);
-  ns = ServoModule::registerNamespace(this); ServoModule::registerParams(ns, this);
-  ns = SpeedControlModule::registerNamespace(this); SpeedControlModule::registerParams(ns, this);
-  ns = StatusModule::registerNamespace(this); StatusModule::registerParams(ns, this);
-  ns = TankSteerModule::registerNamespace(this);  TankSteerModule::registerParams(ns, this);
-  ns = TurnRateModule::registerNamespace(this);  TurnRateModule::registerParams(ns, this);
-  ns = UDPTelemetryModule::registerNamespace(this);  UDPTelemetryModule::registerParams(ns, this);
-  ns = WaypointModule::registerNamespace(this);  WaypointModule::registerParams(ns, this);
-  ns = WindModule::registerNamespace(this);  WindModule::registerParams(ns, this);
-  ns = WindFromWingModule::registerNamespace(this);  WindFromWingModule::registerParams(ns, this);
-
 
   // register constructors and mgmtParams for all module namespaces
+  /*
   for (uint8_t i=0; i<_namespaces.size(); i++) {
     ns = _namespaces.get(i);
     if (ns->isModuleType) {
@@ -211,6 +173,7 @@ DroneExecutionManager::DroneExecutionManager(DroneSystem* ds, File &logFile):
       DroneModule::registerMgmtParams(ns, this);
     }
   }
+  */
 }
 
 

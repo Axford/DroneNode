@@ -10,9 +10,17 @@ SailorModule::SailorModule(uint8_t id, DroneSystem* ds):
    // set type
    setTypeName(FPSTR(SAILOR_STR_SAILOR));
 
-   _starboardTack = true;
-   _tackLocked = false;
-   _lastCrossTrackPositive = false;
+   _courseWind = 0;
+   _courseTarget = 0;
+
+   _lastUpdate = 0;
+   _iError = 0;
+   _dError = 0;
+   _lastError = 0;
+   _lastHeading = 0;
+
+   _gybeTimerStart = 0;
+   _positiveError = false;
 
    // subs
    initSubs(SAILOR_SUBS);
@@ -61,59 +69,65 @@ SailorModule::SailorModule(uint8_t id, DroneSystem* ds):
 
    param = &_params[SAILOR_PARAM_SPEED_E];
    param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, SAILOR_PARAM_SPEED);
-   param->publish = true;
+   //param->publish = true;
    setParamName(FPSTR(STRING_SPEED), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_UINT8_T, 16);
 
    param = &_params[SAILOR_PARAM_SPEED2_E];
    param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, SAILOR_PARAM_SPEED2);
-   param->publish = true;
+   //param->publish = true;
    setParamName(FPSTR(STRING_SPEED), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_UINT8_T, 16);
 
    param = &_params[SAILOR_PARAM_FLAGS_E];
    param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_MEDIUM, SAILOR_PARAM_FLAGS);
-   param->publish = true;
-   setParamName(FPSTR(STRING_SPEED), param);
-   param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_UINT8_T, 3);
+   //param->publish = true;
+   setParamName(FPSTR(STRING_FLAGS), param);
+   param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_UINT8_T, 4);
+   param->data.uint8[SAILOR_FLAG_STATE] = SAILOR_STATE_PLANNING;
+   param->data.uint8[SAILOR_FLAG_TACK] = SAILOR_TACK_UNDEFINED;
+   param->data.uint8[SAILOR_FLAG_GYBE] = SAILOR_GYBE_NORMAL;
+   param->data.uint8[3] = 0;
 
    param = &_params[SAILOR_PARAM_WING_E];
    param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_CRITICAL, SAILOR_PARAM_WING);
    setParamName(FPSTR(STRING_WING), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 4);
 
+
+   // rudder control
+   param = &_params[SAILOR_PARAM_PID_E];
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, SAILOR_PARAM_PID);
+   setParamName(FPSTR(STRING_PID), param);
+   param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_FLOAT, 12);
+   param->data.f[0] = 0.05;
+   param->data.f[1] = 0;
+   param->data.f[2] = 0;
+
+   param = &_params[SAILOR_PARAM_RUDDER_E];
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_CRITICAL, SAILOR_PARAM_RUDDER);
+   setParamName(FPSTR(STRING_RUDDER), param);
+   param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 4);
+
+   param = &_params[SAILOR_PARAM_THRESHOLD_E];
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, SAILOR_PARAM_THRESHOLD);
+   setParamName(FPSTR(STRING_THRESHOLD), param);
+   param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_FLOAT, 4);
+   param->data.f[0] = 20;
+
+   param = &_params[SAILOR_PARAM_TIMEOUT_E];
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, SAILOR_PARAM_TIMEOUT);
+   setParamName(FPSTR(STRING_TIMEOUT), param);
+   param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_FLOAT, 4);
+   param->data.f[0] = 10;
+
+   param = &_params[SAILOR_PARAM_MODE_E];
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_CRITICAL, SAILOR_PARAM_MODE);
+   setParamName(FPSTR(STRING_MODE), param);
+   param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_UINT8_T, 1);
+   param->data.uint8[0] = SAILOR_MODE_NORMAL;
+
    update();  // set defaults
-}
-
-
-DEM_NAMESPACE* SailorModule::registerNamespace(DroneExecutionManager *dem) {
-  // namespace for module type
-  return dem->createNamespace(SAILOR_STR_SAILOR,0,true);
-}
-
-void SailorModule::registerParams(DEM_NAMESPACE* ns, DroneExecutionManager *dem) {
-  using std::placeholders::_1;
-  using std::placeholders::_2;
-  using std::placeholders::_3;
-  using std::placeholders::_4;
-
-  // writable mgmt params
-  DEMCommandHandler ph = std::bind(&DroneExecutionManager::mod_param, dem, _1, _2, _3, _4);
-  DEMCommandHandler pha = std::bind(&DroneExecutionManager::mod_subAddr, dem, _1, _2, _3, _4);
-
-  dem->registerCommand(ns, STRING_TARGET, DRONE_LINK_MSG_TYPE_FLOAT, ph);
-  dem->registerCommand(ns, PSTR("$target"), DRONE_LINK_MSG_TYPE_ADDR, pha);
-
-  dem->registerCommand(ns, STRING_HEADING, DRONE_LINK_MSG_TYPE_FLOAT, ph);
-  dem->registerCommand(ns, PSTR("$heading"), DRONE_LINK_MSG_TYPE_ADDR, pha);
-
-  dem->registerCommand(ns, STRING_WIND, DRONE_LINK_MSG_TYPE_FLOAT, ph);
-  dem->registerCommand(ns, PSTR("$wind"), DRONE_LINK_MSG_TYPE_ADDR, pha);
-
-  dem->registerCommand(ns, STRING_CROSSTRACK, DRONE_LINK_MSG_TYPE_FLOAT, ph);
-  dem->registerCommand(ns, PSTR("$crosstrack"), DRONE_LINK_MSG_TYPE_ADDR, pha);
-
-  dem->registerCommand(ns, STRING_POLAR, DRONE_LINK_MSG_TYPE_UINT8_T, ph);
 }
 
 
@@ -147,10 +161,10 @@ void SailorModule::update() {
 void SailorModule::loop() {
   DroneModule::loop();
 
-
   /*
   Notes
-   * negative cross-track means the target is to the left, positive to the right
+   * negative cross-track means the target is to the left, i.e. we are to the right of the corridor
+   * positive crossdtrack means targe to the right, we are to the left of the corridor
 
   */
 
@@ -161,135 +175,252 @@ void SailorModule::loop() {
   float ct = _subs[SAILOR_SUB_CROSSTRACK_E].param.data.f[0];
   float c = _params[SAILOR_PARAM_COURSE_E].data.f[0];
 
-  // -- algo 1 --
-  // evaluate all potential course optionsl, using the polar for each
-  // dot the polar value into the target vector
-  // pick the one with the largest vector magnitude
+  uint8_t newState = _params[SAILOR_PARAM_FLAGS_E].data.uint8[SAILOR_FLAG_STATE];
+  uint8_t newTack = _params[SAILOR_PARAM_FLAGS_E].data.uint8[SAILOR_FLAG_TACK];
 
-
-  //uint8_t coursePolarIndex = polarIndexForAngle(h); // what region are we trying to sail in?
-  //boolean rightPolar = headingPolarIndex < 16;
 
   // calc sheet based on delta between heading and wind
   float wing = shortestSignedDistanceBetweenCircularValues(h, w);
   float sheet = fabs(wing) / 180;
   if (sheet > 1) sheet = 1;
 
-  if (_tackLocked && (_lastCrossTrackPositive ? ct < -1 : ct > 1)) _tackLocked = false;
-  if (fabs(ct) > 1.2) {
-    _tackLocked = false;
-  }
 
-  //boolean tackNeeded = rightPolar ? (ct < -1) : (ct > 1);
-  //if (fabs(ct) > 3) tackNeeded =true; // catchall
-  //boolean tackNeeded = (!_tackLocked) && fabs(ct) > 1;
+  if (newState == SAILOR_STATE_PLANNING) {
+    /*
+      we need to select a new course
+    */ 
+   _courseTarget = t;
+   _courseWind = w;
 
+    float maxPV = -10;
 
-  /*
+    // sweep around potential headings relative to wind (i.e. polar coord frame)
+    for (uint8_t i=0; i<32; i++) {
+      float ang = (i * 360.0/32.0) + 360.0/64.0;
+      float worldAng = ang + w;
+      float deltaToTarget = fabs((worldAng) - t);
+      // dot the polar performance into the target vector, may include negative values
+      float pv = cos(degreesToRadians(deltaToTarget)) * polarForAngle(ang);
+      boolean penalise = false;
 
-  if abs(crosstrack > 1) then its time to tack
-     when evaluating potential headings, need to rule out headings that would increase cross-track
-     i.e. zero the pv values
-     if crosstrack positive, then relative headings need to be between 0 and 90 degrees
-     if crosstrack negative, then relative headings need to be between 0 and -90 degrees
-     where relative heading is shortestSignedDistanceBetweenCircularValues(target, potential heading)
+      // if we're at the edge of the tacking corridor
+      if (fabs(ct) > 0.8) {
+        // penalise courses on wrong side of tacking corridor
+        // delta from 
+        float pToT = shortestSignedDistanceBetweenCircularValues(t, worldAng);
+        if (ct > 0) {
+          // on left side of corridor
+          //penalise = (pToT < 0 || pToT > 90);
+          penalise = (pToT < 0 || pToT > 180);
+        } else {
+          // on right side of corridor
+          //penalise = (pToT > 0 || pToT < -90);
+          penalise = (pToT > 0 || pToT < -180);
+        }
+      }
+      
+      if (penalise) pv = -10;   // pv / 50
 
-  */
-
-
-  float maxPV = 0;
-  float newTackIsStarboard = true;
-  // sweep around potential headings relative to wind (i.e. polar coord frame)
-  for (uint8_t i=0; i<32; i++) {
-    float ang = (i * 360.0/32.0) + 360.0/64.0;
-    float deltaToTarget = fabs((ang + w) - t);
-    // dot the polar performance into the target vector
-    float pv = cos(degreesToRadians(deltaToTarget)) * polarForAngle(ang);
-    if (pv < 0) pv = 0;
-    boolean penalise = false;
-
-    if (_tackLocked) {
-      // penalise tacking before its needed
       if (i < 16) {
-        // port wind
-        penalise = _starboardTack;
+        _params[SAILOR_PARAM_SPEED_E].data.uint8[i] = max(pv, 0.0f);
       } else {
-        // starboard wind
-        penalise = !_starboardTack;
+        _params[SAILOR_PARAM_SPEED2_E].data.uint8[i-16] = max(pv, 0.0f);
+      }
+      if (pv > maxPV) {
+        maxPV = pv;
+        c = ang + w; // put back into world frame
+        if (ct > 0) {
+          // currently on port side of corridor, so we should have selected a port tack
+          newTack = SAILOR_TACK_PORT;
+        } else {
+          newTack = SAILOR_TACK_STARBOARD;
+        }
       }
     }
+    
+    // ensure course is in range 0.. 360
+    c = fmod(c, 360);
+    if (c < 0) c += 360;
 
-    if (fabs(ct) > 1) {
-      float pToT = shortestSignedDistanceBetweenCircularValues(t, ang + w);
-      if (ct > 0) {
-        penalise = (pToT < 0 || pToT > 90);
-      } else {
-        penalise = (pToT > 0 || pToT < -90);
-      }
+    // if course is close to target, then just head to target
+    if (fabs(c-t) < 11) {
+      c = t;
     }
 
-    if (penalise) pv = pv / 50;
+    updateAndPublishParam(&_params[SAILOR_PARAM_COURSE_E], (uint8_t*)&c, sizeof(c));
 
-    if (i < 16) {
-      _params[SAILOR_PARAM_SPEED_E].data.uint8[i] = pv;
+    publishParamEntry(&_params[SAILOR_PARAM_SPEED_E]);
+    publishParamEntry(&_params[SAILOR_PARAM_SPEED2_E]);
+
+    newState = SAILOR_STATE_COURSE_SET;
+
+  } else {
+    /* 
+       a course is set... not much todo except check if we need to set a new course
+    */
+    boolean replan = false;
+
+    if (newState == SAILOR_STATE_COURSE_UNDERWAY) {
+      // have we reached the edge of the tacking corridor
+      if (fabs(ct) >= 1) {
+        replan = true;
+      }
     } else {
-      _params[SAILOR_PARAM_SPEED2_E].data.uint8[i-16] = pv;
+      // have we progressed far on this new course to consider ourselves underway?
+      if (fabs(ct) < 0.8) {
+        newState = SAILOR_STATE_COURSE_UNDERWAY;
+      }
     }
-    if (pv > maxPV) {
-      maxPV = pv;
-      c = ang + w; // put back into world frame
-      newTackIsStarboard = i > 15;
+    
+    // has wind direction changed dramatically since we selected a course
+    float windDelta = shortestSignedDistanceBetweenCircularValues(w, _courseWind);
+    if (fabs(windDelta) > 40) { 
+      replan = true;
+    }
+
+    // has the target heading changed dramatically since we selected a course
+    float targetDelta = shortestSignedDistanceBetweenCircularValues(t, _courseTarget);
+    if (fabs(targetDelta) > 120) { 
+      replan = true;
+    }
+   
+    if (replan) {
+      newState = SAILOR_STATE_PLANNING;
     }
   }
 
-  // ensure course is in range 0.. 360
-  c = fmod(c, 360);
-  if (c < 0) c += 360;
-
-  // if course is close to target, then just head to target
-  if (fabs(c-t) < 11) {
-    c = t;
-  }
-
-  // see if we're on a rubbish tack
-  if (maxPV < 25) {
-    _tackLocked = false;
-  }
-
-  // see if we need to force a tack
-  // should never happen
-  if (fabs(ct) > 1.2) {
-    _starboardTack = ct < 0;
-    _tackLocked = true;
-    _lastCrossTrackPositive = ct > 0;
-  }
-
-  // see if we're changing tack
-  //if (!_tackLocked && newTackIsStarboard != _starboardTack && fabs(ct)<1.2) {
-  if (newTackIsStarboard != _starboardTack && fabs(ct)<1.2) {
-    _starboardTack = newTackIsStarboard;
-    _tackLocked = true;
-    _lastCrossTrackPositive = ct > 0;
-  }
 
   // remap sheet in range -1 to 1
   sheet = (sheet * 2) - 1;
-
-  uint8_t flags[3];
-  flags[0] = _starboardTack ? 1 : 0;
-  flags[1] = _tackLocked ? 1 : 0;
-  flags[2] = _lastCrossTrackPositive ? 1 : 0;
-
   updateAndPublishParam(&_params[SAILOR_PARAM_SHEET_E], (uint8_t*)&sheet, sizeof(sheet));
-  updateAndPublishParam(&_params[SAILOR_PARAM_COURSE_E], (uint8_t*)&c, sizeof(c));
 
   // rescale
   wing = wing > 0 ? 1 : -1;
   updateAndPublishParam(&_params[SAILOR_PARAM_WING_E], (uint8_t*)&wing, sizeof(wing));
 
+  //publishParamEntry(&_params[SAILOR_PARAM_WING_E]);
+
+  /*
+    Rudder Control
+  */
+
+ // target should be the planned course
+ t = c;
+
+  unsigned long updateTime = millis();
+  float dt = (updateTime - _lastUpdate) / 1000.0;
+
+  // don't bother updating if dt too small
+  if (dt < 0.05) return;
+
+  _lastUpdate = updateTime;
+
+  // check to see if heading has dramatically changed
+  if (fabs(shortestSignedDistanceBetweenCircularValues(_lastHeading, t)) > 45) {
+    // reset d and i errors
+    _iError = 0;
+    _dError = 0;
+  }
+
+  // calc shortest signed distance
+  // positive values indicate a clockwise turn
+  float err = shortestSignedDistanceBetweenCircularValues( h, t );
+  boolean positiveError = err > 0;
+
+  uint8_t newGybe = _params[SAILOR_PARAM_FLAGS_E].data.uint8[SAILOR_FLAG_GYBE];
+
+  // get current expected polar performance
+  //float cpv = polarForAngle(h - w);
+
+  // check for potential gybe condition
+  if (fabs(err) > _params[SAILOR_PARAM_THRESHOLD_E].data.f[0]) {
+    if (newGybe == SAILOR_GYBE_NORMAL) {
+      // if in normal mode, then change to potential gybe and start the timer
+      newGybe = SAILOR_GYBE_POTENTIAL;
+      _gybeTimerStart = updateTime;
+      _positiveError = err > 0;
+    }
+
+    if (positiveError != _positiveError) {
+      // reset to normal mode
+      //newGybe = SAILOR_MODE_NORMAL;
+      // dont reset to normal until error falls below threshold... i.e. gybe complete
+    //} else if (cpv < 50) { 
+      // we appear to be in a very low performance region of the polar
+      // and may be stuck here
+
+
+    } else {
+      if ( (updateTime - _gybeTimerStart)/1000.0 > _params[SAILOR_PARAM_TIMEOUT_E].data.f[0]) {
+        // if in potential gybe and timer has exceed the timeout... switch to gybe mode
+        // as long as this wouldn't cause us to turn into the wind! 
+        float angToWind = shortestSignedDistanceBetweenCircularValues(h, w);
+        // check for when we need to turn clockwise, so a gybe would be counter-clockwise
+        // if the wind is also in a counter-clockwise direction , then we will have an issue
+        // ??? and a smaller angle than err ???
+        if (err > 0 && angToWind < 0) {
+          // cancel gybe
+          //newGybe = SAILOR_GYBE_NORMAL;    
+        } else if (err < 0 && angToWind > 0) {
+          // cancel gybe
+          //newGybe = SAILOR_GYBE_NORMAL;    
+        } else {
+          newGybe = SAILOR_GYBE_GYBING;
+        }
+      }
+    } 
+  } else {
+    // reset to normal mode
+    newGybe = SAILOR_GYBE_NORMAL;
+  }
+
+  // if gybe mode then invert err
+  if (newGybe == SAILOR_GYBE_GYBING) {
+    // if _positiveError then when we first entered gybe we needed to turn clockwise to reach the targetHeading
+    if ((err > 0 && _positiveError) || (err < 0 && !_positiveError)) {
+      //err = -err;
+      // make sure err is large for maximum rudder authority
+      err = err > 0 ? -90 : 90;
+    }
+  }
+
+  // limit to 90 for ease
+  if (err > 90) err = 90;
+  if (err < -90) err = -90;
+
+  // update I and D terms
+  _iError += err * dt;
+  _dError = (err - _lastError) / dt;
+
+  // clamp i error
+  if (_params[SAILOR_PARAM_PID_E].data.f[1] > 0) {
+    if (fabs(_iError) > 100 / _params[SAILOR_PARAM_PID_E].data.f[1]) {
+      _iError = (_iError > 0 ? 100 : -100) / _params[SAILOR_PARAM_PID_E].data.f[1];
+    }
+  }
+
+  // apply PID cooefficients
+  float tr =
+    err * _params[SAILOR_PARAM_PID_E].data.f[0] +
+    _iError * _params[SAILOR_PARAM_PID_E].data.f[1] +
+    _dError * _params[SAILOR_PARAM_PID_E].data.f[2];
+
+  _lastError = err;
+
+  // apply limits
+  if (tr > 1) tr = 1;
+  if (tr < -1) tr = -1;
+
+  updateAndPublishParam(&_params[SAILOR_PARAM_RUDDER_E], (uint8_t*)&tr, sizeof(tr));
+
+
+  uint8_t flags[4];
+  flags[SAILOR_FLAG_STATE] = newState;
+  flags[SAILOR_FLAG_TACK] = newTack;
+  flags[SAILOR_FLAG_GYBE] = newGybe;
+  flags[3] = round(255 * _courseWind / 360); 
   updateAndPublishParam(&_params[SAILOR_PARAM_FLAGS_E], (uint8_t*)&flags, sizeof(flags));
 
-  publishParamEntry(&_params[SAILOR_PARAM_SPEED_E]);
-  publishParamEntry(&_params[SAILOR_PARAM_SPEED2_E]);
-  //publishParamEntry(&_params[SAILOR_PARAM_WING_E]);
+  _lastHeading = h;
+
 }

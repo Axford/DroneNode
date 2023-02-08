@@ -108,6 +108,7 @@ static const char STRING_RESETCOUNT[] = "resetCount";
 static const char STRING_RIGHT[] = "right";
 static const char STRING_ROLL[] = "roll";
 static const char STRING_RSSI[] = "RSSI";
+static const char STRING_RUDDER[] = "rudder";
 static const char STRING_SAMPLES[] = "samples";
 static const char STRING_SAMPLEINTERVAL[] = "sampleInterval";
 static const char STRING_SATELLITES[] = "satellites";
