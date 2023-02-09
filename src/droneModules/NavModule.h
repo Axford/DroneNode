@@ -108,6 +108,8 @@ enum NAV_MODE {
 class NavModule:  public DroneModule {
 protected:
   boolean _atTarget;  // true if we've reached the current target
+  float _progress;  // ratio of current distance to target divided by target radius
+  float _lastTarget[3];  // internal tracker of the last target
 
 public:
 

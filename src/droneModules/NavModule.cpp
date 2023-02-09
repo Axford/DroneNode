@@ -18,6 +18,11 @@ NavModule::NavModule(uint8_t id, DroneSystem* ds):
 
    _atTarget = false;
 
+   _progress = 10; // outside target radius by default
+   _lastTarget[0] = 0;
+   _lastTarget[1] = 0;
+   _lastTarget[2] = 0;
+
    // subs
    initSubs(NAV_SUBS);
 
@@ -160,6 +165,11 @@ void NavModule::onParamWrite(DRONE_PARAM_ENTRY *param) {
   if (getDroneLinkMsgParam(param->paramPriority) == NAV_SUB_TARGET) {
     // update last location if target changes
     updateLast(false);
+
+    // update _lastTarget
+    _lastTarget[0] = _subs[NAV_SUB_TARGET_E].param.data.f[0];
+    _lastTarget[1] = _subs[NAV_SUB_TARGET_E].param.data.f[1];
+    _lastTarget[2] = _subs[NAV_SUB_TARGET_E].param.data.f[2];
   }
 }
 
@@ -168,8 +178,23 @@ void NavModule::onSubReceived(DRONE_PARAM_SUB *sub) {
   DroneModule::onSubReceived(sub);
 
   if (sub->addrParam == NAV_SUB_TARGET_ADDR) {
-    // target changed, so update last
-    updateLast(false);
+    // check how close we were to the previous target... if virtually there, assume we had made and it a separate WayPoint module has updated the target
+    // within 10% of target
+    if (_progress < 1.1) {
+      // target changed, so update last using _lastTarget
+      _params[NAV_PARAM_LAST_E].data.f[0] = _lastTarget[0];
+      _params[NAV_PARAM_LAST_E].data.f[1] = _lastTarget[1];
+      _params[NAV_PARAM_LAST_E].data.f[2] = _lastTarget[2];
+      publishParamEntry(&_params[NAV_PARAM_LAST_E]);
+    } else {
+      // target changed, so update last
+      updateLast(false);
+    }
+    
+    // update _lastTarget
+    _lastTarget[0] = _subs[NAV_SUB_TARGET_E].param.data.f[0];
+    _lastTarget[1] = _subs[NAV_SUB_TARGET_E].param.data.f[1];
+    _lastTarget[2] = _subs[NAV_SUB_TARGET_E].param.data.f[2];
   }
 }
 
@@ -356,12 +381,19 @@ void NavModule::update() {
 
   // check to see if we've reached the waypoint
   // by comparing d (distance to go) to the target radius [2]
-  if (d < _subs[NAV_SUB_TARGET_E].param.data.f[2]) {
-    // TODO - we made it... now what?
-    // just keep going?
-    // or switch to some sort of loiter?
-    _atTarget = true;
-    updateLast( true );
+  if (_subs[NAV_SUB_TARGET_E].param.data.f[2] > 0) {
+    _progress = d / _subs[NAV_SUB_TARGET_E].param.data.f[2];
+  } else {
+    _progress = 0;
+  }
+
+  if (_progress <= 1) {
+    if (!_atTarget) {
+      // We've made it...  update last and wait for a new target to be set
+      _atTarget = true;
+      updateLast( true );
+    }
+    
   } else {
     _atTarget = false;
   }
