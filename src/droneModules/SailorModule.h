@@ -89,7 +89,7 @@ config (pubs)
 #define SAILOR_PARAM_SPEED2            20   
 #define SAILOR_PARAM_SPEED2_E          4
 
-// @pub 21;u8;3;flags;[0] = state, [1] = tack state,  [2] = gybe state, [3] = course wind packed into 0..255
+// @pub 21;u8;5;flags;[0] = state, [1] = tack state,  [2] = gybe state, [3] = course wind packed into 0..255
 #define SAILOR_PARAM_FLAGS             21  
 #define SAILOR_PARAM_FLAGS_E           5
 
@@ -123,6 +123,8 @@ config (pubs)
 #define SAILOR_FLAG_STATE              0
 #define SAILOR_FLAG_TACK               1
 #define SAILOR_FLAG_GYBE               2
+#define SAILOR_FLAG_COURSE_WIND        3
+#define SAILOR_FLAG_CROSS_THE_WIND     4
 
 #define SAILOR_GYBE_NORMAL             0
 #define SAILOR_GYBE_POTENTIAL          1

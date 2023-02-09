@@ -4,6 +4,18 @@
 #include "../strings.h"
 #include "../navMath.h"
 
+
+// return true if a is between b and c
+// used to evaluate if changing course from b to c will cross the wind a
+boolean isAngleBetweenAngles(float a, float b, float c) {
+  float bToC = shortestSignedDistanceBetweenCircularValues(b, c);
+  float bToA = shortestSignedDistanceBetweenCircularValues(b, a);
+
+  // will cross wind if sign of bToA matches bToC AND magnitude of bToA < bToC
+  boolean sameSign = (bToC * bToA) > 0;
+  return (sameSign && (abs(bToA) < abs(bToC)));
+}
+
 SailorModule::SailorModule(uint8_t id, DroneSystem* ds):
   DroneModule ( id, ds )
  {
@@ -83,11 +95,12 @@ SailorModule::SailorModule(uint8_t id, DroneSystem* ds):
    param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_MEDIUM, SAILOR_PARAM_FLAGS);
    //param->publish = true;
    setParamName(FPSTR(STRING_FLAGS), param);
-   param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_UINT8_T, 4);
+   param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_UINT8_T, 5);
    param->data.uint8[SAILOR_FLAG_STATE] = SAILOR_STATE_PLANNING;
    param->data.uint8[SAILOR_FLAG_TACK] = SAILOR_TACK_UNDEFINED;
    param->data.uint8[SAILOR_FLAG_GYBE] = SAILOR_GYBE_NORMAL;
-   param->data.uint8[3] = 0;
+   param->data.uint8[SAILOR_FLAG_COURSE_WIND] = 0;
+   param->data.uint8[SAILOR_FLAG_CROSS_THE_WIND] = 0;
 
    param = &_params[SAILOR_PARAM_WING_E];
    param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_CRITICAL, SAILOR_PARAM_WING);
@@ -177,7 +190,9 @@ void SailorModule::loop() {
 
   uint8_t newState = _params[SAILOR_PARAM_FLAGS_E].data.uint8[SAILOR_FLAG_STATE];
   uint8_t newTack = _params[SAILOR_PARAM_FLAGS_E].data.uint8[SAILOR_FLAG_TACK];
+  boolean willCrossWind = _params[SAILOR_PARAM_FLAGS_E].data.uint8[SAILOR_FLAG_CROSS_THE_WIND] == 1;
 
+  uint8_t newGybe = _params[SAILOR_PARAM_FLAGS_E].data.uint8[SAILOR_FLAG_GYBE];
 
   // calc sheet based on delta between heading and wind
   float wing = shortestSignedDistanceBetweenCircularValues(h, w);
@@ -193,6 +208,7 @@ void SailorModule::loop() {
    _courseWind = w;
 
     float maxPV = -10;
+    float newC = c;
 
     // sweep around potential headings relative to wind (i.e. polar coord frame)
     for (uint8_t i=0; i<32; i++) {
@@ -228,7 +244,7 @@ void SailorModule::loop() {
       }
       if (pv > maxPV) {
         maxPV = pv;
-        c = ang + w; // put back into world frame
+        newC = ang + w; // put back into world frame
         if (ct > 0) {
           // currently on port side of corridor, so we should have selected a port tack
           newTack = SAILOR_TACK_PORT;
@@ -239,13 +255,19 @@ void SailorModule::loop() {
     }
     
     // ensure course is in range 0.. 360
-    c = fmod(c, 360);
-    if (c < 0) c += 360;
+    newC = fmod(newC, 360);
+    if (newC < 0) newC += 360;
 
     // if course is close to target, then just head to target
-    if (fabs(c-t) < 11) {
-      c = t;
+    if (fabs(newC-t) < 11) {
+      newC = t;
     }
+
+    // determine if new course will require crossing the wind
+    willCrossWind = isAngleBetweenAngles(w, c, newC);
+
+    // update c value for use in rudder control
+    c = newC;
 
     updateAndPublishParam(&_params[SAILOR_PARAM_COURSE_E], (uint8_t*)&c, sizeof(c));
 
@@ -253,6 +275,9 @@ void SailorModule::loop() {
     publishParamEntry(&_params[SAILOR_PARAM_SPEED2_E]);
 
     newState = SAILOR_STATE_COURSE_SET;
+
+    // reset any gybe in progress
+    newGybe = SAILOR_GYBE_NORMAL;
 
   } else {
     /* 
@@ -280,7 +305,7 @@ void SailorModule::loop() {
 
     // has the target heading changed dramatically since we selected a course
     float targetDelta = shortestSignedDistanceBetweenCircularValues(t, _courseTarget);
-    if (fabs(targetDelta) > 120) { 
+    if (fabs(targetDelta) > 80) { 
       replan = true;
     }
    
@@ -327,8 +352,6 @@ void SailorModule::loop() {
   float err = shortestSignedDistanceBetweenCircularValues( h, t );
   boolean positiveError = err > 0;
 
-  uint8_t newGybe = _params[SAILOR_PARAM_FLAGS_E].data.uint8[SAILOR_FLAG_GYBE];
-
   // get current expected polar performance
   //float cpv = polarForAngle(h - w);
 
@@ -353,20 +376,7 @@ void SailorModule::loop() {
     } else {
       if ( (updateTime - _gybeTimerStart)/1000.0 > _params[SAILOR_PARAM_TIMEOUT_E].data.f[0]) {
         // if in potential gybe and timer has exceed the timeout... switch to gybe mode
-        // as long as this wouldn't cause us to turn into the wind! 
-        float angToWind = shortestSignedDistanceBetweenCircularValues(h, w);
-        // check for when we need to turn clockwise, so a gybe would be counter-clockwise
-        // if the wind is also in a counter-clockwise direction , then we will have an issue
-        // ??? and a smaller angle than err ???
-        if (err > 0 && angToWind < 0) {
-          // cancel gybe
-          //newGybe = SAILOR_GYBE_NORMAL;    
-        } else if (err < 0 && angToWind > 0) {
-          // cancel gybe
-          //newGybe = SAILOR_GYBE_NORMAL;    
-        } else {
-          newGybe = SAILOR_GYBE_GYBING;
-        }
+        newGybe = SAILOR_GYBE_GYBING;
       }
     } 
   } else {
@@ -376,11 +386,24 @@ void SailorModule::loop() {
 
   // if gybe mode then invert err
   if (newGybe == SAILOR_GYBE_GYBING) {
+    /*
     // if _positiveError then when we first entered gybe we needed to turn clockwise to reach the targetHeading
     if ((err > 0 && _positiveError) || (err < 0 && !_positiveError)) {
       //err = -err;
       // make sure err is large for maximum rudder authority
       err = err > 0 ? -90 : 90;
+    }
+    */
+
+    // if we are gybing, we need to choose a turn that gets us to the target without crossing the wind
+    // first lets check to see if the natural direction would cross the wind
+    if (isAngleBetweenAngles(w, h, t)) {
+      // we need to take the opposite way round to reach the target, so invert and enlarge the err value
+      if (err > 0) {
+        err = -90;
+      } else {
+        err = 90;
+      }
     }
   }
 
@@ -418,7 +441,9 @@ void SailorModule::loop() {
   flags[SAILOR_FLAG_STATE] = newState;
   flags[SAILOR_FLAG_TACK] = newTack;
   flags[SAILOR_FLAG_GYBE] = newGybe;
-  flags[3] = round(255 * _courseWind / 360); 
+  flags[SAILOR_FLAG_COURSE_WIND] = round(255 * _courseWind / 360); 
+  flags[SAILOR_FLAG_CROSS_THE_WIND] = willCrossWind ? 1 : 0;
+
   updateAndPublishParam(&_params[SAILOR_PARAM_FLAGS_E], (uint8_t*)&flags, sizeof(flags));
 
   _lastHeading = h;
