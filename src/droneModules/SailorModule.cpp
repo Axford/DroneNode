@@ -13,7 +13,7 @@ boolean isAngleBetweenAngles(float a, float b, float c) {
 
   // will cross wind if sign of bToA matches bToC AND magnitude of bToA < bToC
   boolean sameSign = (bToC * bToA) > 0;
-  return (sameSign && (abs(bToA) < abs(bToC)));
+  return (sameSign && (fabs(bToA) < fabs(bToC)));
 }
 
 SailorModule::SailorModule(uint8_t id, DroneSystem* ds):
@@ -290,19 +290,31 @@ void SailorModule::loop() {
       if (fabs(ct) >= 1) {
         replan = true;
       }
+
+      // is the wind now blowing in a direction where we are likely to stall?
+      // get current expected polar performance
+      float cpv = polarForAngle(h - w);
+      if (cpv == 0) {
+        replan = true;
+      }
     } else {
       // have we progressed far on this new course to consider ourselves underway?
-      if (fabs(ct) < 0.8) {
+      // and have we managed to get on the intended course
+      float headingError = shortestSignedDistanceBetweenCircularValues( h, c );
+      if ((fabs(ct) < 0.8) && (fabs(headingError) < _params[SAILOR_PARAM_THRESHOLD_E].data.f[0])) {
         newState = SAILOR_STATE_COURSE_UNDERWAY;
       }
     }
     
     // has wind direction changed dramatically since we selected a course
+    /*
     float windDelta = shortestSignedDistanceBetweenCircularValues(w, _courseWind);
     if (fabs(windDelta) > 40) { 
       replan = true;
     }
+    */
 
+  
     // has the target heading changed dramatically since we selected a course
     float targetDelta = shortestSignedDistanceBetweenCircularValues(t, _courseTarget);
     if (fabs(targetDelta) > 80) { 
@@ -351,9 +363,6 @@ void SailorModule::loop() {
   // positive values indicate a clockwise turn
   float err = shortestSignedDistanceBetweenCircularValues( h, t );
   boolean positiveError = err > 0;
-
-  // get current expected polar performance
-  //float cpv = polarForAngle(h - w);
 
   // check for potential gybe condition
   if (fabs(err) > _params[SAILOR_PARAM_THRESHOLD_E].data.f[0]) {
