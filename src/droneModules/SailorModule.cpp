@@ -34,6 +34,9 @@ SailorModule::SailorModule(uint8_t id, DroneSystem* ds):
    _gybeTimerStart = 0;
    _positiveError = false;
 
+   _potentialStall = false;
+   _stallTimerStart = 0;
+
    // subs
    initSubs(SAILOR_SUBS);
 
@@ -279,6 +282,9 @@ void SailorModule::loop() {
     // reset any gybe in progress
     newGybe = SAILOR_GYBE_NORMAL;
 
+    // reset stall timer
+    _potentialStall = false;
+
   } else {
     /* 
        a course is set... not much todo except check if we need to set a new course
@@ -295,7 +301,17 @@ void SailorModule::loop() {
       // get current expected polar performance
       float cpv = polarForAngle(h - w);
       if (cpv == 0) {
-        replan = true;
+        // start stall timer
+        if (_potentialStall) {
+          if (millis() > _stallTimerStart + 5000) {
+            replan = true;
+            _potentialStall = false;
+          }
+
+        } else {
+          _potentialStall = true;
+          _stallTimerStart = millis();
+        }
       }
     } else {
       // have we progressed far on this new course to consider ourselves underway?

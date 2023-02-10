@@ -160,6 +160,8 @@ protected:
   uint32_t _gybeTimerStart; // if we are in potential gybe conditions, when did the timer start
   boolean _positiveError;  // did the timer start whilst the error is positive
 
+  uint32_t _stallTimerStart;
+  boolean _potentialStall;
 
 public:
 
