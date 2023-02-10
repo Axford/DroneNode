@@ -312,6 +312,9 @@ void SailorModule::loop() {
           _potentialStall = true;
           _stallTimerStart = millis();
         }
+      } else {
+        // cancel potential stall
+        _potentialStall = false;
       }
     } else {
       // have we progressed far on this new course to consider ourselves underway?
