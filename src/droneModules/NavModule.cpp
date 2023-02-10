@@ -426,6 +426,55 @@ float NavModule::getDistanceTo(float lon2, float lat2) {
 
 
 float NavModule::getCrossTrackDistance() {
+  // calculate approximate cross-track distance from current location to line between last waypoint and target waypoint
+  // in meters
+
+  /*
+  this is a hacky alternative to the "proper" formula, but is more robust to calculation errors
+  with limited floating point precision.  It produces a generous estimate of crosstrack
+  distance (approximation causes crosstrack to be over-stated) that improves in accuracy as the current location approaches the target.  This generally causes tacks that are a little narrower than the target corridor when close to the starting point, but expand to fill the tacking corridor
+  closer to the target.
+  */
+
+  if (_subs[NAV_SUB_TARGET_E].param.data.f[0] == 0 ||
+      _params[NAV_PARAM_LAST_E].data.f[0] == 0 ||
+    _subs[NAV_SUB_LOCATION_E].param.data.f[0] == 0) return 0;
+
+  // local shortcuts
+  double lon1 = _params[NAV_PARAM_LAST_E].data.f[0];
+  double lat1 = _params[NAV_PARAM_LAST_E].data.f[1];
+  double lon2 = _subs[NAV_SUB_TARGET_E].param.data.f[0];
+  double lat2 = _subs[NAV_SUB_TARGET_E].param.data.f[1];
+  double lon3 = _subs[NAV_SUB_LOCATION_E].param.data.f[0];
+  double lat3 = _subs[NAV_SUB_LOCATION_E].param.data.f[1];
+
+  GeographicPoint lp;
+  lp.lon = _params[NAV_PARAM_LAST_E].data.f[0];
+  lp.lat = _params[NAV_PARAM_LAST_E].data.f[1];
+
+
+  // calc distance d1 from last to current
+  double d1 = getDistanceTo(lon1, lat1);
+  
+  // calc initial bearing b1 from last to target
+  double b1 = calculateInitialBearingBetweenCoordinates(lon1, lat1, lon2, lat2);
+
+  // calc position p1 using b1 and d1
+  GeographicPoint p1 = calculateDestinationFromDistanceAndBearing(lp, d1, b1);
+
+  // calc bearing from b2 from last to current
+  double b2 = calculateInitialBearingBetweenCoordinates(lon1, lat1, lon3, lat3);
+
+  // get sign of crosstrack from shortest path between bearings
+  float delta = shortestSignedDistanceBetweenCircularValues(b1, b2);
+
+
+  // calc distance between current and p1
+  return getDistanceTo(p1.lon, p1.lat) * (delta > 0 ? -1 : 1);
+}
+
+/*
+float NavModule::getCrossTrackDistance() {
   // calculate cross-track distance from current location to line between last waypoint and target waypoint
   // in meters
 
@@ -458,6 +507,7 @@ float NavModule::getCrossTrackDistance() {
 
   return d;
 }
+*/
 
 
 boolean NavModule::_goto(DRONE_LINK_PAYLOAD *payload, boolean continuation) {

@@ -333,6 +333,12 @@ void SailorModule::loop() {
     }
     */
 
+
+    // are we well beyond the edge of the tacking corridor
+    if (fabs(ct) >= 1.5) {
+      replan = true;
+    }
+
   
     // has the target heading changed dramatically since we selected a course
     float targetDelta = shortestSignedDistanceBetweenCircularValues(t, _courseTarget);
