@@ -101,27 +101,6 @@ ManagementModule::ManagementModule(uint8_t id, DroneSystem* ds):
    _params[MANAGEMENT_PARAM_CPU_E].data.uint8[0] = 240; // default high speed
 }
 
-DEM_NAMESPACE* ManagementModule::registerNamespace(DroneExecutionManager *dem) {
-  // namespace for module type
-  return dem->createNamespace(MANAGEMENT_STR_MANAGEMENT,0,true);
-}
-
-void ManagementModule::registerParams(DEM_NAMESPACE* ns, DroneExecutionManager *dem) {
-  using std::placeholders::_1;
-  using std::placeholders::_2;
-  using std::placeholders::_3;
-  using std::placeholders::_4;
-
-  // writable mgmt params
-  DEMCommandHandler ph = std::bind(&DroneExecutionManager::mod_param, dem, _1, _2, _3, _4);
-
-  dem->registerCommand(ns, STRING_RESET, DRONE_LINK_MSG_TYPE_UINT8_T, ph);
-  dem->registerCommand(ns, STRING_DISCOVERY, DRONE_LINK_MSG_TYPE_UINT8_T, ph);
-  dem->registerCommand(ns, STRING_HOSTNAME, DRONE_LINK_MSG_TYPE_CHAR, ph);
-  dem->registerCommand(ns, STRING_WIFI, DRONE_LINK_MSG_TYPE_UINT8_T, ph);
-  dem->registerCommand(ns, STRING_SLEEP, DRONE_LINK_MSG_TYPE_UINT32_T, ph);
-  dem->registerCommand(ns, STRING_CPU, DRONE_LINK_MSG_TYPE_UINT8_T, ph);
-}
 
 void ManagementModule::onParamWrite(DRONE_PARAM_ENTRY *param) {
   DroneModule::onParamWrite(param);

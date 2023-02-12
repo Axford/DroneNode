@@ -100,9 +100,6 @@ public:
 
   AvoidModule(uint8_t id, DroneSystem* ds);
 
-  static DEM_NAMESPACE* registerNamespace(DroneExecutionManager *dem);
-  static void registerParams(DEM_NAMESPACE* ns, DroneExecutionManager *dem);
-
   AvoidModuleVessel* getVesselByMMSI(uint32_t mmsi);
 
   void setup();

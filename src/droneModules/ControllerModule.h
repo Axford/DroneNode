@@ -178,9 +178,6 @@ public:
   ControllerModule(uint8_t id, DroneSystem* ds);
   ~ControllerModule();
 
-  static DEM_NAMESPACE* registerNamespace(DroneExecutionManager *dem);
-  static void registerParams(DEM_NAMESPACE* ns, DroneExecutionManager *dem);
-
   void clear();
 
   void doReset();

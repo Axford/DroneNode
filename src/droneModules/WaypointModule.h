@@ -65,8 +65,12 @@ lon,lat,radius
 #define WAYPOINT_PARAM_DISTANCE       15
 #define WAYPOINT_PARAM_DISTANCE_E     5
 
-#define WAYPOINT_PARAM_ENTRIES        6
+// @pub 16;f;1;speed;Approx speed along waypoint path in meters per second
+#define WAYPOINT_PARAM_SPEED          16
+#define WAYPOINT_PARAM_SPEED_E        6
 
+//#define WAYPOINT_PARAM_ENTRIES        7
+#define WAYPOINT_PARAM_ENTRIES        6
 
 #define WAYPOINT_MODE_NORMAL          0
 #define WAYPOINT_MODE_RELOAD          1
@@ -94,6 +98,10 @@ protected:
     float _distanceRemaining;
     float _distanceToNext;
 
+    // to determine speed
+    //float _firstDistanceRemaining;  // what was the first valid distance remaining we recorded
+    //uint32_t _firstDistanceRemainingTime;  // what millis() did we first record a valid distance remaining
+   
 public:
 
   WaypointModule(uint8_t id, DroneSystem* ds);

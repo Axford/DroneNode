@@ -34,6 +34,7 @@ struct DEM_COMMAND;
 
 #define DEM_DATATYPE_NONE 255 // dummy dataType for no parameters
 
+/*
 struct DEM_ENUM_MAPPING {
   const char *const str;
   uint8_t value;
@@ -110,6 +111,7 @@ struct DEM_MACRO {
   DRONE_LINK_ADDR eventAddr;  // set if this is an event handler
   IvanLinkedList::LinkedList<DEM_INSTRUCTION_COMPILED> *commands;
 };
+*/
 
 struct DEM_ADDRESS {
   uint8_t moduleId;  // what module is subscribing
@@ -132,12 +134,12 @@ static const char DEM_BOOT_FILENAME[] PROGMEM = "/boot.dat";
 class DroneExecutionManager
 {
 protected:
-  DEM_CALLSTACK _call;
-  DEM_DATASTACK _data;
+  //DEM_CALLSTACK _call;
+  //DEM_DATASTACK _data;
 
-  IvanLinkedList::LinkedList<DEM_MACRO*> _macros;
-  IvanLinkedList::LinkedList<DEM_NAMESPACE*> _namespaces;
-  IvanLinkedList::LinkedList<DEM_NAMESPACE*> _types; // registered module types
+  //IvanLinkedList::LinkedList<DEM_MACRO*> _macros;
+  //IvanLinkedList::LinkedList<DEM_NAMESPACE*> _namespaces;
+  //IvanLinkedList::LinkedList<DEM_NAMESPACE*> _types; // registered module types
 
   // queue of addresses that need to be resolved
   IvanLinkedList::LinkedList<DEM_ADDRESS> _addressQueue;
@@ -154,7 +156,7 @@ protected:
   uint8_t _channelContext;  // set by module commands
   uint8_t _nodeContext;  // set by node command
   boolean _multiLineComment; // set to true when /* encountered
-  DEM_INSTRUCTION _instruction;  // newly parsed instruction
+  //DEM_INSTRUCTION _instruction;  // newly parsed instruction
 
   unsigned long _maxExecutionTime;
   String _slowestInstruction;
@@ -170,19 +172,19 @@ public:
     boolean safeMode();  // get safeMode status
 
     // looks up macro by name, returns null if not found
-    DEM_MACRO* getMacro(const char* name);
+    //DEM_MACRO* getMacro(const char* name);
     // allocates memory, adds to list and returns new macro
     // or returns existing macro address if already created
-    DEM_MACRO* createMacro(const char* name);
+    //DEM_MACRO* createMacro(const char* name);
 
-    DEM_NAMESPACE* getNamespace(const char* name);
+    //DEM_NAMESPACE* getNamespace(const char* name);
 
-    DEM_NAMESPACE* createNamespace(const char* name, uint8_t module, boolean isModuleType);
-    DEM_NAMESPACE* createNamespace(const __FlashStringHelper* name, uint8_t module, boolean isModuleType);
+    //DEM_NAMESPACE* createNamespace(const char* name, uint8_t module, boolean isModuleType);
+    //DEM_NAMESPACE* createNamespace(const __FlashStringHelper* name, uint8_t module, boolean isModuleType);
 
-    void registerCommand(DEM_NAMESPACE* ns, const char* command, uint8_t dataType, DEMCommandHandler handler);
+    //void registerCommand(DEM_NAMESPACE* ns, const char* command, uint8_t dataType, DEMCommandHandler handler);
 
-    DEM_COMMAND getCommand(DEM_NAMESPACE* ns, const char* command);
+    //DEM_COMMAND getCommand(DEM_NAMESPACE* ns, const char* command);
 
     void addToAddressQueue(DroneModule* newMod, char* subName, char* address);
     void processAddressQueue();
@@ -190,39 +192,40 @@ public:
     void loadConfiguration(const char* filename);
     void saveConfiguration();
 
-    void callStackPush(DEM_CALLSTACK_ENTRY entry);
-    void callStackPop();
-    DEM_CALLSTACK_ENTRY* callStackPeek(uint8_t offset);
+   // void callStackPush(DEM_CALLSTACK_ENTRY entry);
+    //void callStackPop();
+    //DEM_CALLSTACK_ENTRY* callStackPeek(uint8_t offset);
 
-    void dataStackPush(uint32_t d, DEM_INSTRUCTION_COMPILED* owner);
-    DEM_DATASTACK_ENTRY* dataStackPop();
+    //void dataStackPush(uint32_t d, DEM_INSTRUCTION_COMPILED* owner);
+    //DEM_DATASTACK_ENTRY* dataStackPop();
     // peek at an item offset down from the top of the stack
-    DEM_DATASTACK_ENTRY* dataStackPeek(uint8_t offset);
+    //DEM_DATASTACK_ENTRY* dataStackPeek(uint8_t offset);
 
-    void printInstruction(DEM_INSTRUCTION * instruction);
+    //void printInstruction(DEM_INSTRUCTION * instruction);
 
-    void parseEnums(DEM_INSTRUCTION * instruction, DEM_ENUM_MAPPING * mappingTable, uint16_t mappings);
+    //void parseEnums(DEM_INSTRUCTION * instruction, DEM_ENUM_MAPPING * mappingTable, uint16_t mappings);
 
     //void compileInstruction(DEM_INSTRUCTION * instruction, DEM_INSTRUCTION_COMPILED * compiled);
 
     // load a D-Code script from SPIFFS, return true if loaded and parsed ok
-    boolean load(const char * filename);
+    //boolean load(const char * filename);
 
-    boolean tokenContainsNumber(char tokenStart);
-    boolean compileLine(const char * line, DEM_INSTRUCTION_COMPILED* instr);
+    //boolean tokenContainsNumber(char tokenStart);
+    //boolean compileLine(const char * line, DEM_INSTRUCTION_COMPILED* instr);
 
     // execute next instruction
-    void execute();
+    //void execute();
 
     // interrupt whatever we're doing by running a macro
-    void runMacro(const char * macroName, boolean calledFromMacro);
+    //void runMacro(const char * macroName, boolean calledFromMacro);
 
-    void serveMacroInfo(AsyncWebServerRequest *request);
-    void serveCommandInfo(AsyncWebServerRequest *request);
-    void serveExecutionInfo(AsyncWebServerRequest *request);
+    //void serveMacroInfo(AsyncWebServerRequest *request);
+    //void serveCommandInfo(AsyncWebServerRequest *request);
+    //void serveExecutionInfo(AsyncWebServerRequest *request);
 
 
     // core handlers
+    /*
     boolean core_counter(DEM_INSTRUCTION_COMPILED* instr, DEM_CALLSTACK* cs, DEM_DATASTACK* ds, boolean continuation);
     boolean core_delay(DEM_INSTRUCTION_COMPILED* instr, DEM_CALLSTACK* cs, DEM_DATASTACK* ds, boolean continuation);
     boolean core_do(DEM_INSTRUCTION_COMPILED* instr, DEM_CALLSTACK* cs, DEM_DATASTACK* ds, boolean continuation);
@@ -234,19 +237,24 @@ public:
     boolean core_restart(DEM_INSTRUCTION_COMPILED* instr, DEM_CALLSTACK* cs, DEM_DATASTACK* ds, boolean continuation);
     boolean core_run(DEM_INSTRUCTION_COMPILED* instr, DEM_CALLSTACK* cs, DEM_DATASTACK* ds, boolean continuation);
     boolean core_send(DEM_INSTRUCTION_COMPILED* instr, DEM_CALLSTACK* cs, DEM_DATASTACK* ds, boolean continuation);
-    
+    */
+
     void completeSetup();
-    
+
+    /* 
     boolean core_setup(DEM_INSTRUCTION_COMPILED* instr, DEM_CALLSTACK* cs, DEM_DATASTACK* ds, boolean continuation);
     boolean core_swap(DEM_INSTRUCTION_COMPILED* instr, DEM_CALLSTACK* cs, DEM_DATASTACK* ds, boolean continuation);
     boolean core_until(DEM_INSTRUCTION_COMPILED* instr, DEM_CALLSTACK* cs, DEM_DATASTACK* ds, boolean continuation);
+    */
 
     DroneModule* instanceModule(char* typeName, uint8_t id);
-
+    
+    /*
     boolean mod_constructor(DEM_INSTRUCTION_COMPILED* instr, DEM_CALLSTACK* cs, DEM_DATASTACK* ds, boolean continuation);
     boolean mod_param(DEM_INSTRUCTION_COMPILED* instr, DEM_CALLSTACK* cs, DEM_DATASTACK* ds, boolean continuation);
     boolean mod_subAddr(DEM_INSTRUCTION_COMPILED* instr, DEM_CALLSTACK* cs, DEM_DATASTACK* ds, boolean continuation);
     boolean core_sub(DEM_INSTRUCTION_COMPILED* instr, DEM_CALLSTACK* cs, DEM_DATASTACK* ds, boolean continuation);
+    */
 };
 
 

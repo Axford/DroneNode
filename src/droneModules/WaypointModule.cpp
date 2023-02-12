@@ -18,6 +18,9 @@ WaypointModule::WaypointModule(uint8_t id, DroneSystem* ds):
    _distanceRemaining = 0;
    _distanceToNext = 0;
 
+   //_firstDistanceRemaining = 0;
+   //_firstDistanceRemainingTime = 0;
+
    // mgmt
    //_mgmtParams[DRONE_MODULE_PARAM_TYPE_E].paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_CHAR, sizeof(WAYPOINT_STR_WAYPOINT));
    //strncpy_P(_mgmtParams[DRONE_MODULE_PARAM_TYPE_E].data.c, WAYPOINT_STR_WAYPOINT, sizeof(WAYPOINT_STR_WAYPOINT));
@@ -75,6 +78,11 @@ WaypointModule::WaypointModule(uint8_t id, DroneSystem* ds):
    _params[WAYPOINT_PARAM_DISTANCE_E].data.f[0] = 0;
    _params[WAYPOINT_PARAM_DISTANCE_E].data.f[1] = 0;
    _params[WAYPOINT_PARAM_DISTANCE_E].data.f[2] = 0;
+
+   //_params[WAYPOINT_PARAM_SPEED_E].paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, WAYPOINT_PARAM_SPEED);
+   //_params[WAYPOINT_PARAM_SPEED_E].name = FPSTR(STRING_SPEED);
+   //_params[WAYPOINT_PARAM_SPEED_E].nameLen = sizeof(STRING_SPEED);
+   //_params[WAYPOINT_PARAM_SPEED_E].paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 4);
 }
 
 
@@ -248,6 +256,8 @@ void WaypointModule::loop() {
   uint8_t waypoint = _params[WAYPOINT_PARAM_WAYPOINT_E].data.uint8[0];
   uint8_t waypoints = _params[WAYPOINT_PARAM_WAYPOINTS_E].data.uint8[0];
 
+  //float newSpeed = _params[WAYPOINT_PARAM_SPEED_E].data.f[0];
+
   if (m == WAYPOINT_MODE_RELOAD) {
     // reload waypoint.csv file
     loadWaypoints();
@@ -294,6 +304,27 @@ void WaypointModule::loop() {
       }
     }
 
+    // update speed estimate
+    /*
+    if (_firstDistanceRemaining == 0 && _distanceRemaining > 0) {
+      _firstDistanceRemaining = _distanceRemaining;
+      _firstDistanceRemainingTime = millis();
+    } else if (_distanceRemaining > 0) {
+      // update speed calc, must have got closer by at least 100m
+      if (_distanceRemaining <  _firstDistanceRemaining - 100) {
+        // calc time delta
+        float dt = (millis() - _firstDistanceRemainingTime) / 1000;
+        if (dt < 0) {
+          // timer overflow... reset calculations
+          _firstDistanceRemaining = 0;
+        } else if (dt > 0) {
+          newSpeed = (_distanceRemaining - _firstDistanceRemaining) / dt;
+        }
+      }
+    }
+
+    updateAndPublishParam(&_params[WAYPOINT_PARAM_SPEED_E], (uint8_t*)&newSpeed, sizeof(newSpeed));
+*/
   }
 
   if (waypoints == 0) {

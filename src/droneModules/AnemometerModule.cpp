@@ -44,17 +44,6 @@ AnemometerModule::AnemometerModule(uint8_t id, DroneSystem* ds):
 }
 
 
-
-DEM_NAMESPACE* AnemometerModule::registerNamespace(DroneExecutionManager *dem) {
-  // namespace for module type
-  return dem->createNamespace(ANEMOMETER_STR_ANEMOMETER,0,true);
-}
-
-void AnemometerModule::registerParams(DEM_NAMESPACE* ns, DroneExecutionManager *dem) {
-
-}
-
-
 void IRAM_ATTR AnemometerModule::ISR() {
   _globalAnemometerCounter2++;
 }

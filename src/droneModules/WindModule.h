@@ -107,9 +107,6 @@ public:
   WindModule(uint8_t id, DroneSystem* ds);
   ~WindModule();
 
-  static DEM_NAMESPACE* registerNamespace(DroneExecutionManager *dem);
-  static void registerParams(DEM_NAMESPACE* ns, DroneExecutionManager *dem);
-
   void doReset();
 
   static void ISR();

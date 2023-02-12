@@ -33,8 +33,6 @@ public:
 
   void initBaseParams();
 
-  static void registerParams(DEM_NAMESPACE* ns, DroneExecutionManager *dem);
-
   //virtual void onParamWrite(DRONE_PARAM_ENTRY *param);
 
   virtual void doReset();

@@ -55,26 +55,6 @@ MPU6050Module::~MPU6050Module() {
 }
 
 
-DEM_NAMESPACE* MPU6050Module::registerNamespace(DroneExecutionManager *dem) {
-  // namespace for module type
-  return dem->createNamespace(MPU6050_STR_MPU6050,0,true);
-}
-
-void MPU6050Module::registerParams(DEM_NAMESPACE* ns, DroneExecutionManager *dem) {
-  I2CBaseModule::registerParams(ns, dem);
-
-  using std::placeholders::_1;
-  using std::placeholders::_2;
-  using std::placeholders::_3;
-  using std::placeholders::_4;
-
-  // writable mgmt params
-  DEMCommandHandler ph = std::bind(&DroneExecutionManager::mod_param, dem, _1, _2, _3, _4);
-
-  //dem->registerCommand(ns, STRING_THRESHOLD, DRONE_LINK_MSG_TYPE_FLOAT, ph);
-}
-
-
 void MPU6050Module::doReset() {
   I2CBaseModule::doReset();
 

@@ -52,9 +52,6 @@ public:
   DiagnosticModule(uint8_t id, DroneSystem* ds);
   ~DiagnosticModule();
 
-  static DEM_NAMESPACE* registerNamespace(DroneExecutionManager *dem);
-  static void registerParams(DEM_NAMESPACE* ns, DroneExecutionManager *dem);
-
   void doReset();
   
   void doShutdown();

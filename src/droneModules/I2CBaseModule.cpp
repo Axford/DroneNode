@@ -26,20 +26,6 @@ void I2CBaseModule::initBaseParams() {
 }
 
 
-void I2CBaseModule::registerParams(DEM_NAMESPACE* ns, DroneExecutionManager *dem) {
-  using std::placeholders::_1;
-  using std::placeholders::_2;
-  using std::placeholders::_3;
-  using std::placeholders::_4;
-
-  // writable mgmt params
-  DEMCommandHandler ph = std::bind(&DroneExecutionManager::mod_param, dem, _1, _2, _3, _4);
-
-  dem->registerCommand(ns, STRING_BUS, DRONE_LINK_MSG_TYPE_UINT8_T, ph);
-  dem->registerCommand(ns, STRING_ADDR, DRONE_LINK_MSG_TYPE_UINT8_T, ph);
-}
-
-
 void I2CBaseModule::doReset() {
   if (!_setupDone) return;
 

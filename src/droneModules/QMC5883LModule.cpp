@@ -93,34 +93,6 @@ QMC5883LModule::~QMC5883LModule() {
 }
 
 
-DEM_NAMESPACE* QMC5883LModule::registerNamespace(DroneExecutionManager *dem) {
-  // namespace for module type
-  return dem->createNamespace(QMC5883L_STR_QMC5883L,0,true);
-}
-
-void QMC5883LModule::registerParams(DEM_NAMESPACE* ns, DroneExecutionManager *dem) {
-
-  I2CBaseModule::registerParams(ns, dem);
-
-  using std::placeholders::_1;
-  using std::placeholders::_2;
-  using std::placeholders::_3;
-  using std::placeholders::_4;
-
-  // writable mgmt params
-  DEMCommandHandler ph = std::bind(&DroneExecutionManager::mod_param, dem, _1, _2, _3, _4);
-  DEMCommandHandler pha = std::bind(&DroneExecutionManager::mod_subAddr, dem, _1, _2, _3, _4);
-
-  dem->registerCommand(ns, STRING_LOCATION, DRONE_LINK_MSG_TYPE_FLOAT, ph);
-  dem->registerCommand(ns, PSTR("$location"), DRONE_LINK_MSG_TYPE_FLOAT, pha);
-
-  dem->registerCommand(ns, STRING_CALIB_X, DRONE_LINK_MSG_TYPE_FLOAT, ph);
-  dem->registerCommand(ns, STRING_CALIB_Y, DRONE_LINK_MSG_TYPE_FLOAT, ph);
-  dem->registerCommand(ns, STRING_TRIM, DRONE_LINK_MSG_TYPE_FLOAT, ph);
-  dem->registerCommand(ns, STRING_LIMITS, DRONE_LINK_MSG_TYPE_FLOAT, ph);
-  dem->registerCommand(ns, STRING_SAMPLES, DRONE_LINK_MSG_TYPE_UINT32_T, ph);
-}
-
 void QMC5883LModule::doReset() {
   Log.noticeln("[HMC.dR]");
   I2CBaseModule::doReset();

@@ -58,32 +58,6 @@ ODriveModule::ODriveModule(uint8_t id, DroneSystem* ds):
 
 }
 
-DEM_NAMESPACE* ODriveModule::registerNamespace(DroneExecutionManager *dem) {
-  // namespace for module type
-  return dem->createNamespace(ODRIVE_STR_ODRIVE,0,true);
-}
-
-void ODriveModule::registerParams(DEM_NAMESPACE* ns, DroneExecutionManager *dem) {
-  using std::placeholders::_1;
-  using std::placeholders::_2;
-  using std::placeholders::_3;
-  using std::placeholders::_4;
-
-  // writable mgmt params
-  DEMCommandHandler ph = std::bind(&DroneExecutionManager::mod_param, dem, _1, _2, _3, _4);
-  DEMCommandHandler pha = std::bind(&DroneExecutionManager::mod_subAddr, dem, _1, _2, _3, _4);
-
-  dem->registerCommand(ns, STRING_LEFT, DRONE_LINK_MSG_TYPE_FLOAT, ph);
-  dem->registerCommand(ns, PSTR("$left"), DRONE_LINK_MSG_TYPE_FLOAT, pha);
-  dem->registerCommand(ns, STRING_RIGHT, DRONE_LINK_MSG_TYPE_FLOAT, ph);
-  dem->registerCommand(ns, PSTR("$right"), DRONE_LINK_MSG_TYPE_FLOAT, pha);
-
-  dem->registerCommand(ns, STRING_LIMITS, DRONE_LINK_MSG_TYPE_FLOAT, ph);
-  dem->registerCommand(ns, STRING_PORT, DRONE_LINK_MSG_TYPE_UINT8_T, ph);
-  dem->registerCommand(ns, STRING_INVERT, DRONE_LINK_MSG_TYPE_UINT8_T, ph);
-  dem->registerCommand(ns, STRING_SWITCH, DRONE_LINK_MSG_TYPE_UINT8_T, ph);
-}
-
 
 void ODriveModule::setPort(Stream *port) {
   _port = port;

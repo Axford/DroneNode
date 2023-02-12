@@ -60,7 +60,7 @@
 
 */
 
-
+/*
 DEM_ENUM_MAPPING DEM_ENUM_TABLE[] = {
   // boolean
   { STRING_FALSE, 0 },
@@ -88,6 +88,7 @@ DEM_ENUM_MAPPING DRONE_PARAM_TABLE[] = {
   { STRING_RESETCOUNT, DRONE_MODULE_PARAM_RESETCOUNT_E },
   { STRING_TYPE, DRONE_MODULE_PARAM_TYPE_E },
 };
+*/
 
 
 
@@ -97,8 +98,8 @@ DroneExecutionManager::DroneExecutionManager(DroneSystem* ds, File &logFile):
   _logFile(logFile) {
   _dmm = _ds->dmm;
   _dlm = _ds->dlm;
-  _call.p = -1;
-  _data.p = -1;
+  //_call.p = -1;
+  //_data.p = -1;
 
   // read last boot status from EEPROM
   //_safeMode
@@ -113,6 +114,7 @@ DroneExecutionManager::DroneExecutionManager(DroneSystem* ds, File &logFile):
 
   //_safeMode = false;
 
+  /*
   _instruction.ns = 0;
   _instruction.command[0] = '_';
   _instruction.command[1] = '_';
@@ -122,6 +124,7 @@ DroneExecutionManager::DroneExecutionManager(DroneSystem* ds, File &logFile):
   _instruction.addr.paramPriority = 0;
   _instruction.dataType = DRONE_LINK_MSG_TYPE_UINT8_T;
   _instruction.numTokens = 0;
+  */
 
   _channelContext = 0;
   _nodeContext = 0;
@@ -131,12 +134,14 @@ DroneExecutionManager::DroneExecutionManager(DroneSystem* ds, File &logFile):
   _slowestInstruction = "?";
 
   // register core commands
-  DEM_NAMESPACE *core = createNamespace(PSTR("core"), 0, false);
+  //DEM_NAMESPACE *core = createNamespace(PSTR("core"), 0, false);
 
+ /*
   using std::placeholders::_1;
   using std::placeholders::_2;
   using std::placeholders::_3;
   using std::placeholders::_4;
+  */
 
   /*
   registerCommand(core, PSTR("counter"), DRONE_LINK_MSG_TYPE_UINT32_T, std::bind(&DroneExecutionManager::core_counter, this, _1, _2, _3, _4));
@@ -158,7 +163,7 @@ DroneExecutionManager::DroneExecutionManager(DroneSystem* ds, File &logFile):
 
 
   // register modules
-  DEM_NAMESPACE* ns;
+  //DEM_NAMESPACE* ns;
 
   // register namespaces
   //ns = DroneModule::registerNamespace(this);
@@ -203,6 +208,7 @@ boolean DroneExecutionManager::safeMode() {
   return _safeMode;
 }
 
+/*
 // looks up macro by name, returns null if not found
 DEM_MACRO* DroneExecutionManager::getMacro(const char* name) {
   DEM_MACRO* m;
@@ -212,7 +218,6 @@ DEM_MACRO* DroneExecutionManager::getMacro(const char* name) {
   }
   return NULL;
 }
-
 
 // allocates memory, adds to list and returns new macro
 // or returns existing macro address if already created
@@ -292,7 +297,7 @@ DEM_COMMAND DroneExecutionManager::getCommand(DEM_NAMESPACE* ns, const char* com
   cmd.str = NULL;
   return cmd;
 }
-
+*/
 
 void DroneExecutionManager::addToAddressQueue(DroneModule* newMod, char* subName, char* address) {
   // add to address parsing queue
@@ -649,7 +654,7 @@ void DroneExecutionManager::saveConfiguration() {
   }
 }
 
-
+/*
 void DroneExecutionManager::callStackPush(DEM_CALLSTACK_ENTRY entry) {
   if (_call.p < DEM_CALLSTACK_SIZE-1) {
     _call.p++;
@@ -772,7 +777,6 @@ void DroneExecutionManager::parseEnums(DEM_INSTRUCTION * instruction, DEM_ENUM_M
     }
   }
 }
-
 
 boolean DroneExecutionManager::load(const char * filename) {
   Log.noticeln(F("[DEM.l] %s ..."), filename);
@@ -1409,8 +1413,9 @@ void DroneExecutionManager::runMacro(const char * macroName, boolean calledFromM
     Log.errorln(F("[.r] Unknown macro %s"), macroName);
   }
 }
+*/
 
-
+/*
 void DroneExecutionManager::serveMacroInfo(AsyncWebServerRequest *request) {
 
   AsyncResponseStream *response = request->beginResponseStream("text/text");
@@ -1508,19 +1513,15 @@ void DroneExecutionManager::serveExecutionInfo(AsyncWebServerRequest *request) {
   for (uint8_t i=0; i<=_data.p; i++) {
 
     response->printf("    %u: %u  ", i, _data.stack[i].d);
-    /*if (_data.stack[i].owner) {
-      response->print(_data.stack[i].owner->cmd);
-    } else {
-      response->print('?');
-    }*/
     response->print('\n');
   }
 
   //send the response last
   request->send(response);
 }
+*/
 
-
+/*
 boolean DroneExecutionManager::core_counter(DEM_INSTRUCTION_COMPILED* instr, DEM_CALLSTACK* cs, DEM_DATASTACK* ds, boolean continuation) {
 
   // get loop counter from top of stack
@@ -1671,7 +1672,7 @@ boolean DroneExecutionManager::core_send(DEM_INSTRUCTION_COMPILED* instr, DEM_CA
 
   return true;
 }
-
+*/
 
 void DroneExecutionManager::completeSetup() {
   Log.noticeln(F("[.s] Completing module setup"));
@@ -1689,7 +1690,7 @@ void DroneExecutionManager::completeSetup() {
 }
 
 
-
+/*
 boolean DroneExecutionManager::core_setup(DEM_INSTRUCTION_COMPILED* instr, DEM_CALLSTACK* cs, DEM_DATASTACK* ds, boolean continuation) {
   completeSetup();
 
@@ -1759,7 +1760,7 @@ boolean DroneExecutionManager::core_until(DEM_INSTRUCTION_COMPILED* instr, DEM_C
 
   return true;
 }
-
+*/
 
 /*
   Instance a module by type name
@@ -1860,7 +1861,7 @@ DroneModule* DroneExecutionManager::instanceModule(char* typeName, uint8_t id) {
 /*
    Module Constructor
 */
-
+/*
 boolean DroneExecutionManager::mod_constructor(DEM_INSTRUCTION_COMPILED* instr, DEM_CALLSTACK* cs, DEM_DATASTACK* ds, boolean continuation) {
   uint8_t id = instr->msg.payload.uint8[0];
   Log.noticeln(F("[.c] Instantiating %s as %u"), instr->ns->name, id);
@@ -1958,50 +1959,7 @@ boolean DroneExecutionManager::core_sub(DEM_INSTRUCTION_COMPILED* instr, DEM_CAL
   } else {
     Log.errorln(F("[.sub] Unable to locate module"));
   }
-
-/*
-  char buffer[DRONE_LINK_MSG_MAX_PAYLOAD+1];
-  uint8_t len = (instr->msg.paramTypeLength & 0xF)+1;
-  memcpy(buffer, instr->msg.payload.c, len);
-  buffer[len] = 0;
-  char abuf[4];  //for atoi conversions
-
-  Log.warningln(F("[.sub] Creating sub %s for module %u"), buffer, module);
-  // get param address by name from module
-  DroneModule* mod = _dmm->getModuleById(module);
-  if (mod != NULL) {
-    // parse buffer into address
-    DRONE_LINK_ADDR addr;
-    char * gti = strchr(buffer, '>');
-    char * pi = strchr(buffer, '.');
-    if (gti != NULL && pi != NULL) {
-
-      uint8_t len = gti-buffer;
-      strncpy(abuf, buffer, len);
-      abuf[len] = 0;
-      if (abuf[0] == '@') {
-        addr.node = _dlm->node();
-      } else
-        addr.node = atoi(abuf);
-
-      len = pi-gti-1;
-      strncpy(abuf, gti+1, len);
-      abuf[len] = 0;
-      if (abuf[0] == '@') {
-        addr.channel = module;
-      } else
-        addr.channel = atoi(abuf);
-
-      strcpy(abuf, pi+1);
-      addr.param = atoi(abuf);
-
-      _dlm->subscribe(&addr, mod);
-    }
-
-  } else {
-    Log.errorln(F("[.sub] Unable to locate module"));
-  }
-  */
   Log.noticeln(F("[.sub] end"));
   return true;
 }
+*/

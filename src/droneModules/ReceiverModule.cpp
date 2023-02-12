@@ -118,38 +118,6 @@ ReceiverModule::ReceiverModule(uint8_t id, DroneSystem* ds):
 }
 
 
-DEM_NAMESPACE* ReceiverModule::registerNamespace(DroneExecutionManager *dem) {
-  // namespace for module type
-  return dem->createNamespace(RECEIVER_STR_RECEIVER,0,true);
-}
-
-void ReceiverModule::registerParams(DEM_NAMESPACE* ns, DroneExecutionManager *dem) {
-  using std::placeholders::_1;
-  using std::placeholders::_2;
-  using std::placeholders::_3;
-  using std::placeholders::_4;
-
-  // writable mgmt params
-  DEMCommandHandler ph = std::bind(&DroneExecutionManager::mod_param, dem, _1, _2, _3, _4);
-  DEMCommandHandler pha = std::bind(&DroneExecutionManager::mod_subAddr, dem, _1, _2, _3, _4);
-
-  dem->registerCommand(ns, STRING_PINS, DRONE_LINK_MSG_TYPE_UINT8_T, ph);
-  dem->registerCommand(ns, STRING_LIMITS, DRONE_LINK_MSG_TYPE_UINT32_T, ph);
-  dem->registerCommand(ns, STRING_MODE, DRONE_LINK_MSG_TYPE_UINT8_T, ph);
-
-  dem->registerCommand(ns, STRING_INPUT1, DRONE_LINK_MSG_TYPE_FLOAT, ph);
-  dem->registerCommand(ns, PSTR("$input1"), DRONE_LINK_MSG_TYPE_FLOAT, pha);
-  dem->registerCommand(ns, STRING_INPUT2, DRONE_LINK_MSG_TYPE_FLOAT, ph);
-  dem->registerCommand(ns, PSTR("$input2"), DRONE_LINK_MSG_TYPE_FLOAT, pha);
-  dem->registerCommand(ns, STRING_INPUT3, DRONE_LINK_MSG_TYPE_FLOAT, ph);
-  dem->registerCommand(ns, PSTR("$input3"), DRONE_LINK_MSG_TYPE_FLOAT, pha);
-  dem->registerCommand(ns, STRING_INPUT4, DRONE_LINK_MSG_TYPE_FLOAT, ph);
-  dem->registerCommand(ns, PSTR("$input4"), DRONE_LINK_MSG_TYPE_FLOAT, pha);
-  dem->registerCommand(ns, STRING_SWITCH, DRONE_LINK_MSG_TYPE_FLOAT, ph);
-  dem->registerCommand(ns, PSTR("$switch"), DRONE_LINK_MSG_TYPE_FLOAT, pha);
-}
-
-
 void IRAM_ATTR ReceiverModule::ISR1() {
   static unsigned long _startTime = 0;
 

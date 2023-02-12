@@ -153,9 +153,6 @@ public:
 
   PolarModule(uint8_t id, DroneSystem* ds);
 
-  static DEM_NAMESPACE* registerNamespace(DroneExecutionManager *dem);
-  static void registerParams(DEM_NAMESPACE* ns, DroneExecutionManager *dem);
-
   uint8_t polarIndexForAngle(float ang);
 
   void updatePolar();  // recalc from samples

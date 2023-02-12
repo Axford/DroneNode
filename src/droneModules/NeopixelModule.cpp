@@ -48,28 +48,6 @@ NeopixelModule::NeopixelModule(uint8_t id, DroneSystem* ds):
 }
 
 
-DEM_NAMESPACE* NeopixelModule::registerNamespace(DroneExecutionManager *dem) {
-  // namespace for module type
-  return dem->createNamespace(NEOPIXEL_STR_NEOPIXEL,0,true);
-}
-
-void NeopixelModule::registerParams(DEM_NAMESPACE* ns, DroneExecutionManager *dem) {
-  using std::placeholders::_1;
-  using std::placeholders::_2;
-  using std::placeholders::_3;
-  using std::placeholders::_4;
-
-  // writable mgmt params
-  DEMCommandHandler ph = std::bind(&DroneExecutionManager::mod_param, dem, _1, _2, _3, _4);
-  DEMCommandHandler pha = std::bind(&DroneExecutionManager::mod_subAddr, dem, _1, _2, _3, _4);
-
-  dem->registerCommand(ns, STRING_PINS, DRONE_LINK_MSG_TYPE_UINT8_T, ph);
-  dem->registerCommand(ns, STRING_NUMPIXELS, DRONE_LINK_MSG_TYPE_UINT8_T, ph);
-  dem->registerCommand(ns, STRING_SCENE, DRONE_LINK_MSG_TYPE_UINT8_T, ph);
-  dem->registerCommand(ns, PSTR("$scene"), DRONE_LINK_MSG_TYPE_UINT8_T, pha);
-}
-
-
 void NeopixelModule::initScene(NEOPIXEL_SCENE *scene) {
   scene->brightness = 10;
   scene->effect = NEOPIXEL_SOLID;

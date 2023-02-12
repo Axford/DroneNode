@@ -57,30 +57,6 @@ CMPS12Module::CMPS12Module(uint8_t id, DroneSystem* ds):
 }
 
 
-DEM_NAMESPACE* CMPS12Module::registerNamespace(DroneExecutionManager *dem) {
-  // namespace for module type
-  return dem->createNamespace(CMPS12_STR_CMPS12,0,true);
-}
-
-void CMPS12Module::registerParams(DEM_NAMESPACE* ns, DroneExecutionManager *dem) {
-
-  I2CBaseModule::registerParams(ns, dem);
-
-  using std::placeholders::_1;
-  using std::placeholders::_2;
-  using std::placeholders::_3;
-  using std::placeholders::_4;
-
-  // writable mgmt params
-  DEMCommandHandler ph = std::bind(&DroneExecutionManager::mod_param, dem, _1, _2, _3, _4);
-  DEMCommandHandler pha = std::bind(&DroneExecutionManager::mod_subAddr, dem, _1, _2, _3, _4);
-
-  dem->registerCommand(ns, STRING_LOCATION, DRONE_LINK_MSG_TYPE_FLOAT, ph);
-  dem->registerCommand(ns, PSTR("$location"), DRONE_LINK_MSG_TYPE_FLOAT, pha);
-
-  //dem->registerCommand(ns, STRING_TRIM, DRONE_LINK_MSG_TYPE_FLOAT, ph);
-}
-
 void CMPS12Module::doReset() {
   Log.noticeln("[CMPS.dR]");
   I2CBaseModule::doReset();

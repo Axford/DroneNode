@@ -54,24 +54,6 @@ UDPTelemetryModule::UDPTelemetryModule(uint8_t id, DroneSystem* ds):
    param->data.f[2] = 0;
 }
 
-DEM_NAMESPACE* UDPTelemetryModule::registerNamespace(DroneExecutionManager *dem) {
-  // namespace for module type
-  return dem->createNamespace(UDP_TELEMETRY_STR_UDP_TELEMETRY,0,true);
-}
-
-void UDPTelemetryModule::registerParams(DEM_NAMESPACE* ns, DroneExecutionManager *dem) {
-  using std::placeholders::_1;
-  using std::placeholders::_2;
-  using std::placeholders::_3;
-  using std::placeholders::_4;
-
-  // writable mgmt params
-  DEMCommandHandler ph = std::bind(&DroneExecutionManager::mod_param, dem, _1, _2, _3, _4);
-
-  dem->registerCommand(ns, STRING_PORT, DRONE_LINK_MSG_TYPE_UINT32_T, ph);
-  dem->registerCommand(ns, STRING_BROADCAST, DRONE_LINK_MSG_TYPE_UINT8_T, ph);
-}
-
 
 uint8_t UDPTelemetryModule::getInterfaceType() {
   // to be overridden

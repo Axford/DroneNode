@@ -64,23 +64,6 @@ RFM69TelemetryModule::RFM69TelemetryModule(uint8_t id, DroneSystem* ds):
    param->data.uint32[0] = 915;
 }
 
-DEM_NAMESPACE* RFM69TelemetryModule::registerNamespace(DroneExecutionManager *dem) {
-  // namespace for module type
-  return dem->createNamespace(RFM69_TELEMETRY_STR_RFM69_TELEMETRY,0,true);
-}
-
-void RFM69TelemetryModule::registerParams(DEM_NAMESPACE* ns, DroneExecutionManager *dem) {
-  using std::placeholders::_1;
-  using std::placeholders::_2;
-  using std::placeholders::_3;
-  using std::placeholders::_4;
-
-  // writable mgmt params
-  DEMCommandHandler ph = std::bind(&DroneExecutionManager::mod_param, dem, _1, _2, _3, _4);
-
-  dem->registerCommand(ns, STRING_POWER, DRONE_LINK_MSG_TYPE_FLOAT, ph);
-}
-
 
 uint8_t RFM69TelemetryModule::getInterfaceType() {
   // to be overridden

@@ -336,7 +336,7 @@ void DroneModule::setSubAddr(DRONE_PARAM_SUB* ps, uint8_t nodeId, uint8_t channe
   }
 }
 
-
+/*
 DEM_NAMESPACE* DroneModule::registerNamespace(DroneExecutionManager *dem) {
   // namespace for module type
   return dem->createNamespace(PSTR("Drone"),0,true);
@@ -356,6 +356,7 @@ void DroneModule::registerMgmtParams(DEM_NAMESPACE* ns, DroneExecutionManager *d
     dem->registerCommand(ns, STRING_NAME, DRONE_LINK_MSG_TYPE_CHAR, ph);
     dem->registerCommand(ns, STRING_INTERVAL, DRONE_LINK_MSG_TYPE_UINT32_T, ph);
 }
+*/
 
 
 void DroneModule::saveParamValue(DRONE_PARAM_ENTRY* p, File *f) {

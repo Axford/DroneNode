@@ -82,9 +82,6 @@ public:
   INA219Module(uint8_t id, DroneSystem* ds);
   ~INA219Module();
 
-  static DEM_NAMESPACE* registerNamespace(DroneExecutionManager *dem);
-  static void registerParams(DEM_NAMESPACE* ns, DroneExecutionManager *dem);
-
   void doReset();
 
   void publishEntry(uint8_t i);

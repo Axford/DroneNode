@@ -124,40 +124,6 @@ NavModule::NavModule(uint8_t id, DroneSystem* ds):
    param->data.f[1] = 10;
 }
 
-NavModule::~NavModule() {
-
-}
-
-DEM_NAMESPACE* NavModule::registerNamespace(DroneExecutionManager *dem) {
-  // namespace for module type
-  return dem->createNamespace(NAV_STR_NAV,0,true);
-}
-
-void NavModule::registerParams(DEM_NAMESPACE* ns, DroneExecutionManager *dem) {
-
-  // writable mgmt params
-  DEMCommandHandler ph = std::bind(&DroneExecutionManager::mod_param, dem, _1, _2, _3, _4);
-  DEMCommandHandler pha = std::bind(&DroneExecutionManager::mod_subAddr, dem, _1, _2, _3, _4);
-
-  dem->registerCommand(ns, STRING_LOCATION, DRONE_LINK_MSG_TYPE_FLOAT, ph);
-  dem->registerCommand(ns, PSTR("$location"), DRONE_LINK_MSG_TYPE_ADDR, pha);
-
-  dem->registerCommand(ns, STRING_TARGET, DRONE_LINK_MSG_TYPE_FLOAT, ph);
-  dem->registerCommand(ns, PSTR("$target"), DRONE_LINK_MSG_TYPE_ADDR, pha);
-
-  dem->registerCommand(ns, STRING_WIND, DRONE_LINK_MSG_TYPE_FLOAT, ph);
-  dem->registerCommand(ns, PSTR("$wind"), DRONE_LINK_MSG_TYPE_ADDR, pha);
-
-  dem->registerCommand(ns, STRING_HEADING, DRONE_LINK_MSG_TYPE_FLOAT, ph);
-  dem->registerCommand(ns, STRING_DISTANCE, DRONE_LINK_MSG_TYPE_FLOAT, ph);
-  dem->registerCommand(ns, STRING_LAST, DRONE_LINK_MSG_TYPE_FLOAT, ph);
-  dem->registerCommand(ns, STRING_HOME, DRONE_LINK_MSG_TYPE_FLOAT, ph);
-  dem->registerCommand(ns, STRING_CROSSTRACK, DRONE_LINK_MSG_TYPE_FLOAT, ph);
-  dem->registerCommand(ns, STRING_CORRECTION, DRONE_LINK_MSG_TYPE_FLOAT, ph);
-  dem->registerCommand(ns, STRING_CROSSWIND, DRONE_LINK_MSG_TYPE_FLOAT, ph);
-  dem->registerCommand(ns, STRING_MODE, DRONE_LINK_MSG_TYPE_UINT8_T, ph);
-}
-
 
 void NavModule::onParamWrite(DRONE_PARAM_ENTRY *param) {
   DroneModule::onParamWrite(param);
@@ -201,19 +167,6 @@ void NavModule::onSubReceived(DRONE_PARAM_SUB *sub) {
 
 void NavModule::setup() {
   DroneModule::setup();
-
-  // register private commands
-  String nsName = "_" + String(getName());
-  DEM_NAMESPACE* ns = _dem->createNamespace(nsName.c_str(),0,true);
-
-  DEMCommandHandler gotoH = std::bind(&NavModule::nav_goto, this, _1, _2, _3, _4);
-  _dem->registerCommand(ns, PSTR("goto"), DRONE_LINK_MSG_TYPE_FLOAT, gotoH);
-
-  DEMCommandHandler inRadiusH = std::bind(&NavModule::nav_inRadius, this, _1, _2, _3, _4);
-  _dem->registerCommand(ns, PSTR("inRadius"), DRONE_LINK_MSG_TYPE_FLOAT, inRadiusH);
-
-  DEMCommandHandler goHomeH = std::bind(&NavModule::nav_goHome, this, _1, _2, _3, _4);
-  _dem->registerCommand(ns, PSTR("goHome"), DEM_DATATYPE_NONE, goHomeH);
 }
 
 void NavModule::loop() {
@@ -540,7 +493,7 @@ boolean NavModule::_goto(DRONE_LINK_PAYLOAD *payload, boolean continuation) {
 }
 
 
-
+/*
 boolean NavModule::nav_inRadius(DEM_INSTRUCTION_COMPILED* instr, DEM_CALLSTACK* cs, DEM_DATASTACK* ds, boolean continuation) {
   Log.noticeln("[Nav.inRadius]");
 
@@ -564,3 +517,4 @@ boolean NavModule::nav_goto(DEM_INSTRUCTION_COMPILED* instr, DEM_CALLSTACK* cs, 
 boolean NavModule::nav_goHome(DEM_INSTRUCTION_COMPILED* instr, DEM_CALLSTACK* cs, DEM_DATASTACK* ds, boolean continuation) {
   return _goto(&_params[NAV_PARAM_HOME_E].data, continuation);
 }
+*/

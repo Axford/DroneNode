@@ -158,9 +158,9 @@ public:
   void setParamFromList(DRONE_PARAM_ENTRY* pe, char * paramList);
   void setSubAddr(DRONE_PARAM_SUB* ps, uint8_t nodeId, uint8_t channelId, uint8_t paramId);
 
-  static DEM_NAMESPACE* registerNamespace(DroneExecutionManager *dem);
-  static void registerConstructor(DEM_NAMESPACE* ns, DroneExecutionManager *dem);
-  static void registerMgmtParams(DEM_NAMESPACE* ns, DroneExecutionManager *dem);
+  //static DEM_NAMESPACE* registerNamespace(DroneExecutionManager *dem);
+  //static void registerConstructor(DEM_NAMESPACE* ns, DroneExecutionManager *dem);
+  //static void registerMgmtParams(DEM_NAMESPACE* ns, DroneExecutionManager *dem);
 
   void saveParamValue(DRONE_PARAM_ENTRY* p, File *f);
   void saveParam(DRONE_PARAM_ENTRY* p, File *f);

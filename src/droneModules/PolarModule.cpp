@@ -106,37 +106,6 @@ PolarModule::PolarModule(uint8_t id, DroneSystem* ds):
 
 }
 
-DEM_NAMESPACE* PolarModule::registerNamespace(DroneExecutionManager *dem) {
-  // namespace for module type
-  return dem->createNamespace(POLAR_STR_POLAR,0,true);
-}
-
-void PolarModule::registerParams(DEM_NAMESPACE* ns, DroneExecutionManager *dem) {
-  using std::placeholders::_1;
-  using std::placeholders::_2;
-  using std::placeholders::_3;
-  using std::placeholders::_4;
-
-  // writable mgmt params
-  DEMCommandHandler ph = std::bind(&DroneExecutionManager::mod_param, dem, _1, _2, _3, _4);
-  DEMCommandHandler pha = std::bind(&DroneExecutionManager::mod_subAddr, dem, _1, _2, _3, _4);
-  dem->registerCommand(ns, STRING_LOCATION, DRONE_LINK_MSG_TYPE_FLOAT, ph);
-  dem->registerCommand(ns, PSTR("$location"), DRONE_LINK_MSG_TYPE_FLOAT, pha);
-  dem->registerCommand(ns, STRING_SOG, DRONE_LINK_MSG_TYPE_FLOAT, ph);
-  dem->registerCommand(ns, PSTR("$SOG"), DRONE_LINK_MSG_TYPE_FLOAT, pha);
-  dem->registerCommand(ns, STRING_WIND, DRONE_LINK_MSG_TYPE_FLOAT, ph);
-  dem->registerCommand(ns, PSTR("$wind"), DRONE_LINK_MSG_TYPE_FLOAT, pha);
-  dem->registerCommand(ns, STRING_WIND_SPEED, DRONE_LINK_MSG_TYPE_FLOAT, ph);
-  dem->registerCommand(ns, PSTR("$windSpeed"), DRONE_LINK_MSG_TYPE_FLOAT, pha);
-  dem->registerCommand(ns, STRING_HEADING, DRONE_LINK_MSG_TYPE_FLOAT, ph);
-  dem->registerCommand(ns, PSTR("$heading"), DRONE_LINK_MSG_TYPE_FLOAT, pha);
-
-  dem->registerCommand(ns, STRING_MODE, DRONE_LINK_MSG_TYPE_UINT8_T, ph);
-  dem->registerCommand(ns, STRING_TARGET, DRONE_LINK_MSG_TYPE_FLOAT, ph);
-  dem->registerCommand(ns, STRING_THRESHOLD, DRONE_LINK_MSG_TYPE_FLOAT, ph);
-  dem->registerCommand(ns, STRING_RADIUS, DRONE_LINK_MSG_TYPE_FLOAT, ph);
-}
-
 
 uint8_t PolarModule::polarIndexForAngle(float ang) {
   //float w = _subs[SAILOR_SUB_WIND_E].param.data.f[0];

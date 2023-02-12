@@ -48,31 +48,6 @@ JoystickModule::JoystickModule(uint8_t id, DroneSystem* ds):
 }
 
 
-DEM_NAMESPACE* JoystickModule::registerNamespace(DroneExecutionManager *dem) {
-  // namespace for module type
-  return dem->createNamespace(JOYSTICK_STR_JOYSTICK,0,true);
-}
-
-void JoystickModule::registerParams(DEM_NAMESPACE* ns, DroneExecutionManager *dem) {
-
-  I2CBaseModule::registerParams(ns, dem);
-
-  using std::placeholders::_1;
-  using std::placeholders::_2;
-  using std::placeholders::_3;
-  using std::placeholders::_4;
-
-  // writable mgmt params
-  DEMCommandHandler ph = std::bind(&DroneExecutionManager::mod_param, dem, _1, _2, _3, _4);
-
-  dem->registerCommand(ns, STRING_XAXIS, DRONE_LINK_MSG_TYPE_FLOAT, ph);
-  dem->registerCommand(ns, STRING_YAXIS, DRONE_LINK_MSG_TYPE_FLOAT, ph);
-  dem->registerCommand(ns, STRING_ZAXIS, DRONE_LINK_MSG_TYPE_FLOAT, ph);
-  dem->registerCommand(ns, STRING_BUTTON, DRONE_LINK_MSG_TYPE_FLOAT, ph);
-  dem->registerCommand(ns, STRING_INVERT, DRONE_LINK_MSG_TYPE_UINT8_T, ph);
-}
-
-
 void JoystickModule::doReset() {
   I2CBaseModule::doReset();
 

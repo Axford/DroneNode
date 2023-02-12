@@ -56,26 +56,6 @@ SerialTelemetryModule::SerialTelemetryModule(uint8_t id, DroneSystem* ds):
 }
 
 
-DEM_NAMESPACE* SerialTelemetryModule::registerNamespace(DroneExecutionManager *dem) {
-  // namespace for module type
-  return dem->createNamespace(SERIAL_TELEMETRY_STR_SERIAL_TELEMETRY,0,true);
-}
-
-
-void SerialTelemetryModule::registerParams(DEM_NAMESPACE* ns, DroneExecutionManager *dem) {
-  using std::placeholders::_1;
-  using std::placeholders::_2;
-  using std::placeholders::_3;
-  using std::placeholders::_4;
-
-  // writable mgmt params
-  DEMCommandHandler ph = std::bind(&DroneExecutionManager::mod_param, dem, _1, _2, _3, _4);
-
-  dem->registerCommand(ns, STRING_PORT, DRONE_LINK_MSG_TYPE_UINT8_T, ph);
-  dem->registerCommand(ns, STRING_BAUD, DRONE_LINK_MSG_TYPE_UINT32_T, ph);
-}
-
-
 uint8_t SerialTelemetryModule::getInterfaceType() {
   // to be overridden
   return DRONE_MESH_INTERFACE_TYPE_SERIAL;

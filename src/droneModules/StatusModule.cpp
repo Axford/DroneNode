@@ -93,35 +93,6 @@ StatusModule::StatusModule(uint8_t id, DroneSystem* ds):
    _params[STATUS_PARAM_VALUE4_E].data.f[0] = 0.5;
 }
 
-DEM_NAMESPACE* StatusModule::registerNamespace(DroneExecutionManager *dem) {
-  // namespace for module type
-  return dem->createNamespace(STATUS_STR_STATUS,0,true);
-}
-
-void StatusModule::registerParams(DEM_NAMESPACE* ns, DroneExecutionManager *dem) {
-  using std::placeholders::_1;
-  using std::placeholders::_2;
-  using std::placeholders::_3;
-  using std::placeholders::_4;
-
-  // writable mgmt params
-  DEMCommandHandler ph = std::bind(&DroneExecutionManager::mod_param, dem, _1, _2, _3, _4);
-  DEMCommandHandler pha = std::bind(&DroneExecutionManager::mod_subAddr, dem, _1, _2, _3, _4);
-  dem->registerCommand(ns, STRING_SUB1, DRONE_LINK_MSG_TYPE_FLOAT, ph);
-  dem->registerCommand(ns, PSTR("$sub1"), DRONE_LINK_MSG_TYPE_FLOAT, pha);
-  dem->registerCommand(ns, STRING_SUB2, DRONE_LINK_MSG_TYPE_FLOAT, ph);
-  dem->registerCommand(ns, PSTR("$sub2"), DRONE_LINK_MSG_TYPE_FLOAT, pha);
-  dem->registerCommand(ns, STRING_SUB3, DRONE_LINK_MSG_TYPE_FLOAT, ph);
-  dem->registerCommand(ns, PSTR("$sub3"), DRONE_LINK_MSG_TYPE_FLOAT, pha);
-  dem->registerCommand(ns, STRING_SUB4, DRONE_LINK_MSG_TYPE_FLOAT, ph);
-  dem->registerCommand(ns, PSTR("$sub4"), DRONE_LINK_MSG_TYPE_FLOAT, pha);
-
-  dem->registerCommand(ns, STRING_SCENE, DRONE_LINK_MSG_TYPE_UINT8_T, ph);
-  dem->registerCommand(ns, STRING_VALUE1, DRONE_LINK_MSG_TYPE_FLOAT, ph);
-  dem->registerCommand(ns, STRING_VALUE2, DRONE_LINK_MSG_TYPE_FLOAT, ph);
-  dem->registerCommand(ns, STRING_VALUE3, DRONE_LINK_MSG_TYPE_FLOAT, ph);
-  dem->registerCommand(ns, STRING_VALUE4, DRONE_LINK_MSG_TYPE_FLOAT, ph);
-}
 
 
 void StatusModule::setup() {

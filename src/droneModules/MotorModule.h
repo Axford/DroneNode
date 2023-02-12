@@ -84,10 +84,6 @@ public:
 
   MotorModule(uint8_t id, DroneSystem* ds);
 
-  static DEM_NAMESPACE* registerNamespace(DroneExecutionManager *dem);
-  static void registerParams(DEM_NAMESPACE* ns, DroneExecutionManager *dem);
-
-
   virtual void setup();
 
   boolean requestMotorPins(uint8_t num);

@@ -71,27 +71,6 @@ INA219Module::~INA219Module() {
 }
 
 
-DEM_NAMESPACE* INA219Module::registerNamespace(DroneExecutionManager *dem) {
-  // namespace for module type
-  return dem->createNamespace(INA219_STR_INA219,0,true);
-}
-
-void INA219Module::registerParams(DEM_NAMESPACE* ns, DroneExecutionManager *dem) {
-  I2CBaseModule::registerParams(ns, dem);
-
-  using std::placeholders::_1;
-  using std::placeholders::_2;
-  using std::placeholders::_3;
-  using std::placeholders::_4;
-
-  // writable mgmt params
-  DEMCommandHandler ph = std::bind(&DroneExecutionManager::mod_param, dem, _1, _2, _3, _4);
-
-  dem->registerCommand(ns, STRING_THRESHOLD, DRONE_LINK_MSG_TYPE_FLOAT, ph);
-  dem->registerCommand(ns, STRING_CELLS, DRONE_LINK_MSG_TYPE_UINT8_T, ph);
-}
-
-
 void INA219Module::doReset() {
   Log.noticeln("[INA.dR]");
   I2CBaseModule::doReset();

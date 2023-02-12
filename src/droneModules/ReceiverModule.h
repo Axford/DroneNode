@@ -134,9 +134,6 @@ public:
 
   ReceiverModule(uint8_t id, DroneSystem* ds);
 
-  static DEM_NAMESPACE* registerNamespace(DroneExecutionManager *dem);
-  static void registerParams(DEM_NAMESPACE* ns, DroneExecutionManager *dem);
-
   static void ISR1();
   static void ISR2();
   static void ISR3();

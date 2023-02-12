@@ -114,10 +114,6 @@ protected:
 public:
 
   NavModule(uint8_t id, DroneSystem* ds);
-  ~NavModule();
-
-  static DEM_NAMESPACE* registerNamespace(DroneExecutionManager *dem);
-  static void registerParams(DEM_NAMESPACE* ns, DroneExecutionManager *dem);
 
   void onParamWrite(DRONE_PARAM_ENTRY *param);
   void onSubReceived(DRONE_PARAM_SUB *sub);
@@ -134,9 +130,9 @@ public:
 
   boolean _goto(DRONE_LINK_PAYLOAD *payload, boolean continuation);
 
-  boolean nav_inRadius(DEM_INSTRUCTION_COMPILED* instr, DEM_CALLSTACK* cs, DEM_DATASTACK* ds, boolean continuation);
-  boolean nav_goto(DEM_INSTRUCTION_COMPILED* instr, DEM_CALLSTACK* cs, DEM_DATASTACK* ds, boolean continuation);
-  boolean nav_goHome(DEM_INSTRUCTION_COMPILED* instr, DEM_CALLSTACK* cs, DEM_DATASTACK* ds, boolean continuation);
+  //boolean nav_inRadius(DEM_INSTRUCTION_COMPILED* instr, DEM_CALLSTACK* cs, DEM_DATASTACK* ds, boolean continuation);
+  //boolean nav_goto(DEM_INSTRUCTION_COMPILED* instr, DEM_CALLSTACK* cs, DEM_DATASTACK* ds, boolean continuation);
+  //boolean nav_goHome(DEM_INSTRUCTION_COMPILED* instr, DEM_CALLSTACK* cs, DEM_DATASTACK* ds, boolean continuation);
 };
 
 #endif
