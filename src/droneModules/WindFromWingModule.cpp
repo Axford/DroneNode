@@ -52,6 +52,7 @@ WindFromWingModule::WindFromWingModule(uint8_t id, DroneSystem* ds):
 
 
 void WindFromWingModule::loop() {
+  DroneModule::loop();
   if (!_setupDone) return;
 
   // shortcuts

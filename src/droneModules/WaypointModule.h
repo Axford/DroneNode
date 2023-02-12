@@ -69,8 +69,7 @@ lon,lat,radius
 #define WAYPOINT_PARAM_SPEED          16
 #define WAYPOINT_PARAM_SPEED_E        6
 
-//#define WAYPOINT_PARAM_ENTRIES        7
-#define WAYPOINT_PARAM_ENTRIES        6
+#define WAYPOINT_PARAM_ENTRIES        7
 
 #define WAYPOINT_MODE_NORMAL          0
 #define WAYPOINT_MODE_RELOAD          1
@@ -99,8 +98,8 @@ protected:
     float _distanceToNext;
 
     // to determine speed
-    //float _firstDistanceRemaining;  // what was the first valid distance remaining we recorded
-    //uint32_t _firstDistanceRemainingTime;  // what millis() did we first record a valid distance remaining
+    float _firstDistanceRemaining;  // what was the first valid distance remaining we recorded
+    uint32_t _firstDistanceRemainingTime;  // what millis() did we first record a valid distance remaining
    
 public:
 

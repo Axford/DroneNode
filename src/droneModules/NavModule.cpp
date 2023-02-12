@@ -209,6 +209,7 @@ void NavModule::updateLast(boolean fromTarget) {
 }
 
 void NavModule::update() {
+  DroneModule::update();
   if (!_setupDone) return;
 
   if (_params[NAV_PARAM_MODE_E].data.uint8[0] == NAV_IDLE) {

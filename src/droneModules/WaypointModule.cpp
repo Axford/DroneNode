@@ -11,6 +11,8 @@ WaypointModule::WaypointModule(uint8_t id, DroneSystem* ds):
  {
    setTypeName(FPSTR(WAYPOINT_STR_WAYPOINT));
 
+    _mgmtParams[DRONE_MODULE_PARAM_INTERVAL_E].data.uint32[0] = 1000;  // 1 sec
+
    _waypoints = IvanLinkedList::LinkedList<WAYPOINT_MODULE_WAYPOINT>();
    _lastStoredWaypoint = 0;
 
@@ -18,13 +20,8 @@ WaypointModule::WaypointModule(uint8_t id, DroneSystem* ds):
    _distanceRemaining = 0;
    _distanceToNext = 0;
 
-   //_firstDistanceRemaining = 0;
-   //_firstDistanceRemainingTime = 0;
-
-   // mgmt
-   //_mgmtParams[DRONE_MODULE_PARAM_TYPE_E].paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_CHAR, sizeof(WAYPOINT_STR_WAYPOINT));
-   //strncpy_P(_mgmtParams[DRONE_MODULE_PARAM_TYPE_E].data.c, WAYPOINT_STR_WAYPOINT, sizeof(WAYPOINT_STR_WAYPOINT));
-
+   _firstDistanceRemaining = 0;
+   _firstDistanceRemainingTime = 0;
 
    // subs
    initSubs(WAYPOINT_SUBS);
@@ -79,10 +76,10 @@ WaypointModule::WaypointModule(uint8_t id, DroneSystem* ds):
    _params[WAYPOINT_PARAM_DISTANCE_E].data.f[1] = 0;
    _params[WAYPOINT_PARAM_DISTANCE_E].data.f[2] = 0;
 
-   //_params[WAYPOINT_PARAM_SPEED_E].paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, WAYPOINT_PARAM_SPEED);
-   //_params[WAYPOINT_PARAM_SPEED_E].name = FPSTR(STRING_SPEED);
-   //_params[WAYPOINT_PARAM_SPEED_E].nameLen = sizeof(STRING_SPEED);
-   //_params[WAYPOINT_PARAM_SPEED_E].paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 4);
+   _params[WAYPOINT_PARAM_SPEED_E].paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, WAYPOINT_PARAM_SPEED);
+   _params[WAYPOINT_PARAM_SPEED_E].name = FPSTR(STRING_SPEED);
+   _params[WAYPOINT_PARAM_SPEED_E].nameLen = sizeof(STRING_SPEED);
+   _params[WAYPOINT_PARAM_SPEED_E].paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 4);
 }
 
 
@@ -220,14 +217,10 @@ void WaypointModule::loadWaypoints() {
     _waypoints.set(i,t);
   }
 
-
   _totalDistance = lastW.cumulativeDistance;
 
   // update number of waypoints
   updateAndPublishParam(&_params[WAYPOINT_PARAM_WAYPOINTS_E], (uint8_t*)&waypoints, sizeof(waypoints));
-
-  // update total length of path
-  //updateAndPublishParam(&_params[WAYPOINT_PARAM_DISTANCE_E], (uint8_t*)&lastW.cumulativeDistance, sizeof(lastW.cumulativeDistance));
 }
 
 
@@ -250,13 +243,14 @@ void WaypointModule::setup() {
 
 
 void WaypointModule::loop() {
+  DroneModule::loop();
   if (!_setupDone) return;
 
   uint8_t m = _params[WAYPOINT_PARAM_MODE_E].data.uint8[0];
   uint8_t waypoint = _params[WAYPOINT_PARAM_WAYPOINT_E].data.uint8[0];
   uint8_t waypoints = _params[WAYPOINT_PARAM_WAYPOINTS_E].data.uint8[0];
 
-  //float newSpeed = _params[WAYPOINT_PARAM_SPEED_E].data.f[0];
+  float newSpeed = _params[WAYPOINT_PARAM_SPEED_E].data.f[0];
 
   if (m == WAYPOINT_MODE_RELOAD) {
     // reload waypoint.csv file
@@ -268,63 +262,69 @@ void WaypointModule::loop() {
     waypoint = 0;
     waypoints = _waypoints.size();
 
-  } else {
+  } else if (waypoints > 0) {
 
-    // see if we have reached current waypoint
-    float d = calculateDistanceBetweenCoordinates(
-      _subs[WAYPOINT_SUB_LOCATION_E].param.data.f[0],
-      _subs[WAYPOINT_SUB_LOCATION_E].param.data.f[1],
-      _params[WAYPOINT_PARAM_TARGET_E].data.f[0],
-      _params[WAYPOINT_PARAM_TARGET_E].data.f[1]
-    );
+    // ensure we have valid locations
+    if (_subs[WAYPOINT_SUB_LOCATION_E].param.data.f[0] != 0 && 
+       _params[WAYPOINT_PARAM_TARGET_E].data.f[0] != 0) {
 
-    _distanceToNext = d;
+      // see if we have reached current waypoint
+      float d = calculateDistanceBetweenCoordinates(
+        _subs[WAYPOINT_SUB_LOCATION_E].param.data.f[0],
+        _subs[WAYPOINT_SUB_LOCATION_E].param.data.f[1],
+        _params[WAYPOINT_PARAM_TARGET_E].data.f[0],
+        _params[WAYPOINT_PARAM_TARGET_E].data.f[1]
+      );
 
-    // calc distance remaining
-    _distanceRemaining = d;
-    for (uint8_t i=waypoint; i<_waypoints.size(); i++) {
-      WAYPOINT_MODULE_WAYPOINT t = _waypoints.get(i);
-      _distanceRemaining += t.distanceRemaining;
-    }
+      _distanceToNext = d;
 
-    // update distances
-    float distances[3] = { _distanceToNext, _distanceRemaining, _totalDistance };
-    updateAndPublishParam(&_params[WAYPOINT_PARAM_DISTANCE_E], (uint8_t*)&distances, sizeof(distances));
-
-    if (d < _params[WAYPOINT_PARAM_TARGET_E].data.f[2]) {
-      // select next waypoint
-      if (waypoints > 0) {
-        if (waypoint == waypoints-1) {
-          // we've reached the last waypoint
-          // should we loop?
-          if (_params[WAYPOINT_PARAM_LOOP_E].data.uint8[0] == 1) {
-            waypoint = 0;
-          }
-        } else waypoint++;
+      // calc distance remaining
+      _distanceRemaining = d;
+      for (uint8_t i=waypoint; i<_waypoints.size(); i++) {
+        WAYPOINT_MODULE_WAYPOINT t = _waypoints.get(i);
+        _distanceRemaining += t.distanceRemaining;
       }
-    }
 
-    // update speed estimate
-    /*
-    if (_firstDistanceRemaining == 0 && _distanceRemaining > 0) {
-      _firstDistanceRemaining = _distanceRemaining;
-      _firstDistanceRemainingTime = millis();
-    } else if (_distanceRemaining > 0) {
-      // update speed calc, must have got closer by at least 100m
-      if (_distanceRemaining <  _firstDistanceRemaining - 100) {
-        // calc time delta
-        float dt = (millis() - _firstDistanceRemainingTime) / 1000;
-        if (dt < 0) {
-          // timer overflow... reset calculations
-          _firstDistanceRemaining = 0;
-        } else if (dt > 0) {
-          newSpeed = (_distanceRemaining - _firstDistanceRemaining) / dt;
+      // update distances
+      float distances[3] = { _distanceToNext, _distanceRemaining, _totalDistance };
+      updateAndPublishParam(&_params[WAYPOINT_PARAM_DISTANCE_E], (uint8_t*)&distances, sizeof(distances));
+
+      if (d < _params[WAYPOINT_PARAM_TARGET_E].data.f[2]) {
+        // select next waypoint
+        if (waypoints > 0) {
+          if (waypoint == waypoints-1) {
+            // we've reached the last waypoint
+            // should we loop?
+            if (_params[WAYPOINT_PARAM_LOOP_E].data.uint8[0] == 1) {
+              waypoint = 0;
+              _firstDistanceRemaining = 0;
+            }
+          } else waypoint++;
         }
       }
-    }
 
-    updateAndPublishParam(&_params[WAYPOINT_PARAM_SPEED_E], (uint8_t*)&newSpeed, sizeof(newSpeed));
-*/
+      // update speed estimate
+      if (_firstDistanceRemaining == 0 && _distanceRemaining > 0) {
+        _firstDistanceRemaining = _distanceRemaining;
+        _firstDistanceRemainingTime = millis();
+      } else if (_distanceRemaining > 0) {
+        //Log.noticeln("[WP] dist: %F, %F", _firstDistanceRemaining, _distanceRemaining);
+        // update speed calc, must have got closer by at least 100m
+        if (_distanceRemaining <  _firstDistanceRemaining - 100) {
+          // calc time delta
+          float dt = (millis() - _firstDistanceRemainingTime) / 1000;
+          if (dt < 0) {
+            // timer overflow... reset calculations
+            _firstDistanceRemaining = 0;
+          } else if (dt > 0) {
+            newSpeed = (_firstDistanceRemaining - _distanceRemaining) / dt;
+            //Log.noticeln("[WP] speed: %F, %F", newSpeed, dt);
+          }
+        }
+      }
+
+      updateAndPublishParam(&_params[WAYPOINT_PARAM_SPEED_E], (uint8_t*)&newSpeed, sizeof(newSpeed));
+    }
   }
 
   if (waypoints == 0) {
@@ -336,7 +336,8 @@ void WaypointModule::loop() {
   if (waypoints > 0 && waypoint < waypoints) {
     // update new target
     WAYPOINT_MODULE_WAYPOINT t = _waypoints.get(waypoint);
-    updateAndPublishParam(&_params[WAYPOINT_PARAM_TARGET_E], (uint8_t*)&t, sizeof(t));
+    float newTarget[3] = { t.lon, t.lat, t.radius};
+    updateAndPublishParam(&_params[WAYPOINT_PARAM_TARGET_E], (uint8_t*)&newTarget, sizeof(newTarget));
 
     // do we need to store the waypoint in flash?
     if (waypoint != _lastStoredWaypoint) {

@@ -89,6 +89,7 @@ float TurnRateModule::getRotationDistance(float origin, float target){
 
 
 void TurnRateModule::loop() {
+  DroneModule::loop();
   if (!_setupDone) return;
 
   unsigned long updateTime = millis();

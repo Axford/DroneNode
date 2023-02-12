@@ -168,6 +168,7 @@ void MotorModule::disable() {
 
 
 void MotorModule::update() {
+  DroneModule::update();
   if (_error > 0 || !_setupDone) return;
 
   // enforce zero speed if module disabled
