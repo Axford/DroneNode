@@ -14,6 +14,10 @@ WaypointModule::WaypointModule(uint8_t id, DroneSystem* ds):
    _waypoints = IvanLinkedList::LinkedList<WAYPOINT_MODULE_WAYPOINT>();
    _lastStoredWaypoint = 0;
 
+   _totalDistance = 0;
+   _distanceRemaining = 0;
+   _distanceToNext = 0;
+
    // mgmt
    //_mgmtParams[DRONE_MODULE_PARAM_TYPE_E].paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_CHAR, sizeof(WAYPOINT_STR_WAYPOINT));
    //strncpy_P(_mgmtParams[DRONE_MODULE_PARAM_TYPE_E].data.c, WAYPOINT_STR_WAYPOINT, sizeof(WAYPOINT_STR_WAYPOINT));
@@ -63,31 +67,15 @@ WaypointModule::WaypointModule(uint8_t id, DroneSystem* ds):
    _params[WAYPOINT_PARAM_LOOP_E].nameLen = sizeof(STRING_LOOP);
    _params[WAYPOINT_PARAM_LOOP_E].paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_UINT8_T, 1);
    _params[WAYPOINT_PARAM_LOOP_E].data.uint8[0] = 0;
+
+   _params[WAYPOINT_PARAM_DISTANCE_E].paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, WAYPOINT_PARAM_DISTANCE);
+   _params[WAYPOINT_PARAM_DISTANCE_E].name = FPSTR(STRING_DISTANCE);
+   _params[WAYPOINT_PARAM_DISTANCE_E].nameLen = sizeof(STRING_DISTANCE);
+   _params[WAYPOINT_PARAM_DISTANCE_E].paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 12);
+   _params[WAYPOINT_PARAM_DISTANCE_E].data.f[0] = 0;
+   _params[WAYPOINT_PARAM_DISTANCE_E].data.f[1] = 0;
+   _params[WAYPOINT_PARAM_DISTANCE_E].data.f[2] = 0;
 }
-
-
-DEM_NAMESPACE* WaypointModule::registerNamespace(DroneExecutionManager *dem) {
-  // namespace for module type
-  return dem->createNamespace(WAYPOINT_STR_WAYPOINT,0,true);
-}
-
-void WaypointModule::registerParams(DEM_NAMESPACE* ns, DroneExecutionManager *dem) {
-  using std::placeholders::_1;
-  using std::placeholders::_2;
-  using std::placeholders::_3;
-  using std::placeholders::_4;
-
-  // writable mgmt params
-  DEMCommandHandler ph = std::bind(&DroneExecutionManager::mod_param, dem, _1, _2, _3, _4);
-  DEMCommandHandler pha = std::bind(&DroneExecutionManager::mod_subAddr, dem, _1, _2, _3, _4);
-
-  dem->registerCommand(ns, STRING_LOCATION, DRONE_LINK_MSG_TYPE_FLOAT, ph);
-  dem->registerCommand(ns, PSTR("$location"), DRONE_LINK_MSG_TYPE_FLOAT, pha);
-
-  dem->registerCommand(ns, STRING_MODE, DRONE_LINK_MSG_TYPE_FLOAT, ph);
-}
-
-
 
 
 
@@ -97,109 +85,141 @@ void WaypointModule::loadWaypoints() {
 
   uint8_t waypoints = 0;
 
+  WAYPOINT_MODULE_WAYPOINT lastW;
+  lastW.lat = 0;
+  lastW.lon = 0;
+  lastW.cumulativeDistance = 0;
+  lastW.distanceFromLast = 0;
+  lastW.distanceRemaining = 0;
+
   // read waypoint.csv  file
-    if (LITTLEFS.exists(F("/waypoint.csv"))) {
-      File file = LITTLEFS.open(F("/waypoint.csv"), FILE_READ);
+  if (LITTLEFS.exists(F("/waypoint.csv"))) {
+    File file = LITTLEFS.open(F("/waypoint.csv"), FILE_READ);
 
-      if (!file) {
-        Serial.println("[w.lW] Error opening waypoint.csv");
-      } else {
-        /*
-        1) read first line (header) and parse column indices for lon, lat and radius
-        2) read following lines and parse desired elements to populate linked list
-        */
-        
-        uint32_t line = 0;
-        char buffer[32];  // parsing buffer
-        uint8_t bufLen = 0;  // how many valid chars are in the buffer
-        uint8_t col = 0;
+    if (!file) {
+      Serial.println("[w.lW] Error opening waypoint.csv");
+    } else {
+      /*
+      1) read first line (header) and parse column indices for lon, lat and radius
+      2) read following lines and parse desired elements to populate linked list
+      */
+      
+      uint32_t line = 0;
+      char buffer[32];  // parsing buffer
+      uint8_t bufLen = 0;  // how many valid chars are in the buffer
+      uint8_t col = 0;
 
-        uint8_t lonCol = 255;
-        uint8_t latCol = 255;
-        uint8_t radiusCol = 255;
-        WAYPOINT_MODULE_WAYPOINT t;
-        t.lat = 0;
-        t.lon = 0;
-        t.radius = 0;
-        float f;
-        uint8_t colsFound = 0;
+      uint8_t lonCol = 255;
+      uint8_t latCol = 255;
+      uint8_t radiusCol = 255;
+      WAYPOINT_MODULE_WAYPOINT t;
+      t.lat = 0;
+      t.lon = 0;
+      t.radius = 0;
+      t.cumulativeDistance = lastW.cumulativeDistance;
+      t.distanceFromLast = 0;
+      t.distanceRemaining = 0;
+      float f;
+      uint8_t colsFound = 0;
 
-        while (file.available()) {
-          char c = file.read();
+      while (file.available()) {
+        char c = file.read();
 
-          // skip whitespace
-          if (c == '\t' || c==' ' || c=='\r') {
-            continue;
-          }
-
-          if (c == ',' || c == '\n' || !file.available()) {
-            if (line == 0) {
-              // header
-              if (strcmp(buffer, "lon") == 0) {
-                lonCol = col;
-              } else if (strcmp(buffer, "lat") == 0) {
-                latCol = col;
-              } else if (strcmp(buffer, "radius") == 0) {
-                radiusCol = col;
-              };
-
-            } else {
-              // data row
-              // attempt to convert buffer into a float
-              f = (float)atof(buffer);
-
-              // see which column this relates to
-              if (col == lonCol) {
-                t.lon = f;
-                colsFound++;
-              } else if (col == latCol) {
-                t.lat = f;
-                colsFound++;
-              } else if (col == radiusCol) {
-                t.radius = f;
-                colsFound++;
-              };
-
-              // have we found a complete row?
-              if (( c == '\n' || !file.available() ) && colsFound == 3) {
-                // store waypoint
-                _waypoints.add(t);
-              }
-            }
-
-            if (c == '\n') {
-              line++;
-              col = 0;
-              colsFound = 0;
-            } else {
-              col++;
-            }
-            bufLen = 0;  // reset ready for next col
-
-          } else {
-            // append to buffer
-            if (bufLen < 31) {
-              buffer[bufLen] = c;
-              bufLen++;
-              buffer[bufLen] = 0; // null terminate as we go
-            }
-          }
-          
-
+        // skip whitespace
+        if (c == '\t' || c==' ' || c=='\r') {
+          continue;
         }
 
-        waypoints = _waypoints.size();
+        if (c == ',' || c == '\n' || !file.available()) {
+          if (line == 0) {
+            // header
+            if (strcmp(buffer, "lon") == 0) {
+              lonCol = col;
+            } else if (strcmp(buffer, "lat") == 0) {
+              latCol = col;
+            } else if (strcmp(buffer, "radius") == 0) {
+              radiusCol = col;
+            };
+
+          } else {
+            // data row
+            // attempt to convert buffer into a float
+            f = (float)atof(buffer);
+
+            // see which column this relates to
+            if (col == lonCol) {
+              t.lon = f;
+              colsFound++;
+            } else if (col == latCol) {
+              t.lat = f;
+              colsFound++;
+            } else if (col == radiusCol) {
+              t.radius = f;
+              colsFound++;
+            };
+
+            // have we found a complete row?
+            if (( c == '\n' || !file.available() ) && colsFound == 3) {
+              // calculate distances
+              if (lastW.lon != 0) t.distanceFromLast = calculateDistanceBetweenCoordinates(lastW.lon, lastW.lat, t.lon, t.lat);
+              t.cumulativeDistance += t.distanceFromLast;
+
+              // store waypoint
+              _waypoints.add(t);
+              
+              memcpy(&lastW, &t, sizeof(lastW));
+            }
+          }
+
+          if (c == '\n') {
+            line++;
+            col = 0;
+            colsFound = 0;
+          } else {
+            col++;
+          }
+          bufLen = 0;  // reset ready for next col
+
+        } else {
+          // append to buffer
+          if (bufLen < 31) {
+            buffer[bufLen] = c;
+            bufLen++;
+            buffer[bufLen] = 0; // null terminate as we go
+          }
+        }
+        
 
       }
 
-      file.close();
-    } else {
-      Serial.println("[W.lW] No waypoint.csv");
+      waypoints = _waypoints.size();
+
     }
 
+    file.close();
+  } else {
+    Serial.println("[W.lW] No waypoint.csv");
+  }
+
+  // loop back over waypoints and calculate distance remaining
+  float distanceRemaining = 0;
+  for (int i = _waypoints.size()-1; i>=0; i--) {
+    WAYPOINT_MODULE_WAYPOINT t = _waypoints.get(i);
+
+    t.distanceRemaining = distanceRemaining;
+    distanceRemaining += t.distanceFromLast;
+    
+    _waypoints.set(i,t);
+  }
+
+
+  _totalDistance = lastW.cumulativeDistance;
 
   // update number of waypoints
   updateAndPublishParam(&_params[WAYPOINT_PARAM_WAYPOINTS_E], (uint8_t*)&waypoints, sizeof(waypoints));
+
+  // update total length of path
+  //updateAndPublishParam(&_params[WAYPOINT_PARAM_DISTANCE_E], (uint8_t*)&lastW.cumulativeDistance, sizeof(lastW.cumulativeDistance));
 }
 
 
@@ -247,6 +267,19 @@ void WaypointModule::loop() {
       _params[WAYPOINT_PARAM_TARGET_E].data.f[0],
       _params[WAYPOINT_PARAM_TARGET_E].data.f[1]
     );
+
+    _distanceToNext = d;
+
+    // calc distance remaining
+    _distanceRemaining = d;
+    for (uint8_t i=waypoint; i<_waypoints.size(); i++) {
+      WAYPOINT_MODULE_WAYPOINT t = _waypoints.get(i);
+      _distanceRemaining += t.distanceRemaining;
+    }
+
+    // update distances
+    float distances[3] = { _distanceToNext, _distanceRemaining, _totalDistance };
+    updateAndPublishParam(&_params[WAYPOINT_PARAM_DISTANCE_E], (uint8_t*)&distances, sizeof(distances));
 
     if (d < _params[WAYPOINT_PARAM_TARGET_E].data.f[2]) {
       // select next waypoint

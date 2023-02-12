@@ -34,38 +34,42 @@ lon,lat,radius
 
 // subs
 // @sub 12;13;f;3;location;Location from GPS 
-#define WAYPOINT_SUB_LOCATION          12
-#define WAYPOINT_SUB_LOCATION_ADDR     13
-#define WAYPOINT_SUB_LOCATION_E        0
+#define WAYPOINT_SUB_LOCATION         12
+#define WAYPOINT_SUB_LOCATION_ADDR    13
+#define WAYPOINT_SUB_LOCATION_E       0
 
-#define WAYPOINT_SUBS                1
+#define WAYPOINT_SUBS                 1
 
 // pubs
 // @pub 8;u8;1;mode;Mode 0=normal, 1=Reload waypoint.csv
-#define WAYPOINT_PARAM_MODE       8
-#define WAYPOINT_PARAM_MODE_E     0
+#define WAYPOINT_PARAM_MODE           8
+#define WAYPOINT_PARAM_MODE_E         0
 
 // @pub 9;u8;1;waypoints;How many waypoints are loaded
-#define WAYPOINT_PARAM_WAYPOINTS       9
-#define WAYPOINT_PARAM_WAYPOINTS_E     1
+#define WAYPOINT_PARAM_WAYPOINTS      9
+#define WAYPOINT_PARAM_WAYPOINTS_E    1
 
 // @pub 10;u8;1;waypoint;Current waypoint number
-#define WAYPOINT_PARAM_WAYPOINT         10
-#define WAYPOINT_PARAM_WAYPOINT_E       2
+#define WAYPOINT_PARAM_WAYPOINT       10
+#define WAYPOINT_PARAM_WAYPOINT_E     2
 
 // @pub 11;f;3;target;Target location of current waypoint, feed to Nav.target
 #define WAYPOINT_PARAM_TARGET         11
 #define WAYPOINT_PARAM_TARGET_E       3
 
-// @pub 12;u8;1;loop;0=stop at end of file, 1=loop
-#define WAYPOINT_PARAM_LOOP         14
-#define WAYPOINT_PARAM_LOOP_E       4
+// @pub 14;u8;1;loop;0=stop at end of file, 1=loop
+#define WAYPOINT_PARAM_LOOP           14
+#define WAYPOINT_PARAM_LOOP_E         4
 
-#define WAYPOINT_PARAM_ENTRIES         5
+// @pub 15;f;3;distance;[0] distance to next waypoint, [1] distance remaining on total path [2] Cumulative length of waypoint path in meters
+#define WAYPOINT_PARAM_DISTANCE       15
+#define WAYPOINT_PARAM_DISTANCE_E     5
+
+#define WAYPOINT_PARAM_ENTRIES        6
 
 
-#define WAYPOINT_MODE_NORMAL           0
-#define WAYPOINT_MODE_RELOAD           1
+#define WAYPOINT_MODE_NORMAL          0
+#define WAYPOINT_MODE_RELOAD          1
 
 
 // -----------------------------------------------------------------------------
@@ -73,6 +77,9 @@ struct WAYPOINT_MODULE_WAYPOINT {
   float lon;
   float lat;
   float radius;
+  float distanceFromLast;
+  float cumulativeDistance;
+  float distanceRemaining;
 };
 
 
@@ -83,12 +90,13 @@ protected:
     uint8_t _lastStoredWaypoint;
     IvanLinkedList::LinkedList<WAYPOINT_MODULE_WAYPOINT> _waypoints;
 
+    float _totalDistance;
+    float _distanceRemaining;
+    float _distanceToNext;
+
 public:
 
   WaypointModule(uint8_t id, DroneSystem* ds);
-  
-  static DEM_NAMESPACE* registerNamespace(DroneExecutionManager *dem);
-  static void registerParams(DEM_NAMESPACE* ns, DroneExecutionManager *dem);
 
   void loadWaypoints();
   void setup();
