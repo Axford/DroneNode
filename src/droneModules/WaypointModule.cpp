@@ -280,10 +280,8 @@ void WaypointModule::loop() {
 
       // calc distance remaining
       _distanceRemaining = d;
-      for (uint8_t i=waypoint; i<_waypoints.size(); i++) {
-        WAYPOINT_MODULE_WAYPOINT t = _waypoints.get(i);
-        _distanceRemaining += t.distanceRemaining;
-      }
+      WAYPOINT_MODULE_WAYPOINT t = _waypoints.get(waypoint);
+      _distanceRemaining += t.distanceRemaining;
 
       // update distances
       float distances[3] = { _distanceToNext, _distanceRemaining, _totalDistance };
