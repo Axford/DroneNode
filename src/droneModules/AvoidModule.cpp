@@ -248,7 +248,7 @@ void AvoidModule::loop() {
         p2 = calculateDestinationFromDistanceAndBearing2(
           v->location[0],
           v->location[1],
-          1000, 
+          10000, 
           v->courseOverGround
         );
 
