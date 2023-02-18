@@ -40,7 +40,7 @@ QMC5883L.new 6
 // pubs
 // pubs of form: <param address>;<type>;<number of values>;<name>;<description>
 
-// @pub 10;f;4;vector;Raw magnetic field vector
+// @pub 10;f;4;vector;Magnetic field vector after pitch/roll compensation
 #define QMC5883L_PARAM_VECTOR          (I2CBASE_SUBCLASS_PARAM_START+0)
 // @pub 11;f;1;heading;Heading adjusted for magnetic declination
 #define QMC5883L_PARAM_HEADING         (I2CBASE_SUBCLASS_PARAM_START+1)  //11
@@ -53,9 +53,15 @@ QMC5883L.new 6
 // @pub 15;f;1;trim;Manual calibration value to adjust heading to match hull (e.g. for a misaligned physical mount)
 #define QMC5883L_PARAM_TRIM            (I2CBASE_SUBCLASS_PARAM_START+5)  //15
 // @pub 18;f;4;limits;Averaged limits at the four quadrants, used to refine the calibration onoine
-#define QMC5883L_PARAM_LIMITS            (I2CBASE_SUBCLASS_PARAM_START+8)  // 18
+#define QMC5883L_PARAM_LIMITS          (I2CBASE_SUBCLASS_PARAM_START+8)  // 18
 // @pub 19;u32;4;samples;Number of calibration samples per quadrant
 #define QMC5883L_PARAM_SAMPLES         (I2CBASE_SUBCLASS_PARAM_START+9)  // 19
+// @pub 20;u8;1;mode;Mode: 0=online calibration, 1=fixed calibration, 2=reset calibration
+#define QMC5883L_PARAM_MODE            (I2CBASE_SUBCLASS_PARAM_START+10)  // 20
+// @pub 21;f;4;raw;Raw magnetic field vector
+#define QMC5883L_PARAM_RAW             (I2CBASE_SUBCLASS_PARAM_START+11)  // 21
+// @pub 26;f;3;centre;Centre of the raw magnetic field sphere
+#define QMC5883L_PARAM_CENTRE          (I2CBASE_SUBCLASS_PARAM_START+16)  // 26
 
 #define QMC5883L_PARAM_VECTOR_E          (I2CBASE_PARAM_ENTRIES+0)
 #define QMC5883L_PARAM_HEADING_E         (I2CBASE_PARAM_ENTRIES+1)
@@ -65,8 +71,11 @@ QMC5883L.new 6
 #define QMC5883L_PARAM_TRIM_E            (I2CBASE_PARAM_ENTRIES+5)
 #define QMC5883L_PARAM_LIMITS_E          (I2CBASE_PARAM_ENTRIES+6)
 #define QMC5883L_PARAM_SAMPLES_E         (I2CBASE_PARAM_ENTRIES+7)
+#define QMC5883L_PARAM_MODE_E            (I2CBASE_PARAM_ENTRIES+8)
+#define QMC5883L_PARAM_RAW_E             (I2CBASE_PARAM_ENTRIES+9)
+#define QMC5883L_PARAM_CENTRE_E          (I2CBASE_PARAM_ENTRIES+10)
 
-#define QMC5883L_PARAM_ENTRIES           (I2CBASE_PARAM_ENTRIES + 8)
+#define QMC5883L_PARAM_ENTRIES           (I2CBASE_PARAM_ENTRIES + 11)
 
 // subs
 // subs of form: <param address>;<addr param address>;<type>;<number of values>;<name>;description
@@ -76,10 +85,36 @@ QMC5883L.new 6
 #define QMC5883L_SUB_LOCATION_ADDR       (I2CBASE_SUBCLASS_PARAM_START+7) //17
 #define QMC5883L_SUB_LOCATION_E          0
 
-#define QMC5883L_SUBS                    1
+// @sub 22;23;f;1;pitch;Pitch from IMU (in degrees)
+#define QMC5883L_SUB_PITCH               (I2CBASE_SUBCLASS_PARAM_START+12) //22
+#define QMC5883L_SUB_PITCH_ADDR          (I2CBASE_SUBCLASS_PARAM_START+13) //23
+#define QMC5883L_SUB_PITCH_E             1
+
+// @sub 24;25;f;1;roll;Roll from IMU (in degrees)
+#define QMC5883L_SUB_ROLL                (I2CBASE_SUBCLASS_PARAM_START+14) //24
+#define QMC5883L_SUB_ROLL_ADDR           (I2CBASE_SUBCLASS_PARAM_START+15) //25
+#define QMC5883L_SUB_ROLL_E              2
+
+#define QMC5883L_SUBS                    3
 
 // strings
 static const char QMC5883L_STR_QMC5883L[] PROGMEM = "QMC5883L";
+
+#define QMC5883L_MODE_ONLINE_CALIBRATION     0
+#define QMC5883L_MODE_FIXED_CALIBRATION      1
+#define QMC5883L_MODE_RESET_CALIBRATION      2
+
+
+
+struct COMPASS_SAMPLE_POINT {
+  float x;
+  float y;
+  float z;
+};
+
+#define QMC5883L_MAX_SAMPLE_POINTS           64
+
+#define QMC5883L_MOVING_AVERAGE_POINTS       10
 
 
 // class
@@ -88,6 +123,18 @@ protected:
   int _location[2];  // lng, lat - rounded to whole digits
   //DRONE_LINK_ADDR _locationInput;
   QMC5883LCompass *_sensor;
+
+  // moving average on raw vector values
+  float _rawAvg[3];
+  uint8_t _numRawSamples;
+
+  // sampling for online calibration
+  uint8_t _numSamples;  
+  COMPASS_SAMPLE_POINT _samples[QMC5883L_MAX_SAMPLE_POINTS];
+
+  // min and max limits for raw magnetic values in all orientations
+  float _minRaw[3];
+  float _maxRaw[3];
 public:
 
   QMC5883LModule(uint8_t id, DroneSystem* ds);
@@ -99,6 +146,9 @@ public:
 
   void setup();
   void update();
+
+  boolean addSamplePoint(float x, float y, float z);
+
   void loop();
 
   void updateQuadrant(uint8_t quadrant, float v);

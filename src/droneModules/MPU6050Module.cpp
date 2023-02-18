@@ -46,6 +46,11 @@ MPU6050Module::MPU6050Module(uint8_t id, DroneSystem* ds):
    param = &_params[MPU6050_PARAM_PITCH_E];
    param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_HIGH, MPU6050_PARAM_PITCH);
    setParamName(FPSTR(STRING_PITCH), param);
+   param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 4); 
+
+   param = &_params[MPU6050_PARAM_ROLL_E];
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_HIGH, MPU6050_PARAM_ROLL);
+   setParamName(FPSTR(STRING_ROLL), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 4);  
 }
 
@@ -113,6 +118,10 @@ void MPU6050Module::loop() {
 
   float pitch = atan2(a.acceleration.y, a.acceleration.z) * 180 / PI;
   _params[MPU6050_PARAM_PITCH_E].data.f[0] = pitch;
+
+  // positive roll is to the right, negative to the left
+  float roll = atan2(a.acceleration.x, a.acceleration.z) * 180 / PI;
+  _params[MPU6050_PARAM_ROLL_E].data.f[0] = roll;
 
   // error check
   if (isnan(_params[MPU6050_PARAM_ACCEL_E].data.f[0])) {

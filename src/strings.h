@@ -103,6 +103,7 @@ static const char STRING_PUBLISH[] = "publish";
 static const char STRING_PUBLISHRATE[] = "publishRate";
 static const char STRING_PWM_CHANNEL[] = "PWMChannel";
 static const char STRING_RADIUS[] = "radius";
+static const char STRING_RAW[] = "raw";
 static const char STRING_RESET[] = "reset";
 static const char STRING_RESETCOUNT[] = "resetCount";
 static const char STRING_RIGHT[] = "right";
