@@ -123,7 +123,7 @@ QMC5883LModule::QMC5883LModule(uint8_t id, DroneSystem* ds):
    _params[QMC5883L_PARAM_CENTRE_E].paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_CRITICAL, QMC5883L_PARAM_CENTRE);
    _params[QMC5883L_PARAM_CENTRE_E].name = FPSTR(STRING_CENTRE);
    _params[QMC5883L_PARAM_CENTRE_E].nameLen = sizeof(STRING_CENTRE);
-   _params[QMC5883L_PARAM_CENTRE_E].paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 12);
+   _params[QMC5883L_PARAM_CENTRE_E].paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_FLOAT, 12);
    _params[QMC5883L_PARAM_CENTRE_E].data.f[0] = 0;
    _params[QMC5883L_PARAM_CENTRE_E].data.f[1] = 0;
    _params[QMC5883L_PARAM_CENTRE_E].data.f[2] = 0;
@@ -310,13 +310,15 @@ void QMC5883LModule::loop() {
     if (_rawAvg[i] < _minRaw[i]) _minRaw[i] = _rawAvg[i];
   }
 
-  // update centre
-  _params[QMC5883L_PARAM_CENTRE_E].data.f[0] = (_maxRaw[0] + _minRaw[0])/2;
-  _params[QMC5883L_PARAM_CENTRE_E].data.f[1] = (_maxRaw[1] + _minRaw[1])/2;
-  // compensate for not wanting to turn the boat upside down to calibrate the compass
-  float magDia = ((_maxRaw[0] - _minRaw[0]) + (_maxRaw[1] - _minRaw[1])) / 2;
-  if (_maxRaw[2] < _minRaw[2] + magDia) _maxRaw[2] = _minRaw[2] + magDia;
-  _params[QMC5883L_PARAM_CENTRE_E].data.f[2] = (_maxRaw[2] + _minRaw[2])/2;
+  if (_params[QMC5883L_PARAM_MODE_E].data.uint8[0] == QMC5883L_MODE_ONLINE_CALIBRATION) {
+    // update centre
+    _params[QMC5883L_PARAM_CENTRE_E].data.f[0] = (_maxRaw[0] + _minRaw[0])/2;
+    _params[QMC5883L_PARAM_CENTRE_E].data.f[1] = (_maxRaw[1] + _minRaw[1])/2;
+    // compensate for not wanting to turn the boat upside down to calibrate the compass
+    float magDia = ((_maxRaw[0] - _minRaw[0]) + (_maxRaw[1] - _minRaw[1])) / 2;
+    if (_maxRaw[2] < _minRaw[2] + magDia) _maxRaw[2] = _minRaw[2] + magDia;
+    _params[QMC5883L_PARAM_CENTRE_E].data.f[2] = (_maxRaw[2] + _minRaw[2])/2;
+  }
   
   _params[QMC5883L_PARAM_RAW_E].data.f[0] = _rawAvg[0];
   _params[QMC5883L_PARAM_RAW_E].data.f[1] = _rawAvg[1];
@@ -430,8 +432,8 @@ void QMC5883LModule::loop() {
   float y = _params[QMC5883L_PARAM_VECTOR_E].data.f[1] - _params[QMC5883L_PARAM_CALIB_Y_E].data.f[1];
 
   // scale vectors to a unit circle
-  float xScale = fabs(_params[QMC5883L_PARAM_LIMITS_E].data.f[1] - _params[QMC5883L_PARAM_LIMITS_E].data.f[3])/2;
-  float yScale = fabs(_params[QMC5883L_PARAM_LIMITS_E].data.f[0]  - _params[QMC5883L_PARAM_LIMITS_E].data.f[2])/2;
+  float xScale = fabs(_params[QMC5883L_PARAM_CALIB_X_E].data.f[2] - _params[QMC5883L_PARAM_CALIB_X_E].data.f[0])/2;
+  float yScale = fabs(_params[QMC5883L_PARAM_CALIB_Y_E].data.f[2]  - _params[QMC5883L_PARAM_CALIB_Y_E].data.f[0])/2;
   if (xScale > 0 && yScale > 0) {
     x /= xScale;
     y /= yScale;
