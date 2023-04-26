@@ -29,6 +29,7 @@ static const char STRING_BUSV[] = "busV";
 static const char STRING_BUTTON[] = "button";
 static const char STRING_CALIB_X[] = "calibX";
 static const char STRING_CALIB_Y[] = "calibY";
+static const char STRING_CALIB_Z[] = "calibZ";
 static const char STRING_CELLS[] = "cells";
 static const char STRING_CELLV[] = "cellV";
 static const char STRING_CENTRE[] = "centre";

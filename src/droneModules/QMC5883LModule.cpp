@@ -4,7 +4,7 @@
 #include "strings.h"
 #include <SPIFFS.h>
 #include "../navMath.h"
-
+#include "Preferences.h"
 
 #define SQR(x) ((x)*(x))
 
@@ -13,12 +13,10 @@ QMC5883LModule::QMC5883LModule(uint8_t id, DroneSystem* ds):
   I2CBaseModule ( id, ds )
  {
    setTypeName(FPSTR(QMC5883L_STR_QMC5883L));
-   //_params[I2CBASE_PARAM_ADDR_E].data.uint8[0] = QMC5883L_I2C_ADDRESS;
    _sensor = NULL;
    _location[0] = -1.8;
    _location[1] = 52;
 
-   _numSamples = 0;
    _numRawSamples = 0;
 
    for (uint8_t i=0; i<3; i++) {
@@ -85,29 +83,19 @@ QMC5883LModule::QMC5883LModule(uint8_t id, DroneSystem* ds):
    _params[QMC5883L_PARAM_CALIB_Y_E].data.f[1] = 0;
    _params[QMC5883L_PARAM_CALIB_Y_E].data.f[2] = 1;
 
+  _params[QMC5883L_PARAM_CALIB_Z_E].paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_HIGH, QMC5883L_PARAM_CALIB_Z);
+   _params[QMC5883L_PARAM_CALIB_Z_E].name = FPSTR(STRING_CALIB_Z);
+   _params[QMC5883L_PARAM_CALIB_Z_E].nameLen = sizeof(STRING_CALIB_Z);
+   _params[QMC5883L_PARAM_CALIB_Z_E].paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_FLOAT, 12);
+   _params[QMC5883L_PARAM_CALIB_Z_E].data.f[0] = -1;
+   _params[QMC5883L_PARAM_CALIB_Z_E].data.f[1] = 0;
+   _params[QMC5883L_PARAM_CALIB_Z_E].data.f[2] = 1;
+
    _params[QMC5883L_PARAM_TRIM_E].paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, QMC5883L_PARAM_TRIM);
    _params[QMC5883L_PARAM_TRIM_E].name = FPSTR(STRING_TRIM);
    _params[QMC5883L_PARAM_TRIM_E].nameLen = sizeof(STRING_TRIM);
    _params[QMC5883L_PARAM_TRIM_E].paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_FLOAT, 4);
    _params[QMC5883L_PARAM_TRIM_E].data.f[0] = 0;
-
-   _params[QMC5883L_PARAM_LIMITS_E].paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_CRITICAL, QMC5883L_PARAM_LIMITS);
-   _params[QMC5883L_PARAM_LIMITS_E].name = FPSTR(STRING_LIMITS);
-   _params[QMC5883L_PARAM_LIMITS_E].nameLen = sizeof(STRING_LIMITS);
-   _params[QMC5883L_PARAM_LIMITS_E].paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_FLOAT, 16);
-   _params[QMC5883L_PARAM_LIMITS_E].data.f[0] = 0;
-   _params[QMC5883L_PARAM_LIMITS_E].data.f[1] = 0;
-   _params[QMC5883L_PARAM_LIMITS_E].data.f[2] = 0;
-   _params[QMC5883L_PARAM_LIMITS_E].data.f[3] = 0;
-
-   _params[QMC5883L_PARAM_SAMPLES_E].paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_MEDIUM, QMC5883L_PARAM_SAMPLES);
-   _params[QMC5883L_PARAM_SAMPLES_E].name = FPSTR(STRING_SAMPLES);
-   _params[QMC5883L_PARAM_SAMPLES_E].nameLen = sizeof(STRING_SAMPLES);
-   _params[QMC5883L_PARAM_SAMPLES_E].paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_UINT32_T, 16);
-   _params[QMC5883L_PARAM_SAMPLES_E].data.uint32[0] = 0;
-   _params[QMC5883L_PARAM_SAMPLES_E].data.uint32[1] = 0;
-   _params[QMC5883L_PARAM_SAMPLES_E].data.uint32[2] = 0;
-   _params[QMC5883L_PARAM_SAMPLES_E].data.uint32[3] = 0;
 
    _params[QMC5883L_PARAM_MODE_E].paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, QMC5883L_PARAM_MODE);
    _params[QMC5883L_PARAM_MODE_E].name = FPSTR(STRING_MODE);
@@ -119,14 +107,6 @@ QMC5883LModule::QMC5883LModule(uint8_t id, DroneSystem* ds):
    _params[QMC5883L_PARAM_RAW_E].name = FPSTR(STRING_RAW);
    _params[QMC5883L_PARAM_RAW_E].nameLen = sizeof(STRING_RAW);
    _params[QMC5883L_PARAM_RAW_E].paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 16);
-
-   _params[QMC5883L_PARAM_CENTRE_E].paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_CRITICAL, QMC5883L_PARAM_CENTRE);
-   _params[QMC5883L_PARAM_CENTRE_E].name = FPSTR(STRING_CENTRE);
-   _params[QMC5883L_PARAM_CENTRE_E].nameLen = sizeof(STRING_CENTRE);
-   _params[QMC5883L_PARAM_CENTRE_E].paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_FLOAT, 12);
-   _params[QMC5883L_PARAM_CENTRE_E].data.f[0] = 0;
-   _params[QMC5883L_PARAM_CENTRE_E].data.f[1] = 0;
-   _params[QMC5883L_PARAM_CENTRE_E].data.f[2] = 0;
 }
 
 QMC5883LModule::~QMC5883LModule() {
@@ -162,34 +142,36 @@ void QMC5883LModule::setup() {
     _sensor = new QMC5883LCompass();
     _sensor->init();
     
-    // initialise limits to match calibration limits - clockwise from North
-    // y+
-    _params[QMC5883L_PARAM_LIMITS_E].data.f[0] = _params[QMC5883L_PARAM_CALIB_Y_E].data.f[2];
-    // x+
-    _params[QMC5883L_PARAM_LIMITS_E].data.f[1] = _params[QMC5883L_PARAM_CALIB_X_E].data.f[2];
-    // y-
-    _params[QMC5883L_PARAM_LIMITS_E].data.f[2] = _params[QMC5883L_PARAM_CALIB_Y_E].data.f[0];
-    // x-
-    _params[QMC5883L_PARAM_LIMITS_E].data.f[3] = _params[QMC5883L_PARAM_CALIB_X_E].data.f[0];
+    // load calibration values from EEPROM... if available
+    Preferences pref; 
+    // use module name as preference namespace
+    pref.begin(_mgmtParams[DRONE_MODULE_PARAM_NAME_E].data.c, true);
 
-    // add matching points to samples
-    _numSamples = 4;
-    // top centre, then clockwise
-    _samples[0].x = _params[QMC5883L_PARAM_CALIB_X_E].data.f[1];
-    _samples[0].y = _params[QMC5883L_PARAM_CALIB_Y_E].data.f[2];
-    _samples[0].z = 0;
+    // X
+    _params[QMC5883L_PARAM_CALIB_X_E].data.f[0] = pref.getFloat("xMin", _params[QMC5883L_PARAM_CALIB_X_E].data.f[0]);
+    _params[QMC5883L_PARAM_CALIB_X_E].data.f[2] = pref.getFloat("xMax", _params[QMC5883L_PARAM_CALIB_X_E].data.f[2]);
+    _params[QMC5883L_PARAM_CALIB_X_E].data.f[1] = (_params[QMC5883L_PARAM_CALIB_X_E].data.f[2] + _params[QMC5883L_PARAM_CALIB_X_E].data.f[0])/2;
 
-    _samples[0].x = _params[QMC5883L_PARAM_CALIB_X_E].data.f[2];
-    _samples[0].y = _params[QMC5883L_PARAM_CALIB_Y_E].data.f[1];
-    _samples[0].z = 0;
+    _minRaw[0] = _params[QMC5883L_PARAM_CALIB_X_E].data.f[0];
+    _maxRaw[0] = _params[QMC5883L_PARAM_CALIB_X_E].data.f[2];
 
-    _samples[0].x = _params[QMC5883L_PARAM_CALIB_X_E].data.f[1];
-    _samples[0].y = _params[QMC5883L_PARAM_CALIB_Y_E].data.f[0];
-    _samples[0].z = 0;
+    // Y
+    _params[QMC5883L_PARAM_CALIB_Y_E].data.f[0] = pref.getFloat("yMin", _params[QMC5883L_PARAM_CALIB_Y_E].data.f[0]);
+    _params[QMC5883L_PARAM_CALIB_Y_E].data.f[2] = pref.getFloat("yMax", _params[QMC5883L_PARAM_CALIB_Y_E].data.f[2]);
+    _params[QMC5883L_PARAM_CALIB_Y_E].data.f[1] = (_params[QMC5883L_PARAM_CALIB_Y_E].data.f[2] + _params[QMC5883L_PARAM_CALIB_Y_E].data.f[0])/2;
 
-    _samples[0].x = _params[QMC5883L_PARAM_CALIB_X_E].data.f[0];
-    _samples[0].y = _params[QMC5883L_PARAM_CALIB_Y_E].data.f[1];
-    _samples[0].z = 0;
+    _minRaw[1] = _params[QMC5883L_PARAM_CALIB_Y_E].data.f[0];
+    _maxRaw[1] = _params[QMC5883L_PARAM_CALIB_Y_E].data.f[2]; 
+    
+    // Z
+    _params[QMC5883L_PARAM_CALIB_Z_E].data.f[0] = pref.getFloat("zMin", _params[QMC5883L_PARAM_CALIB_Z_E].data.f[0]);
+    _params[QMC5883L_PARAM_CALIB_Z_E].data.f[2] = pref.getFloat("zMax", _params[QMC5883L_PARAM_CALIB_Z_E].data.f[2]);
+    _params[QMC5883L_PARAM_CALIB_Z_E].data.f[1] = (_params[QMC5883L_PARAM_CALIB_Z_E].data.f[2] + _params[QMC5883L_PARAM_CALIB_Z_E].data.f[0])/2;
+    
+    _minRaw[2] = _params[QMC5883L_PARAM_CALIB_Z_E].data.f[0];
+    _maxRaw[2] = _params[QMC5883L_PARAM_CALIB_Z_E].data.f[2];
+
+    pref.end();
   }
 }
 
@@ -229,7 +211,7 @@ void QMC5883LModule::update() {
   }
 }
 
-
+/*
 boolean QMC5883LModule::addSamplePoint(float x, float y, float z) {
   float targetDistance = 2 * PI * 6 / QMC5883L_MAX_SAMPLE_POINTS; 
 
@@ -285,6 +267,7 @@ boolean QMC5883LModule::addSamplePoint(float x, float y, float z) {
 
   return false;
 }
+*/
 
 
 void QMC5883LModule::loop() {
@@ -310,14 +293,25 @@ void QMC5883LModule::loop() {
     if (_rawAvg[i] < _minRaw[i]) _minRaw[i] = _rawAvg[i];
   }
 
+  // if calibrating.... 
   if (_params[QMC5883L_PARAM_MODE_E].data.uint8[0] == QMC5883L_MODE_ONLINE_CALIBRATION) {
-    // update centre
-    _params[QMC5883L_PARAM_CENTRE_E].data.f[0] = (_maxRaw[0] + _minRaw[0])/2;
-    _params[QMC5883L_PARAM_CENTRE_E].data.f[1] = (_maxRaw[1] + _minRaw[1])/2;
+    // update limits
+    _params[QMC5883L_PARAM_CALIB_X_E].data.f[0] = _minRaw[0];
+    _params[QMC5883L_PARAM_CALIB_X_E].data.f[2] = _maxRaw[0];
+    _params[QMC5883L_PARAM_CALIB_Y_E].data.f[0] = _minRaw[1];
+    _params[QMC5883L_PARAM_CALIB_Y_E].data.f[2] = _maxRaw[1];
+    _params[QMC5883L_PARAM_CALIB_Z_E].data.f[0] = _minRaw[2];
+    _params[QMC5883L_PARAM_CALIB_Z_E].data.f[2] = _maxRaw[2];
+
     // compensate for not wanting to turn the boat upside down to calibrate the compass
     float magDia = ((_maxRaw[0] - _minRaw[0]) + (_maxRaw[1] - _minRaw[1])) / 2;
     if (_maxRaw[2] < _minRaw[2] + magDia) _maxRaw[2] = _minRaw[2] + magDia;
-    _params[QMC5883L_PARAM_CENTRE_E].data.f[2] = (_maxRaw[2] + _minRaw[2])/2;
+    _params[QMC5883L_PARAM_CALIB_Z_E].data.f[2] = _maxRaw[2];
+
+    // update centre
+    _params[QMC5883L_PARAM_CALIB_X_E].data.f[1] = (_maxRaw[0] + _minRaw[0])/2;
+    _params[QMC5883L_PARAM_CALIB_Y_E].data.f[1] = (_maxRaw[1] + _minRaw[1])/2;
+    _params[QMC5883L_PARAM_CALIB_Z_E].data.f[1] = (_maxRaw[2] + _minRaw[2])/2;
   }
   
   _params[QMC5883L_PARAM_RAW_E].data.f[0] = _rawAvg[0];
@@ -330,114 +324,97 @@ void QMC5883LModule::loop() {
       fabs(_params[QMC5883L_PARAM_VECTOR_E].data.f[1]) > 100 ||
       fabs(_params[QMC5883L_PARAM_VECTOR_E].data.f[2]) > 100) return;
 
-
   // apply pitch and roll compensation
-  _params[QMC5883L_PARAM_VECTOR_E].data.f[0] = _params[QMC5883L_PARAM_RAW_E].data.f[0] - _params[QMC5883L_PARAM_CENTRE_E].data.f[0];
-  _params[QMC5883L_PARAM_VECTOR_E].data.f[1] = _params[QMC5883L_PARAM_RAW_E].data.f[1] - _params[QMC5883L_PARAM_CENTRE_E].data.f[1];
-  _params[QMC5883L_PARAM_VECTOR_E].data.f[2] = _params[QMC5883L_PARAM_RAW_E].data.f[2] - _params[QMC5883L_PARAM_CENTRE_E].data.f[2];
-  _params[QMC5883L_PARAM_VECTOR_E].data.f[3] = _params[QMC5883L_PARAM_RAW_E].data.f[3];
+  // start by applying fixed offset
+  _params[QMC5883L_PARAM_VECTOR_E].data.f[0] = _params[QMC5883L_PARAM_RAW_E].data.f[0] - _params[QMC5883L_PARAM_CALIB_X_E].data.f[1];
+  _params[QMC5883L_PARAM_VECTOR_E].data.f[1] = _params[QMC5883L_PARAM_RAW_E].data.f[1] - _params[QMC5883L_PARAM_CALIB_Y_E].data.f[1];
+  _params[QMC5883L_PARAM_VECTOR_E].data.f[2] = _params[QMC5883L_PARAM_RAW_E].data.f[2] - _params[QMC5883L_PARAM_CALIB_Z_E].data.f[1];
 
-  // pitch
-  /*
-  var x = this.x;
-  var y = this.y;
-  var cs = Math.cos(a);
-  var sn = Math.sin(a);
-  this.x = x * cs - y * sn;
-  this.y = x * sn + y * cs;
-  */
-  float pitchAng = -degreesToRadians(_subs[QMC5883L_SUB_PITCH_E].param.data.f[0]);
-  float cosPitchAng = cos(pitchAng);
-  float sinPitchAng = sin(pitchAng);
-  float y1 = _params[QMC5883L_PARAM_VECTOR_E].data.f[1];
-  float z1 = _params[QMC5883L_PARAM_VECTOR_E].data.f[2];
-  _params[QMC5883L_PARAM_VECTOR_E].data.f[1] = y1 * cosPitchAng - z1 * sinPitchAng;
-  _params[QMC5883L_PARAM_VECTOR_E].data.f[2] = y1 * sinPitchAng + z1 * cosPitchAng;
+  // calculate scaling factors, to achieve an approx unit sphere about the origin
+  float xRadius = fabs(_params[QMC5883L_PARAM_CALIB_X_E].data.f[2] - _params[QMC5883L_PARAM_CALIB_X_E].data.f[0])/2;
+  float yRadius = fabs(_params[QMC5883L_PARAM_CALIB_Y_E].data.f[2] - _params[QMC5883L_PARAM_CALIB_Y_E].data.f[0])/2;
+  float zRadius = fabs(_params[QMC5883L_PARAM_CALIB_Z_E].data.f[2] - _params[QMC5883L_PARAM_CALIB_Z_E].data.f[0])/2;
+  
+  // check to see if radii are sufficient to consider this a valid calibration
+  float quality = 0;
+  if (xRadius > 4) quality++;
+  if (yRadius > 4) quality++;
+  if (zRadius > 4) quality++;
+  _params[QMC5883L_PARAM_VECTOR_E].data.f[3] = quality;
 
-  // roll 
-  float rollAng = -degreesToRadians(_subs[QMC5883L_SUB_ROLL_E].param.data.f[0]);
-  float cosRollAng = cos(rollAng);
-  float sinRollAng = sin(rollAng);
-  float x1 = _params[QMC5883L_PARAM_VECTOR_E].data.f[0];
-  z1 = _params[QMC5883L_PARAM_VECTOR_E].data.f[2];
-  _params[QMC5883L_PARAM_VECTOR_E].data.f[0] = x1 * cosRollAng - z1 * sinRollAng;
-  _params[QMC5883L_PARAM_VECTOR_E].data.f[2] = x1 * sinRollAng + z1 * cosRollAng;
+  if (quality == 3) {
+    // apply scaling
+    _params[QMC5883L_PARAM_VECTOR_E].data.f[0] /= xRadius;
+    _params[QMC5883L_PARAM_VECTOR_E].data.f[1] /= yRadius;
+    _params[QMC5883L_PARAM_VECTOR_E].data.f[2] /= zRadius;
 
+    // apply rotations
 
-  if (_params[QMC5883L_PARAM_MODE_E].data.uint8[0] == QMC5883L_MODE_ONLINE_CALIBRATION) {
-    if (addSamplePoint(_params[QMC5883L_PARAM_VECTOR_E].data.f[0], _params[QMC5883L_PARAM_VECTOR_E].data.f[1], _params[QMC5883L_PARAM_VECTOR_E].data.f[2])) {
+    // pitch
+    float pitchAng = -degreesToRadians(_subs[QMC5883L_SUB_PITCH_E].param.data.f[0]);
+    float cosPitchAng = cos(pitchAng);
+    float sinPitchAng = sin(pitchAng);
+    float y1 = _params[QMC5883L_PARAM_VECTOR_E].data.f[1];
+    float z1 = _params[QMC5883L_PARAM_VECTOR_E].data.f[2];
+    _params[QMC5883L_PARAM_VECTOR_E].data.f[1] = y1 * cosPitchAng - z1 * sinPitchAng;
+    _params[QMC5883L_PARAM_VECTOR_E].data.f[2] = y1 * sinPitchAng + z1 * cosPitchAng;
 
-      _params[QMC5883L_PARAM_VECTOR_E].data.f[3] = 1;
-
-      if (_numSamples > 30) {
-        // scan samples and update limits
-        float minX = 1000;
-        float maxX = -1000;
-        float minY = 1000;
-        float maxY = -1000;
-        for (uint8_t i=0; i<_numSamples; i++) {
-          minX = min(minX, _samples[i].x);
-          minY = min(minY, _samples[i].y);
-          maxX = max(maxX, _samples[i].x);
-          maxY = max(maxY, _samples[i].y);
-        }
-
-        _params[QMC5883L_PARAM_CALIB_X_E].data.f[0] = minX;
-        _params[QMC5883L_PARAM_CALIB_X_E].data.f[2] = maxX;
-        _params[QMC5883L_PARAM_CALIB_Y_E].data.f[0] = minY;
-        _params[QMC5883L_PARAM_CALIB_Y_E].data.f[2] = maxY;
-
-        _params[QMC5883L_PARAM_CALIB_X_E].data.f[1] = (minX + maxX)/2;
-        _params[QMC5883L_PARAM_CALIB_Y_E].data.f[1] = (minY + maxY)/2;
-
-        _params[QMC5883L_PARAM_LIMITS_E].data.f[0] = maxY;
-        _params[QMC5883L_PARAM_LIMITS_E].data.f[1] = maxX;
-        _params[QMC5883L_PARAM_LIMITS_E].data.f[2] = minY;
-        _params[QMC5883L_PARAM_LIMITS_E].data.f[3] = minX;
-      }
-    }
+    // roll 
+    float rollAng = -degreesToRadians(_subs[QMC5883L_SUB_ROLL_E].param.data.f[0]);
+    float cosRollAng = cos(rollAng);
+    float sinRollAng = sin(rollAng);
+    float x1 = _params[QMC5883L_PARAM_VECTOR_E].data.f[0];
+    z1 = _params[QMC5883L_PARAM_VECTOR_E].data.f[2];
+    _params[QMC5883L_PARAM_VECTOR_E].data.f[0] = x1 * cosRollAng - z1 * sinRollAng;
+    _params[QMC5883L_PARAM_VECTOR_E].data.f[2] = x1 * sinRollAng + z1 * cosRollAng;
   }
 
 
   if (_params[QMC5883L_PARAM_MODE_E].data.uint8[0] == QMC5883L_MODE_RESET_CALIBRATION) {
 
     // reset calibration
-    _params[QMC5883L_PARAM_SAMPLES_E].data.uint32[0] = 0;
-    _params[QMC5883L_PARAM_SAMPLES_E].data.uint32[1] = 0;
-    _params[QMC5883L_PARAM_SAMPLES_E].data.uint32[2] = 0;
-    _params[QMC5883L_PARAM_SAMPLES_E].data.uint32[3] = 0;
+    _params[QMC5883L_PARAM_CALIB_X_E].data.f[0] = _params[QMC5883L_PARAM_RAW_E].data.f[0];
+    _params[QMC5883L_PARAM_CALIB_X_E].data.f[1] = _params[QMC5883L_PARAM_RAW_E].data.f[0];
+    _params[QMC5883L_PARAM_CALIB_X_E].data.f[2] = _params[QMC5883L_PARAM_RAW_E].data.f[0];
 
-    _params[QMC5883L_PARAM_CALIB_X_E].data.f[0] = _params[QMC5883L_PARAM_VECTOR_E].data.f[0];
-    _params[QMC5883L_PARAM_CALIB_X_E].data.f[1] = _params[QMC5883L_PARAM_VECTOR_E].data.f[0];
-    _params[QMC5883L_PARAM_CALIB_X_E].data.f[2] = _params[QMC5883L_PARAM_VECTOR_E].data.f[0];
+    _params[QMC5883L_PARAM_CALIB_Y_E].data.f[0] = _params[QMC5883L_PARAM_RAW_E].data.f[1];
+    _params[QMC5883L_PARAM_CALIB_Y_E].data.f[1] = _params[QMC5883L_PARAM_RAW_E].data.f[1];
+    _params[QMC5883L_PARAM_CALIB_Y_E].data.f[2] = _params[QMC5883L_PARAM_RAW_E].data.f[1];
 
-    _params[QMC5883L_PARAM_CALIB_Y_E].data.f[0] = _params[QMC5883L_PARAM_VECTOR_E].data.f[1];
-    _params[QMC5883L_PARAM_CALIB_Y_E].data.f[1] = _params[QMC5883L_PARAM_VECTOR_E].data.f[1];
-    _params[QMC5883L_PARAM_CALIB_Y_E].data.f[2] = _params[QMC5883L_PARAM_VECTOR_E].data.f[1];
+    _params[QMC5883L_PARAM_CALIB_Z_E].data.f[0] = _params[QMC5883L_PARAM_RAW_E].data.f[2];
+    _params[QMC5883L_PARAM_CALIB_Z_E].data.f[1] = _params[QMC5883L_PARAM_RAW_E].data.f[2];
+    _params[QMC5883L_PARAM_CALIB_Z_E].data.f[2] = _params[QMC5883L_PARAM_RAW_E].data.f[2];
 
-    _params[QMC5883L_PARAM_LIMITS_E].data.f[0] = _params[QMC5883L_PARAM_VECTOR_E].data.f[1];
-    _params[QMC5883L_PARAM_LIMITS_E].data.f[1] = _params[QMC5883L_PARAM_VECTOR_E].data.f[0];
-    _params[QMC5883L_PARAM_LIMITS_E].data.f[2] = _params[QMC5883L_PARAM_VECTOR_E].data.f[1];
-    _params[QMC5883L_PARAM_LIMITS_E].data.f[3] = _params[QMC5883L_PARAM_VECTOR_E].data.f[0];
 
     _params[QMC5883L_PARAM_MODE_E].data.uint8[0] = QMC5883L_MODE_ONLINE_CALIBRATION;
-
-    _numSamples = 0;
   }
 
 
-  
-  // translate vector to the origin
-  float x = _params[QMC5883L_PARAM_VECTOR_E].data.f[0] - _params[QMC5883L_PARAM_CALIB_X_E].data.f[1];
-  float y = _params[QMC5883L_PARAM_VECTOR_E].data.f[1] - _params[QMC5883L_PARAM_CALIB_Y_E].data.f[1];
+  if (_params[QMC5883L_PARAM_MODE_E].data.uint8[0] == QMC5883L_MODE_STORE_CALIBRATION) {
+    // write calibration values to EEPROM
+    Preferences pref; 
+    // use module name as preference namespace
+    pref.begin(_mgmtParams[DRONE_MODULE_PARAM_NAME_E].data.c, false);
 
-  // scale vectors to a unit circle
-  float xScale = fabs(_params[QMC5883L_PARAM_CALIB_X_E].data.f[2] - _params[QMC5883L_PARAM_CALIB_X_E].data.f[0])/2;
-  float yScale = fabs(_params[QMC5883L_PARAM_CALIB_Y_E].data.f[2]  - _params[QMC5883L_PARAM_CALIB_Y_E].data.f[0])/2;
-  if (xScale > 0 && yScale > 0) {
-    x /= xScale;
-    y /= yScale;
+    // X
+    pref.putFloat("xMin", _params[QMC5883L_PARAM_CALIB_X_E].data.f[0]);
+    pref.putFloat("xMax", _params[QMC5883L_PARAM_CALIB_X_E].data.f[2]);
+
+    // Y
+    pref.putFloat("yMin", _params[QMC5883L_PARAM_CALIB_Y_E].data.f[0]);
+    pref.putFloat("yMax", _params[QMC5883L_PARAM_CALIB_Y_E].data.f[2]);
+
+    // Z
+    pref.putFloat("zMin", _params[QMC5883L_PARAM_CALIB_Z_E].data.f[0]);
+    pref.putFloat("zMax", _params[QMC5883L_PARAM_CALIB_Z_E].data.f[2]);
+
+    pref.end();
+
+    _params[QMC5883L_PARAM_MODE_E].data.uint8[0] = QMC5883L_MODE_FIXED_CALIBRATION;
   }
+
+  float x = _params[QMC5883L_PARAM_VECTOR_E].data.f[0];
+  float y = _params[QMC5883L_PARAM_VECTOR_E].data.f[1];
   
   // calculate heading
   float heading = atan2(y, x);
@@ -462,21 +439,4 @@ void QMC5883LModule::loop() {
 
   // publish param entries
   publishParamEntries();
-}
-
-
-void QMC5883LModule::updateQuadrant(uint8_t quadrant, float v) {
-  float avgWindow = 20;
-
-  // start applying noise rejection after sufficient samples received
-  if (_params[QMC5883L_PARAM_SAMPLES_E].data.uint32[quadrant] > 100) {
-    float ratio = v / _params[QMC5883L_PARAM_LIMITS_E].data.f[quadrant];
-    if (ratio < 0.8 || ratio > 1.2) return;
-  }
-
-  _params[QMC5883L_PARAM_LIMITS_E].data.f[quadrant] =
-    (_params[QMC5883L_PARAM_LIMITS_E].data.f[quadrant] * (avgWindow-1) +  v
-  ) / avgWindow;
-
-  _params[QMC5883L_PARAM_SAMPLES_E].data.uint32[quadrant]++;
 }
