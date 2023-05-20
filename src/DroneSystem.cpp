@@ -293,6 +293,31 @@ void DroneSystem::start() {
 }
 
 
+void printDirectory(File dir, int numTabs) {
+  while (true) {
+
+    File entry =  dir.openNextFile();
+    if (! entry) {
+      // no more files
+      break;
+    }
+    for (uint8_t i = 0; i < numTabs; i++) {
+      Serial.print('\t');
+    }
+    Serial.print(entry.name());
+    if (entry.isDirectory()) {
+      Serial.println("/");
+      printDirectory(entry, numTabs + 1);
+    } else {
+      // files have sizes, directories do not
+      Serial.print("\t\t");
+      Serial.println(entry.size(), DEC);
+    }
+    entry.close();
+  }
+}
+
+
 void DroneSystem::setup() {
   /*
 
@@ -350,6 +375,43 @@ void DroneSystem::setup() {
     DroneLog.begin();
     DroneLog.enable();
   }
+
+  /*
+  SD CARD DEBUGGING
+  */
+
+  Log.noticeln("[] Initializing SD card...");
+
+  if (!SD.begin(4)) {
+    Serial.println("initialization failed!");
+    while (1);
+  }
+  Log.noticeln("   initialization done.");
+
+  // Create/Open file 
+  File myFile = SD.open("/test.txt", FILE_WRITE);
+  
+  // if the file opened okay, write to it:
+  if (myFile) {
+    Log.noticeln("   Writing to file...");
+    // Write to file
+    myFile.println("Testing text 1, 2 ,3...");
+    myFile.close(); // close the file
+    Log.noticeln("   Done.");
+  }
+  // if the file didn't open, print an error:
+  else {
+    Log.errorln("error opening test.txt");
+  }
+
+  // print contents
+  File root;
+  root = SD.open("/");
+
+  //printDirectory(root, 0);
+
+  Log.noticeln("   done!");
+
 
   // Determine and setup filesystem
   Log.noticeln(F("[] Init DroneFS..."));
