@@ -79,6 +79,7 @@ static const char STRING_LEFT[] = "left";
 static const char STRING_LIMITS[] = "limits";
 static const char STRING_LOADV[] = "loadV";
 static const char STRING_LOCATION[] = "location";
+static const char STRING_LOCATION2[] = "location2";
 static const char STRING_LOG[] = "log";
 static const char STRING_LOOP[] = "loop";
 static const char STRING_LOOPTO[] = "loopTo";
