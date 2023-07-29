@@ -69,32 +69,32 @@ ReceiverModule::ReceiverModule(uint8_t id, DroneSystem* ds):
 
 
    param = &_params[RECEIVER_PARAM_VALUE1_E];
-   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_HIGH, RECEIVER_PARAM_VALUE1);
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_CRITICAL, RECEIVER_PARAM_VALUE1);
    setParamName(FPSTR(STRING_VALUE1), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 4);
 
    param = &_params[RECEIVER_PARAM_VALUE2_E];
-   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_HIGH, RECEIVER_PARAM_VALUE2);
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_CRITICAL, RECEIVER_PARAM_VALUE2);
    setParamName(FPSTR(STRING_VALUE2), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 4);
 
    param = &_params[RECEIVER_PARAM_VALUE3_E];
-   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_HIGH, RECEIVER_PARAM_VALUE3);
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_CRITICAL, RECEIVER_PARAM_VALUE3);
    setParamName(FPSTR(STRING_VALUE3), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 4);
 
    param = &_params[RECEIVER_PARAM_VALUE4_E];
-   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_HIGH, RECEIVER_PARAM_VALUE4);
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_CRITICAL, RECEIVER_PARAM_VALUE4);
    setParamName(FPSTR(STRING_VALUE4), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 4);
 
    param = &_params[RECEIVER_PARAM_VALUE5_E];
-   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_HIGH, RECEIVER_PARAM_VALUE5);
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_CRITICAL, RECEIVER_PARAM_VALUE5);
    setParamName(FPSTR(STRING_VALUE5), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 4);
 
    param = &_params[RECEIVER_PARAM_VALUE6_E];
-   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_HIGH, RECEIVER_PARAM_VALUE6);
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_CRITICAL, RECEIVER_PARAM_VALUE6);
    setParamName(FPSTR(STRING_VALUE6), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 4);
 

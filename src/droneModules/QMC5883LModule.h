@@ -50,32 +50,28 @@ QMC5883L.new 6
 #define QMC5883L_PARAM_CALIB_X         (I2CBASE_SUBCLASS_PARAM_START+3)  //13
 // @pub 14;f;3;calibY;Min, center and max magnetic readings for the Y axis
 #define QMC5883L_PARAM_CALIB_Y         (I2CBASE_SUBCLASS_PARAM_START+4)  //14
-// @pub 15;f;1;trim;Manual calibration value to adjust heading to match hull (e.g. for a misaligned physical mount)
-#define QMC5883L_PARAM_TRIM            (I2CBASE_SUBCLASS_PARAM_START+5)  //15
-// @pub 18;f;4;limits;Averaged limits at the four quadrants, used to refine the calibration onoine
-#define QMC5883L_PARAM_LIMITS          (I2CBASE_SUBCLASS_PARAM_START+8)  // 18
-// @pub 19;u32;4;samples;Number of calibration samples per quadrant
-#define QMC5883L_PARAM_SAMPLES         (I2CBASE_SUBCLASS_PARAM_START+9)  // 19
+// @pub 15;f;3;calibZ;Min, center and max magnetic readings for the Z axis
+#define QMC5883L_PARAM_CALIB_Z         (I2CBASE_SUBCLASS_PARAM_START+5)  //15
+
+// @pub 18;f;1;trim;Manual calibration value to adjust heading to match hull (e.g. for a misaligned physical mount)
+#define QMC5883L_PARAM_TRIM            (I2CBASE_SUBCLASS_PARAM_START+8)  //18
 // @pub 20;u8;1;mode;Mode: 0=online calibration, 1=fixed calibration, 2=reset calibration
 #define QMC5883L_PARAM_MODE            (I2CBASE_SUBCLASS_PARAM_START+10)  // 20
 // @pub 21;f;4;raw;Raw magnetic field vector
 #define QMC5883L_PARAM_RAW             (I2CBASE_SUBCLASS_PARAM_START+11)  // 21
-// @pub 26;f;3;centre;Centre of the raw magnetic field sphere
-#define QMC5883L_PARAM_CENTRE          (I2CBASE_SUBCLASS_PARAM_START+16)  // 26
+
 
 #define QMC5883L_PARAM_VECTOR_E          (I2CBASE_PARAM_ENTRIES+0)
 #define QMC5883L_PARAM_HEADING_E         (I2CBASE_PARAM_ENTRIES+1)
 #define QMC5883L_PARAM_DECLINATION_E     (I2CBASE_PARAM_ENTRIES+2)
 #define QMC5883L_PARAM_CALIB_X_E         (I2CBASE_PARAM_ENTRIES+3)
 #define QMC5883L_PARAM_CALIB_Y_E         (I2CBASE_PARAM_ENTRIES+4)
-#define QMC5883L_PARAM_TRIM_E            (I2CBASE_PARAM_ENTRIES+5)
-#define QMC5883L_PARAM_LIMITS_E          (I2CBASE_PARAM_ENTRIES+6)
-#define QMC5883L_PARAM_SAMPLES_E         (I2CBASE_PARAM_ENTRIES+7)
-#define QMC5883L_PARAM_MODE_E            (I2CBASE_PARAM_ENTRIES+8)
-#define QMC5883L_PARAM_RAW_E             (I2CBASE_PARAM_ENTRIES+9)
-#define QMC5883L_PARAM_CENTRE_E          (I2CBASE_PARAM_ENTRIES+10)
+#define QMC5883L_PARAM_CALIB_Z_E         (I2CBASE_PARAM_ENTRIES+5)
+#define QMC5883L_PARAM_TRIM_E            (I2CBASE_PARAM_ENTRIES+6)
+#define QMC5883L_PARAM_MODE_E            (I2CBASE_PARAM_ENTRIES+7)
+#define QMC5883L_PARAM_RAW_E             (I2CBASE_PARAM_ENTRIES+8)
 
-#define QMC5883L_PARAM_ENTRIES           (I2CBASE_PARAM_ENTRIES + 11)
+#define QMC5883L_PARAM_ENTRIES           (I2CBASE_PARAM_ENTRIES + 9)
 
 // subs
 // subs of form: <param address>;<addr param address>;<type>;<number of values>;<name>;description
@@ -103,16 +99,8 @@ static const char QMC5883L_STR_QMC5883L[] PROGMEM = "QMC5883L";
 #define QMC5883L_MODE_ONLINE_CALIBRATION     0
 #define QMC5883L_MODE_FIXED_CALIBRATION      1
 #define QMC5883L_MODE_RESET_CALIBRATION      2
+#define QMC5883L_MODE_STORE_CALIBRATION      3
 
-
-
-struct COMPASS_SAMPLE_POINT {
-  float x;
-  float y;
-  float z;
-};
-
-#define QMC5883L_MAX_SAMPLE_POINTS           64
 
 #define QMC5883L_MOVING_AVERAGE_POINTS       10
 
@@ -127,10 +115,6 @@ protected:
   // moving average on raw vector values
   float _rawAvg[3];
   uint8_t _numRawSamples;
-
-  // sampling for online calibration
-  uint8_t _numSamples;  
-  COMPASS_SAMPLE_POINT _samples[QMC5883L_MAX_SAMPLE_POINTS];
 
   // min and max limits for raw magnetic values in all orientations
   float _minRaw[3];
@@ -147,11 +131,7 @@ public:
   void setup();
   void update();
 
-  boolean addSamplePoint(float x, float y, float z);
-
   void loop();
-
-  void updateQuadrant(uint8_t quadrant, float v);
 
 };
 

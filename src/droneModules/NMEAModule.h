@@ -20,13 +20,13 @@
 #include "../DroneModule.h"
 #include "MicroNMEA.h"
 
-// @pub 8;f;2;location;Current GPS location
+// @pub 8;f;3;location;Current GPS location (inc altitude)
 #define NMEA_PARAM_LOCATION           8
 
 // @pub 9;f;1;satellites;Number of satellites used for fix
 #define NMEA_PARAM_SATELLITES         9
 
-// @pub 10;f;1;heading;Current heading over ground
+// @pub 10;f;1;heading;Current heading over ground (inferred by motion or from dual GPS setup)
 #define NMEA_PARAM_HEADING            10
 
 // @pub 11;f;1;speed;Current speed over ground
@@ -35,7 +35,7 @@
 // @pub 12;f;1;HDOP;Current Horizontal Dilution of Precision
 #define NMEA_PARAM_HDOP               12
 
-// @pub 13;u8;1;port;Which serial port to use (0,1 or 2)
+// @pub 13;u8;2;port;Which serial port to use (0,1 or 2) and optional second port for a dual GPS setup (default 255 for no port)
 #define NMEA_PARAM_PORT               13
 
 // @pub 14;u32;1;baud;Baud rate to use, normally 9600
@@ -50,6 +50,9 @@
 // @pub 17;u32;3;packets;Number of NMEA packets (sentences) received (valid, invalid, unknown)
 #define NMEA_PARAM_PACKETS            17
 
+// @pub 18;f;3;location;Current GPS location of secondary GPS module (inc altitude)
+#define NMEA_PARAM_LOCATION2          18
+
 #define NMEA_PARAM_LOCATION_E         0
 #define NMEA_PARAM_SATELLITES_E       1
 #define NMEA_PARAM_HEADING_E          2
@@ -60,8 +63,9 @@
 #define NMEA_PARAM_FIX_E              7
 #define NMEA_PARAM_FOLLOWME_E         8
 #define NMEA_PARAM_PACKETS_E          9
+#define NMEA_PARAM_LOCATION2_E        10
 
-#define NMEA_PARAM_ENTRIES            10
+#define NMEA_PARAM_ENTRIES            11
 
 
 // subs
@@ -85,10 +89,14 @@ static const char NMEA_STR_NMEA[] PROGMEM = "NMEA";
 class NMEAModule:  public DroneModule {
 protected:
   //uint8_t _portNum;
+  boolean _dualGPS; // set to true if using dual GPS
   Stream *_port;
+  Stream *_port2;
   //uint32_t _baud;
   char _buffer[100];
+  char _buffer2[100];
   MicroNMEA *_nmea;
+  MicroNMEA *_nmea2;
   uint8_t _historyCount;
   float _history[NMEA_HISTORY_DEPTH][3];
 public:
@@ -99,6 +107,7 @@ public:
   void loop();
 
   void setPort(Stream *port);
+  void setPort2(Stream *port);
 
   uint8_t diagnosticDisplays();
   void drawDiagnosticDisplay(SSD1306Wire *display, uint8_t page);

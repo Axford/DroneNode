@@ -2011,8 +2011,9 @@ boolean DroneLinkManager::sendDroneLinkMessage(NetworkInterfaceModule *interface
 
   uint8_t priority = msg->priority();
   uint32_t timeout = 1000;
+  // set rate limit timeouts based on packet priority
   switch (priority) {
-    case DRONE_LINK_MSG_PRIORITY_CRITICAL: timeout = 1000; break;
+    case DRONE_LINK_MSG_PRIORITY_CRITICAL: timeout = 500; break;
     case DRONE_LINK_MSG_PRIORITY_HIGH:     timeout = 2000; break;
     case DRONE_LINK_MSG_PRIORITY_MEDIUM:   timeout = 4000; break;
     case DRONE_LINK_MSG_PRIORITY_LOW:      timeout = 8000; break;
