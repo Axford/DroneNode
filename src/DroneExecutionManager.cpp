@@ -7,6 +7,7 @@
 #include "DroneModule.h"
 
 // drone modules
+#include "droneModules/AnalogModule.h"
 #include "droneModules/AnemometerModule.h"
 #include "droneModules/AvoidModule.h"
 #include "droneModules/CMPS12Module.h"
@@ -43,6 +44,7 @@
 #include "droneModules/TankSteerModule.h"
 #include "droneModules/TurnRateModule.h"
 #include "droneModules/UDPTelemetryModule.h"
+#include "droneModules/VL53L0XModule.h"
 #include "droneModules/WaypointModule.h"
 #include "droneModules/WindModule.h"
 #include "droneModules/WindFromWingModule.h"
@@ -50,9 +52,7 @@
 /*
 #include "droneModules/TimerModule.h"
 
-#include "droneModules/TelemetryModule.h"
 #include "droneModules/BME280Module.h"
-#include "droneModules/MPU6050Module.h"
 #include "droneModules/BasicNavModule.h"
 
 #include "droneModules/OLEDModule.h"
@@ -499,7 +499,9 @@ DroneModule* DroneExecutionManager::instanceModule(char* typeName, uint8_t id) {
   DroneModule *newMod = NULL;
 
   if (id > 0 && id < 255) {
-    if (strcmp_P(typeName, ANEMOMETER_STR_ANEMOMETER) == 0) {
+    if (strcmp_P(typeName, ANALOG_STR_ANALOG) == 0) {
+      newMod = new AnalogModule(id, _ds);
+    } else if (strcmp_P(typeName, ANEMOMETER_STR_ANEMOMETER) == 0) {
       newMod = new AnemometerModule(id, _ds);
     } else if (strcmp_P(typeName, AVOID_STR_AVOID) == 0) {
       newMod = new AvoidModule(id, _ds);
@@ -569,6 +571,8 @@ DroneModule* DroneExecutionManager::instanceModule(char* typeName, uint8_t id) {
       newMod = new TurnRateModule(id, _ds);
     } else if (strcmp_P(typeName, UDP_TELEMETRY_STR_UDP_TELEMETRY) == 0) {
       newMod = new UDPTelemetryModule(id, _ds);
+    } else if (strcmp_P(typeName, VL53L0X_STR_VL53L0X) == 0) {
+      newMod = new VL53L0XModule(id, _ds);
     } else if (strcmp_P(typeName, NAV_STR_NAV) == 0) {
       newMod = new NavModule(id, _ds);
     } else if (strcmp_P(typeName, WAYPOINT_STR_WAYPOINT) == 0) {

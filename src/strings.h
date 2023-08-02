@@ -19,6 +19,7 @@ static const char STRING_ADJ_HEADING[] = "adjHeading";
 static const char STRING_ADJ_TARGET[] = "adjTarget";
 static const char STRING_ALARM[] = "alarm";
 static const char STRING_ALTITUDE[] = "altitude";
+static const char STRING_ANALOG[] = "analog";
 static const char STRING_AOA[] = "AOA";
 static const char STRING_BAUD[] = "baud";
 static const char STRING_BRIGHTNESS[] = "brightness";

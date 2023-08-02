@@ -79,7 +79,10 @@ void setup() {
 }
 
 
+unsigned long debugTimer = 0;
+
 void loop() {
+  unsigned long loopTime = millis();
   
   if (!OTAMgr.isUpdating) {
     ds.loop();
@@ -88,4 +91,13 @@ void loop() {
   }
 
   OTAMgr.loop();
+
+  // ANALOG DEBUGGING on pin 35
+  if (loopTime > debugTimer + 1000) {
+
+    //uint16_t a1 = analogRead(35);
+    //Log.noticeln("a = %u", a1);
+
+    debugTimer = loopTime;
+  }
 }
