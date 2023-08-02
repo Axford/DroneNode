@@ -15,6 +15,7 @@
 #include "droneModules/DepthModule.h"
 #include "droneModules/DiagnosticModule.h"
 #include "droneModules/HMC5883LModule.h"
+#include "droneModules/HT16K33Module.h"
 #include "droneModules/INA219Module.h"
 #include "droneModules/INA3221Module.h"
 #include "droneModules/JoystickModule.h"
@@ -514,6 +515,8 @@ DroneModule* DroneExecutionManager::instanceModule(char* typeName, uint8_t id) {
       newMod = new DiagnosticModule(id, _ds);
     } else if (strcmp_P(typeName, HMC5883L_STR_HMC5883L) == 0) {
       newMod = new HMC5883LModule(id, _ds);
+    } else if (strcmp_P(typeName, HT16K33_STR_HT16K33) == 0) {
+      newMod = new HT16K33Module(id, _ds);
     } else if (strcmp_P(typeName, INA219_STR_INA219) == 0) {
       newMod = new INA219Module(id, _ds);
     } else if (strcmp_P(typeName, INA3221_STR_INA3221) == 0) {
