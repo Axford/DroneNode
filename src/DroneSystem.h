@@ -109,6 +109,8 @@ protected:
   // motherboard version
   uint8_t _motherboardVersion;
 
+  boolean _SDAvailable;  // true if SD card available
+
   // serial port mgmt
   DRONE_SYSTEM_SERIAL_PORT _serialPorts[DRONE_SYSTEM_SERIAL_PORTS];
 

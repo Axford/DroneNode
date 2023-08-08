@@ -16,6 +16,7 @@ void DroneSystem::configurePin(uint8_t pin, uint8_t capabilities) {
 
 DroneSystem::DroneSystem() : _server(80), dfs(this), _fsEditor(LITTLEFS, _doLoop) {
   _motherboardVersion = 0;
+  _SDAvailable = false;
 
   // create and give SPI Sempahore
   _xSPISemaphore = xSemaphoreCreateBinary();
@@ -383,35 +384,38 @@ void DroneSystem::setup() {
   Log.noticeln("[] Initializing SD card...");
 
   if (!SD.begin(4)) {
-    Serial.println("initialization failed!");
-    while (1);
+    Serial.println("  initialization failed!");
+  } else {
+    _SDAvailable = true;
+    Log.noticeln("   initialization done.");
   }
-  Log.noticeln("   initialization done.");
-
-  // Create/Open file 
-  File myFile = SD.open("/test.txt", FILE_WRITE);
   
-  // if the file opened okay, write to it:
-  if (myFile) {
-    Log.noticeln("   Writing to file...");
-    // Write to file
-    myFile.println("Testing text 1, 2 ,3...");
-    myFile.close(); // close the file
-    Log.noticeln("   Done.");
+  if (_SDAvailable) {
+    // Create/Open file 
+    File myFile = SD.open("/test.txt", FILE_WRITE);
+    
+    // if the file opened okay, write to it:
+    if (myFile) {
+      Log.noticeln("   Writing to file...");
+      // Write to file
+      myFile.println("Testing text 1, 2 ,3...");
+      myFile.close(); // close the file
+      Log.noticeln("   Done.");
+    }
+    // if the file didn't open, print an error:
+    else {
+      Log.errorln("error opening test.txt");
+    }
+
+    // print contents
+    File root;
+    root = SD.open("/");
+
+    //printDirectory(root, 0);
+
+    Log.noticeln("   done!");
   }
-  // if the file didn't open, print an error:
-  else {
-    Log.errorln("error opening test.txt");
-  }
-
-  // print contents
-  File root;
-  root = SD.open("/");
-
-  //printDirectory(root, 0);
-
-  Log.noticeln("   done!");
-
+  
 
   // Determine and setup filesystem
   Log.noticeln(F("[] Init DroneFS..."));
