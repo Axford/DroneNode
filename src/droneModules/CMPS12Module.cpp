@@ -139,7 +139,7 @@ void CMPS12Module::loop() {
   // Request 5 bytes from the CMPS12
   // this will give us the 8 bit bearing, 
   // both bytes of the 16 bit bearing, pitch and roll
-  Wire.requestFrom(_params[I2CBASE_PARAM_ADDR_E].data.uint8[0], 5);       
+  Wire.requestFrom((int)_params[I2CBASE_PARAM_ADDR_E].data.uint8[0], (int)5);       
   
   while(Wire.available() < 5);        // Wait for all bytes to come back
   
