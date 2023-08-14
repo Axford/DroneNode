@@ -684,10 +684,18 @@ void DroneModule::handleSubAddrMessage(DroneLinkMsg *msg, DRONE_PARAM_SUB *sub) 
     if (memcmp((uint8_t*)&sub->addr, msg->_msg.payload.c, len) != 0) {
       Log.noticeln("[DM.hSAM] Write to address: ");
       msg->print();
+
+      // TODO: Unsubscribe from the old address!
+      // TODO: Implement unsubscribe
+      //_dlm->unsubscribe(&sub->addr, this);
+
       memcpy((uint8_t*)&sub->addr, msg->_msg.payload.c, len);
       // trigger callback
       // TODO: decide if we need callbacks for this?
       //onParamWrite(param);
+
+      // Subscribe to the new address!
+      _dlm->subscribe(&sub->addr, this);
     }
 
 
