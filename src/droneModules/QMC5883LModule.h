@@ -131,6 +131,8 @@ public:
   void setup();
   void update();
 
+  void updateCalibrationValuesFromRaw();
+
   void loop();
 
 };

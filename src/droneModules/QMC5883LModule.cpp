@@ -269,6 +269,26 @@ boolean QMC5883LModule::addSamplePoint(float x, float y, float z) {
 }
 */
 
+void QMC5883LModule::updateCalibrationValuesFromRaw() {
+  // update limits
+  _params[QMC5883L_PARAM_CALIB_X_E].data.f[0] = min(_minRaw[0], _params[QMC5883L_PARAM_CALIB_X_E].data.f[0]);
+  _params[QMC5883L_PARAM_CALIB_X_E].data.f[2] = max(_maxRaw[0], _params[QMC5883L_PARAM_CALIB_X_E].data.f[2]);
+  _params[QMC5883L_PARAM_CALIB_Y_E].data.f[0] = min(_minRaw[1], _params[QMC5883L_PARAM_CALIB_Y_E].data.f[0]);
+  _params[QMC5883L_PARAM_CALIB_Y_E].data.f[2] = max(_maxRaw[1], _params[QMC5883L_PARAM_CALIB_Y_E].data.f[2]);
+  _params[QMC5883L_PARAM_CALIB_Z_E].data.f[0] = min(_minRaw[2], _params[QMC5883L_PARAM_CALIB_Z_E].data.f[0]);
+  _params[QMC5883L_PARAM_CALIB_Z_E].data.f[2] = max(_maxRaw[2], _params[QMC5883L_PARAM_CALIB_Z_E].data.f[2]);
+
+  // compensate for not wanting to turn the boat upside down to calibrate the compass
+  float magDia = ((_maxRaw[0] - _minRaw[0]) + (_maxRaw[1] - _minRaw[1])) / 2;
+  if (_maxRaw[2] < _minRaw[2] + magDia) _maxRaw[2] = _minRaw[2] + magDia;
+  _params[QMC5883L_PARAM_CALIB_Z_E].data.f[2] = _maxRaw[2];
+
+  // update centre
+  _params[QMC5883L_PARAM_CALIB_X_E].data.f[1] = (_maxRaw[0] + _minRaw[0])/2;
+  _params[QMC5883L_PARAM_CALIB_Y_E].data.f[1] = (_maxRaw[1] + _minRaw[1])/2;
+  _params[QMC5883L_PARAM_CALIB_Z_E].data.f[1] = (_maxRaw[2] + _minRaw[2])/2;
+}
+
 
 void QMC5883LModule::loop() {
   I2CBaseModule::loop();
@@ -299,23 +319,7 @@ void QMC5883LModule::loop() {
 
   // if calibrating.... 
   if (_params[QMC5883L_PARAM_MODE_E].data.uint8[0] == QMC5883L_MODE_ONLINE_CALIBRATION) {
-    // update limits
-    _params[QMC5883L_PARAM_CALIB_X_E].data.f[0] = _minRaw[0];
-    _params[QMC5883L_PARAM_CALIB_X_E].data.f[2] = _maxRaw[0];
-    _params[QMC5883L_PARAM_CALIB_Y_E].data.f[0] = _minRaw[1];
-    _params[QMC5883L_PARAM_CALIB_Y_E].data.f[2] = _maxRaw[1];
-    _params[QMC5883L_PARAM_CALIB_Z_E].data.f[0] = _minRaw[2];
-    _params[QMC5883L_PARAM_CALIB_Z_E].data.f[2] = _maxRaw[2];
-
-    // compensate for not wanting to turn the boat upside down to calibrate the compass
-    float magDia = ((_maxRaw[0] - _minRaw[0]) + (_maxRaw[1] - _minRaw[1])) / 2;
-    if (_maxRaw[2] < _minRaw[2] + magDia) _maxRaw[2] = _minRaw[2] + magDia;
-    _params[QMC5883L_PARAM_CALIB_Z_E].data.f[2] = _maxRaw[2];
-
-    // update centre
-    _params[QMC5883L_PARAM_CALIB_X_E].data.f[1] = (_maxRaw[0] + _minRaw[0])/2;
-    _params[QMC5883L_PARAM_CALIB_Y_E].data.f[1] = (_maxRaw[1] + _minRaw[1])/2;
-    _params[QMC5883L_PARAM_CALIB_Z_E].data.f[1] = (_maxRaw[2] + _minRaw[2])/2;
+    updateCalibrationValuesFromRaw();
   }
   
   _params[QMC5883L_PARAM_RAW_E].data.f[0] = _rawAvg[0];
@@ -343,19 +347,56 @@ void QMC5883LModule::loop() {
   float xRadius = fabs(_params[QMC5883L_PARAM_CALIB_X_E].data.f[2] - _params[QMC5883L_PARAM_CALIB_X_E].data.f[0])/2;
   float yRadius = fabs(_params[QMC5883L_PARAM_CALIB_Y_E].data.f[2] - _params[QMC5883L_PARAM_CALIB_Y_E].data.f[0])/2;
   float zRadius = fabs(_params[QMC5883L_PARAM_CALIB_Z_E].data.f[2] - _params[QMC5883L_PARAM_CALIB_Z_E].data.f[0])/2;
-  
+
+  // apply scaling....   raw values have now been transformed into an approximation of a unit sphere, stored in VECTOR
+  _params[QMC5883L_PARAM_VECTOR_E].data.f[0] /= xRadius;
+  _params[QMC5883L_PARAM_VECTOR_E].data.f[1] /= yRadius;
+  _params[QMC5883L_PARAM_VECTOR_E].data.f[2] /= zRadius;
+
   // check to see if radii are sufficient to consider this a valid calibration
-  float quality = 0;
-  if (xRadius > 4) quality++;
-  if (yRadius > 4) quality++;
-  if (zRadius > 4) quality++;
+  float quality = 100 * ((xRadius/15) + (yRadius/15) + (zRadius/15))/3;
+  
+
+  // estimate quality of calibration fit by testing distance of current rawAvg from surface of calibration sphere
+  float vectorLen = sqrt( 
+    sq(_params[QMC5883L_PARAM_VECTOR_E].data.f[0]) +
+    sq(_params[QMC5883L_PARAM_VECTOR_E].data.f[1]) +
+    sq(_params[QMC5883L_PARAM_VECTOR_E].data.f[2])
+  );  
+
+  quality = 100 * max(1 - fabs(1 - vectorLen), 0.0f);
+
   _params[QMC5883L_PARAM_VECTOR_E].data.f[3] = quality;
 
-  if (quality == 3) {
-    // apply scaling
-    _params[QMC5883L_PARAM_VECTOR_E].data.f[0] /= xRadius;
-    _params[QMC5883L_PARAM_VECTOR_E].data.f[1] /= yRadius;
-    _params[QMC5883L_PARAM_VECTOR_E].data.f[2] /= zRadius;
+  // if calibrating and quality is >100 (i.e sphere too small)
+  if (_params[QMC5883L_PARAM_MODE_E].data.uint8[0] == QMC5883L_MODE_ONLINE_CALIBRATION && quality > 100) {
+    /* nudge the calibration limits in the right direction
+    VECTOR gives us the magnitude for each vector... we could scale that down and use it to nudge the limits directly
+    */
+
+    float nudgeScaling = 0.1 * (quality-100)/100; // bigger nudge for lower quality fit
+    if (_params[QMC5883L_PARAM_VECTOR_E].data.f[0] > 0) {
+      _params[QMC5883L_PARAM_CALIB_X_E].data.f[2] += _params[QMC5883L_PARAM_VECTOR_E].data.f[0] * nudgeScaling;
+    } else {
+      _params[QMC5883L_PARAM_CALIB_X_E].data.f[0] += _params[QMC5883L_PARAM_VECTOR_E].data.f[0] * nudgeScaling;
+    }
+
+    if (_params[QMC5883L_PARAM_VECTOR_E].data.f[1] > 0) {
+      _params[QMC5883L_PARAM_CALIB_Y_E].data.f[2] += _params[QMC5883L_PARAM_VECTOR_E].data.f[1] * nudgeScaling;
+    } else {
+      _params[QMC5883L_PARAM_CALIB_Y_E].data.f[0] += _params[QMC5883L_PARAM_VECTOR_E].data.f[1] * nudgeScaling;
+    }
+
+    if (_params[QMC5883L_PARAM_VECTOR_E].data.f[2] > 0) {
+      _params[QMC5883L_PARAM_CALIB_Z_E].data.f[2] += _params[QMC5883L_PARAM_VECTOR_E].data.f[2] * nudgeScaling;
+    } else {
+      _params[QMC5883L_PARAM_CALIB_Z_E].data.f[0] += _params[QMC5883L_PARAM_VECTOR_E].data.f[2] * nudgeScaling;
+    }
+  }
+    
+
+  if (quality > 80) {
+    
 
     // apply rotations
 
@@ -381,20 +422,15 @@ void QMC5883LModule::loop() {
 
   if (_params[QMC5883L_PARAM_MODE_E].data.uint8[0] == QMC5883L_MODE_RESET_CALIBRATION) {
 
+    // reset raw limits
+    for (uint8_t i=0; i<3; i++) {
+      _minRaw[i] = _rawAvg[i]-1;
+      _maxRaw[i] = _rawAvg[i]+1;
+    }
+
     // reset calibration
-    _params[QMC5883L_PARAM_CALIB_X_E].data.f[0] = _params[QMC5883L_PARAM_RAW_E].data.f[0];
-    _params[QMC5883L_PARAM_CALIB_X_E].data.f[1] = _params[QMC5883L_PARAM_RAW_E].data.f[0];
-    _params[QMC5883L_PARAM_CALIB_X_E].data.f[2] = _params[QMC5883L_PARAM_RAW_E].data.f[0];
-
-    _params[QMC5883L_PARAM_CALIB_Y_E].data.f[0] = _params[QMC5883L_PARAM_RAW_E].data.f[1];
-    _params[QMC5883L_PARAM_CALIB_Y_E].data.f[1] = _params[QMC5883L_PARAM_RAW_E].data.f[1];
-    _params[QMC5883L_PARAM_CALIB_Y_E].data.f[2] = _params[QMC5883L_PARAM_RAW_E].data.f[1];
-
-    _params[QMC5883L_PARAM_CALIB_Z_E].data.f[0] = _params[QMC5883L_PARAM_RAW_E].data.f[2];
-    _params[QMC5883L_PARAM_CALIB_Z_E].data.f[1] = _params[QMC5883L_PARAM_RAW_E].data.f[2];
-    _params[QMC5883L_PARAM_CALIB_Z_E].data.f[2] = _params[QMC5883L_PARAM_RAW_E].data.f[2];
-
-
+    updateCalibrationValuesFromRaw();
+  
     _params[QMC5883L_PARAM_MODE_E].data.uint8[0] = QMC5883L_MODE_ONLINE_CALIBRATION;
   }
 
