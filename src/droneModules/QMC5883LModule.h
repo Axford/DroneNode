@@ -55,7 +55,7 @@ QMC5883L.new 6
 
 // @pub 18;f;1;trim;Manual calibration value to adjust heading to match hull (e.g. for a misaligned physical mount)
 #define QMC5883L_PARAM_TRIM            (I2CBASE_SUBCLASS_PARAM_START+8)  //18
-// @pub 20;u8;1;mode;Mode: 0=online calibration, 1=fixed calibration, 2=reset calibration
+// @pub 20;u8;1;mode;Mode: 0=online calibration, 1=fixed calibration, 2=reset calibration, 3=store calibration
 #define QMC5883L_PARAM_MODE            (I2CBASE_SUBCLASS_PARAM_START+10)  // 20
 // @pub 21;f;4;raw;Raw magnetic field vector
 #define QMC5883L_PARAM_RAW             (I2CBASE_SUBCLASS_PARAM_START+11)  // 21

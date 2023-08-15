@@ -319,6 +319,11 @@ void QMC5883LModule::loop() {
   _params[QMC5883L_PARAM_RAW_E].data.f[2] = _rawAvg[2];
   _params[QMC5883L_PARAM_RAW_E].data.f[3] = 0;
 
+  _params[QMC5883L_PARAM_VECTOR_E].data.f[0] = _rawAvg[0];
+  _params[QMC5883L_PARAM_VECTOR_E].data.f[1] = _rawAvg[1];
+  _params[QMC5883L_PARAM_VECTOR_E].data.f[2] = _rawAvg[2];
+  _params[QMC5883L_PARAM_VECTOR_E].data.f[3] = 0;
+
   // check for valid range
   if (fabs(_params[QMC5883L_PARAM_VECTOR_E].data.f[0]) > 100 ||
       fabs(_params[QMC5883L_PARAM_VECTOR_E].data.f[1]) > 100 ||
