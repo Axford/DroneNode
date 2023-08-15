@@ -280,11 +280,15 @@ void QMC5883LModule::loop() {
   // get sensor values
   _sensor->read();
 
-  // update moving averages
-  _rawAvg[0] = ( (_sensor->getX() / 100.0) + (_numRawSamples)*(_rawAvg[0]) ) / (_numRawSamples + 1);
-  _rawAvg[1] = ( (_sensor->getY() / 100.0) + (_numRawSamples)*(_rawAvg[1]) ) / (_numRawSamples + 1);
-  _rawAvg[2] = ( (_sensor->getZ() / 100.0) + (_numRawSamples)*(_rawAvg[2]) ) / (_numRawSamples + 1);
+  float sv[3] = { _sensor->getX(), _sensor->getY(), _sensor->getZ() };
 
+  // update moving averages
+  for (uint8_t i=0; i<3; i++) {
+    // reject bad raw values
+    if (isnan(sv[i])) return;
+    _rawAvg[i] = ( (sv[i] / 100.0) + (_numRawSamples)*(_rawAvg[i]) ) / (_numRawSamples + 1);
+  }
+  
   if (_numRawSamples < QMC5883L_MOVING_AVERAGE_POINTS) _numRawSamples++;
 
   for (uint8_t i=0; i<3; i++) {
