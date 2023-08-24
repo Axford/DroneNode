@@ -3,7 +3,6 @@
 #include "../DroneLinkManager.h"
 #include "strings.h"
 #include "../navMath.h"
-#include <LITTLEFS.h>
 #include "Preferences.h"
 
 WaypointModule::WaypointModule(uint8_t id, DroneSystem* ds):
