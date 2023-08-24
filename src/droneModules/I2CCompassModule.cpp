@@ -16,6 +16,8 @@ I2CCompassModule::I2CCompassModule(uint8_t id, DroneSystem* ds):
    _numRawSamples = 0;
 
    for (uint8_t i=0; i<3; i++) {
+    _raw[i] = 0;
+    _rawAvg[i] = 0;
     _minRaw[i] = 0;
     _maxRaw[i] = 0;
    }
