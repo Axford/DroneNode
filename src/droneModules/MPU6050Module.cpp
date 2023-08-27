@@ -108,7 +108,7 @@ MPU6050Module::MPU6050Module(uint8_t id, DroneSystem* ds):
    param = &_params[MPU6050_PARAM_MODE_E];
    param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, MPU6050_PARAM_MODE);
    setParamName(FPSTR(STRING_MODE), param);
-   param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_UINT8_T, 1);
+   param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_UINT8_T, 1);
    param->data.f[0] = MPU6050_MODE_ONLINE_CALIBRATION;
 }
 
