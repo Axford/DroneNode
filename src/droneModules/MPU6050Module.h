@@ -3,11 +3,12 @@
 Manages a MPU6050 I2c gyro/accel sensor
 
 @config >>>
-[MPU6050 = 8 ]
+[MPU6050 = 14 ]
   name = "MPU6050"
   bus = 4
   interval = 50
   publish = accel, pitch, roll
+  publish = raw, calibX, calibY, calibZ, mode
 <<<
 
 */
