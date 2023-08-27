@@ -2,6 +2,7 @@
 #include "../DroneLinkMsg.h"
 #include "../DroneLinkManager.h"
 #include "strings.h"
+#include "Preferences.h"
 
 #define SQR(x) (x*x) 
 
@@ -147,6 +148,37 @@ void MPU6050Module::setup() {
     _sensor->setFilterBandwidth(MPU6050_BAND_21_HZ);
 
     _sensor->setAccelerometerRange(MPU6050_RANGE_8_G);
+
+    // load calibration values from EEPROM... if available
+    Preferences pref; 
+    // use module name as preference namespace
+    pref.begin(_mgmtParams[DRONE_MODULE_PARAM_NAME_E].data.c, true);
+
+    // X
+    _params[MPU6050_PARAM_CALIB_X_E].data.f[0] = pref.getFloat("xMin", _params[MPU6050_PARAM_CALIB_X_E].data.f[0]);
+    _params[MPU6050_PARAM_CALIB_X_E].data.f[2] = pref.getFloat("xMax", _params[MPU6050_PARAM_CALIB_X_E].data.f[2]);
+    _params[MPU6050_PARAM_CALIB_X_E].data.f[1] = (_params[MPU6050_PARAM_CALIB_X_E].data.f[2] + _params[MPU6050_PARAM_CALIB_X_E].data.f[0])/2;
+
+    _minRaw[0] = _params[MPU6050_PARAM_CALIB_X_E].data.f[0];
+    _maxRaw[0] = _params[MPU6050_PARAM_CALIB_X_E].data.f[2];
+
+    // Y
+    _params[MPU6050_PARAM_CALIB_Y_E].data.f[0] = pref.getFloat("yMin", _params[MPU6050_PARAM_CALIB_Y_E].data.f[0]);
+    _params[MPU6050_PARAM_CALIB_Y_E].data.f[2] = pref.getFloat("yMax", _params[MPU6050_PARAM_CALIB_Y_E].data.f[2]);
+    _params[MPU6050_PARAM_CALIB_Y_E].data.f[1] = (_params[MPU6050_PARAM_CALIB_Y_E].data.f[2] + _params[MPU6050_PARAM_CALIB_Y_E].data.f[0])/2;
+
+    _minRaw[1] = _params[MPU6050_PARAM_CALIB_Y_E].data.f[0];
+    _maxRaw[1] = _params[MPU6050_PARAM_CALIB_Y_E].data.f[2]; 
+    
+    // Z
+    _params[MPU6050_PARAM_CALIB_Z_E].data.f[0] = pref.getFloat("zMin", _params[MPU6050_PARAM_CALIB_Z_E].data.f[0]);
+    _params[MPU6050_PARAM_CALIB_Z_E].data.f[2] = pref.getFloat("zMax", _params[MPU6050_PARAM_CALIB_Z_E].data.f[2]);
+    _params[MPU6050_PARAM_CALIB_Z_E].data.f[1] = (_params[MPU6050_PARAM_CALIB_Z_E].data.f[2] + _params[MPU6050_PARAM_CALIB_Z_E].data.f[0])/2;
+    
+    _minRaw[2] = _params[MPU6050_PARAM_CALIB_Z_E].data.f[0];
+    _maxRaw[2] = _params[MPU6050_PARAM_CALIB_Z_E].data.f[2];
+
+    pref.end();
   }
 }
 
@@ -251,9 +283,15 @@ void MPU6050Module::loop() {
   _params[MPU6050_PARAM_RAW_E].data.f[3] = _magStdDev;
   
 
-  // calc pitch - assume standard orientation with Y+ forward
-  //float mag = sqrt(SQR(a.acceleration.x) + SQR(a.acceleration.y) + SQR(a.acceleration.z));
+  // apply offset/bias
+  _raw[0] = _params[MPU6050_PARAM_RAW_E].data.f[0] - _params[MPU6050_PARAM_CALIB_X_E].data.f[1];
+  _raw[1] = _params[MPU6050_PARAM_RAW_E].data.f[1] - _params[MPU6050_PARAM_CALIB_Y_E].data.f[1];
+  _raw[2] = _params[MPU6050_PARAM_RAW_E].data.f[2] - _params[MPU6050_PARAM_CALIB_Z_E].data.f[1];
 
+  // apply scaling?
+  // TODO
+
+  // calc pitch - assume standard orientation with Y+ forward
   float pitch = atan2(_raw[1], _raw[2]) * 180 / PI;
   _params[MPU6050_PARAM_PITCH_E].data.f[0] = pitch;
 
@@ -261,12 +299,44 @@ void MPU6050Module::loop() {
   float roll = atan2(_raw[0], _raw[2]) * 180 / PI;
   _params[MPU6050_PARAM_ROLL_E].data.f[0] = roll;
 
-  // error check
-  /*
-  if (isnan(_params[MPU6050_PARAM_ACCEL_E].data.f[0])) {
-    setError(1);  // will be cleared by next watchdog
+
+  if (_params[MPU6050_PARAM_MODE_E].data.uint8[0] == MPU6050_MODE_RESET_CALIBRATION) {
+
+    // reset raw limits
+    for (uint8_t i=0; i<3; i++) {
+      _minRaw[i] = _rawAvg[i]-1;
+      _maxRaw[i] = _rawAvg[i]+1;
+    }
+
+    // reset calibration
+    updateCalibrationValuesFromRaw();
+  
+    _params[MPU6050_PARAM_MODE_E].data.uint8[0] = MPU6050_MODE_ONLINE_CALIBRATION;
   }
-  */
+
+
+  if (_params[MPU6050_PARAM_MODE_E].data.uint8[0] == MPU6050_MODE_STORE_CALIBRATION) {
+    // write calibration values to EEPROM
+    Preferences pref; 
+    // use module name as preference namespace
+    pref.begin(_mgmtParams[DRONE_MODULE_PARAM_NAME_E].data.c, false);
+
+    // X
+    pref.putFloat("xMin", _params[MPU6050_PARAM_CALIB_X_E].data.f[0]);
+    pref.putFloat("xMax", _params[MPU6050_PARAM_CALIB_X_E].data.f[2]);
+
+    // Y
+    pref.putFloat("yMin", _params[MPU6050_PARAM_CALIB_Y_E].data.f[0]);
+    pref.putFloat("yMax", _params[MPU6050_PARAM_CALIB_Y_E].data.f[2]);
+
+    // Z
+    pref.putFloat("zMin", _params[MPU6050_PARAM_CALIB_Z_E].data.f[0]);
+    pref.putFloat("zMax", _params[MPU6050_PARAM_CALIB_Z_E].data.f[2]);
+
+    pref.end();
+
+    _params[MPU6050_PARAM_MODE_E].data.uint8[0] = MPU6050_MODE_FIXED_CALIBRATION;
+  }
 
   // publish param entries
   publishParamEntries();
