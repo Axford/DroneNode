@@ -521,7 +521,7 @@ void DroneSystem::loop() {
         Serial.println(_serialCommand);
 
         // clear boot flag and restart
-        if (strcmp(_serialCommand, "execute")==0) {
+        if (strcmp(_serialCommand, "reset")==0) {
           Serial.println("restarting");
           dem->setBootStatus(DEM_BOOT_SUCCESS);
           dmm->restart();
