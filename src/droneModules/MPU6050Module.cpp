@@ -274,8 +274,7 @@ void MPU6050Module::loop() {
   
   // copy _raw values into param
   for (uint8_t i=0; i<3; i++) {
-    _params[MPU6050_PARAM_ACCEL_E].data.f[i] = _raw[i];
-    _params[MPU6050_PARAM_RAW_E].data.f[i] = _rawAvg[i];
+    _params[MPU6050_PARAM_RAW_E].data.f[i] = _raw[i];
   }
   //_params[MPU6050_PARAM_RAW_E].data.f[0] = mag;
   //_params[MPU6050_PARAM_RAW_E].data.f[1] = _magAvg;
@@ -288,8 +287,19 @@ void MPU6050Module::loop() {
   _raw[1] = _params[MPU6050_PARAM_RAW_E].data.f[1] - _params[MPU6050_PARAM_CALIB_Y_E].data.f[1];
   _raw[2] = _params[MPU6050_PARAM_RAW_E].data.f[2] - _params[MPU6050_PARAM_CALIB_Z_E].data.f[1];
 
-  // apply scaling?
-  // TODO
+  // calculate scaling factors, to achieve an approx unit sphere about the origin
+  float scaling[3];
+  scaling[0] = fabs(_params[MPU6050_PARAM_CALIB_X_E].data.f[2] - _params[MPU6050_PARAM_CALIB_X_E].data.f[0])/2;
+  scaling[1] = fabs(_params[MPU6050_PARAM_CALIB_Y_E].data.f[2] - _params[MPU6050_PARAM_CALIB_Y_E].data.f[0])/2;
+  scaling[2] = fabs(_params[MPU6050_PARAM_CALIB_Z_E].data.f[2] - _params[MPU6050_PARAM_CALIB_Z_E].data.f[0])/2;
+  
+  // apply scaling and copy to accel vector
+  for (uint8_t i=0; i<3; i++) {
+    if (scaling[i] > 7) {
+      _raw[i] = 9.81 * _raw[i] / scaling[i];
+    }
+    _params[MPU6050_PARAM_ACCEL_E].data.f[i] = _raw[i];
+  }
 
   // calc pitch - assume standard orientation with Y+ forward
   float pitch = atan2(_raw[1], _raw[2]) * 180 / PI;
