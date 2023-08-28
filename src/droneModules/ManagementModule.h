@@ -4,6 +4,14 @@
 @inherits      Drone
 @description   Provides overall system management and a pub/sub interface to the DroneModuleManager
 
+@config >>>
+[ Management = 1 ]
+  name = Management
+  interval = 1000
+  hostname = Dreamer
+  discovery = 1
+  publish = hostname, build, IP, uptime, save
+<<<
 */
 #ifndef MANAGEMENT_MODULE_H
 #define MANAGEMENT_MODULE_H

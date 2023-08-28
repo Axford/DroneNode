@@ -8,22 +8,10 @@ BME280Module::BME280Module(uint8_t id, DroneSystem* ds):
  {
    setTypeName(FPSTR(BME280_STR_BME280));
 
-   _numParamEntries = BME280_PARAM_ENTRIES;
-   _params = new DRONE_PARAM_ENTRY[_numParamEntries];
-
-   // defaults
-   for (uint8_t i=0; i<_numParamEntries; i++) {
-     _params[i].paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 4);
-     _params[i].publish = false;
-     _params[i].data.f[0] = 0;
-   }
+   initParams(BME280_PARAM_ENTRIES);
 
    I2CBaseModule::initBaseParams();
    _params[I2CBASE_PARAM_ADDR_E].data.uint8[0] = BME280_I2C_ADDRESS;
-
-   _mgmtParams[DRONE_MODULE_PARAM_TYPE_E].paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_CHAR, sizeof(BME280_STR_BME280));
-   strncpy_P(_mgmtParams[DRONE_MODULE_PARAM_TYPE_E].data.c, BME280_STR_BME280, sizeof(BME280_STR_BME280));
-
 
    // init param entries
    _params[BME280_PARAM_TEMPERATURE_E].paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_MEDIUM, BME280_PARAM_TEMPERATURE);

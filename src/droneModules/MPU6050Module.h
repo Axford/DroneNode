@@ -1,6 +1,8 @@
 /*
 
-Manages a MPU6050 I2c gyro/accel sensor
+@type          MPU6050
+@inherits      I2CBase
+@description   Manages a MPU6050 I2c gyro/accel sensor
 
 @config >>>
 [MPU6050 = 14 ]

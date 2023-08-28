@@ -5,22 +5,16 @@
 @description   Manages a LSM9DS1 I2C Compass
 
 @config >>>
-LSM9DS1.new 6
-  name "Compass"
-  interval 200
-  bus 0
-  status 1
-  calibX -3.5 0 2.3
-  calibY -3.6 0 1.7
-  // default location
-  location -1.8 52 100
-  //$location [@>GPS.location]
-  $location [@>5.8]
-  .publish "heading"
-  .publish "vector"
-  .publish "calibX"
-  .publish "calibY"
-.done
+[LSM9DS1 = 6]
+  name= "Compass"
+  interval= 200
+  bus= 0
+  status= 1
+  calibX= -3.5, 0, 2.3
+  calibY= -3.6, 0, 1.7
+  location= -1.8, 52, 100
+  $location = @>GPS.location
+  publish = heading, vector, calibX, calibY
 <<<
 
 */

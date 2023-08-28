@@ -9,7 +9,18 @@
 <<<
 
 @config >>>
-
+[ TankSteer = 8 ]
+  name = TankSteer
+  mode = 1
+  trim = 0
+  PID = 0.02, 0, 0
+  limits = 0.2,1
+  threshold = 15
+  $target = @>Nav.adjTarget
+  $heading = @>50.8
+  $distance = @>Nav.distance
+  publish = moode, trim, PID, limits, threshold, target
+  publish = heading, distance, left, right
 <<<
 
 */

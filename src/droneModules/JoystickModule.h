@@ -1,6 +1,6 @@
 /*
 
-Manages a JOYSTICK I2c temp, humidty and pressure sensor
+Manages an I2C JOYSTICK 
 
 */
 #ifndef JOYSTICK_MODULE_H

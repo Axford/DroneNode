@@ -8,8 +8,14 @@
 <<<
 
 @config >>>
-[Avoid=13]
-
+[ Avoid = 14 ]
+  name = Avoid
+  $location = @>50.9
+  $heading = @>50.8
+  $course = @>Nav.adjHeading
+  $SOG = @>50.12
+  publish = adjHeading, target, threshold, vessel, packets
+  publish = location, SOG, heading, course, ETC
 <<<
 */
 

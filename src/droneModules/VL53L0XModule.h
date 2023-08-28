@@ -8,7 +8,7 @@
 [VL53L0X = 8]
   name= "Laser"
   bus= 3
-  publish = 
+  publish = distance
 <<<
 
 */
