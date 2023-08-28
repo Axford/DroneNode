@@ -287,7 +287,7 @@ void I2CCompassModule::loop() {
     sq(_params[I2CCOMPASS_PARAM_VECTOR_E].data.f[2])
   );  
 
-  quality = 100 * max(1 - fabs(1 - vectorLen), 0.0f);
+  quality = 100 * max(1 - (1 - vectorLen), 0.0f);
 
   _params[I2CCOMPASS_PARAM_VECTOR_E].data.f[3] = quality;
 
@@ -350,6 +350,13 @@ void I2CCompassModule::loop() {
       _minRaw[i] = _rawAvg[i]-1;
       _maxRaw[i] = _rawAvg[i]+1;
     }
+
+    _params[I2CCOMPASS_PARAM_CALIB_X_E].data.f[0] = _rawAvg[0]-1;
+    _params[I2CCOMPASS_PARAM_CALIB_X_E].data.f[2] = _rawAvg[0]+1;
+    _params[I2CCOMPASS_PARAM_CALIB_Y_E].data.f[0] = _rawAvg[1]-1;
+    _params[I2CCOMPASS_PARAM_CALIB_Y_E].data.f[2] = _rawAvg[1]+1;
+    _params[I2CCOMPASS_PARAM_CALIB_Z_E].data.f[0] = _rawAvg[2]-1;
+    _params[I2CCOMPASS_PARAM_CALIB_Z_E].data.f[2] = _rawAvg[2]+1;
 
     // reset calibration
     updateCalibrationValuesFromRaw();
