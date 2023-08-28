@@ -37,6 +37,8 @@ DroneSystem::DroneSystem() : _server(80), dfs(this), _fsEditor(LITTLEFS, _doLoop
   for (uint8_t i=0; i<DRONE_SYSTEM_PINS; i++) {
     _pins[i].state = DRONE_SYSTEM_PIN_STATE_UNAVAILABLE;
     _pins[i].capabilities = 0;
+    _pins[i].strip = NULL;
+    _pins[i].stripIndex = 0;
   }
 
   // now set specific capabilities
@@ -154,6 +156,32 @@ boolean DroneSystem::requestPin(uint8_t pin, uint8_t capabilities, DroneModule* 
     Log.errorln("[ds.rP] Pin unavailable %u", pin);
     return false;
   }
+}
+
+
+NeoPixelBrightnessBus<NeoGrbFeature, Neo800KbpsMethod>* DroneSystem::requestStrip(uint8_t pin, uint8_t pixels, DroneModule* module) {
+
+  // if there is an existing strip on this pin then return it
+  if (_pins[pin].strip) {
+    return _pins[pin].strip;
+  } else if (requestPin(pin, DRONE_SYSTEM_PIN_CAP_OUTPUT, module)) {
+    // create new strip
+    _pins[pin].strip = new NeoPixelBrightnessBus<NeoGrbFeature, Neo800KbpsMethod>(pixels, pin);
+    _pins[pin].strip->Begin();
+    _pins[pin].strip->Show();
+    _pins[pin].strip->SetBrightness(25);
+
+    return _pins[pin].strip;
+  };
+  return NULL;
+}
+
+void DroneSystem::setStripFirstPixel(uint8_t pin, uint8_t index) {
+  _pins[pin].stripIndex = index;
+}
+
+uint8_t DroneSystem::getStripFirstPixel(uint8_t pin) {
+  return _pins[pin].stripIndex;
 }
 
 
@@ -581,6 +609,11 @@ void DroneSystem::loop() {
   }
 
   //_OTAMgr->loop();
+
+  // show strips
+  for (uint8_t i=0; i<DRONE_SYSTEM_PINS; i++) {
+    if (_pins[i].strip) _pins[i].strip->Show();
+  }
 
   // return SPI semaphore
   xSemaphoreGive( _xSPISemaphore );

@@ -56,9 +56,9 @@ protected:
   uint8_t _hw;
   uint8_t _state;
 
+public:
   NeoPixelBrightnessBus<NeoGrbFeature, Neo800KbpsMethod> *_strip;
 
-public:
   DroneLED(DroneSystem* ds);
 
   boolean isNeopixel();

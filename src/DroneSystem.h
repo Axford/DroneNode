@@ -96,6 +96,8 @@ struct DRONE_SYSTEM_PIN {
   uint8_t state;
   uint8_t capabilities;
   DroneModule* module;
+  NeoPixelBrightnessBus<NeoGrbFeature, Neo800KbpsMethod> * strip; // if a strip is associated with this pin
+  uint8_t stripIndex;  // index of first pixel
 };
 
 #define DRONE_SYSTEM_PINS   36    // 0..35
@@ -148,6 +150,10 @@ public:
 
   boolean requestSerialPort(uint8_t port, DroneModule* module);
   boolean requestPin(uint8_t pin, uint8_t capabilities, DroneModule* module);
+  NeoPixelBrightnessBus<NeoGrbFeature, Neo800KbpsMethod>* requestStrip(uint8_t pin, uint8_t pixels, DroneModule* module);
+  void setStripFirstPixel(uint8_t pin, uint8_t index);
+  // get index of first pixel for strip on pin
+  uint8_t getStripFirstPixel(uint8_t pin);
 
   void detectMotherboardVersion();
 

@@ -2,12 +2,14 @@
 #include "../DroneLinkMsg.h"
 #include "../DroneLinkManager.h"
 #include "strings.h"
+#include "DroneSystem.h"
 
 CylonModule::CylonModule(uint8_t id, DroneSystem* ds):
   DroneModule ( id, ds )
  {
    setTypeName(FPSTR(CYLON_STR_CYLON));
    _strip = NULL;
+   _firstPixel = 0;
 
    // subs
    initSubs(CYLON_SUBS);
@@ -50,8 +52,6 @@ void CylonModule::disable() {
   if (_strip) {
     _strip->SetBrightness(25);
     _strip->ClearTo(RgbColor(0,0,0));
-
-    _strip->Show();
   }
   DroneModule::disable();
   Log.noticeln(F("[Cy.d] end"));
@@ -60,27 +60,22 @@ void CylonModule::disable() {
 
 void CylonModule::setup() {
   //Log.noticeln(F("[Cy.s]"));
-  DroneModule::setup();
-  if (_params[CYLON_PARAM_PINS_E].data.uint8[0] > 0) {
-    if (_strip == NULL) {
-      // TODO - hack to allow for onboard status LED
-      _strip = new NeoPixelBrightnessBus<NeoGrbFeature, Neo800KbpsMethod>(_params[CYLON_PARAM_NUMPIXELS_E].data.uint8[0] + 1, _params[CYLON_PARAM_PINS_E].data.uint8[0]);
+  DroneModule::setup();  
+  if (_strip == NULL) {
+    _strip = _ds->requestStrip(_params[CYLON_PARAM_PINS_E].data.uint8[0], _params[CYLON_PARAM_NUMPIXELS_E].data.uint8[0], this);
+
+    if (_strip != NULL) {
+      _firstPixel = _ds->getStripFirstPixel(_params[CYLON_PARAM_PINS_E].data.uint8[0]);
+
+      // init red while booting
+      for(uint8_t i=_firstPixel; i<_params[CYLON_PARAM_NUMPIXELS_E].data.uint8[0]+_firstPixel; i++) {
+        _strip->SetPixelColor(i, RgbColor(255, 0, 0));
+      }
+      _strip->Show();
+    } else {
+      Log.errorln(F("Unable to init strip on pin %d"), _params[CYLON_PARAM_PINS_E].data.uint8[0]);
+      disable();
     }
-
-    _strip->Begin();
-    _strip->Show();
-    _strip->SetBrightness(25); // to be overridden by scenes
-
-
-    // init red while booting
-    for(uint8_t i=0; i<_params[CYLON_PARAM_NUMPIXELS_E].data.uint8[0]+1; i++) {
-      _strip->SetPixelColor(i, RgbColor(255, 0, 0));
-    }
-    _strip->Show();
-
-  } else {
-    Log.errorln(F("Undefined pin %d"), _params[CYLON_PARAM_PINS_E].data.uint8[0]);
-    disable();
   }
 }
 
@@ -115,7 +110,7 @@ void CylonModule::loop() {
           c = HsbColor(0 + 0.7*i/perSide,1,0.5);
         }
       }
-      _strip->SetPixelColor(i + 1, i<numLit ? c : blk);
+      _strip->SetPixelColor(i + _firstPixel, i<numLit ? c : blk);
     }
 
 
@@ -136,10 +131,8 @@ void CylonModule::loop() {
         }
       }
 
-      _strip->SetPixelColor(_params[CYLON_PARAM_NUMPIXELS_E].data.uint8[0]-i, i<numLit ? c : blk);
+      _strip->SetPixelColor((_firstPixel-1) + _params[CYLON_PARAM_NUMPIXELS_E].data.uint8[0]-i, i<numLit ? c : blk);
     }
-
-    _strip->Show();
   }
 }
 

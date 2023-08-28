@@ -20,12 +20,10 @@ DroneLED::DroneLED(DroneSystem* ds) {
     pinMode(DRONE_LED_PIN, OUTPUT);
   } else {
     // init NeoPixel strip
-    _strip = new NeoPixelBrightnessBus<NeoGrbFeature, Neo800KbpsMethod>(DRONE_LED_MAX_PIXELS, DRONE_LED_PIN);
 
-    _strip->Begin();
-    _strip->Show();
-    // default brightness is very low to save battery
-    _strip->SetBrightness(15);
+    //_strip = new NeoPixelBrightnessBus<NeoGrbFeature, Neo800KbpsMethod>(DRONE_LED_MAX_PIXELS, DRONE_LED_PIN);
+    _strip = _ds->requestStrip(DRONE_LED_PIN, DRONE_LED_MAX_PIXELS, NULL);
+    _ds->setStripFirstPixel(DRONE_LED_PIN, 1);
   }
 
   // set initial state
@@ -110,11 +108,12 @@ void DroneLED::update() {
           _animationState = 0;
           _strip->SetPixelColor(0, RgbColor(50, 0, 100));
         }
+
+        _strip->Show();
         
         _animationTimer = loopTime;
       }
     }
-    _strip->Show();
   }
 }
 

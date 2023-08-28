@@ -41,6 +41,7 @@ static const char CYLON_STR_CYLON[] PROGMEM = "Cylon";
 
 class CylonModule:  public DroneModule {
 protected:
+  uint8_t _firstPixel;
   NeoPixelBrightnessBus<NeoGrbFeature, Neo800KbpsMethod> *_strip;
 public:
 
