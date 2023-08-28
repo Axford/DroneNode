@@ -10,6 +10,7 @@
 #include "droneModules/AnalogModule.h"
 #include "droneModules/AnemometerModule.h"
 #include "droneModules/AvoidModule.h"
+#include "droneModules/BME280Module.h"
 #include "droneModules/CMPS12Module.h"
 #include "droneModules/ControllerModule.h"
 #include "droneModules/CylonModule.h"
@@ -51,8 +52,6 @@
 
 /*
 #include "droneModules/TimerModule.h"
-
-#include "droneModules/BME280Module.h"
 #include "droneModules/BasicNavModule.h"
 
 #include "droneModules/OLEDModule.h"
@@ -505,6 +504,8 @@ DroneModule* DroneExecutionManager::instanceModule(char* typeName, uint8_t id) {
       newMod = new AnemometerModule(id, _ds);
     } else if (strcmp_P(typeName, AVOID_STR_AVOID) == 0) {
       newMod = new AvoidModule(id, _ds);
+    } else if (strcmp_P(typeName, BME280_STR_BME280) == 0) {
+      newMod = new BME280Module(id, _ds);
     } else if (strcmp_P(typeName, CMPS12_STR_CMPS12) == 0) {
       newMod = new CMPS12Module(id, _ds);
     } else if (strcmp_P(typeName, CONTROLLER_STR_CONTROLLER) == 0) {
