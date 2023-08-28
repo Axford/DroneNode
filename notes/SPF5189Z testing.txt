@@ -1,14 +1,19 @@
  26/08/23
-    pPddled with SPF5189Z at 5v and ground plane monopole
+    Paddled with SPF5189Z at 5v and ground plane monopole
     Benchnode with no amp and simple copper single core monopole
         distance 50cm anntana point to point 
-        all setups given 5 mins for rolling window to settle
+        all setups given 5 mins for rolling windows to settle
 
         with SPF5189Z attached and powerd on    
     Benchnode RSSI -13db
     Paddled RSSI -19db
 
         with SPF5189Z attached and powerd off
-    Benchnode RSSI -db
-    Paddled RSSI -db
+    Benchnode RSSI -18db
+    Paddled RSSI -19db
 
+        with SPF5189Z removed
+    Benchnode RSSI -13db
+    Paddled RSSI -13db
+
+ 
