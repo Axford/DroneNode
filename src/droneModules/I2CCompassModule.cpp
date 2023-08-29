@@ -292,7 +292,8 @@ void I2CCompassModule::loop() {
   _params[I2CCOMPASS_PARAM_VECTOR_E].data.f[3] = quality;
 
   // if calibrating and quality is >100 (i.e sphere too small)
-  if (_params[I2CCOMPASS_PARAM_MODE_E].data.uint8[0] == I2CCOMPASS_MODE_ONLINE_CALIBRATION && quality > 100) {
+  // or if sphere has got too big (e.g. because of spurious max values)
+  if (_params[I2CCOMPASS_PARAM_MODE_E].data.uint8[0] == I2CCOMPASS_MODE_ONLINE_CALIBRATION && (quality > 70 )) {
     /* nudge the calibration limits in the right direction
     VECTOR gives us the magnitude for each vector... we could scale that down and use it to nudge the limits directly
     */

@@ -114,6 +114,8 @@ void WindModule::setup() {
 
     if (!I2CBaseModule::isAlive()) {
       Log.errorln("[Wind.s] No sensor found");
+      setError(1);
+      disable();
       return;
     }
 
