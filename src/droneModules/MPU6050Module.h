@@ -99,6 +99,9 @@ protected:
   // min and max limits for raw magnetic values in all orientations
   float _minRaw[3];
   float _maxRaw[3];
+
+  unsigned long _lastSampleMicros;
+  unsigned long _lastPublishTime;
 public:
 
   MPU6050Module(uint8_t id, DroneSystem* ds);

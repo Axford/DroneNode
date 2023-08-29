@@ -31,7 +31,11 @@ MPU6050Module::MPU6050Module(uint8_t id, DroneSystem* ds):
    _magDSquared = 0;
    _magStdDev = 0;
 
-   _mgmtParams[DRONE_MODULE_PARAM_INTERVAL_E].data.uint32[0] = 50;
+   _lastSampleMicros = 0;
+   _lastPublishTime = 0;
+
+   // aiming to match sensor bandwidth
+   _mgmtParams[DRONE_MODULE_PARAM_INTERVAL_E].data.uint32[0] = 1000/184;
 
    initParams(MPU6050_PARAM_ENTRIES);
 
@@ -43,7 +47,7 @@ MPU6050Module::MPU6050Module(uint8_t id, DroneSystem* ds):
 
    // init param entries
    param = &_params[MPU6050_PARAM_ACCEL_E];
-   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_CRITICAL, MPU6050_PARAM_ACCEL);
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_HIGH, MPU6050_PARAM_ACCEL);
    setParamName(FPSTR(STRING_ACCEL), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 12);
    param->data.f[0] = 0;
@@ -64,12 +68,12 @@ MPU6050Module::MPU6050Module(uint8_t id, DroneSystem* ds):
    param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 4);
 
    param = &_params[MPU6050_PARAM_PITCH_E];
-   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_HIGH, MPU6050_PARAM_PITCH);
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_CRITICAL, MPU6050_PARAM_PITCH);
    setParamName(FPSTR(STRING_PITCH), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 4); 
 
    param = &_params[MPU6050_PARAM_ROLL_E];
-   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_HIGH, MPU6050_PARAM_ROLL);
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_CRITICAL, MPU6050_PARAM_ROLL);
    setParamName(FPSTR(STRING_ROLL), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 4);  
 
@@ -154,9 +158,10 @@ void MPU6050Module::setup() {
     }
 
     // configure
-    _sensor->setFilterBandwidth(MPU6050_BAND_21_HZ);
-
+    _sensor->setSampleRateDivisor(1);
+    _sensor->setFilterBandwidth(MPU6050_BAND_184_HZ);
     _sensor->setAccelerometerRange(MPU6050_RANGE_8_G);
+    _sensor->setGyroRange(MPU6050_RANGE_1000_DEG);
 
     // load calibration values from EEPROM... if available
     Preferences pref; 
@@ -244,6 +249,10 @@ void MPU6050Module::loop() {
   // fetch values and place into _raw
   getSensorValues();
 
+  unsigned long sampleMicros = (_lastSampleMicros > 0) ? micros() - _lastSampleMicros : 0;
+  _lastSampleMicros = micros();
+  float dt = sampleMicros / 1000000;
+
   // update moving averages
   for (uint8_t i=0; i<3; i++) {
     // reject bad raw values
@@ -310,8 +319,8 @@ void MPU6050Module::loop() {
   _raw[2] = _params[MPU6050_PARAM_RAW_E].data.f[2] - _params[MPU6050_PARAM_CALIB_Z_E].data.f[1];
 
   for (uint8_t i=0; i<3; i++) {
-    _params[MPU6050_PARAM_GYRO_E].data.f[i] = _rawG[i] - _params[MPU6050_PARAM_CALIB_G_E].data.f[i];
-    //_params[MPU6050_PARAM_RAW_E].data.f[i] = _rawG[i];
+    _rawG[i] = _rawG[i] - _params[MPU6050_PARAM_CALIB_G_E].data.f[i];
+    _params[MPU6050_PARAM_GYRO_E].data.f[i] = _rawG[i];
   }
 
   // calculate scaling factors, to achieve an approx unit sphere about the origin
@@ -330,11 +339,13 @@ void MPU6050Module::loop() {
 
   // calc pitch - assume standard orientation with Y+ forward
   float pitch = atan2(_raw[1], _raw[2]) * 180 / PI;
-  _params[MPU6050_PARAM_PITCH_E].data.f[0] = pitch;
+  // blend accel pitch with gyro info - complementary filter
+  _params[MPU6050_PARAM_PITCH_E].data.f[0] = 0.05 * pitch + 0.95*(_params[MPU6050_PARAM_PITCH_E].data.f[0] + _rawG[0] * dt);
 
   // positive roll is to the right, negative to the left
   float roll = atan2(_raw[0], _raw[2]) * 180 / PI;
-  _params[MPU6050_PARAM_ROLL_E].data.f[0] = roll;
+  // blend accel pitch with gyro info - complementary filter
+  _params[MPU6050_PARAM_ROLL_E].data.f[0] = 0.05 * roll + 0.95*(_params[MPU6050_PARAM_ROLL_E].data.f[0] + _rawG[1] * dt);
 
 
   if (_params[MPU6050_PARAM_MODE_E].data.uint8[0] == MPU6050_MODE_RESET_CALIBRATION) {
@@ -382,6 +393,10 @@ void MPU6050Module::loop() {
     _params[MPU6050_PARAM_MODE_E].data.uint8[0] = MPU6050_MODE_FIXED_CALIBRATION;
   }
 
-  // publish param entries
-  publishParamEntries();
+  // publish param entries, no faster than 20Hz
+  unsigned long loopTime = millis();
+  if (loopTime >= _lastPublishTime + 50) {
+    publishParamEntries();
+    _lastPublishTime = loopTime;
+  }
 }
