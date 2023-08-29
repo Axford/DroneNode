@@ -49,19 +49,22 @@
 // @pub 19;u8;1;mode;Mode: 0=online calibration, 1=fixed calibration, 2=reset calibration, 3=store calibration
 #define MPU6050_PARAM_MODE            (I2CBASE_SUBCLASS_PARAM_START+9)  // 19
 
+// @pub 20;f;3;calibG;Gyro calibration values (bias to zero)
+#define MPU6050_PARAM_CALIB_G         (I2CBASE_SUBCLASS_PARAM_START+10)  // 20
 
 #define MPU6050_PARAM_ACCEL_E         (I2CBASE_PARAM_ENTRIES+0)
 #define MPU6050_PARAM_GYRO_E          (I2CBASE_PARAM_ENTRIES+1)
 #define MPU6050_PARAM_TEMPERATURE_E   (I2CBASE_PARAM_ENTRIES+2)
 #define MPU6050_PARAM_PITCH_E         (I2CBASE_PARAM_ENTRIES+3)
 #define MPU6050_PARAM_ROLL_E          (I2CBASE_PARAM_ENTRIES+4)
-#define MPU6050_PARAM_RAW_E          (I2CBASE_PARAM_ENTRIES+5)
-#define MPU6050_PARAM_CALIB_X_E          (I2CBASE_PARAM_ENTRIES+6)
-#define MPU6050_PARAM_CALIB_Y_E          (I2CBASE_PARAM_ENTRIES+7)
-#define MPU6050_PARAM_CALIB_Z_E          (I2CBASE_PARAM_ENTRIES+8)
+#define MPU6050_PARAM_RAW_E           (I2CBASE_PARAM_ENTRIES+5)
+#define MPU6050_PARAM_CALIB_X_E       (I2CBASE_PARAM_ENTRIES+6)
+#define MPU6050_PARAM_CALIB_Y_E       (I2CBASE_PARAM_ENTRIES+7)
+#define MPU6050_PARAM_CALIB_Z_E       (I2CBASE_PARAM_ENTRIES+8)
 #define MPU6050_PARAM_MODE_E          (I2CBASE_PARAM_ENTRIES+9)
+#define MPU6050_PARAM_CALIB_G_E       (I2CBASE_PARAM_ENTRIES+10)
 
-#define MPU6050_PARAM_ENTRIES         (I2CBASE_PARAM_ENTRIES + 10)
+#define MPU6050_PARAM_ENTRIES         (I2CBASE_PARAM_ENTRIES + 11)
 
 // strings
 static const char MPU6050_STR_MPU6050[] PROGMEM = "MPU6050";
@@ -82,6 +85,7 @@ protected:
 
   // moving average on raw vector values
   float _raw[3];  // raw values straight from the sensor
+  float _rawG[3];  // raw gyro values
   float _lastRaw[3];
   float _rawAvg[3];
   float _lastMags[MPU6050_MOVING_AVERAGE_POINTS];

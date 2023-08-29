@@ -14,6 +14,7 @@ MPU6050Module::MPU6050Module(uint8_t id, DroneSystem* ds):
 
    for (uint8_t i=0; i<3; i++) {
     _raw[i] = 0;
+    _rawG[i] = 0;
     _lastRaw[i] = 0;
     _rawAvg[i] = 0;
     _minRaw[i] = 0;
@@ -50,7 +51,7 @@ MPU6050Module::MPU6050Module(uint8_t id, DroneSystem* ds):
    param->data.f[2] = 0;
 
    param = &_params[MPU6050_PARAM_GYRO_E];
-   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, MPU6050_PARAM_GYRO);
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_HIGH, MPU6050_PARAM_GYRO);
    setParamName(FPSTR(STRING_GYRO), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 12);
    param->data.f[0] = 0;
@@ -110,6 +111,14 @@ MPU6050Module::MPU6050Module(uint8_t id, DroneSystem* ds):
    setParamName(FPSTR(STRING_MODE), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_UINT8_T, 1);
    param->data.f[0] = MPU6050_MODE_ONLINE_CALIBRATION;
+
+   param = &_params[MPU6050_PARAM_CALIB_G_E];
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_HIGH, MPU6050_PARAM_CALIB_G);
+   setParamName(FPSTR(STRING_CALIB_G), param);
+   param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 12);
+   param->data.f[0] = 0;
+   param->data.f[1] = 0;
+   param->data.f[2] = 0;
 }
 
 
@@ -178,6 +187,11 @@ void MPU6050Module::setup() {
     _minRaw[2] = _params[MPU6050_PARAM_CALIB_Z_E].data.f[0];
     _maxRaw[2] = _params[MPU6050_PARAM_CALIB_Z_E].data.f[2];
 
+    // GYRO
+    _params[MPU6050_PARAM_CALIB_G_E].data.f[0] = pref.getFloat("gx", _params[MPU6050_PARAM_CALIB_G_E].data.f[0]);
+    _params[MPU6050_PARAM_CALIB_G_E].data.f[1] = pref.getFloat("gy", _params[MPU6050_PARAM_CALIB_G_E].data.f[1]);
+    _params[MPU6050_PARAM_CALIB_G_E].data.f[2] = pref.getFloat("gz", _params[MPU6050_PARAM_CALIB_G_E].data.f[2]);
+
     pref.end();
   }
 }
@@ -196,6 +210,12 @@ void MPU6050Module::updateCalibrationValuesFromRaw() {
   _params[MPU6050_PARAM_CALIB_X_E].data.f[1] = (_maxRaw[0] + _minRaw[0])/2;
   _params[MPU6050_PARAM_CALIB_Y_E].data.f[1] = (_maxRaw[1] + _minRaw[1])/2;
   _params[MPU6050_PARAM_CALIB_Z_E].data.f[1] = (_maxRaw[2] + _minRaw[2])/2;
+
+  // update gyro offsets
+  for (uint8_t i=0; i<3; i++) {
+    // average them in over time 
+    _params[MPU6050_PARAM_CALIB_G_E].data.f[i] += (_rawG[i] -  _params[MPU6050_PARAM_CALIB_G_E].data.f[i]) / 50;
+  }
 }
 
 
@@ -210,9 +230,9 @@ void MPU6050Module::getSensorValues() {
   _raw[1] = a.acceleration.y;
   _raw[2] = a.acceleration.z;
 
-  _params[MPU6050_PARAM_GYRO_E].data.f[0] = g.gyro.x;
-  _params[MPU6050_PARAM_GYRO_E].data.f[1] = g.gyro.y;
-  _params[MPU6050_PARAM_GYRO_E].data.f[2] = g.gyro.z;
+  _rawG[0] = g.gyro.x;
+  _rawG[1] = g.gyro.y;
+  _rawG[2] = g.gyro.z;
 
   _params[MPU6050_PARAM_TEMPERATURE_E].data.f[0] = temp.temperature;
 }
@@ -241,51 +261,58 @@ void MPU6050Module::loop() {
   _lastMags[_lastMagIndex] = mag;
   _lastMagIndex = (_lastMagIndex+1) % MPU6050_MOVING_AVERAGE_POINTS;
 
-  // calulate mean of _lastMags
-  _magAvg = 0;
-  for (uint8_t i=0; i<MPU6050_MOVING_AVERAGE_POINTS; i++) {
-    _magAvg += _lastMags[i];
-  }
-  _magAvg /= MPU6050_MOVING_AVERAGE_POINTS;
+  if (_params[MPU6050_PARAM_MODE_E].data.uint8[0] == MPU6050_MODE_ONLINE_CALIBRATION) {
+    // calulate mean of _lastMags
+    _magAvg = 0;
+    for (uint8_t i=0; i<MPU6050_MOVING_AVERAGE_POINTS; i++) {
+      _magAvg += _lastMags[i];
+    }
+    _magAvg /= MPU6050_MOVING_AVERAGE_POINTS;
 
-  // calculate square diffs
-  _magVariance = 0;
-  for (uint8_t i=0; i<MPU6050_MOVING_AVERAGE_POINTS; i++) {
-    float sqDiff = _lastMags[i] - _magAvg;
-    _magVariance += (sqDiff * sqDiff);
-  }
-  _magVariance /= MPU6050_MOVING_AVERAGE_POINTS;
+    // calculate square diffs
+    _magVariance = 0;
+    for (uint8_t i=0; i<MPU6050_MOVING_AVERAGE_POINTS; i++) {
+      float sqDiff = _lastMags[i] - _magAvg;
+      _magVariance += (sqDiff * sqDiff);
+    }
+    _magVariance /= MPU6050_MOVING_AVERAGE_POINTS;
 
-  _magStdDev = sqrt( _magVariance );
+    _magStdDev = sqrt( _magVariance );
 
-  /*
-  initial testing suggests a stdDev of <0.025 represents a static condition
-  */
-  if (_params[MPU6050_PARAM_MODE_E].data.uint8[0] == MPU6050_MODE_ONLINE_CALIBRATION &&
-      (_magStdDev < 0.02)) {
-    for (uint8_t i=0; i<3; i++) {
-      // update overall min and max values
-      if (_rawAvg[i] > _maxRaw[i]) _maxRaw[i] = _rawAvg[i];
-      if (_rawAvg[i] < _minRaw[i]) _minRaw[i] = _rawAvg[i];
+    /*
+    initial testing suggests a stdDev of <0.02 represents a static condition
+    */
+    if (_params[MPU6050_PARAM_MODE_E].data.uint8[0] == MPU6050_MODE_ONLINE_CALIBRATION &&
+        (_magStdDev < 0.02)) {
+      for (uint8_t i=0; i<3; i++) {
+        // update overall min and max values
+        if (_rawAvg[i] > _maxRaw[i]) _maxRaw[i] = _rawAvg[i];
+        if (_rawAvg[i] < _minRaw[i]) _minRaw[i] = _rawAvg[i];
+      }
+
+      updateCalibrationValuesFromRaw();
     }
 
-    updateCalibrationValuesFromRaw();
+    _params[MPU6050_PARAM_RAW_E].data.f[3] = _magStdDev;
+  } else {
+    _params[MPU6050_PARAM_RAW_E].data.f[3] = 0;
   }
   
   // copy _raw values into param
   for (uint8_t i=0; i<3; i++) {
     _params[MPU6050_PARAM_RAW_E].data.f[i] = _raw[i];
   }
-  //_params[MPU6050_PARAM_RAW_E].data.f[0] = mag;
-  //_params[MPU6050_PARAM_RAW_E].data.f[1] = _magAvg;
-  //_params[MPU6050_PARAM_RAW_E].data.f[2] = _magVariance;
-  _params[MPU6050_PARAM_RAW_E].data.f[3] = _magStdDev;
   
 
   // apply offset/bias
   _raw[0] = _params[MPU6050_PARAM_RAW_E].data.f[0] - _params[MPU6050_PARAM_CALIB_X_E].data.f[1];
   _raw[1] = _params[MPU6050_PARAM_RAW_E].data.f[1] - _params[MPU6050_PARAM_CALIB_Y_E].data.f[1];
   _raw[2] = _params[MPU6050_PARAM_RAW_E].data.f[2] - _params[MPU6050_PARAM_CALIB_Z_E].data.f[1];
+
+  for (uint8_t i=0; i<3; i++) {
+    _params[MPU6050_PARAM_GYRO_E].data.f[i] = _rawG[i] - _params[MPU6050_PARAM_CALIB_G_E].data.f[i];
+    //_params[MPU6050_PARAM_RAW_E].data.f[i] = _rawG[i];
+  }
 
   // calculate scaling factors, to achieve an approx unit sphere about the origin
   float scaling[3];
@@ -315,7 +342,9 @@ void MPU6050Module::loop() {
     // reset raw limits
     for (uint8_t i=0; i<3; i++) {
       _minRaw[i] = _rawAvg[i]-1;
-      _maxRaw[i] = _rawAvg[i]+1;
+      _maxRaw[i] = _rawAvg[i]+1;      
+      _rawG[i] = 0;
+      _params[MPU6050_PARAM_CALIB_G_E].data.f[i] = 0;
     }
 
     // reset calibration
@@ -342,6 +371,11 @@ void MPU6050Module::loop() {
     // Z
     pref.putFloat("zMin", _params[MPU6050_PARAM_CALIB_Z_E].data.f[0]);
     pref.putFloat("zMax", _params[MPU6050_PARAM_CALIB_Z_E].data.f[2]);
+
+    // Gyro
+    pref.putFloat("gx", _params[MPU6050_PARAM_CALIB_G_E].data.f[0]);
+    pref.putFloat("gy", _params[MPU6050_PARAM_CALIB_G_E].data.f[1]);
+    pref.putFloat("gz", _params[MPU6050_PARAM_CALIB_G_E].data.f[2]);
 
     pref.end();
 
