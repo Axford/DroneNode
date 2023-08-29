@@ -120,6 +120,7 @@ static const char STRING_SAVE[] = "save";
 static const char STRING_SCENE[] = "scene";
 static const char STRING_SCENES[] = "scenes";
 static const char STRING_SHEET[] = "sheet";
+static const char STRING_SHUNT[] = "shunt";
 static const char STRING_SHUNTV[] = "shuntV";
 static const char STRING_SLEEP[] = "sleep";
 static const char STRING_SOG[] = "SOG";

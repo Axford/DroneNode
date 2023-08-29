@@ -70,6 +70,14 @@ INA3221Module::INA3221Module(uint8_t id, DroneSystem* ds):
    param->data.f[0] = 11.2;
    param->data.f[1] = 11.2;
    param->data.f[2] = 11.2;
+
+   param = &_params[INA3221_PARAM_SHUNT_E];
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, INA3221_PARAM_SHUNT);
+   setParamName(FPSTR(STRING_SHUNT), param);
+   param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_FLOAT, 12);
+   param->data.f[0] = 100;
+   param->data.f[1] = 100;
+   param->data.f[2] = 100;
 }
 
 INA3221Module::~INA3221Module() {
@@ -103,7 +111,7 @@ void INA3221Module::setup() {
     _sensor->reset();
 
     // Set shunt resistors to 100 mOhm for all channels
-    _sensor->setShuntRes(100, 100, 100);
+    _sensor->setShuntRes(_params[INA3221_PARAM_SHUNT_E].data.f[0], _params[INA3221_PARAM_SHUNT_E].data.f[1], _params[INA3221_PARAM_SHUNT_E].data.f[2]);
   }
 }
 

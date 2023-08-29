@@ -49,6 +49,9 @@
 // @pub 18;f;3;threshold;Threshold voltage below which alarm is triggered (loadV < threshold) per channel
 #define INA3221_PARAM_THRESHOLD       (I2CBASE_SUBCLASS_PARAM_START+8)
 
+// @pub 19;f;3;shunt;Shunt resistor values for each channel in mOhm (default 100 mOhm)
+#define INA3221_PARAM_SHUNT           (I2CBASE_SUBCLASS_PARAM_START+9)
+
 #define INA3221_PARAM_CURRENT_E         (I2CBASE_PARAM_ENTRIES+0)
 #define INA3221_PARAM_POWER_E           (I2CBASE_PARAM_ENTRIES+1)
 #define INA3221_PARAM_LOADV_E           (I2CBASE_PARAM_ENTRIES+2)
@@ -56,8 +59,9 @@
 #define INA3221_PARAM_ALARM_E           (I2CBASE_PARAM_ENTRIES+4)
 #define INA3221_PARAM_CELLS_E           (I2CBASE_PARAM_ENTRIES+5)
 #define INA3221_PARAM_THRESHOLD_E       (I2CBASE_PARAM_ENTRIES+6)
+#define INA3221_PARAM_SHUNT_E           (I2CBASE_PARAM_ENTRIES+7)
 
-#define INA3221_PARAM_ENTRIES           (I2CBASE_PARAM_ENTRIES + 7)
+#define INA3221_PARAM_ENTRIES           (I2CBASE_PARAM_ENTRIES + 8)
 
 
 // strings
