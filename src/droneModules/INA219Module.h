@@ -56,6 +56,9 @@
 // @pub 18;f;1;threshold;Threshold voltage below which alarm is triggered (loadV < threshold)
 #define INA219_PARAM_THRESHOLD       (I2CBASE_SUBCLASS_PARAM_START+8)
 
+// @pub 19;f;1;usage;Cumulative usage in Amp hours
+#define INA219_PARAM_USAGE           (I2CBASE_SUBCLASS_PARAM_START+9)
+
 #define INA219_PARAM_SHUNTV_E          (I2CBASE_PARAM_ENTRIES+0)
 #define INA219_PARAM_BUSV_E            (I2CBASE_PARAM_ENTRIES+1)
 #define INA219_PARAM_CURRENT_E         (I2CBASE_PARAM_ENTRIES+2)
@@ -65,8 +68,9 @@
 #define INA219_PARAM_ALARM_E           (I2CBASE_PARAM_ENTRIES+6)
 #define INA219_PARAM_CELLS_E           (I2CBASE_PARAM_ENTRIES+7)
 #define INA219_PARAM_THRESHOLD_E       (I2CBASE_PARAM_ENTRIES+8)
+#define INA219_PARAM_USAGE_E           (I2CBASE_PARAM_ENTRIES+9)
 
-#define INA219_PARAM_ENTRIES           (I2CBASE_PARAM_ENTRIES + 9)
+#define INA219_PARAM_ENTRIES           (I2CBASE_PARAM_ENTRIES + 10)
 
 
 // strings
@@ -77,6 +81,8 @@ static const char INA219_STR_INA219[] PROGMEM = "INA219";
 class INA219Module:  public I2CBaseModule {
 protected:
   Adafruit_INA219 *_sensor;
+
+  unsigned long _lastLoopTime;
 public:
 
   INA219Module(uint8_t id, DroneSystem* ds);
