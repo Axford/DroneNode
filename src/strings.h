@@ -145,6 +145,7 @@ static const char STRING_TRUE[] = "true";
 static const char STRING_TURN_RATE[] = "turnRate";
 static const char STRING_TYPE[] = "type";
 static const char STRING_UPTIME[] = "uptime";
+static const char STRING_USAGE[] = "usage";
 static const char STRING_VALUE1[] = "value1";
 static const char STRING_VALUE2[] = "value2";
 static const char STRING_VALUE3[] = "value3";
