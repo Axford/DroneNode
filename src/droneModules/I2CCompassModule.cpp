@@ -200,9 +200,12 @@ void I2CCompassModule::updateCalibrationValuesFromRaw() {
   _params[I2CCOMPASS_PARAM_CALIB_Z_E].data.f[2] = max(_maxRaw[2], _params[I2CCOMPASS_PARAM_CALIB_Z_E].data.f[2]);
 
   // compensate for not wanting to turn the boat upside down to calibrate the compass
+  // REMOVED: this caused more problems than it solved! 
+  /*
   float magDia = ((_maxRaw[0] - _minRaw[0]) + (_maxRaw[1] - _minRaw[1])) / 2;
   if (_maxRaw[2] < _minRaw[2] + magDia) _maxRaw[2] = _minRaw[2] + magDia;
   _params[I2CCOMPASS_PARAM_CALIB_Z_E].data.f[2] = _maxRaw[2];
+  */
 
   // update centre
   _params[I2CCOMPASS_PARAM_CALIB_X_E].data.f[1] = (_maxRaw[0] + _minRaw[0])/2;
