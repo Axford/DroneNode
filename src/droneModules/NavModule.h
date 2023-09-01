@@ -43,7 +43,12 @@ Target waypoints are defined in terms of Lon Lat and target Radius in meters.
 #define NAV_SUB_WIND_ADDR          22
 #define NAV_SUB_WIND_E             2
 
-#define NAV_SUBS                   3
+// @sub 25;26;f;1;satellites;Number of satellites for GPS lock (e.g. @>GPS.satellites)
+#define NAV_SUB_SATELLITES         25
+#define NAV_SUB_SATELLITES_ADDR    26
+#define NAV_SUB_SATELLITES_E       3
+
+#define NAV_SUBS                   4
 
 
 // pubs

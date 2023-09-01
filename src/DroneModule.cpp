@@ -49,7 +49,7 @@ _fs(LITTLEFS) // TODO - replace with dfs reference
   _mgmtParams[DRONE_MODULE_PARAM_STATUS_E].nameLen = sizeof(STRING_STATUS);
   _mgmtParams[DRONE_MODULE_PARAM_STATUS_E].paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_UINT8_T, 1);
   _mgmtParams[DRONE_MODULE_PARAM_STATUS_E].publish = true;
-  _mgmtParams[DRONE_MODULE_PARAM_STATUS_E].data.uint8[0] = _enabled ? 1 : 0;
+  _mgmtParams[DRONE_MODULE_PARAM_STATUS_E].data.uint8[0] = _enabled ? DRONE_MODULE_STATUS_ENABLED : DRONE_MODULE_STATUS_DISABLED;
 
   _mgmtParams[DRONE_MODULE_PARAM_NAME_E].paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, DRONE_MODULE_PARAM_NAME);
   _mgmtParams[DRONE_MODULE_PARAM_NAME_E].name = FPSTR(STRING_NAME);
@@ -136,6 +136,9 @@ void DroneModule::initSubs(uint8_t numSubs) {
     // input values are writable by default, unless wired to a valid address
     _subs[i].param.paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_FLOAT, 4);
     _subs[i].param.data.f[0] = 0;
+    _subs[i].param.data.f[1] = 0;
+    _subs[i].param.data.f[2] = 0;
+    _subs[i].param.data.f[3] = 0;
   }
 }
 
@@ -604,10 +607,12 @@ boolean DroneModule::publishSubs() {
 void DroneModule::onParamWrite(DRONE_PARAM_ENTRY *param) {
   if (getDroneLinkMsgParam(param->paramPriority) == DRONE_MODULE_PARAM_STATUS) {
     switch(param->data.uint8[0]) {
-      case 0: disable();
+      case DRONE_MODULE_STATUS_DISABLED: disable();
         break;
-      case 1: enable();
+      case DRONE_MODULE_STATUS_ENABLED: enable();
         break;
+      case DRONE_MODULE_STATUS_WAITING: waiting();
+        break; 
     }
   }
 }
@@ -815,15 +820,22 @@ void DroneModule::setError(uint8_t error) {
 void DroneModule::enable() {
   if (_enabled) return;
   _enabled = true;
-  _mgmtParams[DRONE_MODULE_PARAM_STATUS_E].data.uint8[0] = _enabled ? 1 : 0;
+  _mgmtParams[DRONE_MODULE_PARAM_STATUS_E].data.uint8[0] = DRONE_MODULE_STATUS_ENABLED;
   Log.noticeln(F("[DM.en] enable %d"), _id);
 }
 
 void DroneModule::disable() {
   if (!_enabled) return;
   _enabled = false;
-  _mgmtParams[DRONE_MODULE_PARAM_STATUS_E].data.uint8[0] = _enabled ? 1 : 0;
+  _mgmtParams[DRONE_MODULE_PARAM_STATUS_E].data.uint8[0] = DRONE_MODULE_STATUS_DISABLED;
   Log.noticeln(F("[DM.dis] disable %d"), _id);
+}
+
+void DroneModule::waiting() {
+  if (_enabled) return;
+  _enabled = true;
+  _mgmtParams[DRONE_MODULE_PARAM_STATUS_E].data.uint8[0] = DRONE_MODULE_STATUS_WAITING;
+  Log.noticeln(F("[DM.en] waiting %d"), _id);
 }
 
 boolean DroneModule::isEnabled() {

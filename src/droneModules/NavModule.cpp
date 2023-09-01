@@ -26,14 +26,6 @@ NavModule::NavModule(uint8_t id, DroneSystem* ds):
    // subs
    initSubs(NAV_SUBS);
 
-   // defaults
-   for (uint8_t i=0; i<NAV_SUBS; i++) {
-     _subs[i].param.data.f[0] = 0;
-     _subs[i].param.data.f[1] = 0;
-     _subs[i].param.data.f[2] = 0;
-     _subs[i].param.data.f[3] = 0;
-   }
-
    _subs[NAV_SUB_LOCATION_E].addrParam = NAV_SUB_LOCATION_ADDR;
    _subs[NAV_SUB_LOCATION_E].param.paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, NAV_SUB_LOCATION);
    _subs[NAV_SUB_LOCATION_E].param.name = FPSTR(STRING_LOCATION);
@@ -52,6 +44,12 @@ NavModule::NavModule(uint8_t id, DroneSystem* ds):
    _subs[NAV_SUB_WIND_E].param.name = FPSTR(STRING_WIND);
    _subs[NAV_SUB_WIND_E].param.nameLen = sizeof(STRING_WIND);
    _subs[NAV_SUB_WIND_E].param.paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_FLOAT, 4);
+
+   _subs[NAV_SUB_SATELLITES_E].addrParam = NAV_SUB_SATELLITES_ADDR;
+   _subs[NAV_SUB_SATELLITES_E].param.paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, NAV_SUB_SATELLITES);
+   _subs[NAV_SUB_SATELLITES_E].param.name = FPSTR(STRING_SATELLITES);
+   _subs[NAV_SUB_SATELLITES_E].param.nameLen = sizeof(STRING_SATELLITES);
+   _subs[NAV_SUB_SATELLITES_E].param.paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 4);
 
    // pubs
    initParams(NAV_PARAM_ENTRIES);
@@ -211,6 +209,32 @@ void NavModule::updateLast(boolean fromTarget) {
 void NavModule::update() {
   DroneModule::update();
   if (!_setupDone) return;
+
+  // check for sufficient satellites, assuming we have a valid sub
+  if (_subs[NAV_SUB_SATELLITES_E].received) {
+    if (_subs[NAV_SUB_SATELLITES_E].param.data.f[0] < 9) {
+      if (_mgmtParams[DRONE_MODULE_PARAM_STATUS_E].data.uint8[0] != DRONE_MODULE_STATUS_WAITING) {
+        uint8_t temp = DRONE_MODULE_STATUS_WAITING;
+        updateAndPublishParam(&_mgmtParams[DRONE_MODULE_PARAM_STATUS_E], (uint8_t*)&temp, sizeof(temp));
+
+        float tempF = 0;
+        // make sure distance is set to zero
+        updateAndPublishParam(&_params[NAV_PARAM_DISTANCE_E], (uint8_t*)&tempF, sizeof(tempF));
+
+        waiting();
+      }
+    } else {
+      if (_mgmtParams[DRONE_MODULE_PARAM_STATUS_E].data.uint8[0] == DRONE_MODULE_STATUS_WAITING) {
+        uint8_t temp = DRONE_MODULE_STATUS_ENABLED;
+        updateAndPublishParam(&_mgmtParams[DRONE_MODULE_PARAM_STATUS_E], (uint8_t*)&temp, sizeof(temp));
+        enable();
+      }
+    }
+  }
+
+  // abandon if Waiting
+  if (_mgmtParams[DRONE_MODULE_PARAM_STATUS_E].data.uint8[0] == DRONE_MODULE_STATUS_WAITING) return;
+
 
   if (_params[NAV_PARAM_MODE_E].data.uint8[0] == NAV_IDLE) {
 

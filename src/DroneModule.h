@@ -30,8 +30,13 @@ things that would be useful for all modules
 
 // defines for common params
 
-// @pub 1;u8;1;status;0=disabled, 1=enabled, write a value of 2 or above to trigger reset
+// @pub 1;u8;1;status;0=disabled, 1=enabled, 2=waiting for valid subscriptions, write a value of 255 to trigger reset (TODO)
 #define DRONE_MODULE_PARAM_STATUS      1 
+
+#define DRONE_MODULE_STATUS_DISABLED   0
+#define DRONE_MODULE_STATUS_ENABLED    1
+#define DRONE_MODULE_STATUS_WAITING    2
+
 
 // @pub 2;c;16;name;Module name
 #define DRONE_MODULE_PARAM_NAME        2 
@@ -202,6 +207,7 @@ public:
 
   virtual void enable();
   virtual void disable();
+  virtual void waiting();
   virtual boolean isEnabled();
 
   virtual void setup();
