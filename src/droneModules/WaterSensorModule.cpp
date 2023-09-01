@@ -60,6 +60,7 @@ void WaterSensorModule::setup() {
   if (_ds->requestPin(_params[WATER_SENSOR_PARAM_PINS_E].data.uint8[0], DRONE_SYSTEM_PIN_CAP_OUTPUT, this) && 
       _ds->requestPin(_params[WATER_SENSOR_PARAM_PINS_E].data.uint8[1], DRONE_SYSTEM_PIN_CAP_ANALOG, this)) {
 
+    pinMode(_params[WATER_SENSOR_PARAM_PINS_E].data.uint8[0], OUTPUT);
     // set output low to start
     digitalWrite(_params[WATER_SENSOR_PARAM_PINS_E].data.uint8[0], LOW);
 
