@@ -46,6 +46,7 @@
 #include "droneModules/TurnRateModule.h"
 #include "droneModules/UDPTelemetryModule.h"
 #include "droneModules/VL53L0XModule.h"
+#include "droneModules/WaterSensorModule.h"
 #include "droneModules/WaypointModule.h"
 #include "droneModules/WindModule.h"
 #include "droneModules/WindFromWingModule.h"
@@ -576,6 +577,8 @@ DroneModule* DroneExecutionManager::instanceModule(char* typeName, uint8_t id) {
       newMod = new VL53L0XModule(id, _ds);
     } else if (strcmp_P(typeName, NAV_STR_NAV) == 0) {
       newMod = new NavModule(id, _ds);
+    } else if (strcmp_P(typeName, WATER_SENSOR_STR_WATER_SENSOR) == 0) {
+      newMod = new WaterSensorModule(id, _ds);
     } else if (strcmp_P(typeName, WAYPOINT_STR_WAYPOINT) == 0) {
       newMod = new WaypointModule(id, _ds);
     } else if (strcmp_P(typeName, WIND_STR_WIND) == 0) {
