@@ -246,6 +246,46 @@ void DroneSystem::createSafeModeScript() {
 }
 
 
+void DroneSystem::servePinInfo(AsyncWebServerRequest *request) {
+  AsyncResponseStream *response = request->beginResponseStream("text/text");
+  response->addHeader("Server","ESP Async Web Server");
+  response->print(F("Pins: \n"));
+
+  for (uint8_t i=0; i<DRONE_SYSTEM_PINS; i++) {
+    if (_pins[i].state > 0) {
+      response->printf("%u: \n", i);
+      if (_pins[i].state == DRONE_SYSTEM_PIN_STATE_AVAILABLE) {
+        response->printf("  State: Free\n");
+      } else {
+        response->printf("  State: Assigned\n");
+      }
+      
+      response->printf("  Capabilities: ");
+      if ((_pins[i].capabilities & DRONE_SYSTEM_PIN_CAP_OUTPUT) > 0) response->printf("  Output, ");
+      if ((_pins[i].capabilities & DRONE_SYSTEM_PIN_CAP_INPUT) > 0) response->printf("  Input, ");
+      if ((_pins[i].capabilities & DRONE_SYSTEM_PIN_CAP_ANALOG) > 0) response->printf("  Analog, ");
+      if ((_pins[i].capabilities & DRONE_SYSTEM_PIN_CAP_SERIAL) > 0) response->printf("  Serial, ");
+      if ((_pins[i].capabilities & DRONE_SYSTEM_PIN_CAP_LED) > 0) response->printf("  LED");
+      response->print("\n");
+
+
+      if (_pins[i].strip >  0) {
+        response->printf("  NeoPixel Strip Attached\n");
+      }
+      
+      if (_pins[i].module) {
+        response->printf("  Module: %u: %s \n", _pins[i].module->id(), _pins[i].module->getName());
+      }
+
+      response->print("\n"); 
+    }
+  }
+
+  //send the response last
+  request->send(response);
+}
+
+
 void DroneSystem::setupWebServer() {
   Log.noticeln(F("[] Setup web _server..."));
 
@@ -267,6 +307,13 @@ void DroneSystem::setupWebServer() {
   _server.on("/modules", HTTP_GET, [&](AsyncWebServerRequest *request){
     _doLoop = false;
     dmm->serveModuleInfo(request);
+    _doLoop = true;
+  });
+
+  // pins
+  _server.on("/pins", HTTP_GET, [&](AsyncWebServerRequest *request){
+    _doLoop = false;
+    servePinInfo(request);
     _doLoop = true;
   });
 

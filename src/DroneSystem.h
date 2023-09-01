@@ -164,6 +164,8 @@ public:
   // see if safeMode.txt exists, if not create it
   void createSafeModeScript();
 
+  void servePinInfo(AsyncWebServerRequest *request);
+  
   void setupWebServer();
 
   // startup using safeMode.txt
