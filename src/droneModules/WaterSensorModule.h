@@ -1,18 +1,18 @@
 /*
 
-@type          Analog
+@type          WaterSensor
 @inherits      Drone
-@description   Manages a simple Analog sensor connected to an analog input pin
+@description   Manages a simple Water sensor connected to a pair of pins
 
 @guide >>>
-Reads an analog value on specified pin (range 0..4095) and maps into the range limits[min..max]
+
 <<<
 
 @config >>>
-[Analog = 5]
-  pins = 34
-  limits = 0, 10
-  publish = raw, analog
+[WaterSensor = 5]
+  pins = 4, 34
+  threshold = 400
+  publish = raw, alarm
 <<<
 
 */
