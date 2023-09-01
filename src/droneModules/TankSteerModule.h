@@ -99,7 +99,7 @@ public:
 
   TankSteerModule(uint8_t id, DroneSystem* ds);
   
-  void update();
+  void loop();
 };
 
 #endif

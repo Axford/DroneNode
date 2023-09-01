@@ -95,7 +95,8 @@ TankSteerModule::TankSteerModule(uint8_t id, DroneSystem* ds):
 
 
 
-void TankSteerModule::update() {
+void TankSteerModule::loop() {
+  DroneModule::loop();
   if (!_setupDone) return;
 
   if (_lastMode != _params[TANK_STEER_PARAM_MODE_E].data.uint8[0]) {
@@ -218,10 +219,12 @@ void TankSteerModule::update() {
     speed = (d/threshold) * (smax-smin) + smin;
   }
 
-  // check for zero distance.... and disable motors
-  if (_subs[TANK_STEER_SUB_DISTANCE_E].param.data.f[0] < 0.1) {
+  // check for near zero distance.... and disable motors
+  if (_subs[TANK_STEER_SUB_DISTANCE_E].param.data.f[0] < 1) {
     speed = 0;
     turnRate = 0;
+    // also clamp iError to zero so it doesn't accumulate whilst we're stopped
+    _iError = 0;
   }
 
   // local shortcuts

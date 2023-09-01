@@ -784,6 +784,9 @@ void DroneModule::handleLinkMessage(DroneLinkMsg *msg) {
         if (msg->param() == getDroneLinkMsgParam(_subs[i].param.paramPriority)) {
           // handles writes to the internal value
           handleParamMessage(msg, &_subs[i].param);
+          // trigger an update to ensure event driven behaviour continues to work as expected
+          _updateNeeded = true;
+
         } else if (msg->param() == _subs[i].addrParam) {
           // handle writes to the address
           handleSubAddrMessage(msg, &_subs[i]);
