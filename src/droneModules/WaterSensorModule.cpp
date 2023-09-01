@@ -81,12 +81,12 @@ void WaterSensorModule::loop() {
     if (loopTime > _triggerTime + WATER_SENSOR_SAMPLE_TRIGGER_TIME) {
         _triggered = false;
         _triggerTime = loopTime;
-        
-        // disable trigger
-        digitalWrite(_params[WATER_SENSOR_PARAM_PINS_E].data.uint8[0], LOW);
 
         // read sensor value
         uint32_t raw = analogRead(_params[WATER_SENSOR_PARAM_PINS_E].data.uint8[1]);
+
+        // disable trigger
+        digitalWrite(_params[WATER_SENSOR_PARAM_PINS_E].data.uint8[0], LOW);
 
         // publish new values
         updateAndPublishParam(&_params[WATER_SENSOR_PARAM_RAW_E], (uint8_t*)&raw, sizeof(raw));
