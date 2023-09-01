@@ -48,7 +48,7 @@
 
 static const char WATER_SENSOR_STR_WATER_SENSOR[] PROGMEM = "WaterSensor";
 
-#define WATER_SENSOR_SAMPLE_INTERVAL       1000  // between samples
+#define WATER_SENSOR_SAMPLE_INTERVAL       15000  // between samples
 #define WATER_SENSOR_SAMPLE_TRIGGER_TIME   10    // how long to activate trigger
 
 
