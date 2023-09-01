@@ -100,7 +100,7 @@ void TankSteerModule::loop() {
   if (!_setupDone) return;
 
   if (_lastMode != _params[TANK_STEER_PARAM_MODE_E].data.uint8[0]) {
-    if (_params[TANK_STEER_PARAM_MODE_E].data.uint8[0] == TANK_STEER_MODE_AUTOMATIC) {
+    if (_params[TANK_STEER_PARAM_MODE_E].data.uint8[0] == TANK_STEER_MODE_MANUAL) {
       // zero distance to stop motors when entering manual
       _subs[TANK_STEER_SUB_DISTANCE_E].param.data.f[0] = 0;
 
