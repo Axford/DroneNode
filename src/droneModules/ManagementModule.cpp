@@ -6,6 +6,13 @@
 #include "../OTAManager.h"
 #include "strings.h"
 #include "OLEDTomThumbFont.h"
+#include <rom/rtc.h>
+
+int get_reset_reason(int icore) { 
+   return (int) rtc_get_reset_reason( (RESET_REASON) icore);  
+}
+
+
 
 ManagementModule::ManagementModule(uint8_t id, DroneSystem* ds):
   DroneModule ( id, ds )
@@ -38,7 +45,9 @@ ManagementModule::ManagementModule(uint8_t id, DroneSystem* ds):
    _params[MANAGEMENT_PARAM_RESET_E].paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, MANAGEMENT_PARAM_RESET);
    _params[MANAGEMENT_PARAM_RESET_E].name = FPSTR(STRING_RESET);
    _params[MANAGEMENT_PARAM_RESET_E].nameLen = sizeof(STRING_RESET);
-   _params[MANAGEMENT_PARAM_RESET_E].paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_UINT8_T, 1);
+   _params[MANAGEMENT_PARAM_RESET_E].paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_UINT8_T, 3);
+   _params[MANAGEMENT_PARAM_RESET_E].data.uint8[1] = get_reset_reason(0);
+   _params[MANAGEMENT_PARAM_RESET_E].data.uint8[2] = get_reset_reason(1);
 
    _params[MANAGEMENT_PARAM_HEAP_E].paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, MANAGEMENT_PARAM_HEAP);
    _params[MANAGEMENT_PARAM_HEAP_E].name = FPSTR(STRING_HEAP);

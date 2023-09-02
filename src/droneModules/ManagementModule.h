@@ -26,7 +26,7 @@
 // @pub 9;c;1;build;Git commit hash at the time the firmware was built
 #define MANAGEMENT_PARAM_BUILD         9
 
-// @pub 10;u8;1;reset;Set to 1 to trigger a reset
+// @pub 10;u8;3;reset;Set [0] 1 to trigger a reset, [1,2] are reset codes for codes 0 and 1
 #define MANAGEMENT_PARAM_RESET         10
 
 // @pub 11;u32;1;heap;Current size of heap (i.e. free memory)
