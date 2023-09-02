@@ -123,6 +123,13 @@ MPU6050Module::MPU6050Module(uint8_t id, DroneSystem* ds):
    param->data.f[0] = 0;
    param->data.f[1] = 0;
    param->data.f[2] = 0;
+
+   param = &_params[MPU6050_PARAM_TRIM_E];
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, MPU6050_PARAM_TRIM);
+   setParamName(FPSTR(STRING_TRIM), param);
+   param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_FLOAT, 8);
+   param->data.f[0] = 0;
+   param->data.f[1] = 0;
 }
 
 
@@ -346,6 +353,10 @@ void MPU6050Module::loop() {
   float roll = atan2(_raw[0], _raw[2]) * 180 / PI;
   // blend accel pitch with gyro info - complementary filter
   _params[MPU6050_PARAM_ROLL_E].data.f[0] = 0.05 * roll + 0.95*(_params[MPU6050_PARAM_ROLL_E].data.f[0] + _rawG[1] * dt);
+
+  // apply trims
+  _params[MPU6050_PARAM_PITCH_E].data.f[0] += _params[MPU6050_PARAM_TRIM_E].data.f[0];
+  _params[MPU6050_PARAM_ROLL_E].data.f[0] += _params[MPU6050_PARAM_TRIM_E].data.f[1];
 
 
   if (_params[MPU6050_PARAM_MODE_E].data.uint8[0] == MPU6050_MODE_RESET_CALIBRATION) {
