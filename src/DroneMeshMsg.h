@@ -23,7 +23,7 @@ struct DRONE_MESH_MSG_HEADER {
 #define DRONE_MESH_MSG_NOT_GUARANTEED   0
 #define DRONE_MESH_MSG_GUARANTEED       0b01000000
 
-// Packet types
+// Payload types
 // -------------------------------------------------------------------------
 #define DRONE_MESH_MSG_TYPE_HELLO                    0
 #define DRONE_MESH_MSG_TYPE_SUBSCRIPTION_REQUEST     1

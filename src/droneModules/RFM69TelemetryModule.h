@@ -58,7 +58,12 @@ byte    = value
 #define RFM69_TELEMETRY_PARAM_FREQUENCY      12
 #define RFM69_TELEMETRY_PARAM_FREQUENCY_E    4
 
-#define RFM69_TELEMETRY_PARAM_ENTRIES        5
+// @pub 13;u8;1;threshold;Priority threshold, only packets with this or higher priority will be transmitted (default: 0, i.e. all priorities are transmitted)
+#define RFM69_TELEMETRY_PARAM_THRESHOLD      13
+#define RFM69_TELEMETRY_PARAM_THRESHOLD_E    5
+
+
+#define RFM69_TELEMETRY_PARAM_ENTRIES        6
 
 
 #define RFM69_TELEMETRY_NETWORKID     66  //the same on all nodes that talk to each other

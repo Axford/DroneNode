@@ -498,6 +498,7 @@ void DroneLinkManager::serveNodeInfo(AsyncWebServerRequest *request) {
       response->print("      (");
       response->print( isDroneMeshMsgAck(buffer->data) ? "A" : "S" );
       response->printf(", %u) ", getDroneMeshMsgPayloadType(buffer->data));
+      response->printf(", p%u) ", getDroneMeshMsgPriority(buffer->data));
       response->printf("%u > %u > %u > %u ", getDroneMeshMsgSrcNode(buffer->data), getDroneMeshMsgTxNode(buffer->data), getDroneMeshMsgNextNode(buffer->data),
     getDroneMeshMsgDestNode(buffer->data));
       response->printf("seq=%u [%u]", getDroneMeshMsgSeq(buffer->data), getDroneMeshMsgPayloadSize(buffer->data));

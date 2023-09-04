@@ -62,6 +62,12 @@ RFM69TelemetryModule::RFM69TelemetryModule(uint8_t id, DroneSystem* ds):
    setParamName(FPSTR(STRING_FREQUENCY), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_UINT32_T, 4);
    param->data.uint32[0] = 915;
+
+   param = &_params[RFM69_TELEMETRY_PARAM_THRESHOLD_E];
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, RFM69_TELEMETRY_PARAM_THRESHOLD);
+   setParamName(FPSTR(STRING_THRESHOLD), param);
+   param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_UINT8_T, 1);
+   param->data.uint8[0] = 0;
 }
 
 
@@ -246,6 +252,12 @@ void RFM69TelemetryModule::loop() {
 boolean RFM69TelemetryModule::sendPacket(uint8_t *buffer) {
 
   if (!_enabled || !_radio) return false;
+
+  // abandon DroneLinkMsg packets under the threshold
+  if (getDroneMeshMsgPayloadType(buffer) == DRONE_MESH_MSG_TYPE_DRONELINKMSG) {
+    if (getDroneMeshMsgPriority( buffer ) < _params[RFM69_TELEMETRY_PARAM_THRESHOLD_E].data.uint8[0]) return false;
+  }
+  
 
   // wrap the DroneMesh message in a start byte and end CRC
   uint8_t txSize = getDroneMeshMsgTotalSize(buffer) + 2;
