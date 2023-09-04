@@ -10,6 +10,10 @@ uint8_t getDroneLinkMsgParam(uint8_t paramPriority) {
   return paramPriority & 0b00111111;
 }
 
+uint8_t getDroneLinkMsgPriority(uint8_t paramPriority) {
+  return paramPriority >> 6;
+}
+
 
 
 
@@ -39,7 +43,7 @@ void DroneLinkMsg::source(uint8_t v) { _msg.source =v; }
 void DroneLinkMsg::node(uint8_t v) { _msg.node = v; }
 void DroneLinkMsg::channel(uint8_t v) { _msg.channel = v; }
 void DroneLinkMsg::param(uint8_t v) { _msg.paramPriority = (_msg.paramPriority & 0b11000000) | v; }
-void DroneLinkMsg::priority(uint8_t v) { _msg.paramPriority = (_msg.paramPriority & 0b00111111) | v; }
+void DroneLinkMsg::priority(uint8_t v) { _msg.paramPriority = (_msg.paramPriority & 0b00111111) | (v << 6); }
 void DroneLinkMsg::type(uint8_t v) {
   _msg.paramTypeLength = ((v & 0x7) << 4) | (_msg.paramTypeLength & 0b10001111);
 }
