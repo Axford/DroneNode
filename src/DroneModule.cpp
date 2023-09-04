@@ -818,7 +818,7 @@ void DroneModule::setError(uint8_t error) {
 }
 
 void DroneModule::enable() {
-  if (_enabled) return;
+  //if (_enabled) return;
   _enabled = true;
   _mgmtParams[DRONE_MODULE_PARAM_STATUS_E].data.uint8[0] = DRONE_MODULE_STATUS_ENABLED;
   Log.noticeln(F("[DM.en] enable %d"), _id);
@@ -832,7 +832,7 @@ void DroneModule::disable() {
 }
 
 void DroneModule::waiting() {
-  if (_enabled) return;
+  //if (_enabled) return;
   _enabled = true;
   _mgmtParams[DRONE_MODULE_PARAM_STATUS_E].data.uint8[0] = DRONE_MODULE_STATUS_WAITING;
   Log.noticeln(F("[DM.en] waiting %d"), _id);

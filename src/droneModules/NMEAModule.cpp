@@ -184,7 +184,8 @@ void NMEAModule::setup() {
   }
 
 
-  
+  // start in waiting state
+   waiting();
 }
 
 
@@ -302,6 +303,12 @@ void NMEAModule::loop() {
 
           float n =  _nmea->getNumSatellites();
           updateAndPublishParam(&_params[NMEA_PARAM_SATELLITES_E], (uint8_t*)&n, sizeof(n));
+
+          if (n < 9) {
+            waiting();
+          } else {
+            enable();
+          }
 
           /*
           float v = _nmea->getSpeed() / 1000.0;
