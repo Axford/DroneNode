@@ -47,7 +47,7 @@ MPU6050Module::MPU6050Module(uint8_t id, DroneSystem* ds):
 
    // init param entries
    param = &_params[MPU6050_PARAM_ACCEL_E];
-   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_HIGH, MPU6050_PARAM_ACCEL);
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_MEDIUM, MPU6050_PARAM_ACCEL);
    setParamName(FPSTR(STRING_ACCEL), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 12);
    param->data.f[0] = 0;
@@ -55,7 +55,7 @@ MPU6050Module::MPU6050Module(uint8_t id, DroneSystem* ds):
    param->data.f[2] = 0;
 
    param = &_params[MPU6050_PARAM_GYRO_E];
-   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_HIGH, MPU6050_PARAM_GYRO);
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, MPU6050_PARAM_GYRO);
    setParamName(FPSTR(STRING_GYRO), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 12);
    param->data.f[0] = 0;
@@ -78,7 +78,7 @@ MPU6050Module::MPU6050Module(uint8_t id, DroneSystem* ds):
    param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 4);  
 
    param = &_params[MPU6050_PARAM_RAW_E];
-   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_CRITICAL, MPU6050_PARAM_RAW);
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_MEDIUM, MPU6050_PARAM_RAW);
    setParamName(FPSTR(STRING_RAW), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 16);
    param->data.f[0] = 0;
@@ -87,7 +87,7 @@ MPU6050Module::MPU6050Module(uint8_t id, DroneSystem* ds):
    param->data.f[3] = 0;
 
    param = &_params[MPU6050_PARAM_CALIB_X_E];
-   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_HIGH, MPU6050_PARAM_CALIB_X);
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_MEDIUM, MPU6050_PARAM_CALIB_X);
    setParamName(FPSTR(STRING_CALIB_X), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 12);
    param->data.f[0] = 0;
@@ -95,7 +95,7 @@ MPU6050Module::MPU6050Module(uint8_t id, DroneSystem* ds):
    param->data.f[2] = 0;
 
    param = &_params[MPU6050_PARAM_CALIB_Y_E];
-   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_HIGH, MPU6050_PARAM_CALIB_Y);
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_MEDIUM, MPU6050_PARAM_CALIB_Y);
    setParamName(FPSTR(STRING_CALIB_Y), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 12);
    param->data.f[0] = 0;
@@ -103,7 +103,7 @@ MPU6050Module::MPU6050Module(uint8_t id, DroneSystem* ds):
    param->data.f[2] = 0;
 
    param = &_params[MPU6050_PARAM_CALIB_Z_E];
-   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_HIGH, MPU6050_PARAM_CALIB_Z);
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_MEDIUM, MPU6050_PARAM_CALIB_Z);
    setParamName(FPSTR(STRING_CALIB_Z), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 12);
    param->data.f[0] = 0;
@@ -117,7 +117,7 @@ MPU6050Module::MPU6050Module(uint8_t id, DroneSystem* ds):
    param->data.f[0] = MPU6050_MODE_ONLINE_CALIBRATION;
 
    param = &_params[MPU6050_PARAM_CALIB_G_E];
-   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_HIGH, MPU6050_PARAM_CALIB_G);
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_MEDIUM, MPU6050_PARAM_CALIB_G);
    setParamName(FPSTR(STRING_CALIB_G), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 12);
    param->data.f[0] = 0;

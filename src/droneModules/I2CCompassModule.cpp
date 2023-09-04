@@ -49,7 +49,7 @@ I2CCompassModule::I2CCompassModule(uint8_t id, DroneSystem* ds):
    _params[I2CBASE_PARAM_ADDR_E].data.uint8[0] = I2CCOMPASS_I2C_ADDRESS;
 
    // init param entries
-   _params[I2CCOMPASS_PARAM_VECTOR_E].paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_CRITICAL, I2CCOMPASS_PARAM_VECTOR);
+   _params[I2CCOMPASS_PARAM_VECTOR_E].paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_MEDIUM, I2CCOMPASS_PARAM_VECTOR);
    _params[I2CCOMPASS_PARAM_VECTOR_E].name = FPSTR(STRING_VECTOR);
    _params[I2CCOMPASS_PARAM_VECTOR_E].nameLen = sizeof(STRING_VECTOR);
    _params[I2CCOMPASS_PARAM_VECTOR_E].paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 16);
@@ -101,7 +101,7 @@ I2CCompassModule::I2CCompassModule(uint8_t id, DroneSystem* ds):
    _params[I2CCOMPASS_PARAM_MODE_E].paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_UINT8_T, 1);
    _params[I2CCOMPASS_PARAM_MODE_E].data.uint8[0] = I2CCOMPASS_MODE_ONLINE_CALIBRATION;
 
-   _params[I2CCOMPASS_PARAM_RAW_E].paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_CRITICAL, I2CCOMPASS_PARAM_RAW);
+   _params[I2CCOMPASS_PARAM_RAW_E].paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_MEDIUM, I2CCOMPASS_PARAM_RAW);
    _params[I2CCOMPASS_PARAM_RAW_E].name = FPSTR(STRING_RAW);
    _params[I2CCOMPASS_PARAM_RAW_E].nameLen = sizeof(STRING_RAW);
    _params[I2CCOMPASS_PARAM_RAW_E].paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 16);
