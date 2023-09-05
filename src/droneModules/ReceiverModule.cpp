@@ -48,7 +48,7 @@ ReceiverModule::ReceiverModule(uint8_t id, DroneSystem* ds):
 
    sub = &_subs[RECEIVER_SUB_SWITCH_E];
    sub->addrParam = RECEIVER_SUB_SWITCH_ADDR;
-   sub->param.paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, RECEIVER_SUB_SWITCH);
+   sub->param.paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_HIGH, RECEIVER_SUB_SWITCH);
    setParamName(FPSTR(STRING_SWITCH), &sub->param);
    sub->param.data.f[0] = 1; // default to active mode
 
@@ -273,11 +273,12 @@ float ReceiverModule::rawToValue(uint8_t chan) {
   float v;
   float minV = _params[RECEIVER_PARAM_LIMITS_E].data.uint32[0];
   float maxV = _params[RECEIVER_PARAM_LIMITS_E].data.uint32[1];
-  if (_globalReceiverRawTimers[chan] > minV && _globalReceiverRawTimers[chan] < maxV) {
-    v = (2 * (_globalReceiverRawTimers[chan] - minV) / (maxV - minV)) - 1;
-  } else {
-    v = 0;
-  }
+
+  // clamp to valid range
+  if (_globalReceiverRawTimers[chan] < minV) _globalReceiverRawTimers[chan] = minV;
+  if (_globalReceiverRawTimers[chan] > maxV) _globalReceiverRawTimers[chan] = maxV;  
+
+  v = (2 * (_globalReceiverRawTimers[chan] - minV) / (maxV - minV)) - 1;
   return v;
 }
 

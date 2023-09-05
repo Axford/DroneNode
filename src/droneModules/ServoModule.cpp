@@ -2,6 +2,7 @@
 #include "../DroneLinkMsg.h"
 #include "../DroneLinkManager.h"
 #include "strings.h"
+#include "DroneSystem.h"
 
 ServoModule::ServoModule(uint8_t id, DroneSystem* ds):
   DroneModule ( id, ds )
@@ -70,7 +71,7 @@ ServoModule::ServoModule(uint8_t id, DroneSystem* ds):
 void ServoModule::setup() {
   DroneModule::setup();
 
-  if (_params[SERVO_PARAM_PINS_E].data.uint8[0] > 0) {
+  if (_ds->requestPin(_params[SERVO_PARAM_PINS_E].data.uint8[0], DRONE_SYSTEM_PIN_CAP_OUTPUT, this)) {
     _servo.setPeriodHertz(50);// Standard 50hz servo
     _servo.attach(_params[SERVO_PARAM_PINS_E].data.uint8[0], 500, 2400);
 
@@ -78,7 +79,7 @@ void ServoModule::setup() {
     update();
 
   } else {
-    Log.errorln(F("Undefined pin %d"), _params[SERVO_PARAM_PINS_E].data.uint8[0]);
+    Log.errorln(F("Unable to register pin %d"), _params[SERVO_PARAM_PINS_E].data.uint8[0]);
     disable();
   }
 }
