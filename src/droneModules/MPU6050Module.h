@@ -35,7 +35,7 @@
 #define MPU6050_PARAM_TEMPERATURE   (I2CBASE_SUBCLASS_PARAM_START+2) // 12
 // @pub 13;f;1;pitch;Pitch angle in degrees, negative values are pitch down
 #define MPU6050_PARAM_PITCH         (I2CBASE_SUBCLASS_PARAM_START+3)  // 13
-// @pub 14;f;1;rol;Roll angle in degrees, negative values are roll right
+// @pub 14;f;1;roll;Roll angle in degrees, negative values are roll right
 #define MPU6050_PARAM_ROLL          (I2CBASE_SUBCLASS_PARAM_START+4) // 14
 
 // @pub 15;f;4;raw;Raw acceleration vector, 4th value is std dev of rolling window
