@@ -30,7 +30,7 @@
 #define SERVO_PARAM_PINS         10
 #define SERVO_PARAM_PINS_E       0
 
-// @pub 11;f;1;limits;Movement rate limit in degrees/second
+// @pub 11;f;1;limits;Movement rate limit in degrees/second (default: 90)
 #define SERVO_PARAM_LIMITS       11
 #define SERVO_PARAM_LIMITS_E     1
 
