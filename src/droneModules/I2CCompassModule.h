@@ -1,11 +1,11 @@
 /*
 
-@type          I2CCOMPASS
+@type          I2CCompass
 @inherits      I2CBase
-@description   Manages a generic I2C Compass, to be implemented in a concrete class e.g. I2CCOMPASS
+@description   Manages a generic I2C Compass, to be implemented in a concrete class e.g. I2CCompass
 
 @config >>>
-[I2CCOMPASS = 6]
+[I2CCompass = 6]
   name="Compass"
   interval= 50
   calibX= -6,0,6
@@ -91,7 +91,7 @@
 #define I2CCOMPASS_SUBS                    3
 
 // strings
-static const char I2CCOMPASS_STR_I2CCOMPASS[] PROGMEM = "I2CCOMPASS";
+static const char I2CCOMPASS_STR_I2CCOMPASS[] PROGMEM = "I2CCompass";
 
 #define I2CCOMPASS_MODE_ONLINE_CALIBRATION     0
 #define I2CCOMPASS_MODE_FIXED_CALIBRATION      1
