@@ -40,6 +40,8 @@ _fs(LITTLEFS) // TODO - replace with dfs reference
   _updateNeeded = false;
   hLMDuration = 0;
   loopDuration = 0;
+  _loopUpdates = 0;
+  _firstLoop = 0;
 
   // alloc for mgmt params
   _mgmtParams = (DRONE_PARAM_ENTRY*)malloc( sizeof(DRONE_PARAM_ENTRY) * DRONE_MGMT_PARAM_ENTRIES);
@@ -802,7 +804,8 @@ void DroneModule::handleLinkMessage(DroneLinkMsg *msg) {
 
   //Log.noticeln("[DM.hLM] end");
   long duration = millis() - start;
-  if (duration > hLMDuration) hLMDuration = duration;
+  //if (duration > hLMDuration) hLMDuration = duration;
+  hLMDuration = (hLMDuration*15 + duration)/16;
 }
 
 void DroneModule::setError(uint8_t error) {
@@ -855,11 +858,13 @@ void DroneModule::setup() {
   _setupDone = true;
 }
 
-void DroneModule::updateIfNeeded() {
+boolean DroneModule::updateIfNeeded() {
   if (_updateNeeded && _setupDone && _enabled && _error == 0) {
     update();
     _updateNeeded = false;
+    return true;
   }
+  return false;
 }
 
 void DroneModule::update() {
@@ -869,11 +874,20 @@ void DroneModule::update() {
 boolean DroneModule::readyToLoop() {
   if (!_setupDone || !_enabled || _error > 0) return false;
 
-  return (millis() > _lastLoop + _mgmtParams[DRONE_MODULE_PARAM_INTERVAL_E].data.uint32[0]);
+  return (millis() >= _lastLoop + _mgmtParams[DRONE_MODULE_PARAM_INTERVAL_E].data.uint32[0]);
 }
 
 void DroneModule::loop() {
-  _lastLoop = millis();
+  unsigned long loopTime = millis();
+  if (loopTime < _lastLoop) {
+    // reset when timer overflows
+    _loopUpdates = 0;
+    _firstLoop = 0;
+  } else if (_loopUpdates == 0) {
+    _firstLoop = millis();
+  }
+  _lastLoop = loopTime;
+  _loopUpdates++;
 }
 
 
@@ -973,9 +987,12 @@ void DroneModule::restartDiscovery() {
 void DroneModule::respondWithInfo(AsyncResponseStream *response) {
   DRONE_PARAM_ENTRY *p;
 
+  float loopRate = _loopUpdates / ((_lastLoop - _firstLoop) / 1000.0); // updates per second
+
   response->print(F("  Stats:\n"));
   response->print("    HLM Dur: "); response->print(hLMDuration);
   response->print("\n    Loop Dur: ");  response->print(loopDuration);
+  response->print("\n    Loop Rate: ");  response->print(loopRate);
   response->print("\n");
 
   response->print(F("\n  Mgmt Params:\n"));

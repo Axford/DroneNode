@@ -23,6 +23,16 @@ DroneFSEntry::DroneFSEntry(DroneFS* fs, DroneFSEntry* parent, const char* name, 
   _enumerated = false;
 }
 
+void DroneFSEntry::close() {
+  if (_file) {
+    _file.close();
+  }
+}
+
+DroneFSEntry* DroneFSEntry::getParent() {
+  return _parent;
+}
+
 void DroneFSEntry::setName(const char* name) {
   strncpy(_name, name, DRONE_FS_MAX_NAME_SIZE-1);
 }
@@ -43,6 +53,11 @@ uint32_t DroneFSEntry::getSize() {
   return _isDir ? _children.size() : _size;
 }
 
+void DroneFSEntry::setSize(uint32_t size) {
+  _size = size;
+}
+
+/*
 boolean DroneFSEntry::setSize(uint32_t size) {
   if (_isDir) return false;
 
@@ -60,6 +75,7 @@ boolean DroneFSEntry::setSize(uint32_t size) {
   _size = 0;
   return true;
 }
+*/
 
 void DroneFSEntry::getPath(char * path, uint8_t maxLen) {
   uint8_t len = 0;
@@ -151,6 +167,12 @@ boolean DroneFSEntry::enumerate() {
   if (file) file.close();
   dir.close();
 
+  // remove excess children entries (e.g. after delete), should only ever be max one excess entry
+  while (_children.size() > i) {
+    DroneFSEntry* entry = _children.pop();
+    delete entry;
+  }
+
   _enumerated = true;
   return true;
 }
@@ -177,6 +199,7 @@ boolean DroneFSEntry::readBlock(uint32_t offset, uint8_t* buffer, uint8_t size) 
   }
 }
 
+/*
 boolean DroneFSEntry::writeBlock(uint32_t offset, uint8_t* buffer, uint8_t size) {
   //if (_file) _file.close();
 
@@ -228,6 +251,7 @@ boolean DroneFSEntry::writeBlock(uint32_t offset, uint8_t* buffer, uint8_t size)
   if (_file) _file.close();
   return false;
 }
+*/
 
 DroneFSEntry* DroneFSEntry::getEntryByPath(char* path) {
   if (matchesPath(path)) return this;
@@ -264,27 +288,6 @@ DroneFSEntry* DroneFSEntry::getEntryById(uint8_t id) {
   return entry;
 }
 
-DroneFSEntry* DroneFSEntry::createEntryByPath(char* path) {
-  // check to see if this node matches the path and return self
-  if (matchesPath(path)) return this;
-
-  DroneFSEntry* entry = NULL;
-
-  // should we be creating a file in this dir?  
-  // or in a child dir?  ... that potentially doesn't exist yet?
-  // TODO
-/*
-
-  if (_isDir) {
-    for (uint8_t i=0; i<_children.size(); i++) {
-      entry = _children.get(i)->getEntryByPath(path);
-      if (entry) break;
-    }
-  }
-*/
-  return entry;
-}
-
 //--------------------------------------------------------
 // DroneFS
 //--------------------------------------------------------
@@ -296,7 +299,13 @@ DroneFS::DroneFS(DroneSystem* ds): _ds(ds) {
   _root = new DroneFSEntry(this, NULL, rootName, true);
 
   // detect filesystem
+  // TODO
 
+
+  _uploadBuffer = NULL;
+  _uploadSize = 0;
+  _uploadPath[0] = 0;
+  _uploadState = DRONE_FS_UPLOAD_STATE_NONE;
 }
 
 
@@ -342,6 +351,117 @@ DroneFSEntry* DroneFS::getEntryById(uint8_t id) {
   return _root->getEntryById(id);
 }
 
-DroneFSEntry* DroneFS::createEntryByPath(char* path) {
-  return _root->createEntryByPath(path);
+
+boolean DroneFS::deleteEntryByPath(char* path) {
+  DroneFSEntry* f = _root->getEntryByPath(path);
+  if (f) {
+    f->close();
+
+    // delete file on disk
+    Log.noticeln("Deleting file");
+    LITTLEFS.remove(path);
+
+    // re-enumerate parent directory
+    f->getParent()->enumerate();
+
+    return true;
+  } else {
+    return false;
+  }
+}
+
+
+boolean DroneFS::startUpload(char* path, uint32_t size) {
+  if (_uploadState > DRONE_FS_UPLOAD_STATE_NONE) return false;
+
+  // alloc memory
+  _uploadBuffer = (uint8_t*) malloc(size);
+
+  // check malloc succeeded
+  if (_uploadBuffer == NULL) return false;
+
+  _uploadState = DRONE_FS_UPLOAD_STATE_WIP;
+  _uploadSize = size;
+  strcpy(_uploadPath, path);
+
+  return true;
+}
+
+
+uint8_t DroneFS::getUploadState() {
+  return _uploadState;
+}
+
+
+boolean DroneFS::writeUploadBlock(uint32_t offset, uint8_t* data, uint8_t size) {
+  if (_uploadState == DRONE_FS_UPLOAD_STATE_NONE) {
+    Log.errorln("Upload not initiated");
+    return false;
+  }
+
+  // check size and offset are within range
+  if (offset + size > _uploadSize) {
+    Log.errorln("Out of range");
+    return false;
+  }
+
+  // double check the uploadBuffer is not null
+  if (_uploadBuffer == NULL) {
+    Log.errorln("Buffer NULL");
+    return false;
+  }
+
+  memcpy( &_uploadBuffer[offset], data, size );
+
+  return true;
+}
+
+
+boolean DroneFS::saveUpload() {
+  // check state
+  if (_uploadState == DRONE_FS_UPLOAD_STATE_NONE) return false;
+
+  char backupPath[] = "/backup.txt";
+
+  DroneFSEntry* parent = _root;
+  DroneFSEntry* f = getEntryByPath(_uploadPath);
+  if (f) {
+    parent = f->getParent();
+    f->close();
+
+    // rename old file as backup
+    Log.noticeln("Renaming old as backup");
+    LITTLEFS.rename(_uploadPath, backupPath);
+  }
+
+  // write to disk
+  Log.noticeln("Writing new file to disk");
+  File file = LITTLEFS.open(_uploadPath, FILE_WRITE);
+
+  // return error if unable to allocate file... but retain new info in memory
+  if (!file) {
+    Log.noticeln("Unable to allocate file");
+    return false;  
+  }
+
+  file.write(_uploadBuffer, _uploadSize);
+  file.flush();
+  file.close();
+
+  if (LITTLEFS.exists(backupPath)) {
+    Log.noticeln("Deleting backup");
+    LITTLEFS.remove(backupPath);
+  }
+
+  // free upload buffer
+  Log.noticeln("Free buffer");
+  free(_uploadBuffer);
+  _uploadSize = 0;
+  _uploadState = DRONE_FS_UPLOAD_STATE_NONE;
+
+  // enumerate file system from parent
+  Log.noticeln("Enumerate");
+  parent->enumerate();
+
+  return true;
 }

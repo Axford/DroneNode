@@ -147,22 +147,26 @@ void DroneModuleManager::loopModules() {
     m = _modules.get(i);
     //Log.noticeln(m->getName());
     unsigned long start= millis();
+    boolean processed = false;
 
     // see if update needed
-    m->updateIfNeeded();
+    processed = m->updateIfNeeded();
 
     // and check for main loop
     if (m->readyToLoop()) {
       //Serial.println(" Y");
       //Log.noticeln(F("[DMM.lM] %s"), m->getName());
       m->loop();
+      processed = true;
 
-      // update loopDuration
+    }
+
+    // update loopDuration
+    if (processed) {
       long duration = millis()-start;
       m->loopDuration = (m->loopDuration*15 + duration)/16;
-    } else {
-      //Serial.println(" N");
     }
+
     yield();
   }
 

@@ -220,7 +220,7 @@ public:
     void receiveFSFileRequest(NetworkInterfaceModule *interface, uint8_t *buffer, uint8_t metric);
     void receiveFSReadRequest(NetworkInterfaceModule *interface, uint8_t *buffer, uint8_t metric);
     void receiveFSWriteRequest(NetworkInterfaceModule *interface, uint8_t *buffer, uint8_t metric);
-    void receiveFSResizeRequest(NetworkInterfaceModule *interface, uint8_t *buffer, uint8_t metric);
+    void receiveFSManageRequest(NetworkInterfaceModule *interface, uint8_t *buffer, uint8_t metric);
 
 
     // standard forwarding mechanic for unicast packets
@@ -267,8 +267,8 @@ public:
 
     boolean generateFSFileResponse(NetworkInterfaceModule *interface, uint8_t dest, uint8_t nextHop, DroneFSEntry* entry);
     boolean generateFSReadResponse(NetworkInterfaceModule *interface, uint8_t dest, uint8_t nextHop, DroneFSEntry* entry, uint32_t offset);
-    boolean generateFSResizeResponse(NetworkInterfaceModule *interface, uint8_t dest, uint8_t nextHop, DroneFSEntry* entry, uint32_t newSize);
-    boolean generateFSWriteResponse(NetworkInterfaceModule *interface, uint8_t dest, uint8_t nextHop, DroneFSEntry* entry, uint32_t offset, uint8_t sizeWritten);
+    boolean generateFSManageResponse(NetworkInterfaceModule *interface, uint8_t dest, uint8_t nextHop, uint8_t flags, uint8_t status);
+    boolean generateFSWriteResponse(NetworkInterfaceModule *interface, uint8_t dest, uint8_t nextHop, uint8_t flags, uint32_t offset);
 
     boolean generateFirmwareStartResponse(NetworkInterfaceModule *interface, uint8_t dest, uint8_t status);
     boolean generateFirmwareRewind(NetworkInterfaceModule *interface, uint8_t dest, uint32_t offset);

@@ -660,7 +660,7 @@ void DroneLinkManager::receivePacket(NetworkInterfaceModule *interface, uint8_t 
       // filesystem
       case DRONE_MESH_MSG_TYPE_FS_FILE_REQUEST: receiveFSFileRequest(interface, buffer, metric); break;
       case DRONE_MESH_MSG_TYPE_FS_READ_REQUEST: receiveFSReadRequest(interface, buffer, metric); break;
-      case DRONE_MESH_MSG_TYPE_FS_RESIZE_REQUEST: receiveFSResizeRequest(interface, buffer, metric); break;
+      case DRONE_MESH_MSG_TYPE_FS_MANAGE_REQUEST: receiveFSManageRequest(interface, buffer, metric); break;
       case DRONE_MESH_MSG_TYPE_FS_WRITE_REQUEST: receiveFSWriteRequest(interface, buffer, metric); break;
 
     default:
@@ -1073,6 +1073,8 @@ void DroneLinkManager::receiveFSFileRequest(NetworkInterfaceModule *interface, u
 
       } else if (rbuffer->flags == DRONE_MESH_MSG_FS_FLAG_INDEX_INFO) {
         entry = _fs->getEntryByIndex((char*)rbuffer->path, rbuffer->id);
+      } else if (rbuffer->flags == DRONE_MESH_MSG_FS_FLAG_DELETE) {
+        _fs->deleteEntryByPath((char*)rbuffer->path);
       }
       generateFSFileResponse(interface, header->srcNode, header->txNode, entry);
 
@@ -1122,19 +1124,12 @@ void DroneLinkManager::receiveFSWriteRequest(NetworkInterfaceModule *interface, 
 
       DRONE_MESH_MSG_FS_WRITE_REQUEST* rbuffer = (DRONE_MESH_MSG_FS_WRITE_REQUEST*)buffer;
 
-      // handle request type
-      DroneFSEntry* entry = NULL;
-      entry = _fs->getEntryById(rbuffer->id);
+      boolean res = _fs->writeUploadBlock(rbuffer->offset, rbuffer->data, rbuffer->size);
 
-      uint8_t sizeWritten = 0;
-
-      if (entry) {
-        if (entry->writeBlock(rbuffer->offset, rbuffer->data, rbuffer->size)) {
-          sizeWritten = rbuffer->size;
-        }
-      }
-
-      generateFSWriteResponse(interface, header->srcNode, header->txNode, entry, rbuffer->offset, sizeWritten);
+      uint8_t flags = res ? DRONE_MESH_MSG_FS_FLAG_SUCCESS : DRONE_MESH_MSG_FS_FLAG_ERROR;
+      
+      generateFSWriteResponse(interface, header->srcNode, header->txNode, flags, rbuffer->offset);
+      
 
     } else {
       hopAlong(buffer);
@@ -1143,10 +1138,10 @@ void DroneLinkManager::receiveFSWriteRequest(NetworkInterfaceModule *interface, 
 }
 
 
-void DroneLinkManager::receiveFSResizeRequest(NetworkInterfaceModule *interface, uint8_t *buffer, uint8_t metric) {
+void DroneLinkManager::receiveFSManageRequest(NetworkInterfaceModule *interface, uint8_t *buffer, uint8_t metric) {
   DRONE_MESH_MSG_HEADER *header = (DRONE_MESH_MSG_HEADER*)buffer;
 
-  Log.noticeln("[DLM.rT] FS Resize request from %u to %u", header->srcNode, header->destNode);
+  Log.noticeln("[DLM.rT] FS Manage request from %u to %u", header->srcNode, header->destNode);
 
   // check if we are the nextNode... otherwise ignore it
   if (header->nextNode == _node) {
@@ -1154,25 +1149,30 @@ void DroneLinkManager::receiveFSResizeRequest(NetworkInterfaceModule *interface,
     // are we the destination?
     if (header->destNode == _node) {
 
-      DRONE_MESH_MSG_FS_RESIZE_REQUEST* rbuffer = (DRONE_MESH_MSG_FS_RESIZE_REQUEST*)buffer;
+      DRONE_MESH_MSG_FS_MANAGE_REQUEST* rbuffer = (DRONE_MESH_MSG_FS_MANAGE_REQUEST*)buffer;
 
-      // handle request type
-      DroneFSEntry* entry = NULL;
-      entry = _fs->getEntryByPath((char*)rbuffer->path);
+      uint8_t flags = 0;
+      uint8_t status = 0;
 
-      uint32_t newSize = 0;
+      switch(rbuffer->flags) {
+        case DRONE_MESH_MSG_FS_FLAG_START:
+          Log.noticeln("[DLM.rT] Start");
+          flags = _fs->startUpload((char*)rbuffer->path, rbuffer->size) ? DRONE_MESH_MSG_FS_FLAG_SUCCESS : DRONE_MESH_MSG_FS_FLAG_ERROR;
+          break;
 
-      if (entry) {
-        // request resize
-        if (entry->setSize(rbuffer->size)) {
-          newSize = rbuffer->size;
-        }
-      } else {
-        // need to create a new entry
-        // TODO
+        case DRONE_MESH_MSG_FS_FLAG_QUERY:
+          flags = DRONE_MESH_MSG_FS_FLAG_SUCCESS;
+          break;
+
+        case DRONE_MESH_MSG_FS_FLAG_SAVE:
+          Log.noticeln("[DLM.rT] Save");
+          flags = _fs->saveUpload() ? DRONE_MESH_MSG_FS_FLAG_SUCCESS : DRONE_MESH_MSG_FS_FLAG_ERROR;
+          break;
       }
+      status = _fs->getUploadState();
+      Log.noticeln("[DLM.rT] Status: %u", status);
 
-      generateFSResizeResponse(interface, header->srcNode, header->txNode, entry, newSize);
+      generateFSManageResponse(interface, header->srcNode, header->txNode, flags, status);
 
     } else {
       hopAlong(buffer);
@@ -2219,7 +2219,7 @@ boolean DroneLinkManager::generateFSReadResponse(NetworkInterfaceModule *interfa
 }
 
 
-boolean DroneLinkManager::generateFSWriteResponse(NetworkInterfaceModule *interface, uint8_t dest, uint8_t nextHop, DroneFSEntry* entry, uint32_t offset, uint8_t sizeWritten) {
+boolean DroneLinkManager::generateFSWriteResponse(NetworkInterfaceModule *interface, uint8_t dest, uint8_t nextHop, uint8_t flags, uint32_t offset) {
 
     // request a new buffer in the transmit queue
     DRONE_MESH_MSG_BUFFER *buffer = getTransmitBuffer(interface, DRONE_MESH_MSG_PRIORITY_HIGH);
@@ -2238,16 +2238,8 @@ boolean DroneLinkManager::generateFSWriteResponse(NetworkInterfaceModule *interf
       setDroneMeshMsgPriorityAndPayloadType(buffer->data, DRONE_MESH_MSG_PRIORITY_HIGH, DRONE_MESH_MSG_TYPE_FS_WRITE_RESPONSE);
 
       // populate info
-      if (entry) {
-        rBuffer->id = entry->getId();
-        rBuffer->offset = offset;
-        rBuffer->size = sizeWritten;
-
-      } else {
-        rBuffer->id = 0;
-        rBuffer->offset = 0;
-        rBuffer->size = 0;
-      }
+      rBuffer->offset = offset;
+      rBuffer->flags = flags;
 
       // calc CRC
       rBuffer->crc = _CRC8.smbus((uint8_t*)rBuffer, sizeof(DRONE_MESH_MSG_FS_WRITE_RESPONSE)-1);
@@ -2259,37 +2251,30 @@ boolean DroneLinkManager::generateFSWriteResponse(NetworkInterfaceModule *interf
 }
 
 
-boolean DroneLinkManager::generateFSResizeResponse(NetworkInterfaceModule *interface, uint8_t dest, uint8_t nextHop, DroneFSEntry* entry, uint32_t newSize) {
+boolean DroneLinkManager::generateFSManageResponse(NetworkInterfaceModule *interface, uint8_t dest, uint8_t nextHop, uint8_t flags, uint8_t status) {
 
   // request a new buffer in the transmit queue
   DRONE_MESH_MSG_BUFFER *buffer = getTransmitBuffer(interface, DRONE_MESH_MSG_PRIORITY_HIGH);
 
   // if successful
   if (buffer) {
-    DRONE_MESH_MSG_FS_RESIZE_RESPONSE *rBuffer = (DRONE_MESH_MSG_FS_RESIZE_RESPONSE*)buffer->data;
+    DRONE_MESH_MSG_FS_MANAGE_RESPONSE *rBuffer = (DRONE_MESH_MSG_FS_MANAGE_RESPONSE*)buffer->data;
 
     // populate packet
-    rBuffer->header.typeGuaranteeSize = DRONE_MESH_MSG_SEND | DRONE_MESH_MSG_GUARANTEED | (sizeof(DRONE_MESH_MSG_FS_RESIZE_RESPONSE) - sizeof(DRONE_MESH_MSG_HEADER) - 2) ;
+    rBuffer->header.typeGuaranteeSize = DRONE_MESH_MSG_SEND | DRONE_MESH_MSG_GUARANTEED | (sizeof(DRONE_MESH_MSG_FS_MANAGE_RESPONSE) - sizeof(DRONE_MESH_MSG_HEADER) - 2) ;
     rBuffer->header.txNode = node();;
     rBuffer->header.srcNode = node();
     rBuffer->header.nextNode = nextHop;
     rBuffer->header.destNode = dest;
     rBuffer->header.seq = _gSeq++;
-    setDroneMeshMsgPriorityAndPayloadType(buffer->data, DRONE_MESH_MSG_PRIORITY_HIGH, DRONE_MESH_MSG_TYPE_FS_RESIZE_RESPONSE);
+    setDroneMeshMsgPriorityAndPayloadType(buffer->data, DRONE_MESH_MSG_PRIORITY_HIGH, DRONE_MESH_MSG_TYPE_FS_MANAGE_RESPONSE);
 
     // populate info
-    // populate info
-    if (entry) {
-      rBuffer->size = newSize;
-      entry->getPath((char*)rBuffer->path, DRONE_MESH_MSG_FS_MAX_PATH_SIZE-1);
-
-    } else {
-      rBuffer->size = 0;
-      rBuffer->path[0] = 0;
-    }
+    rBuffer->flags = flags;
+    rBuffer->status = status;
 
     // calc CRC
-    rBuffer->crc = _CRC8.smbus((uint8_t*)rBuffer, sizeof(DRONE_MESH_MSG_FS_RESIZE_RESPONSE)-1);
+    rBuffer->crc = _CRC8.smbus((uint8_t*)rBuffer, sizeof(DRONE_MESH_MSG_FS_MANAGE_RESPONSE)-1);
 
     return true;
   }

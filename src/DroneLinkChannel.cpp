@@ -12,7 +12,7 @@ DroneLinkChannel::DroneLinkChannel(DroneLinkManager* dlm, uint8_t node, uint8_t 
   Log.noticeln(F("Create channel: %d>%d"),node,id);
   _choked =0;
   _peakSize = 0;
-  _maxSize = id == 0 ? 2*DRONE_LINK_CHANNEL_QUEUE_LIMIT : DRONE_LINK_CHANNEL_QUEUE_LIMIT;
+  _maxSize = id == 0 ? 3*DRONE_LINK_CHANNEL_QUEUE_LIMIT : DRONE_LINK_CHANNEL_QUEUE_LIMIT;
 }
 
 uint8_t DroneLinkChannel::id() {

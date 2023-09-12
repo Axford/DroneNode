@@ -132,7 +132,9 @@ protected:
   DRONE_MODULE_DISCOVERY_STATE _discoveryState;
   uint8_t _discoveryIndex;
 
+  unsigned long _firstLoop;
   unsigned long _lastLoop;
+  unsigned long _loopUpdates;  // count of how many loopUpdates since start, used to calculate loop Update rate per second
   boolean _setupDone;
 
   boolean _interfaceState;
@@ -212,7 +214,7 @@ public:
 
   virtual void setup();
 
-  void updateIfNeeded();
+  boolean updateIfNeeded();  // return true if update occurred
   virtual void update();
 
   virtual boolean readyToLoop();
