@@ -197,6 +197,7 @@ struct DRONE_MESH_MSG_FIRMWARE_REWIND {
 #define DRONE_MESH_MSG_FS_FLAG_START          0
 #define DRONE_MESH_MSG_FS_FLAG_QUERY          1
 #define DRONE_MESH_MSG_FS_FLAG_SAVE           2
+#define DRONE_MESH_MSG_FS_FLAG_CANCEL         3
 
 // Manage Response flags
 #define DRONE_MESH_MSG_FS_FLAG_WIP            8  // transfer in progress

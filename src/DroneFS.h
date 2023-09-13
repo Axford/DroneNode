@@ -109,6 +109,7 @@ public:
   uint8_t getUploadState();
   boolean writeUploadBlock(uint32_t offset, uint8_t* data, uint8_t size);
   boolean saveUpload();  // save to disk
+  void cancelUpload();
 };
 
 #endif

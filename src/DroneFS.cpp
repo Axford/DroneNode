@@ -465,3 +465,17 @@ boolean DroneFS::saveUpload() {
 
   return true;
 }
+
+
+void DroneFS::cancelUpload() {
+  if (_uploadState == DRONE_FS_UPLOAD_STATE_NONE) return;
+
+  if (_uploadBuffer && _uploadSize > 0) {
+    free(_uploadBuffer);
+    _uploadSize = 0;
+  }
+
+  _uploadState = DRONE_FS_UPLOAD_STATE_NONE;
+
+  Log.noticeln("Upload cancelled");  
+}

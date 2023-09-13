@@ -1168,6 +1168,12 @@ void DroneLinkManager::receiveFSManageRequest(NetworkInterfaceModule *interface,
           Log.noticeln("[DLM.rT] Save");
           flags = _fs->saveUpload() ? DRONE_MESH_MSG_FS_FLAG_SUCCESS : DRONE_MESH_MSG_FS_FLAG_ERROR;
           break;
+
+        case DRONE_MESH_MSG_FS_FLAG_CANCEL:
+          Log.noticeln("[DLM.rT] Cancel");
+          _fs->cancelUpload();
+          flags = DRONE_MESH_MSG_FS_FLAG_SUCCESS;
+          break;
       }
       status = _fs->getUploadState();
       Log.noticeln("[DLM.rT] Status: %u", status);
