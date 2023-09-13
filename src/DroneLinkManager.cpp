@@ -424,45 +424,47 @@ NetworkInterfaceModule* DroneLinkManager::getSourceInterface(uint8_t source) {
 
 
 void DroneLinkManager::serveNodeInfo(AsyncWebServerRequest *request) {
-  AsyncResponseStream *response = request->beginResponseStream("text/text");
+  AsyncResponseStream *response = request->beginResponseStream("application/json");
   response->addHeader("Server","ESP Async Web Server");
 
   unsigned long loopTime = millis();
 
-
-  response->print(F("Interfaces: \n"));
+  response->print("{");
+  response->print(F("\"interfaces\": [ \n"));
 
   NetworkInterfaceModule* inter;
   for (uint8_t i=0; i< _interfaces.size(); i++) {
     inter =_interfaces.get(i);
 
-    response->printf("  %u > %s : ", inter->id(), inter->getName());
+    if (i>0) response->print(",");
+    response->print("{");
+    response->printf(" \"id\": %u, \"name\": \"%s\",", inter->id(), inter->getName());
 
+    response->print("\"type\":");
     switch(inter->getInterfaceType()) {
-      case DRONE_MESH_INTERFACE_TYPE_UDP: response->print("UDP"); break;
-      case DRONE_MESH_INTERFACE_TYPE_RFM69: response->print("RFM69"); break;
-      case DRONE_MESH_INTERFACE_TYPE_SERIAL: response->print("Serial"); break;
-      case DRONE_MESH_INTERFACE_TYPE_IRIDIUM: response->print("Iridium"); break;
+      case DRONE_MESH_INTERFACE_TYPE_UDP: response->print("\"UDP\""); break;
+      case DRONE_MESH_INTERFACE_TYPE_RFM69: response->print("\"RFM69\""); break;
+      case DRONE_MESH_INTERFACE_TYPE_SERIAL: response->print("\"Serial\""); break;
+      case DRONE_MESH_INTERFACE_TYPE_IRIDIUM: response->print("\"Iridium\""); break;
     }
 
-    response->print(", ");
+    response->print(", \"state\":");
+    response->print(inter->getInterfaceState() ? "\"Up\"" : "\"Down\"");
 
-    response->print(inter->getInterfaceState() ? "Up" : "Down");
-
-    response->print(", ");
-
-    response->print(inter->isBroadcastCapable() ? "Broadcast" : "P2P");
-
+    response->print(", \"link\":");
+    response->print(inter->isBroadcastCapable() ? "\"Broadcast\"" : "\"P2P\"");
+     
     if (!inter->isBroadcastCapable() ) {
-      response->printf(" -> %u", inter->getPeerId());
+      response->printf(", \"peer\": %u", inter->getPeerId());
     }
-
+    response->print("}");
     response->print("\n");
   }
+  response->print("],");
 
 
-  response->print(F("\nRouting table: \n"));
-
+  response->print(F("\"routes\": ["));
+  uint8_t items = 0;
 
   DRONE_LINK_NODE_PAGE *page;
   for (uint8_t i=0; i<DRONE_LINK_NODE_PAGES; i++) {
@@ -470,38 +472,69 @@ void DroneLinkManager::serveNodeInfo(AsyncWebServerRequest *request) {
     if (page != NULL) {
       for (uint8_t j=0; j<DRONE_LINK_NODE_PAGE_SIZE; j++) {
         if (page->nodeInfo[j].heard) {
+
+          if (items > 0) response->print(",");
+          response->print("{");
+
           uint8_t id = (i << 4) + j;
           unsigned int age = (loopTime - page->nodeInfo[j].lastHeard) / 1000;
           char *interfaceName = NULL;
           if (page->nodeInfo[j].interface) interfaceName = page->nodeInfo[j].interface->getName();
-          response->printf("  %u > ", id);
+
+          response->printf("\"id\":%u", id);
+          response->print(",\"name\":");
           if (page->nodeInfo[j].name == NULL) {
-            response->print("???");
+            response->print("\"???\"");
           } else
-            response->printf("%s", page->nodeInfo[j].name);
-          response->printf(", Sq: %u, Mt: %u, Nx: %u, Ag: %u sec, Up: %u, I: %s (%u), At: %.1f, Tx: %.0fms, Ack: %.0fms, GU: %u\n", page->nodeInfo[j].seq, page->nodeInfo[j].metric, page->nodeInfo[j].nextHop, age, page->nodeInfo[j].uptime, interfaceName, page->nodeInfo[j].interface->getInterfaceType(), page->nodeInfo[j].avgAttempts, page->nodeInfo[j].avgTxTime, page->nodeInfo[j].avgAckTime, page->nodeInfo[i].givenUp);
+            response->printf("\"%s\"", page->nodeInfo[j].name);
+
+          response->printf(",\"seq\": %u", page->nodeInfo[j].seq);
+          response->printf(",\"metric\": %u", page->nodeInfo[j].metric);
+          response->printf(",\"nextHop\": %u", page->nodeInfo[j].nextHop);
+          response->printf(",\"age\": %u", age);
+          response->printf(",\"up\": %u", page->nodeInfo[j].uptime);
+          response->printf(",\"iName\": \"%s\"", interfaceName);
+          response->printf(",\"iType\": %u", page->nodeInfo[j].interface->getInterfaceType());
+          response->printf(",\"avgAt\": %u", page->nodeInfo[j].avgAttempts);
+          response->printf(",\"avgTx\": %.0f", page->nodeInfo[j].avgTxTime);
+          response->printf(",\"avgAck\": %.0f", page->nodeInfo[j].avgAckTime);
+          response->printf(",\"gU\": %u", page->nodeInfo[j].givenUp);
+          response->print("}");
+          items++;
         }
       }
     }
   }
 
-  response->printf(("\n\nTx Queue: %.1f (size %u), kicked: %u (%.1f), choked: %u (%.1f) \n"), (100*_utilisation), getTxQueueSize(), _kicked, _kickRate, _choked, _chokeRate);
+  response->print("], \"queue\":{");
+
+  response->printf("\"utilisation\": %.1f", (100*_utilisation));
+  response->printf(",\"size\": %u", getTxQueueSize());
+  response->printf(",\"kicked\": %u", _kicked);
+  response->printf(",\"kickRate\": %.1f", _kickRate);
+  response->printf(",\"choked\": %u", _choked);
+  response->printf(",\"chokeRate\": %.1f", _chokeRate);
 
   // print detailed queue info
+  response->print(", \"items\":[");
   for (uint8_t i=0; i<_txQueue.size(); i++) {
     DRONE_MESH_MSG_BUFFER* buffer = _txQueue.get(i);
 
-    response->printf("    %u: state=%u, int:%s, \n", i, buffer->state, buffer->interface->getName());
+    if (i > 0) response->print(",");
+    response->print("{");
+    response->printf("\"i\": %u", i);
+    response->printf(",\"state\": %u", buffer->state);
+    response->printf(",\"int\": \"%s\"", buffer->interface->getName());
 
     if (buffer->state > DRONE_MESH_MSG_BUFFER_STATE_EMPTY) {
       // decode message in buffer
-      response->print("      (");
-      response->print( isDroneMeshMsgAck(buffer->data) ? "A" : "S" );
-      response->printf(", %u) ", getDroneMeshMsgPayloadType(buffer->data));
-      response->printf(", p%u) ", getDroneMeshMsgPriority(buffer->data));
-      response->printf("%u > %u > %u > %u ", getDroneMeshMsgSrcNode(buffer->data), getDroneMeshMsgTxNode(buffer->data), getDroneMeshMsgNextNode(buffer->data),
+      response->printf(",\"isAck\": %u", isDroneMeshMsgAck(buffer->data) ? 1 : 0);
+      response->printf(",\"payType\": %u", getDroneMeshMsgPayloadType(buffer->data));
+      response->printf(",\"pri\": %u", getDroneMeshMsgPriority(buffer->data));
+      response->printf(",\"addr\": [%u,%u,%u,%u]", getDroneMeshMsgSrcNode(buffer->data), getDroneMeshMsgTxNode(buffer->data), getDroneMeshMsgNextNode(buffer->data),
     getDroneMeshMsgDestNode(buffer->data));
-      response->printf("seq=%u [%u]", getDroneMeshMsgSeq(buffer->data), getDroneMeshMsgPayloadSize(buffer->data));
+      response->printf(",\"seq\": %u", getDroneMeshMsgSeq(buffer->data));
+      response->printf(",\"paySize\": %u", getDroneMeshMsgPayloadSize(buffer->data));
 
       // if this is a DLM ... decode that too
       if (getDroneMeshMsgPayloadType(buffer->data) == DRONE_MESH_MSG_TYPE_DRONELINKMSG) {
@@ -511,11 +544,12 @@ void DroneLinkManager::serveNodeInfo(AsyncWebServerRequest *request) {
         //memcpy((uint8_t*)&tempMsg._msg, &buffer[sizeof(DRONE_MESH_MSG_HEADER)], payloadSize);
 
       }
-
-      response->print("\n");
     }
 
+    response->print("}");
   }
+
+  response->print("]}}");
 
   //send the response last
   request->send(response);
