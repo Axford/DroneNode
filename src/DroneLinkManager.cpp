@@ -1731,6 +1731,8 @@ void DroneLinkManager::processTransmitQueue() {
       if (nextNodeInfo) {
         // use avgAckTime + 10% to reduce duplicate packet transmission
         t = min(t, (uint32_t)(1.1 * nextNodeInfo->avgAckTime));
+        // ensure wait time is at least xx ms
+        t = max(t, (uint32_t)DRONE_LINK_MANAGER_MIN_ACK_INTERVAL);
       }
 
       if (loopTime > b->sent + t) {
