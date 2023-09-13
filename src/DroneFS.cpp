@@ -148,6 +148,7 @@ boolean DroneFSEntry::enumerate() {
       // sync entry
       entry->setName(file.name());
       entry->isDirectory(file.isDirectory());
+      entry->close(); // in case we have an open file handle
     } else {
       // create a new entry
       entry = new DroneFSEntry(_fs, this, file.name(), file.isDirectory());
@@ -199,59 +200,6 @@ boolean DroneFSEntry::readBlock(uint32_t offset, uint8_t* buffer, uint8_t size) 
   }
 }
 
-/*
-boolean DroneFSEntry::writeBlock(uint32_t offset, uint8_t* buffer, uint8_t size) {
-  //if (_file) _file.close();
-
-  // is this the first block?  if so, assume we are starting a write sequence and delete the previous file
-  if (offset == 0) {
-    if (_file) {
-      _file.close();
-    }
-
-    char tpath[DRONE_FS_MAX_PATH_SIZE];
-    getPath((char*)&tpath, DRONE_FS_MAX_PATH_SIZE);
-
-    // need to delete ready for writeBlock to save new file
-    Log.noticeln("Removing prev file");
-    LITTLEFS.remove(tpath);
-  }
-
-  // is this the last block... i.e. size == 0
-  if (_file && size == 0) {
-    // close/flush file
-    _file.close();
-    return true;
-  }
-
-  if (!_file) {
-    char tpath[DRONE_FS_MAX_PATH_SIZE];
-    getPath((char*)&tpath, DRONE_FS_MAX_PATH_SIZE);
-
-    _file = LITTLEFS.open(tpath, FILE_WRITE);
-  }
-
-  if (!_file) return false;
-
-  // check offset lines up with current size - i.e. we're writing sequentially
-  if (offset != _file.size()) return false;
-
-  Log.noticeln("writeBlock offset: %u, size: %u", offset, size);
-  if (_file.seek(offset, SeekSet)) {
-    Log.noticeln("Seeked to %u", _file.position());
-    if (_file.write(buffer, size) == size) {
-      Log.noticeln("Written and flushing");
-      _file.flush();
-      _size = _file.size();
-      return true;
-    } else {
-      Log.noticeln("Unable to write the required size");
-    }
-  }
-  if (_file) _file.close();
-  return false;
-}
-*/
 
 DroneFSEntry* DroneFSEntry::getEntryByPath(char* path) {
   if (matchesPath(path)) return this;
