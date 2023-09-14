@@ -1034,11 +1034,13 @@ void DroneModule::respondWithInfo(AsyncResponseStream *response) {
     response->printf(",\"value\":[%u,%u,%u,%u]", s->addr.source, s->addr.node, s->addr.channel, s->addr.paramPriority);
     response->print(",\"writeable\":1"); 
     response->print(",\"size\":4");
+    response->printf(",\"received\":%u", s->received ? 1 : 0);
 
     response->print("},{");
     response->printf("\"id\":%u",getDroneLinkMsgParam(s->param.paramPriority));
     response->printf(",\"name\":\"%s\"",(PGM_P)s->param.name);
     response->printf(",\"publish\":%u", s->param.publish ? 1 : 0);
+    response->printf(",\"received\":%u", s->received ? 1 : 0);
     response->printf(",");
     DroneLinkMsg::printPayloadAsJson(&s->param.data, s->param.paramTypeLength, response);
     response->print("}");
