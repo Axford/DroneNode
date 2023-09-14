@@ -137,6 +137,10 @@ public:
 
     static void printPayload(DRONE_LINK_PAYLOAD *payload, uint8_t paramTypeLength, AsyncResponseStream *response);
 
+    static void printFloatAsJson(float f, AsyncResponseStream *response);
+
+    static void printPayloadAsJson(DRONE_LINK_PAYLOAD *payload, uint8_t paramTypeLength, AsyncResponseStream *response);
+
     boolean sameAddress(DRONE_LINK_ADDR *addr);
 
     // static utils

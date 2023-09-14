@@ -221,14 +221,15 @@ void DroneModuleManager::watchdog() {
 
 void DroneModuleManager::serveModuleInfo(AsyncWebServerRequest *request) {
 
-  AsyncResponseStream *response = request->beginResponseStream("text/text");
+  AsyncResponseStream *response = request->beginResponseStream("application/json");
   response->addHeader("Server","ESP Async Web Server");
-  response->print(F("Modules: \n"));
-
+  response->print("[");
   DroneModule* m;
   for(uint8_t i = 0; i < _modules.size(); i++){
     m = _modules.get(i);
-    response->printf("%u: \n", m->id());
+    if (i > 0) response->printf(",");
+    response->print("{");
+    response->printf("\"id\":%u,", m->id());
 
     m->respondWithInfo(response);
 
@@ -240,8 +241,10 @@ void DroneModuleManager::serveModuleInfo(AsyncWebServerRequest *request) {
       response->printf("   %u: %s - %u\n", j, c.str, (c.handler != NULL ? 1 : 0));
     }
     */
-    response->print("\n");
+    response->print("}\n");
   }
+
+  response->print("]");
 
   //send the response last
   request->send(response);

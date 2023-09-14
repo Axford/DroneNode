@@ -989,44 +989,61 @@ void DroneModule::respondWithInfo(AsyncResponseStream *response) {
 
   float loopRate = _loopUpdates / ((_lastLoop - _firstLoop) / 1000.0); // updates per second
 
-  response->print(F("  Stats:\n"));
-  response->print("    HLM Dur: "); response->print(hLMDuration);
-  response->print("\n    Loop Dur: ");  response->print(loopDuration);
-  response->print("\n    Loop Rate: ");  response->print(loopRate);
-  response->print("\n");
+  response->printf("\"HLMDuration\":%u", hLMDuration);
+  response->printf(",\"loopDuration\":%u", loopDuration);
+  response->print(",\"loopRate\":");
+  DroneLinkMsg::printFloatAsJson(loopRate, response);
 
-  response->print(F("\n  Mgmt Params:\n"));
+  response->print(",\"mgmt\":[");
   for (uint8_t i=0; i<DRONE_MGMT_PARAM_ENTRIES; i++) {
     p = &_mgmtParams[i];
+    if (i>0) response->print(",");
 
-    response->printf("    %u: %s ",getDroneLinkMsgParam(p->paramPriority),(PGM_P)p->name);
-    if (p->publish) response->print('*');
-    DroneLinkMsg::printPayload(&p->data, p->paramTypeLength, response);
+    response->print("{");
+    response->printf("\"id\":%u",getDroneLinkMsgParam(p->paramPriority));
+    response->printf(",\"name\":\"%s\"",(PGM_P)p->name);
+    response->printf(",\"publish\":%u", p->publish ? 1 : 0);
+    response->printf(",");
+    DroneLinkMsg::printPayloadAsJson(&p->data, p->paramTypeLength, response);
+    response->print("}");
   }
 
-  response->print(F("\n  Params:\n"));
+  response->print("],\"params\":[");
   for (uint8_t i=0; i<_numParamEntries; i++) {
     p = &_params[i];
-    response->printf("    %u: %s ",getDroneLinkMsgParam(p->paramPriority),(PGM_P)(p->name));
-    if (p->publish) response->print('*');
-    DroneLinkMsg::printPayload(&p->data, p->paramTypeLength, response);
+    if (i>0) response->print(",");
+    response->print("{");
+    response->printf("\"id\":%u",getDroneLinkMsgParam(p->paramPriority));
+    response->printf(",\"name\":\"%s\"",(PGM_P)p->name);
+    response->printf(",\"publish\":%u", p->publish ? 1 : 0);
+    response->printf(",");
+    DroneLinkMsg::printPayloadAsJson(&p->data, p->paramTypeLength, response);
+    response->print("}");
   }
 
-  response->print(F("\n  Subs:\n"));
+  response->print("],\"subs\":[");
   DRONE_PARAM_SUB *s;
   for (uint8_t i=0; i<_numSubs; i++) {
     s = &_subs[i];
-    response->printf("    %u: $%s ", s->addrParam, (PGM_P)s->param.name);
-    if (s->param.publish) response->print('*');
-    response->print('[');
-    DroneLinkMsg::printAddress(&s->addr, response);
-    response->print("]\n");
+    if (i>0) response->print(",");
+    response->print("{");
+    response->printf("\"id\":%u",s->addrParam);
+    response->printf(",\"name\":\"$%s\"",(PGM_P)s->param.name);
+    response->printf(",\"publish\":%u", s->param.publish ? 1 : 0);
+    response->print(",\"type\":1"); // address type
+    response->printf(",\"value\":[%u,%u,%u,%u]", s->addr.source, s->addr.node, s->addr.channel, s->addr.paramPriority);
+    response->print(",\"writeable\":1"); 
+    response->print(",\"size\":4");
 
-    response->printf("    %u: %s ",getDroneLinkMsgParam(s->param.paramPriority), (PGM_P)s->param.name);
-    if (s->param.publish) response->print('*');
-    DroneLinkMsg::printPayload(&s->param.data, s->param.paramTypeLength, response);
+    response->print("},{");
+    response->printf("\"id\":%u",getDroneLinkMsgParam(s->param.paramPriority));
+    response->printf(",\"name\":\"%s\"",(PGM_P)s->param.name);
+    response->printf(",\"publish\":%u", s->param.publish ? 1 : 0);
+    response->printf(",");
+    DroneLinkMsg::printPayloadAsJson(&s->param.data, s->param.paramTypeLength, response);
+    response->print("}");
   }
-  response->print(F("\n"));
+  response->print("]");
 }
 
 
