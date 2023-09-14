@@ -71,6 +71,7 @@ public:
     void removeExternalSubscriptions(uint8_t node);
 
     void serveChannelInfo(AsyncResponseStream *response);
+    void serveQueueInfo(AsyncResponseStream *response);
 };
 
 #endif

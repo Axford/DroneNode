@@ -535,15 +535,6 @@ void DroneLinkManager::serveNodeInfo(AsyncWebServerRequest *request) {
     getDroneMeshMsgDestNode(buffer->data));
       response->printf(",\"seq\": %u", getDroneMeshMsgSeq(buffer->data));
       response->printf(",\"paySize\": %u", getDroneMeshMsgPayloadSize(buffer->data));
-
-      // if this is a DLM ... decode that too
-      if (getDroneMeshMsgPayloadType(buffer->data) == DRONE_MESH_MSG_TYPE_DRONELINKMSG) {
-        // upwrap contained msg
-        //uint8_t payloadSize = getDroneMeshMsgPayloadSize(buffer);
-
-        //memcpy((uint8_t*)&tempMsg._msg, &buffer[sizeof(DRONE_MESH_MSG_HEADER)], payloadSize);
-
-      }
     }
 
     response->print("}");
@@ -569,6 +560,12 @@ void DroneLinkManager::serveChannelInfo(AsyncWebServerRequest *request) {
 
     c->serveChannelInfo(response);
     response->print("\n");
+
+    if (c->id() == 0) {
+      // full debug on catch-all channel
+      response->print("\nQueue info:\n");
+      c->serveQueueInfo(response);
+    }
   }
 
 
@@ -2101,7 +2098,7 @@ boolean DroneLinkManager::sendDroneLinkMessage(NetworkInterfaceModule *interface
   for (uint8_t i=0; i<_txQueue.size(); i++) {
     DRONE_MESH_MSG_BUFFER *b = _txQueue.get(i);
     // check for packets ready to send
-    if (b->state > DRONE_MESH_MSG_BUFFER_STATE_EMPTY) {
+    if (b->state == DRONE_MESH_MSG_BUFFER_STATE_READY) {
       if (getDroneMeshMsgPayloadType(b->data) == DRONE_MESH_MSG_TYPE_DRONELINKMSG) {
         // compare signatures and destNodes
         uint8_t offset = sizeof(DRONE_MESH_MSG_HEADER);

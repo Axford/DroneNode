@@ -59,6 +59,18 @@ boolean DroneLinkChannel::publish(DroneLinkMsg &msg) {
     if (!sameSig) {
       DroneLinkMsg *tmp = new DroneLinkMsg(msg);
 
+      // search for insertion point, by finding the point where the next item is a lower priority
+      uint8_t insertionPoint = 0;
+      for (uint8_t i=0; i<_queue.size(); i++) {
+        scrub = _queue.get(i);
+        insertionPoint++;
+
+        if (scrub->priority() < msg.priority()) break;
+      }
+
+     _queue.add(insertionPoint, tmp);
+
+      /*
       if (msg.type() < DRONE_LINK_MSG_TYPE_CHAR) {
         // priority message, jump the queue
         // TODO: search back from the end until we find the first high priority item, then insert after it
@@ -68,6 +80,7 @@ boolean DroneLinkChannel::publish(DroneLinkMsg &msg) {
         _queue.add(tmp);
 
       }
+      */
 
       _peakSize = max(_peakSize, (uint8_t)_queue.size());
     }
@@ -251,5 +264,25 @@ void DroneLinkChannel::serveChannelInfo(AsyncResponseStream *response) {
     } else {
       response->printf("    node: %u\n", sub->extNode);
     }
+  }
+}
+
+
+void DroneLinkChannel::serveQueueInfo(AsyncResponseStream *response) {
+  DroneLinkMsg *msg;
+  for(int i = 0; i < _queue.size(); i++) {
+    msg = _queue.get(i);
+
+  response->print(msg->source());
+  response->print(':');
+  response->print(msg->node());
+  response->print('>');
+  response->print(msg->channel());
+  response->print('.');
+  response->print(msg->param());
+  response->print(" p");
+  response->print(msg->priority());
+  response->print(' ');
+  DroneLinkMsg::printPayload(&msg->_msg.payload, msg->_msg.paramTypeLength, response);
   }
 }

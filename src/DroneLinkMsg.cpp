@@ -146,7 +146,7 @@ void DroneLinkMsg::printPayload(DRONE_LINK_PAYLOAD *payload, uint8_t paramTypeLe
     case DRONE_LINK_MSG_TYPE_FLOAT: Serial.print(F("f")); break;
     case DRONE_LINK_MSG_TYPE_CHAR: Serial.print(F("c")); break;
     case DRONE_LINK_MSG_TYPE_NAME: Serial.print(F("N")); break;
-    case DRONE_LINK_MSG_TYPE_NAMEQUERY: Serial.print(F("AQ")); break;
+    case DRONE_LINK_MSG_TYPE_NAMEQUERY: Serial.print(F("NQ")); break;
     case DRONE_LINK_MSG_TYPE_QUERY: Serial.print(F("Q")); break;
   }
   if (ty != DRONE_LINK_MSG_TYPE_QUERY) {
