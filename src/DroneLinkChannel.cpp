@@ -248,23 +248,34 @@ void DroneLinkChannel::removeExternalSubscriptions(uint8_t node) {
 
 
 void DroneLinkChannel::serveChannelInfo(AsyncResponseStream *response) {
+  response->print("{");
+  response->printf("\"node\":%u", _node);
+  response->printf(",\"channel\":%u", _id);
+  response->printf(",\"size\":%u", size());
+  response->printf(",\"peakSize\":%u", peakSize());
+  
+  response->print(",\"subs\":[");
   DroneLinkChannelSubscription *sub;
   for(int i = 0; i < _subs.size(); i++) {
     sub = _subs.get(i);
-
-    response->printf("  param: %u", sub->param);
+    if (i>0) response->print(",");
+    response->print("{");
+    response->printf("\"param\":%u", sub->param);
+    //response->printf("\"type\":\"%s\"", (sub->module) ? "module" : "node");
 
     if (sub->module) {
       if (_node != _dlm->node()) {
-        response->printf("    module: %u: %s, state:%u\n", sub->module->id(), sub->module->getName(), sub->state);
+        response->printf(",\"sub\":\"module: %u: %s, state:%u\"", sub->module->id(), sub->module->getName(), sub->state);
       } else {
-        response->printf("    module: %u: %s \n", sub->module->id(), sub->module->getName());
+        response->printf(",\"sub\":\"module: %u: %s\"", sub->module->id(), sub->module->getName());
       }
 
     } else {
-      response->printf("    node: %u\n", sub->extNode);
+      response->printf(",\"sub\":\"node: %u\"", sub->extNode);
     }
+    response->print("}");
   }
+  response->print("]}");
 }
 
 
