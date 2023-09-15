@@ -247,39 +247,36 @@ void DroneSystem::createSafeModeScript() {
 
 
 void DroneSystem::servePinInfo(AsyncWebServerRequest *request) {
-  AsyncResponseStream *response = request->beginResponseStream("text/text");
+  AsyncResponseStream *response = request->beginResponseStream("application/json");
   response->addHeader("Server","ESP Async Web Server");
-  response->print(F("Pins: \n"));
+  response->print("[");
 
+  uint8_t total = 0;
   for (uint8_t i=0; i<DRONE_SYSTEM_PINS; i++) {
     if (_pins[i].state > 0) {
-      response->printf("%u: \n", i);
-      if (_pins[i].state == DRONE_SYSTEM_PIN_STATE_AVAILABLE) {
-        response->printf("  State: Free\n");
-      } else {
-        response->printf("  State: Assigned\n");
-      }
+      if (total > 0 ) response->print(",");
+      total++;
+
+      response->print("{");
+      response->printf("\"id\":%u", i);
+      response->printf(",\"state\":%u", _pins[i].state );
       
-      response->printf("  Capabilities: ");
-      if ((_pins[i].capabilities & DRONE_SYSTEM_PIN_CAP_OUTPUT) > 0) response->printf("  Output, ");
-      if ((_pins[i].capabilities & DRONE_SYSTEM_PIN_CAP_INPUT) > 0) response->printf("  Input, ");
-      if ((_pins[i].capabilities & DRONE_SYSTEM_PIN_CAP_ANALOG) > 0) response->printf("  Analog, ");
-      if ((_pins[i].capabilities & DRONE_SYSTEM_PIN_CAP_SERIAL) > 0) response->printf("  Serial, ");
-      if ((_pins[i].capabilities & DRONE_SYSTEM_PIN_CAP_LED) > 0) response->printf("  LED");
-      response->print("\n");
-
-
-      if (_pins[i].strip >  0) {
-        response->printf("  NeoPixel Strip Attached\n");
-      }
+      response->printf(",\"output\":%u", ((_pins[i].capabilities & DRONE_SYSTEM_PIN_CAP_OUTPUT) > 0) ? 1 : 0);
+      response->printf(",\"input\":%u", ((_pins[i].capabilities & DRONE_SYSTEM_PIN_CAP_INPUT) > 0) ? 1 : 0);
+      response->printf(",\"analog\":%u", ((_pins[i].capabilities & DRONE_SYSTEM_PIN_CAP_ANALOG) > 0) ? 1 : 0);
+      response->printf(",\"serial\":%u", ((_pins[i].capabilities & DRONE_SYSTEM_PIN_CAP_SERIAL) > 0) ? 1 : 0);
+      response->printf(",\"LED\":%u", ((_pins[i].capabilities & DRONE_SYSTEM_PIN_CAP_LED) > 0) ? 1 : 0);
+      
+      response->printf(",\"strip\":%u", (_pins[i].strip >  0) ? 1 : 0);
       
       if (_pins[i].module) {
-        response->printf("  Module: %u: %s \n", _pins[i].module->id(), _pins[i].module->getName());
+        response->printf(",\"module\": \"%u: %s\"", _pins[i].module->id(), _pins[i].module->getName());
       }
-
-      response->print("\n"); 
+      response->print("}");
     }
   }
+
+  response->print("]");
 
   //send the response last
   request->send(response);
