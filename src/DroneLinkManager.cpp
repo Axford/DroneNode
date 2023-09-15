@@ -495,7 +495,7 @@ void DroneLinkManager::serveNodeInfo(AsyncWebServerRequest *request) {
           response->printf(",\"up\": %u", page->nodeInfo[j].uptime);
           response->printf(",\"iName\": \"%s\"", interfaceName);
           response->printf(",\"iType\": %u", page->nodeInfo[j].interface->getInterfaceType());
-          response->printf(",\"avgAt\": %u", page->nodeInfo[j].avgAttempts);
+          response->printf(",\"avgAt\": %.1f", page->nodeInfo[j].avgAttempts);
           response->printf(",\"avgTx\": %.0f", page->nodeInfo[j].avgTxTime);
           response->printf(",\"avgAck\": %.0f", page->nodeInfo[j].avgAckTime);
           response->printf(",\"gU\": %u", page->nodeInfo[j].givenUp);
@@ -729,6 +729,8 @@ void DroneLinkManager::receiveAck(uint8_t *buffer) {
           nextNodeInfo->avgAttempts = (nextNodeInfo->avgAttempts * (DRONE_LINK_MANAGER_AVG_SAMPLES-1) + b->attempts) / DRONE_LINK_MANAGER_AVG_SAMPLES;
           nextNodeInfo->avgAckTime = (nextNodeInfo->avgAckTime * (DRONE_LINK_MANAGER_AVG_SAMPLES-1) + (millis() - b->created)) / DRONE_LINK_MANAGER_AVG_SAMPLES;
         }
+
+        b->attempts = 0;
       }
     }
   }
@@ -1694,6 +1696,7 @@ void DroneLinkManager::processTransmitQueue() {
 
       // give up and release the buffer
       b->state = DRONE_MESH_MSG_BUFFER_STATE_EMPTY;
+      b->attempts = 0;
     }
 
     // check for packets ready to send
