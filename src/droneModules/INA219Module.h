@@ -28,7 +28,7 @@
 #include <Adafruit_INA219.h>
 
 /*
-@I2CBus        0x40
+@I2CAddress        0x40
 */ 
 #define INA219_I2C_ADDRESS  0x40
 

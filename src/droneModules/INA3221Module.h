@@ -27,7 +27,7 @@
 #include "Beastdevices_INA3221.h"
 
 /*
-@I2CBus        0x40
+@I2CAddress        0x40
 */ 
 #define INA3221_I2C_ADDRESS  0x40
 

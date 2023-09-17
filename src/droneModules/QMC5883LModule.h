@@ -36,7 +36,7 @@
 #include "QMC5883LCompass.h"
 
 /*
-@I2CBus        0x0D
+@I2CAddress        0x0D
 */ 
 #define QMC5883L_I2C_ADDRESS  0x0D
 

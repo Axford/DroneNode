@@ -23,7 +23,7 @@
 #include <Adafruit_BME280.h>
 
 /*
-@I2CBus        0x76
+@I2CAddress        0x76
 */ 
 #define BME280_I2C_ADDRESS  0x76
 

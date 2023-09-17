@@ -37,7 +37,7 @@
 #include <AS5600.h>
 
 /*
-@I2CBus        0x36
+@I2CAddress        0x36
 */ 
 #define WIND_I2C_ADDRESS  0x36
 
