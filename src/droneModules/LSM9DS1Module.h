@@ -29,6 +29,10 @@
 #include <Adafruit_LSM9DS1.h>
 #include <Adafruit_Sensor.h>
 
+/*
+@I2CBus        0x1E
+@I2CBus        0x6B
+*/ 
 #define LSM9DS1_I2C_ADDRESS_1  0x1E
 #define LSM9DS1_I2C_ADDRESS_2  0x6B
 

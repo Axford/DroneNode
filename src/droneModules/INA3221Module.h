@@ -26,6 +26,9 @@
 
 #include "Beastdevices_INA3221.h"
 
+/*
+@I2CBus        0x40
+*/ 
 #define INA3221_I2C_ADDRESS  0x40
 
 // @pub 12;f;3;current;Current (Amps) for each channel

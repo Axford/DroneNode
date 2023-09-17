@@ -35,6 +35,9 @@
 #include "I2Cdev.h"
 #include "HMC5883L.h"
 
+/*
+@I2CBus        0x1E
+*/ 
 #define HMC5883L_I2C_ADDRESS  0x1E  // write address, read address is +1
 
 // strings

@@ -23,6 +23,9 @@
 #include "I2Cdev.h"
 #include "SSD1306Wire.h"
 
+/*
+@I2CBus        0x3C
+*/ 
 #define DIAGNOSTIC_I2C_ADDRESS  0x3C
 
 // pubs

@@ -22,6 +22,9 @@
 
 #include "HT16K33.h"
 
+/*
+@I2CBus        0x70
+*/ 
 #define HT16K33_I2C_ADDRESS  0x70  // default address
 
 

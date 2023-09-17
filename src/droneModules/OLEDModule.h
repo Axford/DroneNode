@@ -14,6 +14,9 @@ display.begin(SSD1306_SWITCHCAPVCC, 0x3C)
 
 #include "SSD1306Wire.h"
 
+/*
+@I2CBus        0x3C
+*/ 
 #define OLED_I2C_ADDRESS  0x3c
 
 // pubs

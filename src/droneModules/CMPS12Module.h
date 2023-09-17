@@ -28,6 +28,9 @@ Datasheet: https://static.rapidonline.com/pdf/70-6398_v1.pdf
 
 #include "I2Cdev.h"
 
+/*
+@I2CBus        0x60
+*/ 
 #define CMPS12_I2C_ADDRESS  0x60  // default address
 
 #define CMPS12_ANGLE_8      1 // 8bit Angle register

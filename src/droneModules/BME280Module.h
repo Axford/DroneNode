@@ -22,6 +22,9 @@
 #include <Adafruit_Sensor.h>
 #include <Adafruit_BME280.h>
 
+/*
+@I2CBus        0x76
+*/ 
 #define BME280_I2C_ADDRESS  0x76
 
 // @pub 10;f;1;temperature;Temperature in degrees C

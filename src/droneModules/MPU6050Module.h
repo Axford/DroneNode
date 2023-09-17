@@ -24,6 +24,9 @@
 #include <Adafruit_Sensor.h>
 #include <Adafruit_MPU6050.h>
 
+/*
+@I2CBus        0x68
+*/ 
 #define MPU6050_I2C_ADDRESS  0x68
 
 /// PUBS
