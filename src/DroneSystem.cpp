@@ -314,6 +314,13 @@ void DroneSystem::setupWebServer() {
     _doLoop = true;
   });
 
+  // I2C scan info
+  _server.on("/i2c", HTTP_GET, [&](AsyncWebServerRequest *request) {
+    _doLoop = false;
+    DroneWire::serveScanAllInfo(request);
+    _doLoop = true;
+  });
+
   // DEM handlers
   /*
   _server.on("/macros", HTTP_GET, [&](AsyncWebServerRequest *request){

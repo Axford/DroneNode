@@ -117,3 +117,46 @@ void DroneWire::scanAll() {
   }
   Log.noticeln(F("[DW.sA] Scan complete"));
 }
+
+void DroneWire::serveScanInfo(AsyncResponseStream *response) {
+  response->print("\"addresses\":[");
+  uint8_t found = 0;
+  for (uint8_t addr = 1; addr<127; addr++) {
+    if (addr == _TCAADDR) continue;
+
+    //Log.noticeln(F("%d"), addr);
+
+    Wire.beginTransmission(addr);
+    byte error = Wire.endTransmission();
+    if (error == 0) {
+      //Log.noticeln(F("  Found I2C 0x%x"), addr);
+      if (found > 0) response->print(",");
+      response->printf("\"%u\"", addr);
+      found++;
+    } else if (error == 4) {
+      //Log.noticeln(F("  Unknown response I2C 0x%x"), addr);
+    }
+
+    yield();
+  }
+  response->print("]");
+}
+
+void DroneWire::serveScanAllInfo(AsyncWebServerRequest *request) {
+  AsyncResponseStream *response = request->beginResponseStream("application/json");
+  response->addHeader("Server","ESP Async Web Server");
+  response->print("[");
+  for (uint8_t i=0; i<8; i++) {
+    if (i > 0) response->printf(",");
+    response->print("{");
+    response->printf("\"channel\":%u,", i);
+    selectChannel(i);
+    serveScanInfo(response);
+    response->print("}");
+    delay(1);
+  }
+  response->print("]");
+
+  //send the response last
+  request->send(response);
+}
