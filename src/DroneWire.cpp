@@ -131,7 +131,7 @@ void DroneWire::serveScanInfo(AsyncResponseStream *response) {
     if (error == 0) {
       //Log.noticeln(F("  Found I2C 0x%x"), addr);
       if (found > 0) response->print(",");
-      response->printf("\"%u\"", addr);
+      response->printf("%u", addr);
       found++;
     } else if (error == 4) {
       //Log.noticeln(F("  Unknown response I2C 0x%x"), addr);
