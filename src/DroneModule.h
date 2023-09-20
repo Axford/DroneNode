@@ -71,11 +71,12 @@ things that would be useful for all modules
 
 
 struct DRONE_PARAM_ENTRY {
-  uint8_t paramPriority;  // packed priorty adn param value as sent by dronelink
+  uint8_t paramPriority;  // packed priorty and param value as sent by dronelink
   const __FlashStringHelper *name; // pointer to PROGMEM string entry that describes this param
   uint8_t nameLen;
   uint8_t paramTypeLength;
   boolean publish;
+  boolean changed;  // if it has been change vs its default setting
   DRONE_LINK_PAYLOAD data;
 };
 
@@ -85,6 +86,7 @@ struct DRONE_PARAM_SUB {
   uint8_t addrParam; // param address of the addr value
   boolean received;  // set to true once first value received
   boolean enabled;  // set to false to block sub updates
+  boolean changed;  // if it has been change vs its default setting
   DRONE_LINK_ADDR addr;
   DRONE_PARAM_ENTRY param;
 };

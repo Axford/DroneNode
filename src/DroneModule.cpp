@@ -46,6 +46,10 @@ _fs(LITTLEFS) // TODO - replace with dfs reference
   // alloc for mgmt params
   _mgmtParams = (DRONE_PARAM_ENTRY*)malloc( sizeof(DRONE_PARAM_ENTRY) * DRONE_MGMT_PARAM_ENTRIES);
 
+  for (uint8_t i=0; i<DRONE_MGMT_PARAM_ENTRIES; i++) {
+    _mgmtParams[i].changed = false;
+  }
+
   _mgmtParams[DRONE_MODULE_PARAM_STATUS_E].paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_HIGH, DRONE_MODULE_PARAM_STATUS);
   _mgmtParams[DRONE_MODULE_PARAM_STATUS_E].name = FPSTR(STRING_STATUS);
   _mgmtParams[DRONE_MODULE_PARAM_STATUS_E].nameLen = sizeof(STRING_STATUS);
@@ -128,6 +132,7 @@ void DroneModule::initSubs(uint8_t numSubs) {
   for (uint8_t i=0; i<_numSubs; i++) {
     _subs[i].received = false;
     _subs[i].enabled = true;
+    _subs[i].changed = false;
     _subs[i].addr.source = _dlm->node();
     _subs[i].addr.node = 0;
     _subs[i].addr.channel = 0;
@@ -150,6 +155,7 @@ void DroneModule::initParams(uint8_t numParams) {
 
   for (uint8_t i=0; i<_numParamEntries; i++) {
     _params[i].publish = false;
+    _params[i].changed = false;
     _params[i].paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 4);
     _params[i].data.f[0] = 0;
   }
@@ -276,6 +282,8 @@ void DroneModule::setParamFromList(DRONE_PARAM_ENTRY* pe, char * paramList) {
   uint8_t bufLen=0;
   // parse comma separated list of param values and set them
 
+  pe->changed = true;
+
   // param type
   uint8_t t = (pe->paramTypeLength >> 4) & 0x07;
 
@@ -363,6 +371,16 @@ void DroneModule::registerMgmtParams(DEM_NAMESPACE* ns, DroneExecutionManager *d
 }
 */
 
+void saveFloatParamValue(float v, File *f) {
+  char text2[100]={0};      
+  sprintf(text2,"%0.6f", v);
+  int i=0;
+  for (i=strlen(text2)-1; (i>0) && (text2[i] == '0'); i--) text2[i]=0;
+  // see if the last character is now a period
+  i = strlen(text2)-1;
+  if (text2[i] == '.') text2[i] = 0;
+  f->print(text2);
+}
 
 void DroneModule::saveParamValue(DRONE_PARAM_ENTRY* p, File *f) {
   uint8_t ty = (p->paramTypeLength >> 4) & 0x7;
@@ -388,7 +406,10 @@ void DroneModule::saveParamValue(DRONE_PARAM_ENTRY* p, File *f) {
     switch(ty) {
       case DRONE_LINK_MSG_TYPE_UINT8_T: f->print(p->data.uint8[i]); break;
       case DRONE_LINK_MSG_TYPE_UINT32_T: f->print(p->data.uint32[i]); break;
-      case DRONE_LINK_MSG_TYPE_FLOAT: f->print(p->data.f[i], 6); break;
+      case DRONE_LINK_MSG_TYPE_FLOAT: 
+        saveFloatParamValue(p->data.f[i], f);
+        //f->printf("%0.6f", p->data.f[i]); 
+        break;
       case DRONE_LINK_MSG_TYPE_CHAR: if (p->data.c[i] > 0) f->print(char(p->data.c[i])); 
            break;
     }
@@ -399,7 +420,7 @@ void DroneModule::saveParamValue(DRONE_PARAM_ENTRY* p, File *f) {
 
 
 void DroneModule::saveParam(DRONE_PARAM_ENTRY* p, File *f) {
-  if ((p->paramTypeLength & DRONE_LINK_MSG_WRITABLE)>0) {
+  if ((p->paramTypeLength & DRONE_LINK_MSG_WRITABLE)>0 && p->changed) {
     f->print("  ");
     f->print((PGM_P)p->name);
     f->print(" = ");
@@ -653,6 +674,8 @@ void DroneModule::handleParamMessage(DroneLinkMsg *msg, DRONE_PARAM_ENTRY *param
         // update param paramTypeLength
         param->paramTypeLength = (param->paramTypeLength & 0b11110000) | ((len-1) & 0xF);
 
+        param->changed = true;
+
         //Log.noticeln("[DM.hPM] onParamWrite");
         // trigger callback
         onParamWrite(param);
@@ -700,6 +723,8 @@ void DroneModule::handleSubAddrMessage(DroneLinkMsg *msg, DRONE_PARAM_SUB *sub) 
       // trigger callback
       // TODO: decide if we need callbacks for this?
       //onParamWrite(param);
+
+      sub->changed = true;
 
       // Subscribe to the new address!
       _dlm->subscribe(&sub->addr, this);

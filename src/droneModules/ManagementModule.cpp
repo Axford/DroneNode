@@ -133,6 +133,8 @@ void ManagementModule::onParamWrite(DRONE_PARAM_ENTRY *param) {
 
       // write param back to 0
       _params[MANAGEMENT_PARAM_SAVE_E].data.uint8[0] = 0;
+      // clear changed flag
+      _params[MANAGEMENT_PARAM_SAVE_E].changed = false;
 
       // save live config
       _dem->saveConfiguration();

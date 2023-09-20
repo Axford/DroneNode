@@ -427,3 +427,8 @@ void DroneFS::cancelUpload() {
 
   Log.noticeln("Upload cancelled");  
 }
+
+
+void DroneFS::enumerate() {
+  _root->enumerate();
+}

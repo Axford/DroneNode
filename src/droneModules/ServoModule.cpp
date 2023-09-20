@@ -35,7 +35,7 @@ ServoModule::ServoModule(uint8_t id, DroneSystem* ds):
    param = &_params[SERVO_PARAM_PINS_E];
    param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, SERVO_PARAM_PINS);
    setParamName(FPSTR(STRING_PINS), param);
-   param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_UINT8_T, 3);
+   param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_UINT8_T, 1);
    _params[SERVO_PARAM_PINS_E].data.uint8[0] = 0;
 
    param = &_params[SERVO_PARAM_LIMITS_E];

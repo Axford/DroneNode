@@ -450,7 +450,7 @@ void DroneExecutionManager::loadConfiguration(const char* filename) {
 
 void DroneExecutionManager::saveConfiguration() {
 
-  File f = LITTLEFS.open("/live.ini", "w");
+  File f = LITTLEFS.open("/config.ini", "w");
   if (f) {
     // save node id
     f.print("node = ");
@@ -471,6 +471,8 @@ void DroneExecutionManager::saveConfiguration() {
     f.close();
     
   }
+
+  _ds->dfs.enumerate();
 }
 
 
