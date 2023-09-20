@@ -1,5 +1,12 @@
 #include "DroneSystem.h"
 #include "DroneLogger.h"
+#include "esp_pm.h"
+
+static esp_pm_config_esp32_t pm_config = {
+  .max_freq_mhz =240,// CONFIG_EXAMPLE_MAX_CPU_FREQ_MHZ,
+  .min_freq_mhz = 10,//CONFIG_EXAMPLE_MIN_CPU_FREQ_MHZ,
+  .light_sleep_enable = true
+};
 
 // ----------------------------------------------------------------------------
 // protected
@@ -76,6 +83,9 @@ DroneSystem::DroneSystem() : _server(80), dfs(this), _fsEditor(LITTLEFS, _doLoop
   configurePin(4, DRONE_SYSTEM_PIN_CAP_INPUT | DRONE_SYSTEM_PIN_CAP_OUTPUT | DRONE_SYSTEM_PIN_CAP_ANALOG);
   configurePin(25, DRONE_SYSTEM_PIN_CAP_INPUT | DRONE_SYSTEM_PIN_CAP_OUTPUT | DRONE_SYSTEM_PIN_CAP_ANALOG);
   configurePin(26, DRONE_SYSTEM_PIN_CAP_INPUT | DRONE_SYSTEM_PIN_CAP_OUTPUT | DRONE_SYSTEM_PIN_CAP_ANALOG);
+
+  // enable light sleep
+  esp_pm_configure(&pm_config);
 }
 
 
@@ -547,14 +557,9 @@ void DroneSystem::setup() {
 
   dem->completeSetup();
 
-  // scan I2C buses
-  // TODO - make this a serial or web interface function - no need todo on every boot
-  //DroneWire::scanAll();
-
   // TODO - handle update events
   //_OTAMgr->onEvent = handleOTAEVent;
   //_OTAMgr->init( dmm->hostname() );
-
 
   // flush and close _logFile
   if (_logFile) {
