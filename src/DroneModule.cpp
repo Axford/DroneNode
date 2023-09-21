@@ -90,6 +90,7 @@ _fs(LITTLEFS) // TODO - replace with dfs reference
   _mgmtParams[DRONE_MODULE_PARAM_INTERVAL_E].nameLen = sizeof(STRING_INTERVAL);
   _mgmtParams[DRONE_MODULE_PARAM_INTERVAL_E].publish = true;
   _mgmtParams[DRONE_MODULE_PARAM_INTERVAL_E].paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_UINT32_T, 4);
+  // @default interval=0
   _mgmtParams[DRONE_MODULE_PARAM_INTERVAL_E].data.uint32[0] = 0;  // default no delay between loop calls
 }
 

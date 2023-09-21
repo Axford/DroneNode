@@ -26,6 +26,7 @@
 #include <ESP32Servo.h>
 
 // params
+// @ui pins;pins;output
 // @pub 10;u8;1;w;pins;Servo output pin, see <a href="pins.html">Pin Mappings</a>
 #define SERVO_PARAM_PINS         10
 #define SERVO_PARAM_PINS_E       0

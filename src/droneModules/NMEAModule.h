@@ -1,7 +1,7 @@
 /*
 
 @type          NMEA
-@inherits      I2CBase
+@inherits      Drone
 @description   Manages a serial NMEA GPS device
 
 @config >>>
@@ -41,7 +41,7 @@
 // @pub 14;u32;1;w;baud;Baud rate to use, normally 9600
 #define NMEA_PARAM_BAUD               14
 
-// @pub 15;f;3;fix;w;Fix location - to use as basis for differential GPS signal
+// @pub 15;f;3;w;fix;Fix location - to use as basis for differential GPS signal
 #define NMEA_PARAM_FIX                15
 
 // @pub 16;f;3;r;followMe;Location field with a small target radius

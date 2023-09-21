@@ -4,6 +4,8 @@
 #include "strings.h"
 #include "DroneSystem.h"
 
+// @type           Servo
+
 ServoModule::ServoModule(uint8_t id, DroneSystem* ds):
   DroneModule ( id, ds )
  {
@@ -36,19 +38,22 @@ ServoModule::ServoModule(uint8_t id, DroneSystem* ds):
    param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, SERVO_PARAM_PINS);
    setParamName(FPSTR(STRING_PINS), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_UINT8_T, 1);
+   // @default pins=0
    _params[SERVO_PARAM_PINS_E].data.uint8[0] = 0;
 
    param = &_params[SERVO_PARAM_LIMITS_E];
    param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, SERVO_PARAM_LIMITS);
    setParamName(FPSTR(STRING_LIMITS), param);
-   param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_FLOAT, 8);
+   param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_FLOAT, 4);
+   // @default limits=90
    _params[SERVO_PARAM_LIMITS_E].data.f[0] = 90;  // 90 degrees per second rate limit
-   _params[SERVO_PARAM_LIMITS_E].data.f[1] = 0;  // ignored
+  
 
    param = &_params[SERVO_PARAM_MAP_E];
    param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, SERVO_PARAM_MAP);
    setParamName(FPSTR(STRING_MAP), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_FLOAT, 16);
+   // @default map=0,60,110,180
    _params[SERVO_PARAM_MAP_E].data.f[0] = 0;
    _params[SERVO_PARAM_MAP_E].data.f[1] = 60;
    _params[SERVO_PARAM_MAP_E].data.f[2] = 110;
@@ -58,6 +63,7 @@ ServoModule::ServoModule(uint8_t id, DroneSystem* ds):
    param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, SERVO_PARAM_CENTRE);
    setParamName(FPSTR(STRING_CENTRE), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_FLOAT, 4);
+   // @default centre=0
    _params[SERVO_PARAM_CENTRE_E].data.f[0] = 0;
 
    param = &_params[SERVO_PARAM_OUTPUT_E];

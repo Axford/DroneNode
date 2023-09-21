@@ -39,7 +39,7 @@ Pubs
 #define AVOID_PARAM_TARGET         9
 #define AVOID_PARAM_TARGET_E       1
 
-// @pub 10;f;2;t;threshold;Thresholds, 0=range beyond which vessels will be ignored, 1=radius within which to treat as a collision
+// @pub 10;f;2;w;threshold;Thresholds, 0=range beyond which vessels will be ignored, 1=radius within which to treat as a collision
 #define AVOID_PARAM_THRESHOLD      10
 #define AVOID_PARAM_THRESHOLD_E    2
 
