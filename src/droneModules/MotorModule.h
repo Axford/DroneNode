@@ -25,27 +25,27 @@
 
 // pubs
 
-// @pub 10;u8;3;pins;Pin connections - dependent on mode (e.g. A, B, EN for standard H-bridge)
+// @pub 10;u8;3;w;pins;Pin connections - dependent on mode (e.g. A, B, EN for standard H-bridge)
 #define MOTOR_PARAM_PINS         10
 #define MOTOR_PARAM_PINS_E       0
 
-// @pub 11;u8;1;PWMChannel;Which ESP32 PWM channel to use (default 15), mode 1 requires two channels and will use +1 as well
+// @pub 11;u8;1;w;PWMChannel;Which ESP32 PWM channel to use (default 15), mode 1 requires two channels and will use +1 as well
 #define MOTOR_PARAM_PWMCHANNEL   11
 #define MOTOR_PARAM_PWMCHANNEL_E 1
 
-// @pub 12;f;2;limits;Min and max speed limits in range -1 to 1 (default -1 1)
+// @pub 12;f;2;w;limits;Min and max speed limits in range -1 to 1 (default -1 1)
 #define MOTOR_PARAM_LIMITS       12
 #define MOTOR_PARAM_LIMITS_E     2
 
-// @pub 13;f;1;deadband;Input range within which to set the motor output to zero, interpreted abs(input).  Default 0.3
+// @pub 13;f;1;w;deadband;Input range within which to set the motor output to zero, interpreted abs(input).  Default 0.3
 #define MOTOR_PARAM_DEADBAND     13
 #define MOTOR_PARAM_DEADBAND_E   3
 
-// @pub 14;u8;1;mode;Operational mode. 0: standard H-bridge with A, B, and PWM-EN. 1: BTS7960 with PWM F & R.  2: Cytron with PWM speed + Dir
+// @pub 14;u8;1;w;mode;Operational mode. 0: standard H-bridge with A, B, and PWM-EN. 1: BTS7960 with PWM F & R.  2: Cytron with PWM speed + Dir
 #define MOTOR_PARAM_MODE         14
 #define MOTOR_PARAM_MODE_E       4
 
-// @pub 15;u8;1;invert;Invert output direction (0=normal, 1=inverted)
+// @pub 15;u8;1;w;invert;Invert output direction (0=normal, 1=inverted)
 #define MOTOR_PARAM_INVERT       15
 #define MOTOR_PARAM_INVERT_E     5
 

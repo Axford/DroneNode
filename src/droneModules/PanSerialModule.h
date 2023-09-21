@@ -50,11 +50,11 @@ PanSerial.new 21
 
 // outputs
 
-// @pub 14;f;3;PID;PID values (start with: 0.005 0.0 0.0001)
+// @pub 14;f;3;w;PID;PID values (start with: 0.005 0.0 0.0001)
 #define PAN_SERIAL_PARAM_PID           14
 #define PAN_SERIAL_PARAM_PID_E         0
 
-// @pub 15;u8;1;pan;Pan output in range 0..255 as sent over serial
+// @pub 15;u8;1;r;pan;Pan output in range 0..255 as sent over serial
 #define PAN_SERIAL_PARAM_PAN           15
 #define PAN_SERIAL_PARAM_PAN_E         1
 

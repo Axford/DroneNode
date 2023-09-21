@@ -26,23 +26,23 @@
 #include <ESP32Servo.h>
 
 // params
-// @pub 10;u8;1;pins;Servo output pin, see <a href="pins.html">Pin Mappings</a>
+// @pub 10;u8;1;w;pins;Servo output pin, see <a href="pins.html">Pin Mappings</a>
 #define SERVO_PARAM_PINS         10
 #define SERVO_PARAM_PINS_E       0
 
-// @pub 11;f;1;limits;Movement rate limit in degrees/second (default: 90)
+// @pub 11;f;1;w;limits;Movement rate limit in degrees/second (default: 90)
 #define SERVO_PARAM_LIMITS       11
 #define SERVO_PARAM_LIMITS_E     1
 
-// @pub 12;f;4;map;Bezier curve control points to map input (-1..1) to output (0..180)
+// @pub 12;f;4;w;map;Bezier curve control points to map input (-1..1) to output (0..180)
 #define SERVO_PARAM_MAP          12
 #define SERVO_PARAM_MAP_E        2
 
-// @pub 13;f;1;centre;Centre adjustment, applied after map
+// @pub 13;f;1;w;centre;Centre adjustment, applied after map
 #define SERVO_PARAM_CENTRE       13
 #define SERVO_PARAM_CENTRE_E     3
 
-// @pub 14;f;1;output;The raw angle sent to the Servo PWM controller (0..180)
+// @pub 14;f;1;r;output;The raw angle sent to the Servo PWM controller (0..180)
 #define SERVO_PARAM_OUTPUT       14
 #define SERVO_PARAM_OUTPUT_E     4
 

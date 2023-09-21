@@ -62,31 +62,31 @@ Output parameters:
 
 */
 
-// @pub 8;f;5;target;Lon/Lat of target
+// @pub 8;f;5;r;target;Lon/Lat of target
 #define POLAR_PARAM_TARGET         8
 #define POLAR_PARAM_TARGET_E       0
 
-// @pub 9;u8;1;mode;Mode - passthrough (default), active, reset
+// @pub 9;u8;1;w;mode;Mode - passthrough (default), active, reset
 #define POLAR_PARAM_MODE           9
 #define POLAR_PARAM_MODE_E         1
 
-// @pub 10;f;2;threshold;Min SOG for tack and acceptable deviation from target heading
+// @pub 10;f;2;w;threshold;Min SOG for tack and acceptable deviation from target heading
 #define POLAR_PARAM_THRESHOLD      10
 #define POLAR_PARAM_THRESHOLD_E    2
 
-// @pub 11;u8;16;polar;Calculated polar plot
+// @pub 11;u8;16;r;polar;Calculated polar plot
 #define POLAR_PARAM_POLAR          11
 #define POLAR_PARAM_POLAR_E        3
 
-// @pub 12;u8;16;samples;Number of samples per polar bin
+// @pub 12;u8;16;r;samples;Number of samples per polar bin
 #define POLAR_PARAM_SAMPLES        12
 #define POLAR_PARAM_SAMPLES_E      4
 
-// @pub 13;f;3;radius;Inner, mid and outer target radii
+// @pub 13;f;3;w;radius;Inner, mid and outer target radii
 #define POLAR_PARAM_RADIUS         13
 #define POLAR_PARAM_RADIUS_E       5
 
-// @pub 14;f;2;adjHeading;Adjusted heading - either passthrough of <b>Heading</b> or generated heading depending on mode
+// @pub 14;f;2;r;adjHeading;Adjusted heading - either passthrough of <b>Heading</b> or generated heading depending on mode
 #define POLAR_PARAM_ADJ_HEADING    14
 #define POLAR_PARAM_ADJ_HEADING_E  6
 

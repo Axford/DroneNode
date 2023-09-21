@@ -62,19 +62,19 @@
 #define TURN_RATE_SUBS                3
 
 // pubs
-// @pub 16;f;1;turnRate;turnRate output in range -1..1, where 1 is clockwise
+// @pub 16;f;1;r;turnRate;turnRate output in range -1..1, where 1 is clockwise
 #define TURN_RATE_PARAM_TURN_RATE       16
 #define TURN_RATE_PARAM_TURN_RATE_E     0
 
-// @pub 17;f;1;threshold;Error threshold to trigger the gybe timer (default 20 degrees)
+// @pub 17;f;1;w;threshold;Error threshold to trigger the gybe timer (default 20 degrees)
 #define TURN_RATE_PARAM_THRESHOLD       17
 #define TURN_RATE_PARAM_THRESHOLD_E     1
 
-// @pub 18;f;1;timeout;Timeout duration in seconds after which to initiate the gybe (default 10s)
+// @pub 18;f;1;w;timeout;Timeout duration in seconds after which to initiate the gybe (default 10s)
 #define TURN_RATE_PARAM_TIMEOUT         18
 #define TURN_RATE_PARAM_TIMEOUT_E       2
 
-// @pub 19;u8;1;mode;Mode (0=normal, 1=potential gybe, 2=gybe)
+// @pub 19;u8;1;w;mode;Mode (0=normal, 1=potential gybe, 2=gybe)
 #define TURN_RATE_PARAM_MODE            19
 #define TURN_RATE_PARAM_MODE_E          3
 

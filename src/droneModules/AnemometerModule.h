@@ -27,10 +27,10 @@
 #include "../DroneModule.h"
 
 
-// @pub 11;f;1;speed;wind speed in Knots
+// @pub 11;f;1;r;speed;wind speed in Knots
 #define ANEMOMETER_PARAM_SPEED           10
 
-// @pub 12;u8;1;pins;Pin to use for anemometer interrupt signal
+// @pub 12;u8;1;w;pins;Pin to use for anemometer interrupt signal
 #define ANEMOMETER_PARAM_PINS            11
 
 

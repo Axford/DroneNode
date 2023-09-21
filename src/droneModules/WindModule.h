@@ -42,28 +42,28 @@
 #define WIND_I2C_ADDRESS  0x36
 
 // pubs
-// @pub 10;f;1;direction;local wind direction
+// @pub 10;f;1;r;direction;local wind direction
 #define WIND_PARAM_DIRECTION       (I2CBASE_SUBCLASS_PARAM_START+0)  //10
 
-// @pub 11;f;1;speed;wind speed
+// @pub 11;f;1;r;speed;wind speed
 #define WIND_PARAM_SPEED           (I2CBASE_SUBCLASS_PARAM_START+1)  // 11
 
-// @pub 12;u8;1;pins;Pin to use for anemometer interrupt signal
+// @pub 12;u8;1;w;pins;Pin to use for anemometer interrupt signal
 #define WIND_PARAM_PINS            (I2CBASE_SUBCLASS_PARAM_START+2)  // 12
 
-// // @pub 13;f;1;centre;Calibration for local wind direction
+// // @pub 13;f;1;w;centre;Calibration for local wind direction
 #define WIND_PARAM_CENTRE          (I2CBASE_SUBCLASS_PARAM_START+3)  // 13
 
-// // @pub 14;f;1;wind;World wind direction - combination of local direction and heading
+// // @pub 14;f;1;r;wind;World wind direction - combination of local direction and heading
 #define WIND_PARAM_WIND            (I2CBASE_SUBCLASS_PARAM_START+4)  // 14
 
-// @pub 15;u8;1;mode;Operation mode 0=standard, 1=inverted (upside down, e.g. for water direction sensor), 2=anemometer
+// @pub 15;u8;1;w;mode;Operation mode 0=standard, 1=inverted (upside down, e.g. for water direction sensor), 2=anemometer
 #define WIND_PARAM_MODE            (I2CBASE_SUBCLASS_PARAM_START+5)  // 15
 
-// @pub 18;u8;1;samples;Sample depth for moving average, 1 per interval (default 1, max 60)
+// @pub 18;u8;1;w;samples;Sample depth for moving average, 1 per interval (default 1, max 60)
 #define WIND_PARAM_SAMPLES         (I2CBASE_SUBCLASS_PARAM_START+8)  // 18
 
-// @pub 19;f;1;stats;Average variance relative to the moving average
+// @pub 19;f;1;r;stats;Average variance relative to the moving average
 #define WIND_PARAM_STATS           (I2CBASE_SUBCLASS_PARAM_START+9)  // 19
 
 #define WIND_PARAM_DIRECTION_E     (I2CBASE_PARAM_ENTRIES+0)

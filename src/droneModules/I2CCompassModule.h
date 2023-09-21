@@ -37,24 +37,24 @@
 // pubs
 // pubs of form: <param address>;<type>;<number of values>;<name>;<description>
 
-// @pub 10;f;4;vector;Magnetic field vector after pitch/roll compensation
+// @pub 10;f;4;r;vector;Magnetic field vector after pitch/roll compensation
 #define I2CCOMPASS_PARAM_VECTOR          (I2CBASE_SUBCLASS_PARAM_START+0)
-// @pub 11;f;1;heading;Heading adjusted for magnetic declination
+// @pub 11;f;1;r;heading;Heading adjusted for magnetic declination
 #define I2CCOMPASS_PARAM_HEADING         (I2CBASE_SUBCLASS_PARAM_START+1)  //11
-// @pub 12;f;1;declination;Current declination value
+// @pub 12;f;1;r;declination;Current declination value
 #define I2CCOMPASS_PARAM_DECLINATION     (I2CBASE_SUBCLASS_PARAM_START+2)  //12
-// @pub 13;f;3;calibX;Min, center and max magnetic readings for the X axis
+// @pub 13;f;3;w;calibX;Min, center and max magnetic readings for the X axis
 #define I2CCOMPASS_PARAM_CALIB_X         (I2CBASE_SUBCLASS_PARAM_START+3)  //13
-// @pub 14;f;3;calibY;Min, center and max magnetic readings for the Y axis
+// @pub 14;f;3;w;calibY;Min, center and max magnetic readings for the Y axis
 #define I2CCOMPASS_PARAM_CALIB_Y         (I2CBASE_SUBCLASS_PARAM_START+4)  //14
-// @pub 15;f;3;calibZ;Min, center and max magnetic readings for the Z axis
+// @pub 15;f;3;w;calibZ;Min, center and max magnetic readings for the Z axis
 #define I2CCOMPASS_PARAM_CALIB_Z         (I2CBASE_SUBCLASS_PARAM_START+5)  //15
 
-// @pub 18;f;1;trim;Manual calibration value to adjust heading to match hull (e.g. for a misaligned physical mount)
+// @pub 18;f;1;w;trim;Manual calibration value to adjust heading to match hull (e.g. for a misaligned physical mount)
 #define I2CCOMPASS_PARAM_TRIM            (I2CBASE_SUBCLASS_PARAM_START+8)  //18
-// @pub 20;u8;1;mode;Mode: 0=online calibration, 1=fixed calibration, 2=reset calibration, 3=store calibration
+// @pub 20;u8;1;w;mode;Mode: 0=online calibration, 1=fixed calibration, 2=reset calibration, 3=store calibration
 #define I2CCOMPASS_PARAM_MODE            (I2CBASE_SUBCLASS_PARAM_START+10)  // 20
-// @pub 21;f;4;raw;Raw magnetic field vector
+// @pub 21;f;4;r;raw;Raw magnetic field vector
 #define I2CCOMPASS_PARAM_RAW             (I2CBASE_SUBCLASS_PARAM_START+11)  // 21
 
 

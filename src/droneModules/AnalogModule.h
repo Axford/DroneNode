@@ -24,19 +24,19 @@ Reads an analog value on specified pin (range 0..4095) and maps into the range l
 
 // pubs
 
-// @pub 10;u8;1;pins;Pin for the analog input
+// @pub 10;u8;1;w;pins;Pin for the analog input
 #define ANALOG_PARAM_PINS         10
 #define ANALOG_PARAM_PINS_E       0
 
-// @pub 11;u32;1;raw;Raw analog reading (0..4095)
+// @pub 11;u32;1;r;raw;Raw analog reading (0..4095)
 #define ANALOG_PARAM_RAW          11
 #define ANALOG_PARAM_RAW_E        1
 
-// @pub 12;f;2;limits;Min and max values to map the raw reading into
+// @pub 12;f;2;w;limits;Min and max values to map the raw reading into
 #define ANALOG_PARAM_LIMITS       12
 #define ANALOG_PARAM_LIMITS_E     2
 
-// @pub 13;f;1;analog;Analog value after mapping into min/max range
+// @pub 13;f;1;r;analog;Analog value after mapping into min/max range
 #define ANALOG_PARAM_ANALOG       13
 #define ANALOG_PARAM_ANALOG_E     3
 

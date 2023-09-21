@@ -41,31 +41,31 @@ lon,lat,radius
 #define WAYPOINT_SUBS                 1
 
 // pubs
-// @pub 8;u8;1;mode;Mode 0=normal, 1=Reload waypoint.csv
+// @pub 8;u8;1;w;mode;Mode 0=normal, 1=Reload waypoint.csv
 #define WAYPOINT_PARAM_MODE           8
 #define WAYPOINT_PARAM_MODE_E         0
 
-// @pub 9;u8;1;waypoints;How many waypoints are loaded
+// @pub 9;u8;1;r;waypoints;How many waypoints are loaded
 #define WAYPOINT_PARAM_WAYPOINTS      9
 #define WAYPOINT_PARAM_WAYPOINTS_E    1
 
-// @pub 10;u8;1;waypoint;Current waypoint number
+// @pub 10;u8;1;w;waypoint;Current waypoint number
 #define WAYPOINT_PARAM_WAYPOINT       10
 #define WAYPOINT_PARAM_WAYPOINT_E     2
 
-// @pub 11;f;3;target;Target location of current waypoint, feed to Nav.target
+// @pub 11;f;3;r;target;Target location of current waypoint, feed to Nav.target
 #define WAYPOINT_PARAM_TARGET         11
 #define WAYPOINT_PARAM_TARGET_E       3
 
-// @pub 14;u8;1;loop;0=stop at end of file, 1=loop
+// @pub 14;u8;1;w;loop;0=stop at end of file, 1=loop
 #define WAYPOINT_PARAM_LOOP           14
 #define WAYPOINT_PARAM_LOOP_E         4
 
-// @pub 15;f;3;distance;[0] distance to next waypoint, [1] distance remaining on total path [2] Cumulative length of waypoint path in meters
+// @pub 15;f;3;r;distance;[0] distance to next waypoint, [1] distance remaining on total path [2] Cumulative length of waypoint path in meters
 #define WAYPOINT_PARAM_DISTANCE       15
 #define WAYPOINT_PARAM_DISTANCE_E     5
 
-// @pub 16;f;1;speed;Approx speed along waypoint path in meters per second
+// @pub 16;f;1;r;speed;Approx speed along waypoint path in meters per second
 #define WAYPOINT_PARAM_SPEED          16
 #define WAYPOINT_PARAM_SPEED_E        6
 

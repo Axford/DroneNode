@@ -14,23 +14,23 @@
 
 // pubs
 
-// @pub 8;u8;16;scene;Status scene for a Neopixel module to subscribe to.  Set an initial value for scene to configure brightness, etc
+// @pub 8;u8;16;w;scene;Status scene for a Neopixel module to subscribe to.  Set an initial value for scene to configure brightness, etc
 #define STATUS_PARAM_SCENE         8
 #define STATUS_PARAM_SCENE_E       0
 
-// @pub 10;f;1;value1;Threshold for sub1
+// @pub 10;f;1;w;value1;Threshold for sub1
 #define STATUS_PARAM_VALUE1        10
 #define STATUS_PARAM_VALUE1_E      1
 
-// @pub 11;f;1;value2;Threshold for sub2
+// @pub 11;f;1;w;value2;Threshold for sub2
 #define STATUS_PARAM_VALUE2        11
 #define STATUS_PARAM_VALUE2_E      2
 
-// @pub 12;f;1;value3;Threshold for sub3
+// @pub 12;f;1;w;value3;Threshold for sub3
 #define STATUS_PARAM_VALUE3        12
 #define STATUS_PARAM_VALUE3_E      3
 
-// @pub 13;f;1;value4;Threshold for sub4
+// @pub 13;f;1;w;value4;Threshold for sub4
 #define STATUS_PARAM_VALUE4        13
 #define STATUS_PARAM_VALUE4_E      4
 

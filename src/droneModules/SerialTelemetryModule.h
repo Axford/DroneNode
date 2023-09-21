@@ -23,19 +23,19 @@ SerialTelemetry.new 3
 
 #include "../pinConfig.h"
 
-// @pub 8;u8;1;port;Serial port (0-2, default: 1)
+// @pub 8;u8;1;w;port;Serial port (0-2, default: 1)
 #define SERIAL_TELEMETRY_PARAM_PORT           8
 #define SERIAL_TELEMETRY_PARAM_PORT_E         0
 
-// @pub 9;u32;3;packets;Packet counters for sent, received and rejected
+// @pub 9;u32;3;r;packets;Packet counters for sent, received and rejected
 #define SERIAL_TELEMETRY_PARAM_PACKETS        9
 #define SERIAL_TELEMETRY_PARAM_PACKETS_E      1
 
-// @pub 10;f;3;speed;Packet rates per second for sent, received and rejected
+// @pub 10;f;3;r;speed;Packet rates per second for sent, received and rejected
 #define SERIAL_TELEMETRY_PARAM_SPEED          10
 #define SERIAL_TELEMETRY_PARAM_SPEED_E        2
 
-// @pub 11;u32;1;baud;Baud rate (default: 115200)
+// @pub 11;u32;1;w;baud;Baud rate (default: 115200)
 #define SERIAL_TELEMETRY_PARAM_BAUD           11
 #define SERIAL_TELEMETRY_PARAM_BAUD_E         3
 

@@ -39,13 +39,13 @@ Datasheet: https://static.rapidonline.com/pdf/70-6398_v1.pdf
 // pubs of form: <param address>;<type>;<number of values>;<name>;<description>
 
 
-// @pub 10;f;1;heading;Heading adjusted for magnetic declination
+// @pub 10;f;1;r;heading;Heading adjusted for magnetic declination
 #define CMPS12_PARAM_HEADING         (I2CBASE_SUBCLASS_PARAM_START+0)  //10
-// @pub 11;f;1;declination;Current declination value
+// @pub 11;f;1;r;declination;Current declination value
 #define CMPS12_PARAM_DECLINATION     (I2CBASE_SUBCLASS_PARAM_START+1)  //11
-// @pub 12;f;1;trim;Manual calibration value to adjust heading to match hull (e.g. for a misaligned physical mount)
+// @pub 12;f;1;w;trim;Manual calibration value to adjust heading to match hull (e.g. for a misaligned physical mount)
 #define CMPS12_PARAM_TRIM            (I2CBASE_SUBCLASS_PARAM_START+2)  //12
-// @pub 13;f;2;vector;Pitch and roll vector
+// @pub 13;f;2;r;vector;Pitch and roll vector
 #define CMPS12_PARAM_VECTOR          (I2CBASE_SUBCLASS_PARAM_START+3)  //13
 
 

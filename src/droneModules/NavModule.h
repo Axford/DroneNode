@@ -52,47 +52,47 @@ Target waypoints are defined in terms of Lon Lat and target Radius in meters.
 
 
 // pubs
-// @pub 8;f;1;heading;Target heading to reach target, feed to Sailor.target or TurnRate.target
+// @pub 8;f;1;r;heading;Target heading to reach target, feed to Sailor.target or TurnRate.target
 #define NAV_PARAM_HEADING        8  // required heading
 #define NAV_PARAM_HEADING_E      0
 
-// @pub 9;f;1;distance;Distance to target in meters
+// @pub 9;f;1;r;distance;Distance to target in meters
 #define NAV_PARAM_DISTANCE       9  // distance to go
 #define NAV_PARAM_DISTANCE_E     1
 
-// @pub 14;u8;1;mode;0=idle, 1=goto, 2=follow, 3=absolute course, 4=relative course, 5=backaway, 6=orbit
+// @pub 14;u8;1;w;mode;0=idle, 1=goto, 2=follow, 3=absolute course, 4=relative course, 5=backaway, 6=orbit
 #define NAV_PARAM_MODE           14  // mode
 #define NAV_PARAM_MODE_E         2
 
-// @pub 15;f;3;last;Location when we last received a new target, used to plan track
+// @pub 15;f;3;r;last;Location when we last received a new target, used to plan track
 #define NAV_PARAM_LAST           15  // last waypoint/location
 #define NAV_PARAM_LAST_E         3
 
-// @pub 16;f;3;home;First valid location received since boot, used as home location
+// @pub 16;f;3;r;home;First valid location received since boot, used as home location
 #define NAV_PARAM_HOME           16  // home waypoint/location
 #define NAV_PARAM_HOME_E         4
 
-// @pub 17;f;1;crosstrack;crosstrack ratio indicating distance from ideal track
+// @pub 17;f;1;r;crosstrack;crosstrack ratio indicating distance from ideal track
 #define NAV_PARAM_CROSSTRACK     17  // cross-track ratio
 #define NAV_PARAM_CROSSTRACK_E   5
 
-// @pub 18;f;1;correction;How much to adjust heading to stay on ideal track
+// @pub 18;f;1;w;correction;How much to adjust heading to stay on ideal track
 #define NAV_PARAM_CORRECTION     18  // cross-track correction factor
 #define NAV_PARAM_CORRECTION_E   6
 
-// @pub 19;f;1;crosswind;How much crosswind effect to account for - larger values cause heading to turn into the wind
+// @pub 19;f;1;w;crosswind;How much crosswind effect to account for - larger values cause heading to turn into the wind
 #define NAV_PARAM_CROSSWIND      19  // how much crosswind effect to account for
 #define NAV_PARAM_CROSSWIND_E    7
 
-// @pub 20;f;1;adjHeading;Heading adjusted for crosswind, feed to Sailor.target or TurnRate.target
+// @pub 20;f;1;r;adjHeading;Heading adjusted for crosswind, feed to Sailor.target or TurnRate.target
 #define NAV_PARAM_ADJ_HEADING    20  // heading adj for crosswind
 #define NAV_PARAM_ADJ_HEADING_E  8
 
-// @pub 23;f;1;pitch;Pitch to target - assuming elevation in both location and target
+// @pub 23;f;1;r;pitch;Pitch to target - assuming elevation in both location and target
 #define NAV_PARAM_PITCH          23 
 #define NAV_PARAM_PITCH_E        9
 
-// @pub 24;f;2;limits;Pitch limits (min, max)
+// @pub 24;f;2;w;limits;Pitch limits (min, max)
 #define NAV_PARAM_LIMITS         24
 #define NAV_PARAM_LIMITS_E       10
 

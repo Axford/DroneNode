@@ -41,7 +41,7 @@ things that would be useful for all modules
 // @pub 2;c;16;name;Module name
 #define DRONE_MODULE_PARAM_NAME        2 
 
-// @pub 3;u8;1;1=error, 0=no error
+// @pub 3;u8;1;error;Error flags: 1=error, 0=no error
 #define DRONE_MODULE_PARAM_ERROR       3 
 
 // @pub 4;u32;1;resetCount;Module reset count, e.g. for I2C errors

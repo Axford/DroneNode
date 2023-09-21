@@ -13,11 +13,11 @@
 
 
 //pubs
-// @pub 12;u8;1;pins;Which output pin is connected to the pixel strip
+// @pub 12;u8;1;w;pins;Which output pin is connected to the pixel strip
 #define CYLON_PARAM_PINS            12
 #define CYLON_PARAM_PINS_E          0
 
-// @pub 13;u8;1;numPixels;How many pixels in the strip
+// @pub 13;u8;1;w;numPixels;How many pixels in the strip
 #define CYLON_PARAM_NUMPIXELS       13
 #define CYLON_PARAM_NUMPIXELS_E     1
 

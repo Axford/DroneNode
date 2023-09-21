@@ -30,32 +30,32 @@
 #define MPU6050_I2C_ADDRESS  0x68
 
 /// PUBS
-// @pub 10;f;3;accel;Acceleration vector in G
+// @pub 10;f;3;r;accel;Acceleration vector in G
 #define MPU6050_PARAM_ACCEL         (I2CBASE_SUBCLASS_PARAM_START+0) // 10
-// @pub 11;f;3;gyro;Gyro acceleration vector
+// @pub 11;f;3;r;gyro;Gyro acceleration vector
 #define MPU6050_PARAM_GYRO          (I2CBASE_SUBCLASS_PARAM_START+1) // 11
-// @pub 12;f;1;temperature;Temperature in degrees C
+// @pub 12;f;1;r;temperature;Temperature in degrees C
 #define MPU6050_PARAM_TEMPERATURE   (I2CBASE_SUBCLASS_PARAM_START+2) // 12
-// @pub 13;f;1;pitch;Pitch angle in degrees, negative values are pitch down
+// @pub 13;f;1;r;pitch;Pitch angle in degrees, negative values are pitch down
 #define MPU6050_PARAM_PITCH         (I2CBASE_SUBCLASS_PARAM_START+3)  // 13
-// @pub 14;f;1;roll;Roll angle in degrees, negative values are roll right
+// @pub 14;f;1;r;roll;Roll angle in degrees, negative values are roll right
 #define MPU6050_PARAM_ROLL          (I2CBASE_SUBCLASS_PARAM_START+4) // 14
 
-// @pub 15;f;4;raw;Raw acceleration vector, 4th value is std dev of rolling window
+// @pub 15;f;4;r;raw;Raw acceleration vector, 4th value is std dev of rolling window
 #define MPU6050_PARAM_RAW             (I2CBASE_SUBCLASS_PARAM_START+5)  // 15
-// @pub 16;f;3;calibX;Min, center and max magnetic readings for the X axis
+// @pub 16;f;3;w;calibX;Min, center and max magnetic readings for the X axis
 #define MPU6050_PARAM_CALIB_X         (I2CBASE_SUBCLASS_PARAM_START+6)  // 16
-// @pub 17;f;3;calibY;Min, center and max magnetic readings for the Y axis
+// @pub 17;f;3;w;calibY;Min, center and max magnetic readings for the Y axis
 #define MPU6050_PARAM_CALIB_Y         (I2CBASE_SUBCLASS_PARAM_START+7)  // 17
-// @pub 18;f;3;calibZ;Min, center and max magnetic readings for the Z axis
+// @pub 18;f;3;w;calibZ;Min, center and max magnetic readings for the Z axis
 #define MPU6050_PARAM_CALIB_Z         (I2CBASE_SUBCLASS_PARAM_START+8)  // 18
-// @pub 19;u8;1;mode;Mode: 0=online calibration, 1=fixed calibration, 2=reset calibration, 3=store calibration
+// @pub 19;u8;1;w;mode;Mode: 0=online calibration, 1=fixed calibration, 2=reset calibration, 3=store calibration
 #define MPU6050_PARAM_MODE            (I2CBASE_SUBCLASS_PARAM_START+9)  // 19
 
-// @pub 20;f;3;calibG;Gyro calibration values (bias to zero)
+// @pub 20;f;3;r;calibG;Gyro calibration values (bias to zero)
 #define MPU6050_PARAM_CALIB_G         (I2CBASE_SUBCLASS_PARAM_START+10)  // 20
 
-// @pub 21;f;2;trim;Pitch and roll trims [pitch, roll]
+// @pub 21;f;2;w;trim;Pitch and roll trims [pitch, roll]
 #define MPU6050_PARAM_TRIM            (I2CBASE_SUBCLASS_PARAM_START+11)  // 21
 
 #define MPU6050_PARAM_ACCEL_E         (I2CBASE_PARAM_ENTRIES+0)

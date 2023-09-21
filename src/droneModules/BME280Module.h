@@ -27,13 +27,13 @@
 */ 
 #define BME280_I2C_ADDRESS  0x76
 
-// @pub 10;f;1;temperature;Temperature in degrees C
+// @pub 10;f;1;r;temperature;Temperature in degrees C
 #define BME280_PARAM_TEMPERATURE   (I2CBASE_SUBCLASS_PARAM_START+0) // 10
-// @pub 11;f;1;humidity;Humidity
+// @pub 11;f;1;r;humidity;Humidity
 #define BME280_PARAM_HUMIDITY      (I2CBASE_SUBCLASS_PARAM_START+1) // 11
-// @pub 12;f;1;pressure;Pressure
+// @pub 12;f;1;r;pressure;Pressure
 #define BME280_PARAM_PRESSURE      (I2CBASE_SUBCLASS_PARAM_START+2) // 12
-// @pub 13;f;1;altitude;Altitude in meters
+// @pub 13;f;1;r;altitude;Altitude in meters
 #define BME280_PARAM_ALTITUDE      (I2CBASE_SUBCLASS_PARAM_START+3) // 13
 
 #define BME280_PARAM_TEMPERATURE_E   (I2CBASE_PARAM_ENTRIES+0)

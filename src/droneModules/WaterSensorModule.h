@@ -24,19 +24,19 @@
 
 // pubs
 
-// @pub 10;u8;2;pins;Pins for the sensor: {output pin}, {analog pin}
+// @pub 10;u8;2;w;pins;Pins for the sensor: {output pin}, {analog pin}
 #define WATER_SENSOR_PARAM_PINS         10
 #define WATER_SENSOR_PARAM_PINS_E       0
 
-// @pub 11;u32;1;raw;Raw analog reading (0..4095)
+// @pub 11;u32;1;r;raw;Raw analog reading (0..4095)
 #define WATER_SENSOR_PARAM_RAW          11
 #define WATER_SENSOR_PARAM_RAW_E        1
 
-// @pub 12;u32;1;threshold;Level over which the alarm is triggered
+// @pub 12;u32;1;w;threshold;Level over which the alarm is triggered
 #define WATER_SENSOR_PARAM_THRESHOLD    12
 #define WATER_SENSOR_PARAM_THRESHOLD_E   2
 
-// @pub 13;f;1;alarm;Alarm value, 0=idle, 1=triggered
+// @pub 13;f;1;r;alarm;Alarm value, 0=idle, 1=triggered
 #define WATER_SENSOR_PARAM_ALARM        13
 #define WATER_SENSOR_PARAM_ALARM_E      3
 

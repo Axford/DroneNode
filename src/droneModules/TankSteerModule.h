@@ -30,31 +30,31 @@
 #include "../DroneModule.h"
 
 //pubs
-// @pub 8;f;1;left;Left motor speed output in range -1..1
+// @pub 8;f;1;r;left;Left motor speed output in range -1..1
 #define TANK_STEER_PARAM_LEFT          8
 #define TANK_STEER_PARAM_LEFT_E        0
 
-// @pub 9;f;1;right;Right motor speed output in range -1..1
+// @pub 9;f;1;r;right;Right motor speed output in range -1..1
 #define TANK_STEER_PARAM_RIGHT         9
 #define TANK_STEER_PARAM_RIGHT_E       1
 
-// @pub 16;u8;1;mode;1=Automated (responds to speed and turnRate subs) or 0=Manual (ignores subs, but speed and turnRate values can be directly written to)
+// @pub 16;u8;1;w;mode;1=Automated (responds to speed and turnRate subs) or 0=Manual (ignores subs, but speed and turnRate values can be directly written to)
 #define TANK_STEER_PARAM_MODE          10
 #define TANK_STEER_PARAM_MODE_E        2
 
-// @pub 14;f;1;trim;Applied to turnRate value to correct left/right imbalance in motor power
+// @pub 14;f;1;w;trim;Applied to turnRate value to correct left/right imbalance in motor power
 #define TANK_STEER_PARAM_TRIM          11
 #define TANK_STEER_PARAM_TRIM_E        3
 
-// @pub 12;f;3;PID;PID settings for turnRate control
+// @pub 12;f;3;w;PID;PID settings for turnRate control
 #define TANK_STEER_PARAM_PID           12
 #define TANK_STEER_PARAM_PID_E         4
  
-// @pub 12;f;2;limits;Min and max output speed range
+// @pub 12;f;2;w;limits;Min and max output speed range
 #define TANK_STEER_PARAM_LIMITS        13
 #define TANK_STEER_PARAM_LIMITS_E      5
 
-// @pub 13;f;1;threshold;Distance in meters within which to throttle down to min limit
+// @pub 13;f;1;w;threshold;Distance in meters within which to throttle down to min limit
 #define TANK_STEER_PARAM_THRESHOLD     14
 #define TANK_STEER_PARAM_THRESHOLD_E   6
 

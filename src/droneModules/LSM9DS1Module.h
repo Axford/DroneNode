@@ -39,19 +39,19 @@
 // pubs
 // pubs of form: <param address>;<type>;<number of values>;<name>;<description>
 
-// @pub 10;f;4;vector;Raw magnetic field vector
+// @pub 10;f;4;r;vector;Raw magnetic field vector
 #define LSM9DS1_PARAM_VECTOR          (I2CBASE_SUBCLASS_PARAM_START+0)
-// @pub 11;f;1;heading;Heading adjusted for magnetic declination
+// @pub 11;f;1;r;heading;Heading adjusted for magnetic declination
 #define LSM9DS1_PARAM_HEADING         (I2CBASE_SUBCLASS_PARAM_START+1)  //11
-// @pub 12;f;1;declination;Current declination value
+// @pub 12;f;1;w;declination;Current declination value
 #define LSM9DS1_PARAM_DECLINATION     (I2CBASE_SUBCLASS_PARAM_START+2)  //12
-// @pub 13;f;3;calibX;Min, center and max magnetic readings for the X axis
+// @pub 13;f;3;w;calibX;Min, center and max magnetic readings for the X axis
 #define LSM9DS1_PARAM_CALIB_X         (I2CBASE_SUBCLASS_PARAM_START+3)  //13
-// @pub 14;f;3;calibY;Min, center and max magnetic readings for the Y axis
+// @pub 14;f;3;w;calibY;Min, center and max magnetic readings for the Y axis
 #define LSM9DS1_PARAM_CALIB_Y         (I2CBASE_SUBCLASS_PARAM_START+4)  //14
-// @pub 15;f;1;trim;Manual calibration value to adjust heading to match hull (e.g. for a misaligned physical mount)
+// @pub 15;f;1;w;trim;Manual calibration value to adjust heading to match hull (e.g. for a misaligned physical mount)
 #define LSM9DS1_PARAM_TRIM            (I2CBASE_SUBCLASS_PARAM_START+5)  //15
-// @pub 18;f;4;limits;Averaged limits at the four quadrants, used to refine the calibration onoine
+// @pub 18;f;4;w;limits;Averaged limits at the four quadrants, used to refine the calibration onoine
 #define LSM9DS1_PARAM_LIMITS            (I2CBASE_SUBCLASS_PARAM_START+8)  // 18
 
 #define LSM9DS1_PARAM_VECTOR_E          (I2CBASE_PARAM_ENTRIES+0)

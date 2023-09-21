@@ -25,15 +25,15 @@
 #define SPEED_CONTROL_SUBS               1
 
 // outputs
-// @pub 12;f;2;limits;Min and max output speed range
+// @pub 12;f;2;w;limits;Min and max output speed range
 #define SPEED_CONTROL_PARAM_LIMITS       12
 #define SPEED_CONTROL_PARAM_LIMITS_E     0
 
-// @pub 13;f;1;threshold;Distance in meters within which to throttle down to min limit
+// @pub 13;f;1;w;threshold;Distance in meters within which to throttle down to min limit
 #define SPEED_CONTROL_PARAM_THRESHOLD    13
 #define SPEED_CONTROL_PARAM_THRESHOLD_E  1
 
-// @pub 14;f;1;speed;Output speed
+// @pub 14;f;1;r;speed;Output speed
 #define SPEED_CONTROL_PARAM_SPEED        14
 #define SPEED_CONTROL_PARAM_SPEED_E      2
 

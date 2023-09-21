@@ -20,37 +20,37 @@
 #include "../DroneModule.h"
 #include "MicroNMEA.h"
 
-// @pub 8;f;3;location;Current GPS location (inc altitude)
+// @pub 8;f;3;r;location;Current GPS location (inc altitude)
 #define NMEA_PARAM_LOCATION           8
 
-// @pub 9;f;1;satellites;Number of satellites used for fix
+// @pub 9;f;1;r;satellites;Number of satellites used for fix
 #define NMEA_PARAM_SATELLITES         9
 
-// @pub 10;f;1;heading;Current heading over ground (inferred by motion or from dual GPS setup)
+// @pub 10;f;1;r;heading;Current heading over ground (inferred by motion or from dual GPS setup)
 #define NMEA_PARAM_HEADING            10
 
-// @pub 11;f;1;speed;Current speed over ground
+// @pub 11;f;1;r;speed;Current speed over ground
 #define NMEA_PARAM_SPEED              11
 
-// @pub 12;f;1;HDOP;Current Horizontal Dilution of Precision
+// @pub 12;f;1;r;HDOP;Current Horizontal Dilution of Precision
 #define NMEA_PARAM_HDOP               12
 
-// @pub 13;u8;2;port;Which serial port to use (0,1 or 2) and optional second port for a dual GPS setup (default 255 for no port)
+// @pub 13;u8;2;w;port;Which serial port to use (0,1 or 2) and optional second port for a dual GPS setup (default 255 for no port)
 #define NMEA_PARAM_PORT               13
 
-// @pub 14;u32;1;baud;Baud rate to use, normally 9600
+// @pub 14;u32;1;w;baud;Baud rate to use, normally 9600
 #define NMEA_PARAM_BAUD               14
 
-// @pub 15;f;3;fix;Fix location - to use as basis for differential GPS signal
+// @pub 15;f;3;fix;w;Fix location - to use as basis for differential GPS signal
 #define NMEA_PARAM_FIX                15
 
-// @pub 16;f;3;followMe;Location field with a small target radius
+// @pub 16;f;3;r;followMe;Location field with a small target radius
 #define NMEA_PARAM_FOLLOWME           16
 
-// @pub 17;u32;3;packets;Number of NMEA packets (sentences) received (valid, invalid, unknown)
+// @pub 17;u32;3;r;packets;Number of NMEA packets (sentences) received (valid, invalid, unknown)
 #define NMEA_PARAM_PACKETS            17
 
-// @pub 18;f;3;location;Current GPS location of secondary GPS module (inc altitude)
+// @pub 18;f;3;r;location;Current GPS location of secondary GPS module (inc altitude)
 #define NMEA_PARAM_LOCATION2          18
 
 #define NMEA_PARAM_LOCATION_E         0

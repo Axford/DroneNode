@@ -31,27 +31,27 @@
 Pubs
 */
 
-// @pub 8;f;1;adjHeading;Adjusted heading - either passthrough of <b>Heading</b> or generated to avoid obstacle
+// @pub 8;f;1;r;adjHeading;Adjusted heading - either passthrough of <b>Heading</b> or generated to avoid obstacle
 #define AVOID_PARAM_ADJ_HEADING    8
 #define AVOID_PARAM_ADJ_HEADING_E  0
 
-// @pub 9;f;4;target;Target Lon, Lat, COG and SOG
+// @pub 9;f;4;r;target;Target Lon, Lat, COG and SOG
 #define AVOID_PARAM_TARGET         9
 #define AVOID_PARAM_TARGET_E       1
 
-// @pub 10;f;2;threshold;Thresholds, 0=range beyond which vessels will be ignored, 1=radius within which to treat as a collision
+// @pub 10;f;2;t;threshold;Thresholds, 0=range beyond which vessels will be ignored, 1=radius within which to treat as a collision
 #define AVOID_PARAM_THRESHOLD      10
 #define AVOID_PARAM_THRESHOLD_E    2
 
-// @pub 11;u32;4;vessel;Number of vessels, 0=total, 1=in range, 2=colliding, 3=mmsi of most urgent potential collision
+// @pub 11;u32;4;r;vessel;Number of vessels, 0=total, 1=in range, 2=colliding, 3=mmsi of most urgent potential collision
 #define AVOID_PARAM_VESSEL         11
 #define AVOID_PARAM_VESSEL_E       3
 
-// @pub 12;u32;2;packets;0=Number of NMEA packets recevied, 1=Number of successfully parsed AIS messages
+// @pub 12;u32;2;r;packets;0=Number of NMEA packets recevied, 1=Number of successfully parsed AIS messages
 #define AVOID_PARAM_PACKETS        12
 #define AVOID_PARAM_PACKETS_E      4
 
-// @pub 13;f;1;ETC;estimated time to collision
+// @pub 13;f;1;r;ETC;estimated time to collision
 #define AVOID_PARAM_ETC            13
 #define AVOID_PARAM_ETC_E          5
 

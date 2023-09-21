@@ -69,51 +69,51 @@ config (pubs)
 
 
 //pubs
-// @pub 16;f;1;course;Selected course/bearing - feed to Turnrate
+// @pub 16;f;1;r;course;Selected course/bearing - feed to Turnrate
 #define SAILOR_PARAM_COURSE            16
 #define SAILOR_PARAM_COURSE_E          0
 
-// @pub 17;f;1;sheet;Sheet servo control value in range -1 (close haul) to 1 (run)
+// @pub 17;f;1;r;sheet;Sheet servo control value in range -1 (close haul) to 1 (run)
 #define SAILOR_PARAM_SHEET             17
 #define SAILOR_PARAM_SHEET_E           1
 
-// @pub 18;u8;16;polar;Polar map for starboard wind (0-180 degrees), mirrored for port.  0=stall, 255=max relative speed
+// @pub 18;u8;16;w;polar;Polar map for starboard wind (0-180 degrees), mirrored for port.  0=stall, 255=max relative speed
 #define SAILOR_PARAM_POLAR             18
 #define SAILOR_PARAM_POLAR_E           2
 
-// @pub 19;u8;16;speed;polar plot of estimated speeds by heading - 0-180
+// @pub 19;u8;16;r;speed;polar plot of estimated speeds by heading - 0-180
 #define SAILOR_PARAM_SPEED             19   
 #define SAILOR_PARAM_SPEED_E           3
 
-// @pub 20;u8;16;speed2;polar plot of estimated speeds by heading - 180-360
+// @pub 20;u8;16;r;speed2;polar plot of estimated speeds by heading - 180-360
 #define SAILOR_PARAM_SPEED2            20   
 #define SAILOR_PARAM_SPEED2_E          4
 
-// @pub 21;u8;5;flags;[0] = state, [1] = tack state,  [2] = gybe state, [3] = course wind packed into 0..255
+// @pub 21;u8;5;r;flags;[0] = state, [1] = tack state,  [2] = gybe state, [3] = course wind packed into 0..255
 #define SAILOR_PARAM_FLAGS             21  
 #define SAILOR_PARAM_FLAGS_E           5
 
-// @pub 22;u8;1;wing;Wingsail flap position.. 1 = starboard wind, -1 = port wind
+// @pub 22;u8;1;r;wing;Wingsail flap position.. 1 = starboard wind, -1 = port wind
 #define SAILOR_PARAM_WING              22   
 #define SAILOR_PARAM_WING_E            6
 
-// @pub 23;f;3;PID;PID values for rudder control (start with: 0.005 0.0 0.0)
+// @pub 23;f;3;w;PID;PID values for rudder control (start with: 0.005 0.0 0.0)
 #define SAILOR_PARAM_PID               23
 #define SAILOR_PARAM_PID_E             7
 
-// @pub 24;f;1;rudder;Rudder output to feed a servo (-1..1)
+// @pub 24;f;1;r;rudder;Rudder output to feed a servo (-1..1)
 #define SAILOR_PARAM_RUDDER            24
 #define SAILOR_PARAM_RUDDER_E          8
 
-// @pub 25;f;1;threshold;Error threshold to trigger the gybe timer (default 20 degrees)
+// @pub 25;f;1;w;threshold;Error threshold to trigger the gybe timer (default 20 degrees)
 #define SAILOR_PARAM_THRESHOLD         25
 #define SAILOR_PARAM_THRESHOLD_E       9
 
-// @pub 26;f;1;timeout;Timeout duration in seconds after which to initiate the gybe (default 10s)
+// @pub 26;f;1;w;timeout;Timeout duration in seconds after which to initiate the gybe (default 10s)
 #define SAILOR_PARAM_TIMEOUT           26
 #define SAILOR_PARAM_TIMEOUT_E         10
 
-// @pub 27;u8;1;mode;Mode (0=normal, 1=gybe only)
+// @pub 27;u8;1;w;mode;Mode (0=normal, 1=gybe only)
 #define SAILOR_PARAM_MODE              27
 #define SAILOR_PARAM_MODE_E            11
 

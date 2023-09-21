@@ -32,7 +32,7 @@
 // pubs of form: <param address>;<type>;<number of values>;<name>;<description>
 
 
-// @pub 10;f;1;distance;Distance in mm
+// @pub 10;f;1;r;distance;Distance in mm
 #define VL53L0X_PARAM_DISTANCE         (I2CBASE_SUBCLASS_PARAM_START+0)  //10
 
 

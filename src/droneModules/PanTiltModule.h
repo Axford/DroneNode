@@ -42,15 +42,15 @@ PanTilt.new 21
 
 // outputs
 
-// @pub 14;f;3;PID;PID values (start with: 0.005 0.0 0.0001)
+// @pub 14;f;3;w;PID;PID values (start with: 0.005 0.0 0.0001)
 #define PAN_TILT_PARAM_PID           14
 #define PAN_TILT_PARAM_PID_E         0
 
-// @pub 15;f;2;limits;Limits of servo travel in degrees (default -90 90)
+// @pub 15;f;2;w;limits;Limits of servo travel in degrees (default -90 90)
 #define PAN_TILT_PARAM_LIMITS        15
 #define PAN_TILT_PARAM_LIMITS_E      1
 
-// @pub 16;f;1;pan;Pan output in range -1..1, to be fed to servo
+// @pub 16;f;1;r;pan;Pan output in range -1..1, to be fed to servo
 #define PAN_TILT_PARAM_PAN           16
 #define PAN_TILT_PARAM_PAN_E         2
 

@@ -33,20 +33,20 @@ byte    = value
 [0...n] = DroneLinkMsg raw data
 */
 
-// @pub 8;u32;1;port;UDP port to broadcast to, default 8007
+// @pub 8;u32;1;w;port;UDP port to broadcast to, default 8007
 #define UDP_PARAM_PORT               8
 
-// @pub 9;u8;4;broadcast;IP address to broadcast to, default: 255,255,255,255
+// @pub 9;u8;4;w;broadcast;IP address to broadcast to, default: 255,255,255,255
 #define UDP_PARAM_BROADCAST          9
 
 #define UDP_PARAM_PORT_E             0
 #define UDP_PARAM_BROADCAST_E        1
 
-// @pub 10;u32;3;packets;Packet counters for sent, received and rejected
+// @pub 10;u32;3;r;packets;Packet counters for sent, received and rejected
 #define UDP_TELEMETRY_PARAM_PACKETS        10
 #define UDP_TELEMETRY_PARAM_PACKETS_E      2
 
-// @pub 11;f;3;speed;Packet rates per second for sent, received and rejected
+// @pub 11;f;3;r;speed;Packet rates per second for sent, received and rejected
 #define UDP_TELEMETRY_PARAM_SPEED          11
 #define UDP_TELEMETRY_PARAM_SPEED_E        3
 
