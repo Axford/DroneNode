@@ -30,27 +30,33 @@ things that would be useful for all modules
 
 // defines for common params
 
-// @pub 1;u8;1;status;0=disabled, 1=enabled, 2=waiting for valid subscriptions, write a value of 255 to trigger reset (TODO)
+// @publish status
+// @default status=1
+// @pub 1;u8;1;w;status;0=disabled, 1=enabled, 2=waiting for valid subscriptions, write a value of 255 to trigger reset (TODO)
 #define DRONE_MODULE_PARAM_STATUS      1 
 
 #define DRONE_MODULE_STATUS_DISABLED   0
 #define DRONE_MODULE_STATUS_ENABLED    1
 #define DRONE_MODULE_STATUS_WAITING    2
 
-
-// @pub 2;c;16;name;Module name
+// @publish name
+// @pub 2;c;16;w;name;Module name
 #define DRONE_MODULE_PARAM_NAME        2 
 
-// @pub 3;u8;1;error;Error flags: 1=error, 0=no error
+// @publish error
+// @pub 3;u8;1;r;error;Error flags: 1=error, 0=no error
 #define DRONE_MODULE_PARAM_ERROR       3 
 
-// @pub 4;u32;1;resetCount;Module reset count, e.g. for I2C errors
+// @publish resetCount
+// @pub 4;u32;1;r;resetCount;Module reset count, e.g. for I2C errors
 #define DRONE_MODULE_PARAM_RESETCOUNT  4
 
-// @pub 5;c;16;type;Module type name (class name)
+// @publish type
+// @pub 5;c;16;r;type;Module type name (class name)
 #define DRONE_MODULE_PARAM_TYPE        5
 
-// @pub 6;u32;1;interval;Number of milliseconds between updates
+// @publish interval
+// @pub 6;u32;1;w;interval;Number of milliseconds between updates
 #define DRONE_MODULE_PARAM_INTERVAL    6
 
 // indices
