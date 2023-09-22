@@ -50,7 +50,7 @@
 // @pub 17;u32;3;r;packets;Number of NMEA packets (sentences) received (valid, invalid, unknown)
 #define NMEA_PARAM_PACKETS            17
 
-// @pub 18;f;3;r;location;Current GPS location of secondary GPS module (inc altitude)
+// @pub 18;f;3;r;location2;Current GPS location of secondary GPS module (inc altitude)
 #define NMEA_PARAM_LOCATION2          18
 
 #define NMEA_PARAM_LOCATION_E         0
