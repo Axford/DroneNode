@@ -25,6 +25,7 @@
 
 /*
 @I2CAddress        0x70
+@default addr = 112
 */ 
 #define HT16K33_I2C_ADDRESS  0x70  // default address
 

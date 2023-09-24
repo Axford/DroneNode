@@ -26,6 +26,7 @@
 
 /*
 @I2CAddress        0x29
+@default addr = 41
 */ 
 #define VL53L0X_I2C_ADDRESS  0x29  // default address
 

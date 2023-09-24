@@ -39,6 +39,7 @@
 
 /*
 @I2CAddress        0x36
+@default addr = 54
 */ 
 #define WIND_I2C_ADDRESS  0x36
 

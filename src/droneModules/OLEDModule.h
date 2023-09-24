@@ -16,6 +16,7 @@ display.begin(SSD1306_SWITCHCAPVCC, 0x3C)
 
 /*
 @I2CAddress        0x3C
+@default addr = 60
 */ 
 #define OLED_I2C_ADDRESS  0x3c
 

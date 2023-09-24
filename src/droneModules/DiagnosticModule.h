@@ -26,6 +26,7 @@
 
 /*
 @I2CAddress        0x3C
+@default addr = 60
 */ 
 #define DIAGNOSTIC_I2C_ADDRESS  0x3C
 

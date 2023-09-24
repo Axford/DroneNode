@@ -27,6 +27,7 @@
 
 /*
 @I2CAddress        0x68
+@default addr = 104
 */ 
 #define MPU6050_I2C_ADDRESS  0x68
 

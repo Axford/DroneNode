@@ -38,6 +38,7 @@
 
 /*
 @I2CAddress        0x0D
+@default addr = 13
 */ 
 #define QMC5883L_I2C_ADDRESS  0x0D
 

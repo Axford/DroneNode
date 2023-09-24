@@ -31,6 +31,7 @@ Datasheet: https://static.rapidonline.com/pdf/70-6398_v1.pdf
 
 /*
 @I2CAddress        0x60
+@default addr = 96
 */ 
 #define CMPS12_I2C_ADDRESS  0x60  // default address
 

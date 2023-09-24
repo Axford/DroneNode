@@ -19,6 +19,7 @@ display.begin(SSD1306_SWITCHCAPVCC, 0x3C)
 
 /*
 @I2CAddress        0x3c
+@default addr = 60
 */ 
 #define CONTROLLER_OLED_I2C_ADDRESS  0x3c
 

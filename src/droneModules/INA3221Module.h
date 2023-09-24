@@ -29,6 +29,7 @@
 
 /*
 @I2CAddress        0x40
+@default addr = 64
 */ 
 #define INA3221_I2C_ADDRESS  0x40
 

@@ -38,6 +38,7 @@
 
 /*
 @I2CAddress        0x1E
+@default addr = 30
 */ 
 #define HMC5883L_I2C_ADDRESS  0x1E  // write address, read address is +1
 

@@ -32,6 +32,7 @@
 
 /*
 @I2CAddress        0x1E
+@default addr = 30
 @I2CAddress        0x6B
 */ 
 #define LSM9DS1_I2C_ADDRESS_1  0x1E
