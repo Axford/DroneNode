@@ -14,6 +14,7 @@ NavModule::NavModule(uint8_t id, DroneSystem* ds):
  {
    setTypeName(FPSTR(NAV_STR_NAV));
 
+   // @default interval = 1000
    _mgmtParams[DRONE_MODULE_PARAM_INTERVAL_E].data.uint32[0] = 1000;
 
    _atTarget = false;
@@ -95,6 +96,7 @@ NavModule::NavModule(uint8_t id, DroneSystem* ds):
    _params[NAV_PARAM_CORRECTION_E].name = FPSTR(STRING_CORRECTION);
    _params[NAV_PARAM_CORRECTION_E].nameLen = sizeof(STRING_CORRECTION);
    _params[NAV_PARAM_CORRECTION_E].paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 4);
+   // @default correction=20
    _params[NAV_PARAM_CORRECTION_E].data.f[0] = 20;
 
    DRONE_PARAM_ENTRY *param;
@@ -102,6 +104,7 @@ NavModule::NavModule(uint8_t id, DroneSystem* ds):
    param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, NAV_PARAM_CROSSWIND);
    setParamName(FPSTR(STRING_CROSSWIND), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_FLOAT, 4);
+   // @default crosswind=0.5
    _params[NAV_PARAM_CROSSWIND_E].data.f[0] = 0.5;
 
    param = &_params[NAV_PARAM_ADJ_HEADING_E];
@@ -118,6 +121,7 @@ NavModule::NavModule(uint8_t id, DroneSystem* ds):
    param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, NAV_PARAM_LIMITS);
    setParamName(FPSTR(STRING_LIMITS), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_FLOAT, 8);
+   // @default limits=-25,10
    param->data.f[0] = -25;
    param->data.f[1] = 10;
 }

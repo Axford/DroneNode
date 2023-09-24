@@ -37,12 +37,14 @@ MotorModule::MotorModule(uint8_t id, DroneSystem* ds):
    param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, MOTOR_PARAM_PWMCHANNEL);
    setParamName(FPSTR(STRING_PWM_CHANNEL), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_UINT8_T, 1);
+   // @default PWMChannel=15
    _params[MOTOR_PARAM_PWMCHANNEL_E].data.uint8[0] = 15;
 
    param = &_params[MOTOR_PARAM_LIMITS_E];
    param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, MOTOR_PARAM_LIMITS);
    setParamName(FPSTR(STRING_LIMITS), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_FLOAT, 8);
+   // @default limits=-1,1
    _params[MOTOR_PARAM_LIMITS_E].data.f[0] = -1;
    _params[MOTOR_PARAM_LIMITS_E].data.f[1] = 1;
 
@@ -50,6 +52,7 @@ MotorModule::MotorModule(uint8_t id, DroneSystem* ds):
    param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, MOTOR_PARAM_DEADBAND);
    setParamName(FPSTR(STRING_DEADBAND), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_FLOAT, 4);
+   // @default deadband=0.3
    _params[MOTOR_PARAM_DEADBAND_E].data.f[0] = 0.3;
 
    param = &_params[MOTOR_PARAM_MODE_E];

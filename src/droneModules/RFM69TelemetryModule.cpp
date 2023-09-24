@@ -55,12 +55,14 @@ RFM69TelemetryModule::RFM69TelemetryModule(uint8_t id, DroneSystem* ds):
    param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, RFM69_TELEMETRY_PARAM_POWER);
    setParamName(FPSTR(STRING_POWER), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_FLOAT, 4);
+   // @default power=20
    param->data.f[0] = 20;
 
    param = &_params[RFM69_TELEMETRY_PARAM_FREQUENCY_E];
    param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, RFM69_TELEMETRY_PARAM_FREQUENCY);
    setParamName(FPSTR(STRING_FREQUENCY), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_UINT32_T, 4);
+   // @default frequency=915
    param->data.uint32[0] = 915;
 
    param = &_params[RFM69_TELEMETRY_PARAM_THRESHOLD_E];

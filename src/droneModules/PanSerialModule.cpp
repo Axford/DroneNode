@@ -17,6 +17,7 @@ PanSerialModule::PanSerialModule(uint8_t id, DroneSystem* ds):
    _lastTarget = 0;
 
    // set default interval to 1000
+   // @default interval = 1000
    _mgmtParams[DRONE_MODULE_PARAM_INTERVAL_E].data.uint32[0] = 1000;
 
    // subs

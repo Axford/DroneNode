@@ -14,6 +14,7 @@ DepthModule::DepthModule(uint8_t id, DroneSystem* ds):
    _logPos[1] = 0;
 
    // set default interval to 1000
+   // @default interval = 1000
    _mgmtParams[DRONE_MODULE_PARAM_INTERVAL_E].data.uint32[0] = 1000;
 
    // subs
@@ -42,12 +43,14 @@ DepthModule::DepthModule(uint8_t id, DroneSystem* ds):
    param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, DEPTH_PARAM_SPEED);
    setParamName(FPSTR(STRING_PWM_CHANNEL), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_FLOAT, 4);
+      // @default speed=1480
    _params[DEPTH_PARAM_SPEED_E].data.f[0] = 1480;
 
    param = &_params[DEPTH_PARAM_LIMITS_E];
    param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, DEPTH_PARAM_LIMITS);
    setParamName(FPSTR(STRING_LIMITS), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_FLOAT, 8);
+      // @default limits=0.25, 10
    _params[DEPTH_PARAM_LIMITS_E].data.f[0] = 0.25;
    _params[DEPTH_PARAM_LIMITS_E].data.f[1] = 10;
 

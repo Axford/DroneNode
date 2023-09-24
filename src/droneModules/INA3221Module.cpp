@@ -60,6 +60,7 @@ INA3221Module::INA3221Module(uint8_t id, DroneSystem* ds):
    param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, INA3221_PARAM_CELLS);
    setParamName(FPSTR(STRING_CELLS), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_UINT8_T, 3);
+   // @default cells=3,3,3
    param->data.uint8[0] = 3;
    param->data.uint8[1] = 3;
    param->data.uint8[2] = 3;
@@ -68,6 +69,7 @@ INA3221Module::INA3221Module(uint8_t id, DroneSystem* ds):
    param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, INA3221_PARAM_THRESHOLD);
    setParamName(FPSTR(STRING_THRESHOLD), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_FLOAT, 12);
+   // @default threshold=11.2,11.2,11.2
    param->data.f[0] = 11.2;
    param->data.f[1] = 11.2;
    param->data.f[2] = 11.2;
@@ -76,6 +78,7 @@ INA3221Module::INA3221Module(uint8_t id, DroneSystem* ds):
    param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, INA3221_PARAM_SHUNT);
    setParamName(FPSTR(STRING_SHUNT), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_FLOAT, 12);
+   // @default shunt=100,100,100
    param->data.f[0] = 100;
    param->data.f[1] = 100;
    param->data.f[2] = 100;

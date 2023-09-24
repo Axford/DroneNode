@@ -51,12 +51,14 @@ TurnRateModule::TurnRateModule(uint8_t id, DroneSystem* ds):
    _params[TURN_RATE_PARAM_THRESHOLD_E].name = FPSTR(STRING_THRESHOLD);
    _params[TURN_RATE_PARAM_THRESHOLD_E].nameLen = sizeof(STRING_THRESHOLD);
    _params[TURN_RATE_PARAM_THRESHOLD_E].paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_FLOAT, 4);
+   // @default threshold=20
    _params[TURN_RATE_PARAM_THRESHOLD_E].data.f[0] = 20;
 
    _params[TURN_RATE_PARAM_TIMEOUT_E].paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, TURN_RATE_PARAM_TIMEOUT);
    _params[TURN_RATE_PARAM_TIMEOUT_E].name = FPSTR(STRING_TIMEOUT);
    _params[TURN_RATE_PARAM_TIMEOUT_E].nameLen = sizeof(STRING_TIMEOUT);
    _params[TURN_RATE_PARAM_TIMEOUT_E].paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_FLOAT, 4);
+   // @default timeout=10
    _params[TURN_RATE_PARAM_TIMEOUT_E].data.f[0] = 10;
 
    _params[TURN_RATE_PARAM_MODE_E].paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_CRITICAL, TURN_RATE_PARAM_MODE);

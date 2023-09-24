@@ -36,6 +36,7 @@ WindFromWingModule::WindFromWingModule(uint8_t id, DroneSystem* ds):
    param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, WIND_FROM_WING_PARAM_AOA);
    setParamName(FPSTR(STRING_AOA), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_FLOAT, 4);
+   // @default AOA=15
    _params[WIND_FROM_WING_PARAM_AOA_E].data.f[0] = 15;
 
    param = &_params[WIND_FROM_WING_PARAM_WIND_E];
@@ -47,6 +48,7 @@ WindFromWingModule::WindFromWingModule(uint8_t id, DroneSystem* ds):
    param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, WIND_FROM_WING_PARAM_SAMPLES);
    setParamName(FPSTR(STRING_SAMPLES), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_UINT8_T, 1);
+   // @default samples=10
     _params[WIND_FROM_WING_PARAM_SAMPLES_E].data.uint8[0] = 10;
 }
 

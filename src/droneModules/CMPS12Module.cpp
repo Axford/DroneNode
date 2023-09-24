@@ -12,6 +12,7 @@ CMPS12Module::CMPS12Module(uint8_t id, DroneSystem* ds):
    _location[0] = -1.8;
    _location[1] = 52;
 
+   // @default interval = 1000
    _mgmtParams[DRONE_MODULE_PARAM_INTERVAL_E].data.uint32[0] = 1000;  // 1 sec
 
    // subs

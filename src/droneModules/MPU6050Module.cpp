@@ -35,6 +35,7 @@ MPU6050Module::MPU6050Module(uint8_t id, DroneSystem* ds):
    _lastPublishTime = 0;
 
    // aiming to match sensor bandwidth
+   // @default interval = 5
    _mgmtParams[DRONE_MODULE_PARAM_INTERVAL_E].data.uint32[0] = 1000/184;
 
    initParams(MPU6050_PARAM_ENTRIES);

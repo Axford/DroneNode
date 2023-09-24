@@ -10,6 +10,7 @@ VL53L0XModule::VL53L0XModule(uint8_t id, DroneSystem* ds):
  {
    setTypeName(FPSTR(VL53L0X_STR_VL53L0X));
    
+   // @default interval = 1000
    _mgmtParams[DRONE_MODULE_PARAM_INTERVAL_E].data.uint32[0] = 1000;  // 1 sec
 
    // subs

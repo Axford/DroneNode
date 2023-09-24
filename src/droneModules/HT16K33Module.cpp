@@ -9,6 +9,7 @@ HT16K33Module::HT16K33Module(uint8_t id, DroneSystem* ds):
  {
    setTypeName(FPSTR(HT16K33_STR_HT16K33));
 
+  // @default interval = 1000
    _mgmtParams[DRONE_MODULE_PARAM_INTERVAL_E].data.uint32[0] = 1000;  // 1 sec
 
    // subs

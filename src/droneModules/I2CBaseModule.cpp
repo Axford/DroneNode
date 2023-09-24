@@ -6,6 +6,7 @@
 I2CBaseModule::I2CBaseModule(uint8_t id, DroneSystem* ds):
   DroneModule ( id, ds )
  {
+   // @default interval = 1000
    _mgmtParams[DRONE_MODULE_PARAM_INTERVAL_E].data.uint32[0] = 1000;
 }
 

@@ -26,12 +26,14 @@ UDPTelemetryModule::UDPTelemetryModule(uint8_t id, DroneSystem* ds):
    param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, UDP_PARAM_PORT);
    setParamName(FPSTR(STRING_PORT), param);
    _params[UDP_PARAM_PORT_E].paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_UINT32_T, 4);
+   // @default port=8007
    _params[UDP_PARAM_PORT_E].data.uint32[0] = UDP_TELEMETRY_PORT;
 
    param = &_params[UDP_PARAM_BROADCAST_E];
    param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, UDP_PARAM_BROADCAST);
    setParamName(FPSTR(STRING_BROADCAST), param);
    _params[UDP_PARAM_BROADCAST_E].paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_UINT8_T, 4);
+   // @default broadcast=255,255,255,255
    _params[UDP_PARAM_BROADCAST_E].data.uint8[0] = 255;
    _params[UDP_PARAM_BROADCAST_E].data.uint8[1] = 255;
    _params[UDP_PARAM_BROADCAST_E].data.uint8[2] = 255;

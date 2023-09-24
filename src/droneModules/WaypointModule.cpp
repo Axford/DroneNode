@@ -10,6 +10,7 @@ WaypointModule::WaypointModule(uint8_t id, DroneSystem* ds):
  {
    setTypeName(FPSTR(WAYPOINT_STR_WAYPOINT));
 
+    // @default interval = 1000
     _mgmtParams[DRONE_MODULE_PARAM_INTERVAL_E].data.uint32[0] = 1000;  // 1 sec
 
    _waypoints = IvanLinkedList::LinkedList<WAYPOINT_MODULE_WAYPOINT>();

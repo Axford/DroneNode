@@ -74,6 +74,7 @@ TankSteerModule::TankSteerModule(uint8_t id, DroneSystem* ds):
   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, TANK_STEER_PARAM_PID);
   setParamName(FPSTR(STRING_PID), param);
   param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_FLOAT, 12);
+  // @default PID=0.01,0,0
   param->data.f[0] = 0.01;
   param->data.f[1] = 0;
   param->data.f[2] = 0;

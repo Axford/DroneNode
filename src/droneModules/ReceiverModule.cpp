@@ -102,6 +102,7 @@ ReceiverModule::ReceiverModule(uint8_t id, DroneSystem* ds):
    param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, RECEIVER_PARAM_LIMITS);
    setParamName(FPSTR(STRING_LIMITS), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_UINT32_T, 8);
+   // @default limits=1000,2000
    param->data.uint32[0] = 1000;
    param->data.uint32[1] = 2000;
 
@@ -114,6 +115,7 @@ ReceiverModule::ReceiverModule(uint8_t id, DroneSystem* ds):
    param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_CRITICAL, RECEIVER_PARAM_MODE);
    setParamName(FPSTR(STRING_MODE), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_UINT8_T, 1);
+   // @default mode=1
    param->data.uint8[0] = RECEIVER_MODE_PPM;
 }
 

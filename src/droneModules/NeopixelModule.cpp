@@ -44,6 +44,7 @@ NeopixelModule::NeopixelModule(uint8_t id, DroneSystem* ds):
    param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, NEOPIXEL_PARAM_NUMPIXELS);
    setParamName(FPSTR(STRING_NUMPIXELS), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_UINT8_T, 1);
+   // @default numPixels = 4
    _params[NEOPIXEL_PARAM_NUMPIXELS_E].data.uint8[0] = 4;
 }
 

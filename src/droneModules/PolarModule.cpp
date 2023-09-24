@@ -18,6 +18,7 @@ PolarModule::PolarModule(uint8_t id, DroneSystem* ds):
    _region = POLAR_REGION_OUT;
 
    // set default interval to 1000
+   // @default interval = 1000
    _mgmtParams[DRONE_MODULE_PARAM_INTERVAL_E].data.uint32[0] = 1000;
 
    // subs
@@ -76,6 +77,7 @@ PolarModule::PolarModule(uint8_t id, DroneSystem* ds):
    param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_MEDIUM, POLAR_PARAM_THRESHOLD);
    setParamName(FPSTR(STRING_THRESHOLD), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_FLOAT, 8);
+   // @default threshold=1,10
    param->data.f[0] = 1;  // min SOG
    param->data.f[1] = 10;  // acceptable heading deviation
 

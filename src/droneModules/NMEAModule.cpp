@@ -14,6 +14,7 @@ NMEAModule::NMEAModule(uint8_t id, DroneSystem* ds):
 
    _port = NULL;
    _port2 = NULL;
+   // @default interval = 1000
    _mgmtParams[DRONE_MODULE_PARAM_INTERVAL_E].data.uint32[0] = 1000;
 
    _nmea = new MicroNMEA(_buffer, sizeof(_buffer));
@@ -79,6 +80,7 @@ NMEAModule::NMEAModule(uint8_t id, DroneSystem* ds):
    param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, NMEA_PARAM_PORT);
    setParamName(FPSTR(STRING_PORT), param);
    _params[NMEA_PARAM_PORT_E].paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_UINT8_T, 2);
+   // @default port=1, 255
    _params[NMEA_PARAM_PORT_E].data.uint8[0] = 1;
    _params[NMEA_PARAM_PORT_E].data.uint8[1] = 255; // secondary port
 
@@ -86,7 +88,8 @@ NMEAModule::NMEAModule(uint8_t id, DroneSystem* ds):
    param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, NMEA_PARAM_BAUD);
    setParamName(FPSTR(STRING_BAUD), param);
    _params[NMEA_PARAM_BAUD_E].paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_UINT32_T, 4);
-   _params[NMEA_PARAM_BAUD_E].data.uint32[0] = 38400;
+   // @default baud=9600
+   _params[NMEA_PARAM_BAUD_E].data.uint32[0] = 9600;
 
    param = &_params[NMEA_PARAM_FIX_E];
    param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, NMEA_PARAM_FIX);
@@ -100,6 +103,7 @@ NMEAModule::NMEAModule(uint8_t id, DroneSystem* ds):
    param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_CRITICAL, NMEA_PARAM_FOLLOWME);
    setParamName(FPSTR(STRING_FOLLOWME), param);
    _params[NMEA_PARAM_FOLLOWME_E].paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_FLOAT, 12);
+   // @default followMe=0,0,5
    _params[NMEA_PARAM_FOLLOWME_E].data.f[0] = 0;
    _params[NMEA_PARAM_FOLLOWME_E].data.f[1] = 0;
    _params[NMEA_PARAM_FOLLOWME_E].data.f[2] = 5;

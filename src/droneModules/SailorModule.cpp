@@ -116,6 +116,7 @@ SailorModule::SailorModule(uint8_t id, DroneSystem* ds):
    param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, SAILOR_PARAM_PID);
    setParamName(FPSTR(STRING_PID), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_FLOAT, 12);
+   // @default PID=0.05,0,0
    param->data.f[0] = 0.05;
    param->data.f[1] = 0;
    param->data.f[2] = 0;
@@ -129,12 +130,14 @@ SailorModule::SailorModule(uint8_t id, DroneSystem* ds):
    param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, SAILOR_PARAM_THRESHOLD);
    setParamName(FPSTR(STRING_THRESHOLD), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_FLOAT, 4);
+   // @default threshold=20
    param->data.f[0] = 20;
 
    param = &_params[SAILOR_PARAM_TIMEOUT_E];
    param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, SAILOR_PARAM_TIMEOUT);
    setParamName(FPSTR(STRING_TIMEOUT), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_FLOAT, 4);
+   // @default timeout=10
    param->data.f[0] = 10;
 
    param = &_params[SAILOR_PARAM_MODE_E];

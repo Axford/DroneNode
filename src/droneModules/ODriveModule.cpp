@@ -34,6 +34,7 @@ ODriveModule::ODriveModule(uint8_t id, DroneSystem* ds):
    param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, ODRIVE_PARAM_LIMITS);
    setParamName(FPSTR(STRING_LIMITS), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_FLOAT, 8);
+   // @default limits=-1,1
    _params[ODRIVE_PARAM_LIMITS_E].data.f[0] = -1;
    _params[ODRIVE_PARAM_LIMITS_E].data.f[1] = 1;
 
@@ -41,6 +42,7 @@ ODriveModule::ODriveModule(uint8_t id, DroneSystem* ds):
    param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, ODRIVE_PARAM_PORT);
    setParamName(FPSTR(STRING_PORT), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_UINT8_T, 1);
+   // @default port=2
    _params[ODRIVE_PARAM_PORT_E].data.uint8[0] = 2;
 
    param = &_params[ODRIVE_PARAM_INVERT_E];

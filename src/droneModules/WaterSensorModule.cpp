@@ -13,7 +13,8 @@ WaterSensorModule::WaterSensorModule(uint8_t id, DroneSystem* ds):
    _triggered = false;
    _triggerTime = 0;
 
-   // set default interval to 1000
+   // set default interval to 1
+   // @default interval = 1
    _mgmtParams[DRONE_MODULE_PARAM_INTERVAL_E].data.uint32[0] = 1;
 
    // subs

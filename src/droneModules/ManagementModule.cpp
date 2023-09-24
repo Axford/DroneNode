@@ -19,6 +19,7 @@ ManagementModule::ManagementModule(uint8_t id, DroneSystem* ds):
  {
    setTypeName(FPSTR(MANAGEMENT_STR_MANAGEMENT));
 
+  // @default interval = 30000
    _mgmtParams[DRONE_MODULE_PARAM_INTERVAL_E].data.uint32[0] = 30000;  // 30 sec
    _lastRate = 0;
 
@@ -83,6 +84,7 @@ ManagementModule::ManagementModule(uint8_t id, DroneSystem* ds):
    _params[MANAGEMENT_PARAM_DISCOVERY_E].name = FPSTR(STRING_DISCOVERY);
    _params[MANAGEMENT_PARAM_DISCOVERY_E].nameLen = sizeof(STRING_DISCOVERY);
    _params[MANAGEMENT_PARAM_DISCOVERY_E].paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_UINT8_T, 1);
+   // @default discovery=1
    _params[MANAGEMENT_PARAM_DISCOVERY_E].data.uint8[0] = _dmm->discovery() ? 1 : 0;
 
    _params[MANAGEMENT_PARAM_SAVE_E].paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, MANAGEMENT_PARAM_SAVE);
@@ -101,12 +103,14 @@ ManagementModule::ManagementModule(uint8_t id, DroneSystem* ds):
    _params[MANAGEMENT_PARAM_WIFI_E].name = FPSTR(STRING_WIFI);
    _params[MANAGEMENT_PARAM_WIFI_E].nameLen = sizeof(STRING_WIFI);
    _params[MANAGEMENT_PARAM_WIFI_E].paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_UINT8_T, 1);
+   // @default wifi=1
    _params[MANAGEMENT_PARAM_WIFI_E].data.uint8[0] = 1; // 1 = enabled
 
    _params[MANAGEMENT_PARAM_CPU_E].paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, MANAGEMENT_PARAM_CPU);
    _params[MANAGEMENT_PARAM_CPU_E].name = FPSTR(STRING_CPU);
    _params[MANAGEMENT_PARAM_CPU_E].nameLen = sizeof(STRING_CPU);
    _params[MANAGEMENT_PARAM_CPU_E].paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_UINT8_T, 1);
+   // @default cpu=240
    _params[MANAGEMENT_PARAM_CPU_E].data.uint8[0] = 240; // default high speed
 }
 

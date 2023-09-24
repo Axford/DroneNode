@@ -11,6 +11,7 @@ AvoidModule::AvoidModule(uint8_t id, DroneSystem* ds):
    setTypeName(FPSTR(AVOID_STR_AVOID));
 
    // set default interval to 1000
+   // @default interval = 1000
    _mgmtParams[DRONE_MODULE_PARAM_INTERVAL_E].data.uint32[0] = 1000;
 
    _newPackets[0] = 0;
@@ -68,6 +69,7 @@ AvoidModule::AvoidModule(uint8_t id, DroneSystem* ds):
    param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_MEDIUM, AVOID_PARAM_THRESHOLD);
    setParamName(FPSTR(STRING_THRESHOLD), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_FLOAT, 8);
+      // @default threshold=10000, 50
    param->data.f[0] = 10000;  // range beyond which vessels will be ignored in meters
    param->data.f[1] = 50;  // radius within which to treat as a collision
 

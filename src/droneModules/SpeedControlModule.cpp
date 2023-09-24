@@ -23,6 +23,7 @@ SpeedControlModule::SpeedControlModule(uint8_t id, DroneSystem* ds):
    _params[SPEED_CONTROL_PARAM_LIMITS_E].name = FPSTR(STRING_LIMITS);
    _params[SPEED_CONTROL_PARAM_LIMITS_E].nameLen = sizeof(STRING_LIMITS);
    _params[SPEED_CONTROL_PARAM_LIMITS_E].paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_FLOAT, 8);
+   // @default limits=0.2,1
    _params[SPEED_CONTROL_PARAM_LIMITS_E].data.f[0] = 0.2; // just below deadband
    _params[SPEED_CONTROL_PARAM_LIMITS_E].data.f[1] = 1;
 
@@ -30,6 +31,7 @@ SpeedControlModule::SpeedControlModule(uint8_t id, DroneSystem* ds):
    _params[SPEED_CONTROL_PARAM_THRESHOLD_E].name = FPSTR(STRING_THRESHOLD);
    _params[SPEED_CONTROL_PARAM_THRESHOLD_E].nameLen = sizeof(STRING_THRESHOLD);
    _params[SPEED_CONTROL_PARAM_THRESHOLD_E].paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_FLOAT, 4);
+   // @default threshold=3
    _params[SPEED_CONTROL_PARAM_THRESHOLD_E].data.f[0] = 3;  // 3 meters
 
    _params[SPEED_CONTROL_PARAM_SPEED_E].paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_MEDIUM, SPEED_CONTROL_PARAM_SPEED);
