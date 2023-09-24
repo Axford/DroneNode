@@ -1,8 +1,9 @@
 /*
 
-@type TankSteer
-@inherits Drone
-@description Generate left and right motor speeds from target course, current heading and distance to target
+@type          TankSteer
+@inherits      Drone
+@category      Logic
+@description   Generate left and right motor speeds from target course, current heading and distance to target
 
 @guide >>>
 

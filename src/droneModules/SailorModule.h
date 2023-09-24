@@ -1,6 +1,7 @@
 /*
 @type Sailor
 @inherits Drone
+@category      Logic
 @description Control a typical sailing boat
 
 @guide >>>

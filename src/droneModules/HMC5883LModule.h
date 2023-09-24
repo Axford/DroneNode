@@ -2,6 +2,7 @@
 
 @type          HMC5883L
 @inherits      I2CCompass
+@category      Input
 @description   Manages a HMC5883L I2C Compass
 
 @config >>>

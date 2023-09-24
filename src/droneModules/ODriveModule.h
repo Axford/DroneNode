@@ -2,6 +2,7 @@
 
 @type          ODrive
 @inherits      Drone
+@category      Output
 @description   Manages an ODrive module via serial
 
 @config >>>

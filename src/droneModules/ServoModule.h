@@ -2,6 +2,7 @@
 
 @type           Servo
 @inherits       Drone
+@category       Output
 @description    Manages a PWM servo channel
 
 @config >>>

@@ -2,6 +2,7 @@
 
 @type RFM69Telemetry
 @inherits Drone
+@category      Networking
 @description Manages DroneLink telemetry using an RFM69HW radio module
 
 @config >>>

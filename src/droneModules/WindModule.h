@@ -3,6 +3,7 @@
 
 @type          Wind
 @inherits      I2CBase
+@category      Input
 @description   Manages a Wind speed and direction sensor.
 
 @guide >>>

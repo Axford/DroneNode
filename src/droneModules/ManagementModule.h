@@ -2,7 +2,8 @@
 
 @type          Management
 @inherits      Drone
-@description   Provides overall system management and a pub/sub interface to the DroneModuleManager
+@category      Core
+@description   Overall system management
 
 @config >>>
 [ Management = 1 ]

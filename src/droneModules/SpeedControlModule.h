@@ -2,6 +2,7 @@
 
 @type         SpeedControl
 @inherits     Drone
+@category     Logic
 @description  Convert a distance value (meters) into a speed control value (0..1)
 
 @guide >>>

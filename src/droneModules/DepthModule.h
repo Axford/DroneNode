@@ -2,6 +2,7 @@
 
 @type          Depth
 @inherits      Drone
+@category      Input
 @description   Manages a simple Depth sensor (sonar transducer) controlled via Trigger and Echo pins
 
 @guide >>>

@@ -1,7 +1,8 @@
 /*
-@type WindFromWing
-@inherits Drone
-@description Estimate Wind Direction from Wing Compass and Tail position
+@type          WindFromWing
+@inherits      Drone
+@category      Logic
+@description   Estimate Wind Direction from Wing Compass and Tail position
 
 @guide >>>
 <p>Subscribe the Sailor module to the Wind output parameter, instead of a regular wind vane, to use the Wing as an estimator of the Wind angle.</p>

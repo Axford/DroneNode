@@ -2,6 +2,7 @@
 
 @type          NMEA
 @inherits      Drone
+@category      Input
 @description   Manages a serial NMEA GPS device
 
 @config >>>
@@ -35,6 +36,7 @@
 // @pub 12;f;1;r;HDOP;Current Horizontal Dilution of Precision
 #define NMEA_PARAM_HDOP               12
 
+// @ui serialPort;port
 // @pub 13;u8;2;w;port;Which serial port to use (0,1 or 2) and optional second port for a dual GPS setup (default 255 for no port)
 #define NMEA_PARAM_PORT               13
 

@@ -52,6 +52,8 @@
 
 // @pub 18;f;1;w;trim;Manual calibration value to adjust heading to match hull (e.g. for a misaligned physical mount)
 #define I2CCOMPASS_PARAM_TRIM            (I2CBASE_SUBCLASS_PARAM_START+8)  //18
+
+// @ui enum; mode; online calibration, fixed calibration, reset calibration, store calibration
 // @pub 20;u8;1;w;mode;Mode: 0=online calibration, 1=fixed calibration, 2=reset calibration, 3=store calibration
 #define I2CCOMPASS_PARAM_MODE            (I2CBASE_SUBCLASS_PARAM_START+10)  // 20
 // @pub 21;f;4;r;raw;Raw magnetic field vector
@@ -73,7 +75,7 @@
 // subs
 // subs of form: <param address>;<addr param address>;<type>;<number of values>;<name>;description
 
-// @sub 16;17;f;2;location;Current location from GPS
+// @sub 16;17;f;3;location;Current location from GPS
 #define I2CCOMPASS_SUB_LOCATION            (I2CBASE_SUBCLASS_PARAM_START+6) //16
 #define I2CCOMPASS_SUB_LOCATION_ADDR       (I2CBASE_SUBCLASS_PARAM_START+7) //17
 #define I2CCOMPASS_SUB_LOCATION_E          0

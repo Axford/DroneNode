@@ -1,7 +1,8 @@
 /*
-@type Waypoint
-@inherits Drone
-@description Load and manage a series of waypoints from a CSV file
+@type         Waypoint
+@inherits     Drone
+@category     Logic
+@description  Load and manage a series of waypoints from a CSV file
 
 @guide >>>
 

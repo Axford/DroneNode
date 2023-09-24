@@ -1,7 +1,8 @@
 /*
-@type TurnRate
-@inherits Drone
-@description Generate a turnRate command based on target vs current heading using a PID controller
+@type          TurnRate
+@inherits      Drone
+@category      Logic
+@description   Generate a turnRate command based on target vs current heading using a PID controller
 
 @guide >>>
 <p>Steering commands are based on:<p>

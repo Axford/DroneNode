@@ -2,6 +2,7 @@
 
 @type          Diagnostic
 @inherits      I2CBaseModule
+@category      Output
 @description   Manages a Diagnostic 128x64 I2C display (1306 driver)
 
 @config >>>

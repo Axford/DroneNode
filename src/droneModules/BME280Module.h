@@ -2,6 +2,7 @@
 
 @type          BME280
 @inherits      I2CBase
+@category      Input
 @description   Manages a BME280 I2c temp, humidty and pressure sensor
 
 @config >>>

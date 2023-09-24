@@ -32,6 +32,7 @@ things that would be useful for all modules
 
 // @publish status
 // @default status=1
+// @ui enum; status; disabled, enabled, waiting for valid inputs
 // @pub 1;u8;1;w;status;0=disabled, 1=enabled, 2=waiting for valid subscriptions, write a value of 255 to trigger reset (TODO)
 #define DRONE_MODULE_PARAM_STATUS      1 
 
@@ -44,6 +45,7 @@ things that would be useful for all modules
 #define DRONE_MODULE_PARAM_NAME        2 
 
 // @publish error
+// @ui enum; error; no error, error
 // @pub 3;u8;1;r;error;Error flags: 1=error, 0=no error
 #define DRONE_MODULE_PARAM_ERROR       3 
 

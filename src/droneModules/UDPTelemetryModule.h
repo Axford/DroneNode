@@ -1,8 +1,9 @@
 /*
 
-@type UDPTelemetry
-@description Manages DroneLink telemetry using UDP broadcast over WiFi
-@inherits Drone
+@type          UDPTelemetry
+@category      Networking
+@description   Manages DroneLink telemetry using UDP broadcast over WiFi
+@inherits      Drone
 
 @config >>>
 [UDPTelemetry=2]

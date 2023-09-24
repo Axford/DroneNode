@@ -1,6 +1,8 @@
 /*
 
 @type SerialTelemetry
+@inherit       NetworkInterface
+@category      Networking
 @description Manages DroneLink telemetry over a serial port, optionally via a transparent telemetry module
 
 @config >>>

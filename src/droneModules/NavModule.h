@@ -2,7 +2,8 @@
 
 @type          Nav
 @inherits      Drone
-@description   Managen navigation between waypoints accounting for crosswind drift
+@category      Logic
+@description   Navigation between waypoints accounting for crosswind drift
 
 @guide >>>
 Target waypoints are defined in terms of Lon Lat and target Radius in meters.
@@ -60,6 +61,7 @@ Target waypoints are defined in terms of Lon Lat and target Radius in meters.
 #define NAV_PARAM_DISTANCE       9  // distance to go
 #define NAV_PARAM_DISTANCE_E     1
 
+// @ui enum; mode; idle, goto, follow, absolute course, relative course, backaway, orbit
 // @pub 14;u8;1;w;mode;0=idle, 1=goto, 2=follow, 3=absolute course, 4=relative course, 5=backaway, 6=orbit
 #define NAV_PARAM_MODE           14  // mode
 #define NAV_PARAM_MODE_E         2

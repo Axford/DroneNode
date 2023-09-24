@@ -2,6 +2,7 @@
 
 @type           Receiver
 @inherits       Drone
+@category       Input
 @description    Reads up to 4 PWM channels from an RC receiver
 
 @config >>>

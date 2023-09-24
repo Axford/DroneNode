@@ -2,6 +2,7 @@
 
 @type Cylon
 @inherits Drone
+@category      Output
 @description Manage a strip of NEOPixels (WS2812B) - originally created for the Kit speedboat
 
 */

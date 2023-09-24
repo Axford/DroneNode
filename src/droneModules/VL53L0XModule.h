@@ -1,8 +1,9 @@
 /*
 
-@type          CVL53L0X
+@type          VL53L0X
 @inherits      I2CBase
-@description   Manages a VL53L0X laser distance sensor
+@category      Input
+@description   I2C VL53L0X laser distance sensor
 
 @config >>>
 [VL53L0X = 8]

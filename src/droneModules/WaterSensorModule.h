@@ -2,6 +2,7 @@
 
 @type          WaterSensor
 @inherits      Drone
+@category      Input
 @description   Manages a simple Water sensor connected to a pair of pins
 
 @guide >>>

@@ -2,6 +2,7 @@
 
 @type          Analog
 @inherits      Drone
+@category      Input
 @description   Manages a simple Analog sensor connected to an analog input pin
 
 @guide >>>

@@ -2,6 +2,7 @@
 
 @type          INA219
 @inherits      I2CBase
+@category      Input
 @description   Manages an INA219 I2C power monitoring module
 
 @config >>>

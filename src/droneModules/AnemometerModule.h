@@ -3,6 +3,7 @@
 
 @type          Anemometer
 @inherits      Drone
+@category      Input
 @description   Manages an Anemometer.
 
 @guide >>>

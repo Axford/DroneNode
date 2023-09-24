@@ -1,6 +1,7 @@
 /*
 @type          Avoid
 @inherits      Drone
+@category      Logic
 @description   Sail polar calibration module
 
 @guide >>>

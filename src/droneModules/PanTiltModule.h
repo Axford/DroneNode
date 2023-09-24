@@ -1,5 +1,7 @@
 /*
 @type PanTilt
+@inherit Drone
+@category      Output
 @description Generate servo commands for a pan/tilt head to track a target (e.g. for camera or antenna trackers)
 
 @guide >>>

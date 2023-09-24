@@ -2,6 +2,7 @@
 
 @type          CMPS12
 @inherits      I2CBase
+@category      Input
 @description   Manages a CMPS12 I2C Compass
 
 Datasheet: https://static.rapidonline.com/pdf/70-6398_v1.pdf

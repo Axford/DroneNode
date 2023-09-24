@@ -2,6 +2,7 @@
 
 @type          MPU6050
 @inherits      I2CBase
+@category      Input
 @description   Manages a MPU6050 I2c gyro/accel sensor
 
 @config >>>
@@ -49,6 +50,8 @@
 #define MPU6050_PARAM_CALIB_Y         (I2CBASE_SUBCLASS_PARAM_START+7)  // 17
 // @pub 18;f;3;w;calibZ;Min, center and max magnetic readings for the Z axis
 #define MPU6050_PARAM_CALIB_Z         (I2CBASE_SUBCLASS_PARAM_START+8)  // 18
+
+// @ui enum; mode; online calibration, fixed calibration, reset calibration, store calibration
 // @pub 19;u8;1;w;mode;Mode: 0=online calibration, 1=fixed calibration, 2=reset calibration, 3=store calibration
 #define MPU6050_PARAM_MODE            (I2CBASE_SUBCLASS_PARAM_START+9)  // 19
 

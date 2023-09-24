@@ -2,6 +2,7 @@
 
 @type          Motor
 @inherits      Drone
+@category      Output
 @description   Manages a Motor via an H Bridge module using PWM
 
 @config >>>
