@@ -6,6 +6,8 @@
 #include "DroneSystem.h"
 #include "../navMath.h"
 
+// @type Wind
+
 unsigned long _globalWindCounter;
 
 WindModule::WindModule(uint8_t id, DroneSystem* ds):

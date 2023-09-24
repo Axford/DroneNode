@@ -5,6 +5,8 @@
 #include "../navMath.h"
 #include "AsyncUDP.h"
 
+// @type Avoid
+
 AvoidModule::AvoidModule(uint8_t id, DroneSystem* ds):
   DroneModule ( id, ds )
  {

@@ -3,6 +3,8 @@
 #include "../DroneLinkManager.h"
 #include "strings.h"
 
+// @type SpeedControl
+
 SpeedControlModule::SpeedControlModule(uint8_t id, DroneSystem* ds):
   DroneModule ( id, ds )
  {

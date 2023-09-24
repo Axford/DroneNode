@@ -8,6 +8,8 @@
 #include "OLEDTomThumbFont.h"
 #include <rom/rtc.h>
 
+// @type Management
+
 int get_reset_reason(int icore) { 
    return (int) rtc_get_reset_reason( (RESET_REASON) icore);  
 }

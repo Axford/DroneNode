@@ -3,6 +3,8 @@
 #include "../DroneLinkManager.h"
 #include "strings.h"
 
+// @type INA219
+
 INA219Module::INA219Module(uint8_t id, DroneSystem* ds):
   I2CBaseModule ( id, ds )
  {
@@ -58,14 +60,14 @@ INA219Module::INA219Module(uint8_t id, DroneSystem* ds):
    param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, INA219_PARAM_CELLS);
    setParamName(FPSTR(STRING_CELLS), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_UINT8_T, 1);
-      // @default cells=3
+// @default cells=3
    _params[INA219_PARAM_CELLS_E].data.uint8[0] = 3;
 
    param = &_params[INA219_PARAM_THRESHOLD_E];
    param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, INA219_PARAM_THRESHOLD);
    setParamName(FPSTR(STRING_THRESHOLD), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_FLOAT, 4);
-      // @default threshold=11.2
+// @default threshold=11.2
    _params[INA219_PARAM_THRESHOLD_E].data.f[0] = 11.2;
 
    param = &_params[INA219_PARAM_USAGE_E];

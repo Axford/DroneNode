@@ -9,6 +9,8 @@ using std::placeholders::_2;
 using std::placeholders::_3;
 using std::placeholders::_4;
 
+// @type Nav
+
 NavModule::NavModule(uint8_t id, DroneSystem* ds):
   DroneModule ( id, ds )
  {

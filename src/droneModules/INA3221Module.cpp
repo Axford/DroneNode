@@ -4,6 +4,8 @@
 #include "strings.h"
 #include "OLEDTomThumbFont.h"
 
+// @type INA3221
+
 INA3221Module::INA3221Module(uint8_t id, DroneSystem* ds):
   I2CBaseModule ( id, ds )
  {

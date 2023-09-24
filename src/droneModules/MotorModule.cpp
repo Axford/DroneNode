@@ -4,6 +4,8 @@
 #include "strings.h"
 #include "DroneSystem.h"
 
+// @type Motor
+
 MotorModule::MotorModule(uint8_t id, DroneSystem* ds):
   DroneModule ( id, ds )
  {

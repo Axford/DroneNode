@@ -6,6 +6,8 @@
 #include "strings.h"
 #include "DroneSystem.h"
 
+// @type RFM69Telemetry
+
 //#include "RFM69registers.h"
 
 RFM69TelemetryModule::RFM69TelemetryModule(uint8_t id, DroneSystem* ds):

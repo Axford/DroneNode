@@ -4,6 +4,8 @@
 #include "strings.h"
 #include "Preferences.h"
 
+// @type MPU6050
+
 #define SQR(x) (x*x) 
 
 MPU6050Module::MPU6050Module(uint8_t id, DroneSystem* ds):

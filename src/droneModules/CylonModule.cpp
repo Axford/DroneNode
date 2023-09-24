@@ -4,6 +4,8 @@
 #include "strings.h"
 #include "DroneSystem.h"
 
+// @type Cylon
+
 CylonModule::CylonModule(uint8_t id, DroneSystem* ds):
   DroneModule ( id, ds )
  {
@@ -43,6 +45,7 @@ CylonModule::CylonModule(uint8_t id, DroneSystem* ds):
    param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, CYLON_PARAM_NUMPIXELS);
    setParamName(FPSTR(STRING_NUMPIXELS), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_UINT8_T, 1);
+   // @default numPixels=16
    _params[CYLON_PARAM_NUMPIXELS_E].data.uint8[0] = 16;
 }
 

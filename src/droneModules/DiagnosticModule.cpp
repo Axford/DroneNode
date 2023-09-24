@@ -5,6 +5,7 @@
 #include "strings.h"
 #include <SPIFFS.h>
 
+// @type Diagnostic
 
 DiagnosticModule::DiagnosticModule(uint8_t id, DroneSystem* ds):
   I2CBaseModule ( id, ds )

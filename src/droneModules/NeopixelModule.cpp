@@ -3,6 +3,8 @@
 #include "../DroneLinkManager.h"
 #include "strings.h"
 
+// @type Neopixel
+
 NeopixelModule::NeopixelModule(uint8_t id, DroneSystem* ds):
   DroneModule ( id, ds )
  {

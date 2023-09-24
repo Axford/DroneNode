@@ -4,6 +4,8 @@
 #include "strings.h"
 #include "../navMath.h"
 
+// @type Polar
+
 PolarModule::PolarModule(uint8_t id, DroneSystem* ds):
   DroneModule ( id, ds )
  {

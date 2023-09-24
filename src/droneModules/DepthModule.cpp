@@ -5,6 +5,8 @@
 #include "../navMath.h"
 #include "DroneSystem.h"
 
+// @type Depth
+
 DepthModule::DepthModule(uint8_t id, DroneSystem* ds):
   DroneModule ( id, ds )
  {

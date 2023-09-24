@@ -4,6 +4,8 @@
 #include "strings.h"
 #include "../DroneSystem.h"
 
+// @type SerialTelemetry
+
 SerialTelemetryModule::SerialTelemetryModule(uint8_t id, DroneSystem* ds):
   NetworkInterfaceModule ( id, ds )
  {
@@ -52,6 +54,7 @@ SerialTelemetryModule::SerialTelemetryModule(uint8_t id, DroneSystem* ds):
    param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, SERIAL_TELEMETRY_PARAM_BAUD);
    setParamName(FPSTR(STRING_BAUD), param);
    _params[SERIAL_TELEMETRY_PARAM_BAUD_E].paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_UINT32_T, 4);
+   // @default baud=115200
    _params[SERIAL_TELEMETRY_PARAM_BAUD_E].data.uint32[0] = 115200;
 }
 

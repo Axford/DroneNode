@@ -4,6 +4,7 @@
 #include "../strings.h"
 #include "../navMath.h"
 
+// @type TankSteer
 
 TankSteerModule::TankSteerModule(uint8_t id, DroneSystem* ds):
   DroneModule ( id, ds )

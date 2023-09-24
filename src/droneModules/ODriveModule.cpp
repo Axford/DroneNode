@@ -5,6 +5,8 @@
 #include "strings.h"
 #include "DroneSystem.h"
 
+// @type ODrive
+
 ODriveModule::ODriveModule(uint8_t id, DroneSystem* ds):
   DroneModule ( id, ds )
  {

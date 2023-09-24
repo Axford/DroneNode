@@ -7,6 +7,8 @@
 #include "OLEDTomThumbFont.h"
 #include "DroneSystem.h"
 
+// @type NMEA
+
 NMEAModule::NMEAModule(uint8_t id, DroneSystem* ds):
   DroneModule ( id, ds )
  {

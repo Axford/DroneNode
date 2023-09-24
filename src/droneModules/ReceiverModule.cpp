@@ -4,6 +4,8 @@
 #include "strings.h"
 #include "DroneSystem.h"
 
+// @type Receiver
+
 // globals for use in ISRs
 uint8_t _globalReceiveMode = RECEIVER_MODE_PPM;
 uint8_t _globalReceiverPins[6];

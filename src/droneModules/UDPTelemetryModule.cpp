@@ -3,6 +3,8 @@
 #include "../DroneLinkManager.h"
 #include "WiFi.h"
 
+// @type UDPTelemetry
+
 UDPTelemetryModule::UDPTelemetryModule(uint8_t id, DroneSystem* ds):
   NetworkInterfaceModule ( id, ds )
  {

@@ -4,6 +4,7 @@
 #include "../strings.h"
 #include "../navMath.h"
 
+// @type Sailor
 
 // return true if a is between b and c
 // used to evaluate if changing course from b to c will cross the wind a

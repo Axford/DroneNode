@@ -4,6 +4,8 @@
 #include "strings.h"
 #include "../navMath.h"
 
+// @type WindFromWing
+
 WindFromWingModule::WindFromWingModule(uint8_t id, DroneSystem* ds):
   DroneModule ( id, ds )
  {
