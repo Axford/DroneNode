@@ -2,7 +2,7 @@
 @type          Avoid
 @inherits      Drone
 @category      Logic
-@description   Sail polar calibration module
+@description   Avoid other vessels detected via AIS
 
 @guide >>>
 

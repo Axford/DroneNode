@@ -3,8 +3,8 @@
 
 @type          Anemometer
 @inherits      Drone
-@category      Input
-@description   Manages an Anemometer.
+@category      Input.Wind
+@description   Manages an Anemometer based on a pulse per rotation
 
 @guide >>>
 - Anemometer speed from cup anemometor on an digital input with internal pullup

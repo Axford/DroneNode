@@ -2,7 +2,7 @@
 
 @type          Status
 @inherits      Drone
-@category      Output
+@category      Output.LED
 @description   Monitors up to four parameters and publishes a corresponding status scene to a Neopixel module
 
 

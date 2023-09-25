@@ -2,7 +2,7 @@
 
 @type          MPU6050
 @inherits      I2CBase
-@category      Input
+@category      Input.IMU
 @description   Manages a MPU6050 I2c gyro/accel sensor
 
 @config >>>

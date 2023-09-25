@@ -2,7 +2,7 @@
 
 @type          INA3221
 @inherits      I2CBase
-@category      Input
+@category      Input.Power
 @description   Manages a 3-channel INA3221 I2C power monitoring module
 
 @config >>>

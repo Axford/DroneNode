@@ -2,7 +2,7 @@
 
 @type          LSM9DS1
 @inherits      I2CBaseModule
-@category      Input
+@category      Input.Compass
 @description   Manages a LSM9DS1 I2C Compass
 
 @config >>>

@@ -2,7 +2,7 @@
 
 @type          HT16K33
 @inherits      I2CBase
-@category      Output
+@category      Output.Display
 @description   Manages a HT16K33 7 segment display to show uptime
 
 @config >>>

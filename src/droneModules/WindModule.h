@@ -3,8 +3,8 @@
 
 @type          Wind
 @inherits      I2CBase
-@category      Input
-@description   Manages a Wind speed and direction sensor.
+@category      Input.Wind
+@description   Manages a Wind speed (pulse count) and direction sensor (I2C AS5600)
 
 @guide >>>
 - Wind direction using I2C AS5600 sensor
