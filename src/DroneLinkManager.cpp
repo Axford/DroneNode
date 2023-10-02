@@ -490,6 +490,7 @@ void DroneLinkManager::serveNodeInfo(AsyncWebServerRequest *request) {
 
           response->printf(",\"seq\": %u", page->nodeInfo[j].seq);
           response->printf(",\"metric\": %u", page->nodeInfo[j].metric);
+          response->printf(",\"helloMetric\": %u", page->nodeInfo[j].helloMetric);
           response->printf(",\"nextHop\": %u", page->nodeInfo[j].nextHop);
           response->printf(",\"age\": %u", age);
           response->printf(",\"up\": %u", page->nodeInfo[j].uptime);
