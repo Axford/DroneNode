@@ -189,6 +189,28 @@ void DroneLinkManager::removeRoute(uint8_t node) {
     // reset metric
     nodeInfo->metric = 255;
 
+    // clear sequencer
+    nodeInfo->gSequencer->clear();
+
+    /*
+    page->nodeInfo[i].heard = false;
+      page->nodeInfo[i].seq = 0;
+      page->nodeInfo[i].gSeq = 0;
+      page->nodeInfo[i].metric = 255;
+      page->nodeInfo[i].helloMetric = 255;
+      page->nodeInfo[i].name = NULL;
+      page->nodeInfo[i].interface = NULL;  // interface for current best route to node
+      page->nodeInfo[i].nextHop = 0;
+      page->nodeInfo[i].givenUp = 0;
+      page->nodeInfo[i].avgAttempts = 0;
+      page->nodeInfo[i].avgTxTime = 0;
+      page->nodeInfo[i].lastAck = 0;
+      page->nodeInfo[i].lastHello = 0;
+      page->nodeInfo[i].helloInterface = NULL;  // set to the interface we last received a hello via a tx Node - i.e. directly connected
+      page->nodeInfo[i].avgAckTime = 0;
+      page->nodeInfo[i].gSequencer = NULL;
+      */
+
     // udpate state for any associated ext subs
     // UPDATE: removing subscriptions is unhelpful - e.g. if routes are briefly down then we lose subs, e.g. to the server
     /*
