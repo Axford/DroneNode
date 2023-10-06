@@ -811,6 +811,9 @@ void DroneLinkManager::receiveHello(NetworkInterfaceModule *interface, uint8_t *
 
       // probably means the remote node reset...  renew any subscriptions to it!!
       resetExternalSubscriptions(header->srcNode);
+
+      // may also mean the packet sequencing has reset, so clear the sequencer just in case
+      nodeInfo->gSequencer->clear();
     }
 
     // if the interface has changed and there's a lower metric
