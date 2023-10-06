@@ -557,6 +557,11 @@ void DroneSystem::setup() {
 
   dem->completeSetup();
 
+  // attempt VPN
+  //Husarnet.selfHostedSetup(husarnetDashboardURL);
+  //Husarnet.join(husarnetJoinCode, (const char*)dmm->hostname().c_str());
+  //Husarnet.start();
+
   // TODO - handle update events
   //_OTAMgr->onEvent = handleOTAEVent;
   //_OTAMgr->init( dmm->hostname() );

@@ -58,7 +58,16 @@ DroneSystem is the root of all Drone objects, keeping the main script as simple 
 #include <ESP32Servo.h>
 #include <ArduinoLog.h>
 
+// vpn support
+//#include <Husarnet.h>
 
+
+// ----------------------------------------------------------------------------
+// VPN Credentials
+// ----------------------------------------------------------------------------
+
+const char* husarnetJoinCode = "fc94:b01d:1803:8dd8:b293:5c7d:7639:932a/fgUY4RJhfxPzmnRVUZQtcN";
+const char* husarnetDashboardURL = "default";
 
 // ----------------------------------------------------------------------------
 // Serial port mgmt
