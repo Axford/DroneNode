@@ -51,7 +51,11 @@ byte    = value
 #define UDP_TELEMETRY_PARAM_SPEED          11
 #define UDP_TELEMETRY_PARAM_SPEED_E        3
 
-#define UDP_PARAM_ENTRIES                  4
+// @pub 12;c;15;w;URL;URL for a remote server
+#define UDP_TELEMETRY_PARAM_URL            12
+#define UDP_TELEMETRY_PARAM_URL_E          4
+
+#define UDP_PARAM_ENTRIES                  5
 
 
 #define UDP_TELEMETRY_PORT   8007
@@ -71,6 +75,8 @@ protected:
   uint32_t _packetsRejected;
   uint32_t _packetsSent;
   unsigned long _packetsTimer;
+
+  IPAddress _serverAddress;  // resolved from URL
 public:
 
   UDPTelemetryModule(uint8_t id, DroneSystem* ds);

@@ -17,6 +17,11 @@ UDPTelemetryModule::UDPTelemetryModule(uint8_t id, DroneSystem* ds):
    _packetsSent = 0;
    _packetsTimer = 0;
 
+   _serverAddress[0] = 0;
+   _serverAddress[1] = 0;
+   _serverAddress[2] = 0;
+   _serverAddress[3] = 0;
+
    _broadcastCapable = true;
 
    // pubs
@@ -56,7 +61,19 @@ UDPTelemetryModule::UDPTelemetryModule(uint8_t id, DroneSystem* ds):
    param->data.f[0] = 0;
    param->data.f[1] = 0;
    param->data.f[2] = 0;
+
+   param = &_params[UDP_TELEMETRY_PARAM_URL_E];
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, UDP_TELEMETRY_PARAM_URL);
+   setParamName(FPSTR(STRING_URL), param);
+   param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_CHAR, 16);
+   param->data.c[0] = 0;
 }
+
+/*
+IPAddress server_ip;
+WiFi.hostByName("www.google.com",server_ip);
+Serial.println(server_ip);
+*/
 
 
 uint8_t UDPTelemetryModule::getInterfaceType() {
@@ -77,6 +94,8 @@ void UDPTelemetryModule::setup() {
 
 void UDPTelemetryModule::loop() {
   NetworkInterfaceModule::loop();
+
+  unsigned long loopTime = millis();
 
   // deferred initialisation to allow for lack of wifi at start
   if (!_started && WiFi.status() == WL_CONNECTED) {
@@ -114,7 +133,7 @@ void UDPTelemetryModule::loop() {
   }
 
   // update and publish packet counters
-  if (millis() > _packetsTimer + 5000) {
+  if (loopTime > _packetsTimer + 5000) {
 
     uint32_t delta[3];
     delta[0] = _packetsSent - _params[UDP_TELEMETRY_PARAM_PACKETS_E].data.uint32[0];
@@ -128,13 +147,31 @@ void UDPTelemetryModule::loop() {
 
     publishParamEntry(&_params[UDP_TELEMETRY_PARAM_PACKETS_E]);
 
-    float dur = (millis() - _packetsTimer)/1000.0;
+    float dur = (loopTime - _packetsTimer)/1000.0;
     for (uint8_t i=0; i<3; i++) {
       _params[UDP_TELEMETRY_PARAM_SPEED_E].data.f[i] = delta[i] / dur;
     }
     publishParamEntry(&_params[UDP_TELEMETRY_PARAM_SPEED_E]);
 
-    _packetsTimer = millis();
+    // take opportunity to resolve server address...
+    if (_interfaceState &&
+        _params[UDP_TELEMETRY_PARAM_URL_E].data.c[0] != 0 &&
+        _serverAddress[0] == 0
+       ) {
+        WiFi.hostByName(_params[UDP_TELEMETRY_PARAM_URL_E].data.c, _serverAddress);
+
+        if (_serverAddress[0] != 0) {
+          // copy into broadcast param
+          _params[UDP_PARAM_BROADCAST_E].data.uint8[0] = _serverAddress[0];
+          _params[UDP_PARAM_BROADCAST_E].data.uint8[1] = _serverAddress[1];
+          _params[UDP_PARAM_BROADCAST_E].data.uint8[2] = _serverAddress[2];
+          _params[UDP_PARAM_BROADCAST_E].data.uint8[3] = _serverAddress[3];
+
+          publishParamEntry(&_params[UDP_PARAM_BROADCAST_E]);
+        }
+    }
+
+    _packetsTimer = loopTime;
   }
 }
 
