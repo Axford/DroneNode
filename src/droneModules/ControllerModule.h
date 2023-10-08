@@ -1,9 +1,20 @@
 /*
 
-Drive an OLED module based on SSD1306 driver
+@type          Controller
+@inherits      I2CBase
+@category      Logic
+@description   Manage a universal remote control using an SSD1306 display as UI
 
+@config >>>
+[Controller= 10]
+  name= "Controller"
+  bus= 0
+<<<
+
+*/
+
+/*
 display.begin(SSD1306_SWITCHCAPVCC, 0x3C)
-
 */
 #ifndef CONTROLLER_MODULE_H
 #define CONTROLLER_MODULE_H
