@@ -22,6 +22,7 @@ Manages the local set of pub/sub channels
 #include <uthash.h>
 #include "FS.h"
 
+#include "DroneLinkManagerStructs.h"
 #include "droneModules/NetworkInterfaceModule.h"
 
 // forward decl
@@ -40,7 +41,6 @@ class WiFiManager;
 #define DRONE_LINK_MANAGER_LINK_CHECK_INTERVAL     2000
 
 #define DRONE_LINK_MANAGER_AVG_SAMPLES             16  // averaging window for avgAttempts, avgTxTime, etc
-
 
 // -----------------------------------------------------------------------------
 // aka routing entry
@@ -63,6 +63,7 @@ struct DRONE_LINK_NODE_INFO {
   uint32_t lastAck;  // time of last ack from this node
   float avgTxTime;  // avg ms to transmit a packet
   float avgAckTime; // avg time from packet creation to confirmed Ack
+  DRONE_LINK_TRANSPORT_ADDRESS transportAddress;
   DroneLinkMeshMsgSequencer *gSequencer;
 };
 
@@ -193,7 +194,7 @@ public:
 
     // mesh methods
     void registerInterface(NetworkInterfaceModule *interface);
-    void receivePacket(NetworkInterfaceModule *interface, uint8_t *buffer, uint8_t metric);
+    void receivePacket(NetworkInterfaceModule *interface, uint8_t *buffer, uint8_t metric, DRONE_LINK_TRANSPORT_ADDRESS transportAddress);
 
     void receiveAck(uint8_t *buffer);
 

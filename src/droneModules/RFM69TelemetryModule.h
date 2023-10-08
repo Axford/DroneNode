@@ -98,7 +98,7 @@ public:
   virtual void loop();
 
   // network interface methods
-  boolean sendPacket(uint8_t *buffer);
+  boolean sendPacket(uint8_t *buffer, DRONE_LINK_TRANSPORT_ADDRESS transportAddress);
 };
 
 #endif

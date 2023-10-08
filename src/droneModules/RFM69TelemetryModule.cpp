@@ -206,7 +206,9 @@ void RFM69TelemetryModule::loop() {
         Serial.println();
         */
 
-        receivePacket(&_buffer[1], metric);
+        DRONE_LINK_TRANSPORT_ADDRESS ta;
+
+        receivePacket(&_buffer[1], metric, ta);
         _packetsReceived++;
       }
 
@@ -253,7 +255,7 @@ void RFM69TelemetryModule::loop() {
 }
 
 
-boolean RFM69TelemetryModule::sendPacket(uint8_t *buffer) {
+boolean RFM69TelemetryModule::sendPacket(uint8_t *buffer, DRONE_LINK_TRANSPORT_ADDRESS transportAddress) {
 
   if (!_enabled || !_radio) return false;
 

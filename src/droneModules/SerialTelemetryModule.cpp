@@ -137,7 +137,9 @@ void SerialTelemetryModule::loop() {
 
         case 2: // reading payload
           if (_msgLen == _receivedSize - 1) {
-            receivePacket(&_buffer[1], 1);
+            DRONE_LINK_TRANSPORT_ADDRESS ta;
+
+            receivePacket(&_buffer[1], 1, ta);
             _packetsReceived++;
 
             _decodeState = 0;
@@ -180,7 +182,7 @@ void SerialTelemetryModule::setPort(Stream *port) {
 }
 
 
-boolean SerialTelemetryModule::sendPacket(uint8_t *buffer) {
+boolean SerialTelemetryModule::sendPacket(uint8_t *buffer, DRONE_LINK_TRANSPORT_ADDRESS transportAddress) {
 
   if (!_enabled) return false;
 

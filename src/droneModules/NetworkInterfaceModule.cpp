@@ -44,13 +44,13 @@ uint8_t NetworkInterfaceModule::getPeerId() {
 }
 
 
-boolean NetworkInterfaceModule::sendPacket(uint8_t *buffer) {
+boolean NetworkInterfaceModule::sendPacket(uint8_t *buffer, DRONE_LINK_TRANSPORT_ADDRESS transportAddress) {
   // to be inherited
   return false;
 }
 
 
-void NetworkInterfaceModule::receivePacket(uint8_t *buffer, uint8_t metric) {
+void NetworkInterfaceModule::receivePacket(uint8_t *buffer, uint8_t metric, DRONE_LINK_TRANSPORT_ADDRESS transportAddress) {
   // pass onto DLM for processing
-  _dlm->receivePacket(this, buffer, metric);
+  _dlm->receivePacket(this, buffer, metric, transportAddress);
 }

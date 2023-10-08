@@ -17,11 +17,6 @@ UDPTelemetryModule::UDPTelemetryModule(uint8_t id, DroneSystem* ds):
    _packetsSent = 0;
    _packetsTimer = 0;
 
-   _serverAddress[0] = 0;
-   _serverAddress[1] = 0;
-   _serverAddress[2] = 0;
-   _serverAddress[3] = 0;
-
    _broadcastCapable = true;
 
    // pubs
@@ -61,6 +56,16 @@ UDPTelemetryModule::UDPTelemetryModule(uint8_t id, DroneSystem* ds):
    param->data.f[0] = 0;
    param->data.f[1] = 0;
    param->data.f[2] = 0;
+
+   param = &_params[UDP_TELEMETRY_PARAM_SERVER_E];
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, UDP_TELEMETRY_PARAM_SERVER);
+   setParamName(FPSTR(STRING_SERVER), param);
+   _params[UDP_TELEMETRY_PARAM_SERVER_E].paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_UINT8_T, 4);
+   // @default server=0,0,0,0
+   _params[UDP_TELEMETRY_PARAM_SERVER_E].data.uint8[0] = 0;
+   _params[UDP_TELEMETRY_PARAM_SERVER_E].data.uint8[1] = 0;
+   _params[UDP_TELEMETRY_PARAM_SERVER_E].data.uint8[2] = 0;
+   _params[UDP_TELEMETRY_PARAM_SERVER_E].data.uint8[3] = 0;
 
    param = &_params[UDP_TELEMETRY_PARAM_URL_E];
    param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, UDP_TELEMETRY_PARAM_URL);
@@ -119,7 +124,10 @@ void UDPTelemetryModule::loop() {
         long rssi = abs(constrain(WiFi.RSSI(), -100, 0));
         uint8_t metric = map(rssi, 0, 100, 1, 15);
 
-        receivePacket(_rBuffer, metric);
+        DRONE_LINK_TRANSPORT_ADDRESS ta;
+        ta.ipAddress = _udp.remoteIP();
+
+        receivePacket(_rBuffer, metric, ta);
         _packetsReceived++;
       } else if (packetSize > 0) {
         // error - packet size mismatch
@@ -156,18 +164,20 @@ void UDPTelemetryModule::loop() {
     // take opportunity to resolve server address...
     if (_interfaceState &&
         _params[UDP_TELEMETRY_PARAM_URL_E].data.c[0] != 0 &&
-        _serverAddress[0] == 0
+        _params[UDP_TELEMETRY_PARAM_SERVER_E].data.uint8[0] == 0
        ) {
-        WiFi.hostByName(_params[UDP_TELEMETRY_PARAM_URL_E].data.c, _serverAddress);
+        IPAddress serverAddress;
+        WiFi.hostByName(_params[UDP_TELEMETRY_PARAM_URL_E].data.c, serverAddress);
 
-        if (_serverAddress[0] != 0) {
-          // copy into broadcast param
-          _params[UDP_PARAM_BROADCAST_E].data.uint8[0] = _serverAddress[0];
-          _params[UDP_PARAM_BROADCAST_E].data.uint8[1] = _serverAddress[1];
-          _params[UDP_PARAM_BROADCAST_E].data.uint8[2] = _serverAddress[2];
-          _params[UDP_PARAM_BROADCAST_E].data.uint8[3] = _serverAddress[3];
+        if (serverAddress[0] != 0) {
+          // copy into server param
+          
+          _params[UDP_TELEMETRY_PARAM_SERVER_E].data.uint8[0] = serverAddress[0];
+          _params[UDP_TELEMETRY_PARAM_SERVER_E].data.uint8[1] = serverAddress[1];
+          _params[UDP_TELEMETRY_PARAM_SERVER_E].data.uint8[2] = serverAddress[2];
+          _params[UDP_TELEMETRY_PARAM_SERVER_E].data.uint8[3] = serverAddress[3];
 
-          publishParamEntry(&_params[UDP_PARAM_BROADCAST_E]);
+          publishParamEntry(&_params[UDP_TELEMETRY_PARAM_SERVER_E]);
         }
     }
 
@@ -176,7 +186,7 @@ void UDPTelemetryModule::loop() {
 }
 
 
-boolean UDPTelemetryModule::sendPacket(uint8_t *buffer) {
+boolean UDPTelemetryModule::sendPacket(uint8_t *buffer, DRONE_LINK_TRANSPORT_ADDRESS transportAddress) {
   if (!_enabled) return false;
 
   // can only send if WiFi connected
@@ -190,13 +200,40 @@ boolean UDPTelemetryModule::sendPacket(uint8_t *buffer) {
     _params[UDP_PARAM_BROADCAST_E].data.uint8[3]
   );
 
+  IPAddress serverIp(
+    _params[UDP_TELEMETRY_PARAM_SERVER_E].data.uint8[0],
+    _params[UDP_TELEMETRY_PARAM_SERVER_E].data.uint8[1],
+    _params[UDP_TELEMETRY_PARAM_SERVER_E].data.uint8[2],
+    _params[UDP_TELEMETRY_PARAM_SERVER_E].data.uint8[3]
+  );
+
+  // decide whether to use broadcast or unicast transmission
+  // see if we have valid transportAddress?
+  if (transportAddress.ipAddress[0] != 0) {
+    // unicast 
+    sendAddressedPacket(buffer, transportAddress.ipAddress);
+  } else {
+    // this is probably a hello packet, or similar
+
+    // broadcast
+    sendAddressedPacket(buffer, broadcastIp);
+
+    // also send a unicast to our server if we have one
+    if (serverIp[0] != 0) {
+      sendAddressedPacket(buffer, serverIp);
+    }
+  }
+
+ return true;
+}
+
+
+void UDPTelemetryModule::sendAddressedPacket(uint8_t *buffer, IPAddress ipAddress) {
   uint8_t txSize = getDroneMeshMsgTotalSize(buffer);
 
-  _udp.beginPacket(broadcastIp, _params[UDP_PARAM_PORT_E].data.uint32[0]);
+  _udp.beginPacket(ipAddress, _params[UDP_PARAM_PORT_E].data.uint32[0]);
   _udp.write(buffer, txSize);
   _udp.endPacket();
 
   _packetsSent++;
-
-  return true;
 }
