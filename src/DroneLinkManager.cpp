@@ -475,7 +475,7 @@ void DroneLinkManager::serveNodeInfo(AsyncWebServerRequest *request) {
     response->print(inter->getInterfaceState() ? "\"Up\"" : "\"Down\"");
 
     response->print(", \"link\":");
-    response->print(inter->isBroadcastCapable() ? "\"Broadcast\"" : "\"P2P\"");
+    response->print(inter->isBroadcastCapable() ? "\"Broadcast\"" : "\"P2P\"");    
      
     if (!inter->isBroadcastCapable() ) {
       response->printf(", \"peer\": %u", inter->getPeerId());
@@ -523,6 +523,11 @@ void DroneLinkManager::serveNodeInfo(AsyncWebServerRequest *request) {
           response->printf(",\"avgTx\": %.0f", page->nodeInfo[j].avgTxTime);
           response->printf(",\"avgAck\": %.0f", page->nodeInfo[j].avgAckTime);
           response->printf(",\"gU\": %u", page->nodeInfo[j].givenUp);
+          response->printf(", \"transAddr\":[%u,%u,%u,%u]", 
+                           page->nodeInfo[j].transportAddress.ipAddress[0], 
+                           page->nodeInfo[j].transportAddress.ipAddress[1], 
+                           page->nodeInfo[j].transportAddress.ipAddress[2], 
+                           page->nodeInfo[j].transportAddress.ipAddress[3]);
           response->print("}");
           items++;
         }
