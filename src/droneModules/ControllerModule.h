@@ -23,6 +23,7 @@ display.begin(SSD1306_SWITCHCAPVCC, 0x3C)
 
 #include "../DroneModule.h"
 #include "../DroneWire.h"
+#include "../DroneLinkMsg.h"
 #include "I2CBaseModule.h"
 #include "LinkedList.h"
 
@@ -46,10 +47,24 @@ display.begin(SSD1306_SWITCHCAPVCC, 0x3C)
 static const char CONTROLLER_STR_CONTROLLER[] PROGMEM = "Controller";
 
 
+/*
+--------------------------------------------------------------------------------------
+
+*/
+
+struct CONTROLLER_DISPLAY_INFO {
+  char name[DRONE_LINK_MSG_MAX_PAYLOAD];
+  uint32_t position[2];
+  DRONE_LINK_MSG value;
+};
+
+
 
 // class
 class ControllerModule:  public I2CBaseModule {
 protected:
+
+  IvanLinkedList::LinkedList<CONTROLLER_DISPLAY_INFO*> _displayItems;
 
   uint8_t _brightness;
 
@@ -60,10 +75,15 @@ protected:
 
   SSD1306Wire *_display;
   DroneLinkMsg _sendMsg;
+  DroneLinkMsg _queryMsg;
 public:
 
   ControllerModule(uint8_t id, DroneSystem* ds);
   ~ControllerModule();
+
+  void bindSubscriptions();
+
+  void loadConfiguration(const char* filename);
 
   void clear();
   void drawSpinner();
