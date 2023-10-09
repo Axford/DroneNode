@@ -70,9 +70,11 @@ UDPTelemetryModule::UDPTelemetryModule(uint8_t id, DroneSystem* ds):
    param = &_params[UDP_TELEMETRY_PARAM_URL_E];
    param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, UDP_TELEMETRY_PARAM_URL);
    setParamName(FPSTR(STRING_URL), param);
-   param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_CHAR, 16);
+   param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_CHAR, 1);
+   param->data.c[0] = ' ';
    // fill with nulls
-   for (uint8_t i=0; i<16; i++) param->data.c[i] = 0;
+   for (uint8_t i=1; i<16; i++) param->data.c[i] = 0;
+
 }
 
 /*
@@ -165,6 +167,7 @@ void UDPTelemetryModule::loop() {
     // take opportunity to resolve server address...
     if (_interfaceState &&
         _params[UDP_TELEMETRY_PARAM_URL_E].data.c[0] != 0 &&
+        _params[UDP_TELEMETRY_PARAM_URL_E].data.c[0] != ' ' &&
         _params[UDP_TELEMETRY_PARAM_SERVER_E].data.uint8[0] == 0
        ) {
         IPAddress serverAddress;

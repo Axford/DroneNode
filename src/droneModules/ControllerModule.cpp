@@ -39,6 +39,29 @@ ControllerModule::ControllerModule(uint8_t id, DroneSystem *ds) : I2CBaseModule(
   clear();
 
   // subs
+   initSubs(CONTROLLER_SUBS);
+
+   DRONE_PARAM_SUB *sub;
+
+   sub = &_subs[CONTROLLER_SUB_SELECT_E];
+   sub->addrParam = CONTROLLER_SUB_SELECT_ADDR;
+   sub->param.paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, CONTROLLER_SUB_SELECT);
+   setParamName(FPSTR(STRING_SELECT), &sub->param);
+
+   sub = &_subs[CONTROLLER_SUB_CANCEL_E];
+   sub->addrParam = CONTROLLER_SUB_CANCEL_ADDR;
+   sub->param.paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, CONTROLLER_SUB_CANCEL);
+   setParamName(FPSTR(STRING_CANCEL), &sub->param);
+
+   sub = &_subs[CONTROLLER_SUB_YAXIS_E];
+   sub->addrParam = CONTROLLER_SUB_YAXIS_ADDR;
+   sub->param.paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, CONTROLLER_SUB_YAXIS);
+   setParamName(FPSTR(STRING_YAXIS), &sub->param);
+
+  sub = &_subs[CONTROLLER_SUB_ARM_E];
+   sub->addrParam = CONTROLLER_SUB_ARM_ADDR;
+   sub->param.paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, CONTROLLER_SUB_ARM);
+   setParamName(FPSTR(STRING_ARM), &sub->param);
 
   // outputs
   initParams(CONTROLLER_PARAM_ENTRIES);
@@ -449,47 +472,49 @@ void ControllerModule::handleLinkMessage(DroneLinkMsg *msg)
   }
 
   /*
-    Intercept control values
+    Intercept control values (if armed)
   */
-  for (uint8_t i = 0; i < _controlItems.size(); i++)
-  {
-    CONTROLLER_CONTROL_INFO *temp = _controlItems.get(i);
-
-    // see if the addresses match
-    if (msg->node() == temp->value.node &&
-        msg->channel() == temp->value.channel &&
-        msg->param() == temp->value.paramPriority && 
-        msg->type() <= DRONE_LINK_MSG_TYPE_CHAR)
+  if (_armed) {
+    for (uint8_t i = 0; i < _controlItems.size(); i++)
     {
-      // update value and type
-      _sendMsg._msg.paramTypeLength = msg->_msg.paramTypeLength;
-      uint8_t len = msg->length();
-      memcpy(_sendMsg._msg.payload.c, msg->_msg.payload.c, len);
-      
-      _sendMsg.writable(false);
+      CONTROLLER_CONTROL_INFO *temp = _controlItems.get(i);
 
-      if (len < DRONE_LINK_MSG_MAX_PAYLOAD)
+      // see if the addresses match
+      if (msg->node() == temp->value.node &&
+          msg->channel() == temp->value.channel &&
+          msg->param() == temp->value.paramPriority && 
+          msg->type() <= DRONE_LINK_MSG_TYPE_CHAR)
       {
-        _sendMsg._msg.payload.c[len] = 0; // ensure inbound strings are null terminated
+        // update value and type
+        _sendMsg._msg.paramTypeLength = msg->_msg.paramTypeLength;
+        uint8_t len = msg->length();
+        memcpy(_sendMsg._msg.payload.c, msg->_msg.payload.c, len);
+        
+        _sendMsg.writable(false);
+
+        if (len < DRONE_LINK_MSG_MAX_PAYLOAD)
+        {
+          _sendMsg._msg.payload.c[len] = 0; // ensure inbound strings are null terminated
+        }
+
+        // set target address
+        _sendMsg._msg.source = _dlm->node();
+        _sendMsg._msg.node = temp->target.node;
+        _sendMsg._msg.channel = temp->target.channel;
+        _sendMsg._msg.paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_CRITICAL, temp->target.paramPriority);
+        
+        // publish
+        Serial.print("Send ");
+        Serial.print(_sendMsg._msg.payload.f[0]);
+        Serial.print(" to: ");
+        DroneLinkMsg::printAddress(&temp->target);
+        DroneLinkMsg::printPayload(&_sendMsg._msg.payload, _sendMsg._msg.paramTypeLength);
+
+
+        _dlm->sendDroneLinkMessage(temp->target.node, &_sendMsg);
+
+        _spinner += PI / 16.0;
       }
-
-      // set target address
-      _sendMsg._msg.source = _dlm->node();
-      _sendMsg._msg.node = temp->target.node;
-      _sendMsg._msg.channel = temp->target.channel;
-      _sendMsg._msg.paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_CRITICAL, temp->target.paramPriority);
-      
-      // publish
-      Serial.print("Send ");
-      Serial.print(_sendMsg._msg.payload.f[0]);
-      Serial.print(" to: ");
-      DroneLinkMsg::printAddress(&temp->target);
-      DroneLinkMsg::printPayload(&_sendMsg._msg.payload, _sendMsg._msg.paramTypeLength);
-
-
-      _dlm->sendDroneLinkMessage(temp->target.node, &_sendMsg);
-
-      _spinner += PI / 16.0;
     }
   }
 
@@ -576,6 +601,10 @@ void ControllerModule::loop()
   if (!_display)
     return;
 
+  // update armed value
+  _armed = _subs[CONTROLLER_SUB_ARM_E].param.data.f[0] > 0.5;
+
+
   // Serial.println("loop");
 
   DroneWire::selectChannel(_params[I2CBASE_PARAM_BUS_E].data.uint8[0]);
@@ -599,12 +628,10 @@ void ControllerModule::loop()
   _display->drawString(1,0, _title);
 
   // ARM indicator
-  if (_armed)
-  {
-    _display->setFont(ArialMT_Plain_10);
-    _display->setTextAlignment(TEXT_ALIGN_RIGHT);
-    _display->drawString(111, 1, "A");
-  }
+  _display->setFont(ArialMT_Plain_10);
+  _display->setTextAlignment(TEXT_ALIGN_RIGHT);
+  _display->drawString(111, 1, _armed ? "A" : "d");
+  
 
   // draw menu size for debugging
   /*

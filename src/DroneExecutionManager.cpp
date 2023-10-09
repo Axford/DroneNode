@@ -16,6 +16,7 @@
 #include "droneModules/CylonModule.h"
 #include "droneModules/DepthModule.h"
 #include "droneModules/DiagnosticModule.h"
+#include "droneModules/DigitalModule.h"
 #include "droneModules/HMC5883LModule.h"
 #include "droneModules/HT16K33Module.h"
 #include "droneModules/INA219Module.h"
@@ -519,6 +520,8 @@ DroneModule* DroneExecutionManager::instanceModule(char* typeName, uint8_t id) {
       newMod = new DepthModule(id, _ds);
     } else if (strcmp_P(typeName, DIAGNOSTIC_STR_DIAGNOSTIC) == 0) {
       newMod = new DiagnosticModule(id, _ds);
+    } else if (strcmp_P(typeName, DIGITAL_STR_DIGITAL) == 0) {
+      newMod = new DigitalModule(id, _ds);
     } else if (strcmp_P(typeName, HMC5883L_STR_HMC5883L) == 0) {
       newMod = new HMC5883LModule(id, _ds);
     } else if (strcmp_P(typeName, HT16K33_STR_HT16K33) == 0) {

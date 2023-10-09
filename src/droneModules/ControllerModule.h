@@ -35,13 +35,36 @@ display.begin(SSD1306_SWITCHCAPVCC, 0x3C)
 */ 
 #define CONTROLLER_OLED_I2C_ADDRESS  0x3c
 
-
+// -----------------------------------------------------------------------------------
 // pubs
+// -----------------------------------------------------------------------------------
 #define CONTROLLER_PARAM_ENTRIES     (I2CBASE_PARAM_ENTRIES + 0)
 
 
+// -----------------------------------------------------------------------------------
 // subs
-#define CONTROLLER_SUBS              0
+// -----------------------------------------------------------------------------------
+// @sub 20;21;f;1;select;Select button (e.g. JoyStick right button)
+#define CONTROLLER_SUB_SELECT              (I2CBASE_SUBCLASS_PARAM_START+10) //20
+#define CONTROLLER_SUB_SELECT_ADDR         (I2CBASE_SUBCLASS_PARAM_START+11) //21
+#define CONTROLLER_SUB_SELECT_E            0
+
+// @sub 22;23;f;1;cancel;Cancel button (e.g. JoyStick left button)
+#define CONTROLLER_SUB_CANCEL              (I2CBASE_SUBCLASS_PARAM_START+12) //22
+#define CONTROLLER_SUB_CANCEL_ADDR         (I2CBASE_SUBCLASS_PARAM_START+13) //23
+#define CONTROLLER_SUB_CANCEL_E            1
+
+// @sub 24;25;f;1;yAxis;yAxis for controlling menus (e.g. JoyStick right yAxis)
+#define CONTROLLER_SUB_YAXIS               (I2CBASE_SUBCLASS_PARAM_START+14) //24
+#define CONTROLLER_SUB_YAXIS_ADDR          (I2CBASE_SUBCLASS_PARAM_START+15) //25
+#define CONTROLLER_SUB_YAXIS_E             2
+
+// @sub 26;27;f;1;arm;Arm switch 
+#define CONTROLLER_SUB_ARM                 (I2CBASE_SUBCLASS_PARAM_START+14) //26
+#define CONTROLLER_SUB_ARM_ADDR            (I2CBASE_SUBCLASS_PARAM_START+15) //27
+#define CONTROLLER_SUB_ARM_E               3
+
+#define CONTROLLER_SUBS                4
 
 // strings
 static const char CONTROLLER_STR_CONTROLLER[] PROGMEM = "Controller";
