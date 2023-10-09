@@ -48,23 +48,36 @@ static const char CONTROLLER_STR_CONTROLLER[] PROGMEM = "Controller";
 
 
 /*
---------------------------------------------------------------------------------------
-
+-------------------------------------------------------------------------------------
 */
 
 struct CONTROLLER_DISPLAY_INFO {
   char name[DRONE_LINK_MSG_MAX_PAYLOAD];
   uint32_t position[2];
+  uint8_t precision;
   DRONE_LINK_MSG value;
 };
 
+struct CONTROLLER_CONTROL_INFO {
+  char name[DRONE_LINK_MSG_MAX_PAYLOAD];
+  DRONE_LINK_MSG value;
+  DRONE_LINK_ADDR target;
+};
+
+
+/*
+-------------------------------------------------------------------------------------
+*/
 
 
 // class
 class ControllerModule:  public I2CBaseModule {
 protected:
 
+  char _title[DRONE_LINK_MSG_MAX_PAYLOAD];
+
   IvanLinkedList::LinkedList<CONTROLLER_DISPLAY_INFO*> _displayItems;
+  IvanLinkedList::LinkedList<CONTROLLER_CONTROL_INFO*> _controlItems;
 
   uint8_t _brightness;
 
@@ -82,6 +95,8 @@ public:
   ~ControllerModule();
 
   void bindSubscriptions();
+
+  void parseAddress(DRONE_LINK_ADDR *addressInfo, char * address);
 
   void loadConfiguration(const char* filename);
 

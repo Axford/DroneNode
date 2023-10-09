@@ -71,7 +71,8 @@ UDPTelemetryModule::UDPTelemetryModule(uint8_t id, DroneSystem* ds):
    param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, UDP_TELEMETRY_PARAM_URL);
    setParamName(FPSTR(STRING_URL), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_CHAR, 16);
-   param->data.c[0] = 0;
+   // fill with nulls
+   for (uint8_t i=0; i<16; i++) param->data.c[i] = 0;
 }
 
 /*

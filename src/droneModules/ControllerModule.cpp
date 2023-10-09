@@ -32,6 +32,10 @@ ControllerModule::ControllerModule(uint8_t id, DroneSystem *ds) : I2CBaseModule(
   _spinner = 0;
   _scroll = 0;
 
+  _armed = true; // TODO - make this controlled
+
+  strcpy(_title, "Unknown");
+
   clear();
 
   // subs
@@ -40,31 +44,6 @@ ControllerModule::ControllerModule(uint8_t id, DroneSystem *ds) : I2CBaseModule(
   initParams(CONTROLLER_PARAM_ENTRIES);
   I2CBaseModule::initBaseParams();
   _params[I2CBASE_PARAM_ADDR_E].data.uint8[0] = CONTROLLER_OLED_I2C_ADDRESS;
-
-  // dummy display item
-  /*
-  CONTROLLER_DISPLAY_INFO *temp = (CONTROLLER_DISPLAY_INFO *)malloc(sizeof(CONTROLLER_DISPLAY_INFO));
-  temp->value.node = 82;
-  temp->value.channel = 6;
-  temp->value.paramPriority = 9;
-  temp->value.paramTypeLength = _sendMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_FLOAT, 4);
-  temp->value.payload.f[0] = 0;
-  strcpy(temp->name, "Satellites\0");
-  temp->position[0] = 0;
-  temp->position[1] = 0;
-  _displayItems.add(temp);
-
-  temp = (CONTROLLER_DISPLAY_INFO *)malloc(sizeof(CONTROLLER_DISPLAY_INFO));
-  temp->value.node = 82;
-  temp->value.channel = 5;
-  temp->value.paramPriority = 11;
-  temp->value.paramTypeLength = _sendMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_FLOAT, 4);
-  temp->value.payload.f[0] = 0;
-  strcpy(temp->name, "Heading\0");
-  temp->position[0] = 0;
-  temp->position[1] = 14;
-  _displayItems.add(temp);
-  */
 }
 
 ControllerModule::~ControllerModule()
@@ -75,17 +54,23 @@ ControllerModule::~ControllerModule()
 
 void ControllerModule::bindSubscriptions()
 {
-
   // create a binding for each display parameter
   for (uint8_t i = 0; i < _displayItems.size(); i++)
   {
     CONTROLLER_DISPLAY_INFO *temp = _displayItems.get(i);
     _dlm->subscribe(temp->value.node, temp->value.channel, this, temp->value.paramPriority);
   }
+
+  // create a binding for each control parameter
+  for (uint8_t i = 0; i < _controlItems.size(); i++)
+  {
+    CONTROLLER_CONTROL_INFO *temp = _controlItems.get(i);
+    _dlm->subscribe(temp->value.node, temp->value.channel, this, temp->value.paramPriority);
+  }
 }
 
-void parseDisplaySource(CONTROLLER_DISPLAY_INFO *displayItem, char * address) {
-  if (displayItem == NULL || address[0] == 0) return;
+void ControllerModule::parseAddress(DRONE_LINK_ADDR *addressInfo, char * address) {
+  if (addressInfo == NULL || address[0] == 0) return;
 
   // parse elements of address
   char buffer[20];
@@ -100,20 +85,26 @@ void parseDisplaySource(CONTROLLER_DISPLAY_INFO *displayItem, char * address) {
 
     } else if (c == '>') {
       if (bufLen > 0) {
-        displayItem->value.node = atoi(buffer);
+        if (buffer[0] == '@') {
+          addressInfo->node = _dlm->node();
+        } else {
+          addressInfo->node = atoi(buffer);
+        }
+      } else {
+        addressInfo->node = 0;
       }
       bufLen = 0;
       part = 1;
     } else if (c == '.') {
       if (bufLen > 0) {
-        displayItem->value.channel = atoi(buffer);
+        addressInfo->channel = atoi(buffer);
       }
       bufLen = 0;
       part = 2;
 
     }  else if (c == 0) {
       if (bufLen > 0) {
-        displayItem->value.paramPriority = atoi(buffer);
+        addressInfo->paramPriority = atoi(buffer);
       }
       bufLen = 0;
       part = 2;
@@ -187,6 +178,7 @@ void ControllerModule::loadConfiguration(const char* filename) {
   uint8_t nBufLen = 0;
 
   CONTROLLER_DISPLAY_INFO *displayItem = NULL;
+  CONTROLLER_CONTROL_INFO *controlItem = NULL;
 
   if (LITTLEFS.exists(F(filename))) {
     File file = LITTLEFS.open(F(filename), FILE_READ);
@@ -263,12 +255,19 @@ void ControllerModule::loadConfiguration(const char* filename) {
               case CM_PARSER_GENERAL:
                 Serial.print("General: ");
                   Serial.println(nameBuffer);
-                  // do nothing, ignoring content outside sections
+                  if (strcmp(nameBuffer, "title")==0) {
+                    strcpy(_title, valueBuffer);
+                  }
+
                   break;
 
               case CM_PARSER_SECTION_TITLE:
                   Serial.print("Section Title: ");
                   Serial.println(nameBuffer);
+
+                  // clear any existing items
+                  displayItem = NULL;
+                  controlItem = NULL;
 
                   // determine type of config to load
                   if (strcmp(nameBuffer, "display")==0) {
@@ -280,12 +279,23 @@ void ControllerModule::loadConfiguration(const char* filename) {
                     displayItem->value.paramTypeLength = _sendMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_FLOAT, 4);
                     displayItem->value.payload.f[0] = 0;
                     displayItem->name[0] = 0;
+                    displayItem->precision = 1;
                     displayItem->position[0] = 0;
                     displayItem->position[1] = 0;
                     _displayItems.add(displayItem);
-                  } else {
-                    // clear any existing items
-                    displayItem = NULL;
+                  } else if (strcmp(nameBuffer, "control")==0) {
+                    // prep a blank controlItem ready to populate from config
+                    controlItem = (CONTROLLER_CONTROL_INFO *)malloc(sizeof(CONTROLLER_CONTROL_INFO));
+                    controlItem->target.node = 0;
+                    controlItem->target.channel = 0;
+                    controlItem->target.paramPriority = 0;
+                    controlItem->value.node = 0;
+                    controlItem->value.channel = 0;
+                    controlItem->value.paramPriority = 0;
+                    controlItem->value.paramTypeLength = _sendMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_FLOAT, 4);
+                    controlItem->value.payload.f[0] = 0;
+                    controlItem->name[0] = 0;
+                    _controlItems.add(controlItem);
                   }
 
                   outerState = CM_PARSER_SECTION;
@@ -297,12 +307,23 @@ void ControllerModule::loadConfiguration(const char* filename) {
 
                   if (displayItem) {
                     if (strcmp(nameBuffer, "source")==0) {
-                      parseDisplaySource(displayItem, valueBuffer);
+                      parseAddress((DRONE_LINK_ADDR*)(&displayItem->value), valueBuffer);
                     } else if (strcmp(nameBuffer, "name")==0) {
                       strcpy(displayItem->name, valueBuffer);
                     } else if (strcmp(nameBuffer, "position")==0) {
                       parseDisplayPosition(displayItem, valueBuffer);
+                    } else if (strcmp(nameBuffer, "precision")==0) {
+                      displayItem->precision = atoi(valueBuffer);
                     }
+                    
+                  } else  if (controlItem) {
+                    if (strcmp(nameBuffer, "source")==0) {
+                      parseAddress((DRONE_LINK_ADDR*)(&controlItem->value), valueBuffer);
+                    } else if (strcmp(nameBuffer, "target")==0) {
+                      parseAddress(&controlItem->target, valueBuffer);
+                    } else if (strcmp(nameBuffer, "name")==0) {
+                      strcpy(controlItem->name, valueBuffer);
+                    } 
                     
                   } else 
                     Log.errorln(F("[CM.lC] nothing valid to configure"));
@@ -394,10 +415,12 @@ void ControllerModule::handleLinkMessage(DroneLinkMsg *msg)
     */
   }
 
+/*
   if ((msg->node() != _dlm->node()))
   {
     _spinner += PI / 16.0;
   }
+*/
 
   /*
     Intercept display values
@@ -420,6 +443,53 @@ void ControllerModule::handleLinkMessage(DroneLinkMsg *msg)
       {
         temp->value.payload.c[len] = 0; // ensure inbound strings are null terminated
       }
+
+      _spinner += PI / 16.0;
+    }
+  }
+
+  /*
+    Intercept control values
+  */
+  for (uint8_t i = 0; i < _controlItems.size(); i++)
+  {
+    CONTROLLER_CONTROL_INFO *temp = _controlItems.get(i);
+
+    // see if the addresses match
+    if (msg->node() == temp->value.node &&
+        msg->channel() == temp->value.channel &&
+        msg->param() == temp->value.paramPriority && 
+        msg->type() <= DRONE_LINK_MSG_TYPE_CHAR)
+    {
+      // update value and type
+      _sendMsg._msg.paramTypeLength = msg->_msg.paramTypeLength;
+      uint8_t len = msg->length();
+      memcpy(_sendMsg._msg.payload.c, msg->_msg.payload.c, len);
+      
+      _sendMsg.writable(false);
+
+      if (len < DRONE_LINK_MSG_MAX_PAYLOAD)
+      {
+        _sendMsg._msg.payload.c[len] = 0; // ensure inbound strings are null terminated
+      }
+
+      // set target address
+      _sendMsg._msg.source = _dlm->node();
+      _sendMsg._msg.node = temp->target.node;
+      _sendMsg._msg.channel = temp->target.channel;
+      _sendMsg._msg.paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_CRITICAL, temp->target.paramPriority);
+      
+      // publish
+      Serial.print("Send ");
+      Serial.print(_sendMsg._msg.payload.f[0]);
+      Serial.print(" to: ");
+      DroneLinkMsg::printAddress(&temp->target);
+      DroneLinkMsg::printPayload(&_sendMsg._msg.payload, _sendMsg._msg.paramTypeLength);
+
+
+      _dlm->sendDroneLinkMessage(temp->target.node, &_sendMsg);
+
+      _spinner += PI / 16.0;
     }
   }
 
@@ -525,6 +595,8 @@ void ControllerModule::loop()
 
   _display->setColor(BLACK);
   _display->setFont(ArialMT_Plain_10);
+  // title
+  _display->drawString(1,0, _title);
 
   // ARM indicator
   if (_armed)
@@ -561,7 +633,7 @@ void ControllerModule::loop()
     // draw label
     _display->setFont(TomThumb4x6);
     _display->setTextAlignment(TEXT_ALIGN_RIGHT);
-    _display->drawString(x + 58, y + 4, temp->name);
+    _display->drawString(x - 2, y + 4, temp->name);
 
     // draw value
     uint8_t byteLen = (temp->value.paramTypeLength & 0xF) + 1;
@@ -591,7 +663,7 @@ void ControllerModule::loop()
         valueStr += String(temp->value.payload.uint32[j]);
         break;
       case DRONE_LINK_MSG_TYPE_FLOAT:
-        valueStr += String(temp->value.payload.f[j]);
+        valueStr += String(temp->value.payload.f[j], (unsigned int)temp->precision);
         break;
       case DRONE_LINK_MSG_TYPE_CHAR:
         valueStr += String(temp->value.payload.c);
@@ -599,7 +671,7 @@ void ControllerModule::loop()
       }
     }
 
-    _display->drawString(x + 62, y, valueStr);
+    _display->drawString(x + 2, y, valueStr);
   }
 
   drawSpinner();

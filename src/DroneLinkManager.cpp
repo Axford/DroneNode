@@ -172,7 +172,6 @@ void DroneLinkManager::resetExternalSubscriptions(uint8_t extNode) {
 
 void DroneLinkManager::processExternalSubscriptions() {
   // check for pending subscriptions
-
   DroneLinkChannel* c;
   for(int i = 0; i < _channels.size(); i++){
     c = _channels.get(i);
