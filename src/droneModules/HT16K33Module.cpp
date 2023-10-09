@@ -68,11 +68,13 @@ void HT16K33Module::loop() {
   DroneWire::selectChannel(_params[I2CBASE_PARAM_BUS_E].data.uint8[0]);
 
   uint32_t now = millis();
-  uint32_t s = now / 1000;
-  uint32_t t = (now - s * 1000) / 10;
-  s = s % 100;
-  // seg.displayTime(s, t);
-  _sensor->displayTime(s, t, true, false);  // do not display leading zero.
+  uint32_t s = now / 1000;  // convert uptime to seconds
+
+  // calc whole minutes
+  uint32_t minutes = floor(s / 60);
+  uint32_t seconds = s - minutes*60;
+
+  _sensor->displayTime(minutes, seconds, true, false);  // do not display leading zero.
   _sensor->displayColon(1);
 
 }
