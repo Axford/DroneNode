@@ -447,8 +447,8 @@ void DroneSystem::setup() {
   DroneWire::setup();
 
   // I2C scan
-  Log.noticeln(F("[] I2C bus scan..."));
-  DroneWire::scanAll();
+  //Log.noticeln(F("[] I2C bus scan..."));
+  //DroneWire::scanAll();
 
   // Detect motherboard version
   detectMotherboardVersion();
