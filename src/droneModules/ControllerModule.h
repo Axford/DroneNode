@@ -78,6 +78,7 @@ struct CONTROLLER_DISPLAY_INFO {
   char name[DRONE_LINK_MSG_MAX_PAYLOAD];
   uint32_t position[2];
   uint8_t precision;
+  uint8_t page;
   DRONE_LINK_MSG value;
 };
 
@@ -92,6 +93,40 @@ struct CONTROLLER_CONTROL_INFO {
 -------------------------------------------------------------------------------------
 */
 
+struct CONTROLLER_MENU_ITEM {
+  uint8_t menu;
+  uint8_t data;  // any menu data associated, e.g. node id
+  void *dataPointer; // use carefully!
+  String name;
+};
+
+
+struct CONTROLLER_MENU_STATE {
+  //uint8_t id;  // menu id - implicit
+  uint8_t selected; // which item was selected
+  uint8_t backTo;  // which menu item to go to if the left button is pushed
+  String name;  // menu name
+  IvanLinkedList::LinkedList<CONTROLLER_MENU_ITEM> items;
+  //DrawMenuItemHandler drawMenuItemHandler;
+  //SelectMenuHandler selectHandler;
+};
+
+#define CONTROLLER_MENU_ROOT       0
+
+#define CONTROLLER_MENU_COUNT      1
+
+#define CONTROLLER_MENU_INCREMENT_DATA_VALUE   255
+
+
+
+
+/*
+-------------------------------------------------------------------------------------
+*/
+
+// dhysteresis array indices
+#define CONTROLLER_HYS_SELECT       0
+#define CONTROLLER_HYS_CANCEL       1
 
 // class
 class ControllerModule:  public I2CBaseModule {
@@ -109,6 +144,18 @@ protected:
   int _scroll;  // index of first item shown on screen i.e. top
   float _spinner;
 
+  boolean _inMenu;  // whether menu system is active
+
+  uint8_t _page;
+  uint8_t _maxPage;
+
+  uint8_t _menu;  // active menu
+  uint8_t _lastMenu;  // last menu drawn
+  CONTROLLER_MENU_STATE _menus[CONTROLLER_MENU_COUNT];
+
+  boolean _buttons[2];     // flag if ui button pressed and needs handling
+  boolean _hysteresis[2];  // hysteresis flags for UI controls
+
   SSD1306Wire *_display;
   DroneLinkMsg _sendMsg;
   DroneLinkMsg _queryMsg;
@@ -122,6 +169,16 @@ public:
   void parseAddress(DRONE_LINK_ADDR *addressInfo, char * address);
 
   void loadConfiguration(const char* filename);
+
+  void setMenuItem(uint8_t menu, uint8_t item, String name, uint8_t data, void* dataPointer, uint8_t nextMenu);
+
+  
+
+  void drawMenu();
+
+  void manageMenu();
+
+  void manageBinding();  // if binding is active
 
   void clear();
   void drawSpinner();

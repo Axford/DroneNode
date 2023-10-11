@@ -8,6 +8,9 @@ JoystickModule::JoystickModule(uint8_t id, DroneSystem* ds):
  {
    setTypeName(FPSTR(JOYSTICK_STR_JOYSTICK));
 
+   // @default interval=100
+  _mgmtParams[DRONE_MODULE_PARAM_INTERVAL_E].data.uint32[0] = 100;
+
    // pubs
    initParams(JOYSTICK_PARAM_ENTRIES);
 

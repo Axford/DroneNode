@@ -19,6 +19,9 @@ ControllerModule::ControllerModule(uint8_t id, DroneSystem *ds) : I2CBaseModule(
 {
   setTypeName(FPSTR(CONTROLLER_STR_CONTROLLER));
 
+  // @default interval=100
+  _mgmtParams[DRONE_MODULE_PARAM_INTERVAL_E].data.uint32[0] = 100;
+
   // init send msg
   _sendMsg.source(_dlm->node());
   _sendMsg.type(DRONE_LINK_MSG_TYPE_FLOAT);
@@ -32,9 +35,29 @@ ControllerModule::ControllerModule(uint8_t id, DroneSystem *ds) : I2CBaseModule(
   _spinner = 0;
   _scroll = 0;
 
-  _armed = true; // TODO - make this controlled
+  _armed = false; 
+  _inMenu = false;
+  _page = 0;
+  _maxPage = 0;
+
+  _buttons[0] = false;
+  _buttons[1] = false;
+  _hysteresis[0] = false;
+  _hysteresis[1] = false;
+
 
   strcpy(_title, "Unknown");
+
+  // configure menus
+   _menu = CONTROLLER_MENU_ROOT;
+   _scroll = 0;
+
+   // defaults
+   for (uint8_t i=0; i<CONTROLLER_MENU_COUNT; i++) {
+     _menus[i].selected = 0;
+   }
+
+
 
   clear();
 
@@ -303,6 +326,7 @@ void ControllerModule::loadConfiguration(const char* filename) {
                     displayItem->value.payload.f[0] = 0;
                     displayItem->name[0] = 0;
                     displayItem->precision = 1;
+                    displayItem->page = 0;
                     displayItem->position[0] = 0;
                     displayItem->position[1] = 0;
                     _displayItems.add(displayItem);
@@ -337,6 +361,9 @@ void ControllerModule::loadConfiguration(const char* filename) {
                       parseDisplayPosition(displayItem, valueBuffer);
                     } else if (strcmp(nameBuffer, "precision")==0) {
                       displayItem->precision = atoi(valueBuffer);
+                    } else if (strcmp(nameBuffer, "page")==0) {
+                      displayItem->page = atoi(valueBuffer);
+                      if (displayItem->page > _maxPage) _maxPage = displayItem->page;
                     }
                     
                   } else  if (controlItem) {
@@ -371,6 +398,142 @@ void ControllerModule::loadConfiguration(const char* filename) {
     Serial.println(filename);
   }
 }
+
+
+void ControllerModule::setMenuItem(uint8_t menu, uint8_t item, String name, uint8_t data, void* dataPointer, uint8_t nextMenu) {
+  CONTROLLER_MENU_ITEM tempItem;
+  //Serial.printf("Adding to menu %u, item %u \n", menu, item);
+
+  tempItem.name = name;
+  tempItem.menu = nextMenu;
+  tempItem.data = data;
+  tempItem.dataPointer = dataPointer;
+
+  if (item >= _menus[menu].items.size()) {
+    // push
+    _menus[menu].items.add(tempItem);
+  } else {
+    // update
+    _menus[menu].items.set(item, tempItem);
+  }
+}
+
+
+void ControllerModule::drawMenu() {
+  // draw menu items
+  _display->setTextAlignment(TEXT_ALIGN_LEFT);
+  int y;
+  for (uint8_t i=0; i< _menus[_menu].items.size(); i++) {
+    if (i >= _scroll) {
+      y = 14 + (i - _scroll) *12;
+
+      if (y >0 && y < 64) {
+        if (i == _menus[_menu].selected) {
+          _display->setColor(WHITE);
+          _display->fillRect(0, y+1, 128, 11);
+          _display->setColor(BLACK);
+        } else {
+          _display->setColor(WHITE);
+        }
+
+        if (true) {
+          if (_menus[_menu].items[i].name) {
+            _display->drawString(2, y, String(_menus[_menu].items[i].data) + "." + _menus[_menu].items[i].name);
+          } else {
+            _display->drawString(2, y, String(_menus[_menu].items[i].data) + ". ?");
+          }
+        }
+      }
+    }
+  }
+}
+
+ void ControllerModule::manageMenu() {
+
+ }
+
+
+void ControllerModule::manageBinding() {
+
+  // update page
+  if (_buttons[CONTROLLER_HYS_CANCEL]) {
+    _buttons[CONTROLLER_HYS_CANCEL] = false;
+    _page++;
+    if (_page > _maxPage) _page = 0;
+  }
+
+  // title
+  _display->setColor(BLACK);
+  _display->setTextAlignment(TEXT_ALIGN_LEFT);
+  _display->setFont(ArialMT_Plain_10);
+  _display->drawString(1,0, _title);
+
+  //_display->drawString(100, 1, String((int)_page));
+
+  // ARM indicator
+  _display->setTextAlignment(TEXT_ALIGN_RIGHT);
+  _display->drawString(111, 1, _armed ? "A" : "d");
+
+  
+  // draw display items
+  String valueStr = "";
+  _display->setColor(WHITE);
+
+  for (uint8_t i = 0; i < _displayItems.size(); i++)
+  {
+    CONTROLLER_DISPLAY_INFO *temp = _displayItems.get(i);
+
+    // check matching page
+    if (temp->page == _page) {
+      uint32_t x = temp->position[0];
+      uint32_t y = 13 + temp->position[1];
+
+      // draw label
+      _display->setFont(TomThumb4x6);
+      _display->setTextAlignment(TEXT_ALIGN_RIGHT);
+      _display->drawString(x - 2, y + 4, temp->name);
+
+      // draw value
+      uint8_t byteLen = (temp->value.paramTypeLength & 0xF) + 1;
+      uint8_t msgType = (temp->value.paramTypeLength >> 4) & 0x07;
+      uint8_t numValues = (msgType == DRONE_LINK_MSG_TYPE_CHAR) ? 1 : (byteLen / DRONE_LINK_MSG_TYPE_SIZES[msgType]);
+
+      _display->setTextAlignment(TEXT_ALIGN_LEFT);
+      if (numValues > 1)
+      {
+        _display->setFont(TomThumb4x6);
+      }
+      else
+        _display->setFont(ArialMT_Plain_10);
+
+      valueStr = "";
+      for (uint8_t j = 0; j < numValues; j++)
+      {
+        if (j > 0)
+          valueStr += ' ';
+
+        switch (msgType)
+        {
+        case DRONE_LINK_MSG_TYPE_UINT8_T:
+          valueStr += String(temp->value.payload.uint8[j]);
+          break;
+        case DRONE_LINK_MSG_TYPE_UINT32_T:
+          valueStr += String(temp->value.payload.uint32[j]);
+          break;
+        case DRONE_LINK_MSG_TYPE_FLOAT:
+          valueStr += String(temp->value.payload.f[j], (unsigned int)temp->precision);
+          break;
+        case DRONE_LINK_MSG_TYPE_CHAR:
+          valueStr += String(temp->value.payload.c);
+          break;
+        }
+      }
+
+      _display->drawString(x + 2, y, valueStr);
+    }
+  }
+}
+
 
 void ControllerModule::clear()
 {
@@ -418,33 +581,6 @@ void ControllerModule::doShutdown()
 
 void ControllerModule::handleLinkMessage(DroneLinkMsg *msg)
 {
-
-  // intercept local values
-  if (msg->node() == _dlm->node())
-  {
-    // intercept values for joysticks
-
-    // left
-    /*
-    uint8_t axis = 255;
-    if (msg->channel() == _params[CONTROLLER_PARAM_LEFT_E].data.uint8[0]) {
-      if (msg->param() >= 10 && msg->param() <= 13) {
-        if (msg->type() == DRONE_LINK_MSG_TYPE_FLOAT) {
-          axis = CONTROLLER_AXIS_LEFT_X + msg->param() - 10;
-          _axes[ axis] = msg->_msg.payload.f[0];
-        }
-      }
-    }
-    */
-  }
-
-/*
-  if ((msg->node() != _dlm->node()))
-  {
-    _spinner += PI / 16.0;
-  }
-*/
-
   /*
     Intercept display values
   */
@@ -527,13 +663,12 @@ void ControllerModule::setup()
 
   _armed = false;
 
-  // make sure we're subscribed to the joystick channels
-  /*
-  _dlm->subscribe(_params[CONTROLLER_PARAM_LEFT_E].data.uint8[0], this, DRONE_LINK_PARAM_ALL);
-  _dlm->subscribe(_params[CONTROLLER_PARAM_RIGHT_E].data.uint8[0], this, DRONE_LINK_PARAM_ALL);
-  _dlm->subscribe(_params[CONTROLLER_PARAM_TELEMETRY_E].data.uint8[0], this, DRONE_LINK_PARAM_ALL);
-  _dlm->subscribe(_params[CONTROLLER_PARAM_POWER_E].data.uint8[0], this, DRONE_LINK_PARAM_ALL);
-  */
+
+  // build menus
+  _menus[CONTROLLER_MENU_ROOT].name = ("Root");
+  _menus[CONTROLLER_MENU_ROOT].backTo = CONTROLLER_MENU_ROOT;
+  setMenuItem(CONTROLLER_MENU_ROOT, 0, "Main", 0, NULL, 1);
+
 
   // Init display
   if (!_display)
@@ -561,6 +696,28 @@ void ControllerModule::setup()
 
   // load config
   loadConfiguration("/compass.con");
+
+  // debug display Items
+  Serial.println("Display Items...");
+  for (uint8_t i = 0; i < _displayItems.size(); i++)
+  {
+    CONTROLLER_DISPLAY_INFO *temp = _displayItems.get(i);
+
+    Serial.print(i);
+    Serial.print(": ");
+    Serial.println(temp->name);
+
+    Serial.print("  position: ");
+    Serial.print(temp->position[0]);
+    Serial.print(", ");
+    Serial.println(temp->position[1]);
+
+    Serial.print("  precision: ");
+    Serial.println(temp->precision);
+
+    Serial.print("  page: ");
+    Serial.println(temp->page);
+  }
 
   // bind subscriptions
   bindSubscriptions();
@@ -604,6 +761,23 @@ void ControllerModule::loop()
   // update armed value
   _armed = _subs[CONTROLLER_SUB_ARM_E].param.data.f[0] > 0.5;
 
+  // monitor UI control state
+  if (_subs[CONTROLLER_SUB_SELECT_E].param.data.f[0] > 0.5 && !_hysteresis[CONTROLLER_HYS_SELECT]) {
+    _buttons[CONTROLLER_HYS_SELECT] = true;
+    _hysteresis[CONTROLLER_HYS_SELECT] = true;
+  }
+  if (_subs[CONTROLLER_SUB_SELECT_E].param.data.f[0] <0 && _hysteresis[CONTROLLER_HYS_SELECT]) {
+    _hysteresis[CONTROLLER_HYS_SELECT] = false;
+  }
+
+  if (_subs[CONTROLLER_SUB_CANCEL_E].param.data.f[0] > 0.5 && !_hysteresis[CONTROLLER_HYS_CANCEL]) {
+    _buttons[CONTROLLER_HYS_CANCEL] = true;
+    _hysteresis[CONTROLLER_HYS_CANCEL] = true;
+  }
+  if (_subs[CONTROLLER_SUB_CANCEL_E].param.data.f[0] <0 && _hysteresis[CONTROLLER_HYS_CANCEL]) {
+    _hysteresis[CONTROLLER_HYS_CANCEL] = false;
+  }
+
 
   // Serial.println("loop");
 
@@ -621,16 +795,6 @@ void ControllerModule::loop()
 
   _display->setColor(WHITE);
   _display->fillRect(0, 0, 128, 12);
-
-  _display->setColor(BLACK);
-  _display->setFont(ArialMT_Plain_10);
-  // title
-  _display->drawString(1,0, _title);
-
-  // ARM indicator
-  _display->setFont(ArialMT_Plain_10);
-  _display->setTextAlignment(TEXT_ALIGN_RIGHT);
-  _display->drawString(111, 1, _armed ? "A" : "d");
   
 
   // draw menu size for debugging
@@ -642,63 +806,10 @@ void ControllerModule::loop()
     _display->drawString(128, 1, String(_menus[_menu].items.size()));
   */
 
-  // draw active menu
-  _display->setColor(WHITE);
-  _display->setTextAlignment(TEXT_ALIGN_LEFT);
-  _display->setFont(ArialMT_Plain_10);
-
-  // draw display items
-  String valueStr = "";
-
-  for (uint8_t i = 0; i < _displayItems.size(); i++)
-  {
-    CONTROLLER_DISPLAY_INFO *temp = _displayItems.get(i);
-
-    uint32_t x = temp->position[0];
-    uint32_t y = 13 + temp->position[1];
-
-    // draw label
-    _display->setFont(TomThumb4x6);
-    _display->setTextAlignment(TEXT_ALIGN_RIGHT);
-    _display->drawString(x - 2, y + 4, temp->name);
-
-    // draw value
-    uint8_t byteLen = (temp->value.paramTypeLength & 0xF) + 1;
-    uint8_t msgType = (temp->value.paramTypeLength >> 4) & 0x07;
-    uint8_t numValues = (msgType == DRONE_LINK_MSG_TYPE_CHAR) ? 1 : (byteLen / DRONE_LINK_MSG_TYPE_SIZES[msgType]);
-
-    _display->setTextAlignment(TEXT_ALIGN_LEFT);
-    if (numValues > 1)
-    {
-      _display->setFont(TomThumb4x6);
-    }
-    else
-      _display->setFont(ArialMT_Plain_10);
-
-    valueStr = "";
-    for (uint8_t j = 0; j < numValues; j++)
-    {
-      if (j > 0)
-        valueStr += ' ';
-
-      switch (msgType)
-      {
-      case DRONE_LINK_MSG_TYPE_UINT8_T:
-        valueStr += String(temp->value.payload.uint8[j]);
-        break;
-      case DRONE_LINK_MSG_TYPE_UINT32_T:
-        valueStr += String(temp->value.payload.uint32[j]);
-        break;
-      case DRONE_LINK_MSG_TYPE_FLOAT:
-        valueStr += String(temp->value.payload.f[j], (unsigned int)temp->precision);
-        break;
-      case DRONE_LINK_MSG_TYPE_CHAR:
-        valueStr += String(temp->value.payload.c);
-        break;
-      }
-    }
-
-    _display->drawString(x + 2, y, valueStr);
+  if (_inMenu) {
+    manageMenu();
+  } else {
+    manageBinding();
   }
 
   drawSpinner();
