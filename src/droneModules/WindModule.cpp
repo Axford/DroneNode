@@ -66,7 +66,7 @@ WindModule::WindModule(uint8_t id, DroneSystem* ds):
    _params[WIND_PARAM_CENTRE_E].paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_FLOAT, 4);
    _params[WIND_PARAM_CENTRE_E].data.f[0] = 0;
 
-   _params[WIND_PARAM_WIND_E].paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_HIGH, WIND_PARAM_WIND);
+   _params[WIND_PARAM_WIND_E].paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_CRITICAL, WIND_PARAM_WIND);
    _params[WIND_PARAM_WIND_E].name = FPSTR(STRING_WIND);
    _params[WIND_PARAM_WIND_E].nameLen = sizeof(STRING_WIND);
    _params[WIND_PARAM_WIND_E].paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 4);

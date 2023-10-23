@@ -1,6 +1,6 @@
 /*
 
-@type          INA219
+@type          Joystick
 @inherits      I2CBase
 @category      Input
 @description   Manages I2C joystick using DroneJoystick firmware
