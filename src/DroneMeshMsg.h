@@ -23,7 +23,7 @@ struct DRONE_MESH_MSG_HEADER {
 #define DRONE_MESH_MSG_NOT_GUARANTEED   0
 #define DRONE_MESH_MSG_GUARANTEED       0b01000000
 
-// Packet types
+// Payload types
 // -------------------------------------------------------------------------
 #define DRONE_MESH_MSG_TYPE_HELLO                    0
 #define DRONE_MESH_MSG_TYPE_SUBSCRIPTION_REQUEST     1
@@ -49,6 +49,8 @@ struct DRONE_MESH_MSG_HEADER {
 #define DRONE_MESH_MSG_TYPE_FIRMWARE_REWIND          25
 
 // filesystem messages
+/*
+v1
 #define DRONE_MESH_MSG_TYPE_FS_FILE_REQUEST          10
 #define DRONE_MESH_MSG_TYPE_FS_FILE_RESPONSE         11
 #define DRONE_MESH_MSG_TYPE_FS_RESIZE_REQUEST        12
@@ -57,7 +59,16 @@ struct DRONE_MESH_MSG_HEADER {
 #define DRONE_MESH_MSG_TYPE_FS_READ_RESPONSE         15
 #define DRONE_MESH_MSG_TYPE_FS_WRITE_REQUEST         16
 #define DRONE_MESH_MSG_TYPE_FS_WRITE_RESPONSE        17
-
+*/
+// v2
+#define DRONE_MESH_MSG_TYPE_FS_FILE_REQUEST          10
+#define DRONE_MESH_MSG_TYPE_FS_FILE_RESPONSE         11
+#define DRONE_MESH_MSG_TYPE_FS_MANAGE_REQUEST        12
+#define DRONE_MESH_MSG_TYPE_FS_MANAGE_RESPONSE       13
+#define DRONE_MESH_MSG_TYPE_FS_READ_REQUEST          14
+#define DRONE_MESH_MSG_TYPE_FS_READ_RESPONSE         15
+#define DRONE_MESH_MSG_TYPE_FS_WRITE_REQUEST         16
+#define DRONE_MESH_MSG_TYPE_FS_WRITE_RESPONSE        17
 
 // -------------------------------------------------------------------------
 
@@ -171,18 +182,31 @@ struct DRONE_MESH_MSG_FIRMWARE_REWIND {
 #define DRONE_MESH_MSG_FS_MAX_PATH_SIZE       24  // inc null termination
 #define DRONE_MESH_MSG_FS_DATA_SIZE           32
 
-#define DRONE_MESH_MSG_FS_FLAG_PATH_INFO      0
-#define DRONE_MESH_MSG_FS_FLAG_INDEX_INFO     1
+#define DRONE_MESH_MSG_FS_FLAG_PATH_INFO      0  // request entry info as specified by path
+#define DRONE_MESH_MSG_FS_FLAG_INDEX_INFO     1  // request entry info as specified by index
+#define DRONE_MESH_MSG_FS_FLAG_DELETE         2  // delete file/directory by path
 
+
+#define DRONE_MESH_MSG_FS_FLAG_SUCCESS        0
 #define DRONE_MESH_MSG_FS_FLAG_DIRECTORY      4
 #define DRONE_MESH_MSG_FS_FLAG_FILE           5
 #define DRONE_MESH_MSG_FS_FLAG_NOT_FOUND      6
 #define DRONE_MESH_MSG_FS_FLAG_ERROR          7
 
+// Manage Request flags
+#define DRONE_MESH_MSG_FS_FLAG_START          0
+#define DRONE_MESH_MSG_FS_FLAG_QUERY          1
+#define DRONE_MESH_MSG_FS_FLAG_SAVE           2
+#define DRONE_MESH_MSG_FS_FLAG_CANCEL         3
+
+// Manage Response flags
+#define DRONE_MESH_MSG_FS_FLAG_WIP            8  // transfer in progress
+#define DRONE_MESH_MSG_FS_FLAG_READY          9  // all blocks written, ready to save to disk
+
 
 struct DRONE_MESH_MSG_FS_FILE_REQUEST {
   DRONE_MESH_MSG_HEADER header;
-  uint8_t flags;
+  uint8_t flags;  // DRONE_MESH_MSG_FS_FLAG_PATH_INFO | DRONE_MESH_MSG_FS_FLAG_INDEX_INFO | DRONE_MESH_MSG_FS_FLAG_DELETE
   uint8_t id; // index of file in directory (subject to flags)
   uint8_t path[DRONE_MESH_MSG_FS_MAX_PATH_SIZE];  // null terminated
   uint8_t crc;
@@ -213,23 +237,23 @@ struct DRONE_MESH_MSG_FS_READ_RESPONSE {
   uint8_t crc;
 } __packed;
 
-struct DRONE_MESH_MSG_FS_RESIZE_REQUEST {
+struct DRONE_MESH_MSG_FS_MANAGE_REQUEST {
   DRONE_MESH_MSG_HEADER header;
+  uint8_t flags;
   uint32_t size;
   uint8_t path[DRONE_MESH_MSG_FS_MAX_PATH_SIZE];  // null terminated
   uint8_t crc;
 } __packed;
 
-struct DRONE_MESH_MSG_FS_RESIZE_RESPONSE {
+struct DRONE_MESH_MSG_FS_MANAGE_RESPONSE {
   DRONE_MESH_MSG_HEADER header;
-  uint32_t size;
-  uint8_t path[DRONE_MESH_MSG_FS_MAX_PATH_SIZE];  // null terminated
+  uint8_t flags;
+  uint8_t status;
   uint8_t crc;
 } __packed;
 
 struct DRONE_MESH_MSG_FS_WRITE_REQUEST {
   DRONE_MESH_MSG_HEADER header;
-  uint8_t id; // id of file in directory
   uint32_t offset;
   uint8_t size;
   uint8_t data[DRONE_MESH_MSG_FS_DATA_SIZE];
@@ -238,9 +262,8 @@ struct DRONE_MESH_MSG_FS_WRITE_REQUEST {
 
 struct DRONE_MESH_MSG_FS_WRITE_RESPONSE {
   DRONE_MESH_MSG_HEADER header;
-  uint8_t id; // id of file in directory
+  uint8_t flags;
   uint32_t offset;
-  uint8_t size;
   uint8_t crc;
 } __packed;
 

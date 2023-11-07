@@ -6,6 +6,8 @@
 #include "strings.h"
 #include "DroneSystem.h"
 
+// @type RFM69Telemetry
+
 //#include "RFM69registers.h"
 
 RFM69TelemetryModule::RFM69TelemetryModule(uint8_t id, DroneSystem* ds):
@@ -16,6 +18,8 @@ RFM69TelemetryModule::RFM69TelemetryModule(uint8_t id, DroneSystem* ds):
    _packetsRejected = 0;
    _packetsSent = 0;
    _packetsTimer = 0;
+
+   _broadcastCapable = true;
 
    for (uint8_t i=0; i<sizeof(_encryptKey); i++) {
      _encryptKey[i] = i + 10;
@@ -53,24 +57,21 @@ RFM69TelemetryModule::RFM69TelemetryModule(uint8_t id, DroneSystem* ds):
    param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, RFM69_TELEMETRY_PARAM_POWER);
    setParamName(FPSTR(STRING_POWER), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_FLOAT, 4);
+   // @default power=20
    param->data.f[0] = 20;
-}
 
-DEM_NAMESPACE* RFM69TelemetryModule::registerNamespace(DroneExecutionManager *dem) {
-  // namespace for module type
-  return dem->createNamespace(RFM69_TELEMETRY_STR_RFM69_TELEMETRY,0,true);
-}
+   param = &_params[RFM69_TELEMETRY_PARAM_FREQUENCY_E];
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, RFM69_TELEMETRY_PARAM_FREQUENCY);
+   setParamName(FPSTR(STRING_FREQUENCY), param);
+   param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_UINT32_T, 4);
+   // @default frequency=915
+   param->data.uint32[0] = 915;
 
-void RFM69TelemetryModule::registerParams(DEM_NAMESPACE* ns, DroneExecutionManager *dem) {
-  using std::placeholders::_1;
-  using std::placeholders::_2;
-  using std::placeholders::_3;
-  using std::placeholders::_4;
-
-  // writable mgmt params
-  DEMCommandHandler ph = std::bind(&DroneExecutionManager::mod_param, dem, _1, _2, _3, _4);
-
-  dem->registerCommand(ns, STRING_POWER, DRONE_LINK_MSG_TYPE_FLOAT, ph);
+   param = &_params[RFM69_TELEMETRY_PARAM_THRESHOLD_E];
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, RFM69_TELEMETRY_PARAM_THRESHOLD);
+   setParamName(FPSTR(STRING_THRESHOLD), param);
+   param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_UINT8_T, 1);
+   param->data.uint8[0] = 0;
 }
 
 
@@ -101,24 +102,30 @@ void RFM69TelemetryModule::setup() {
   //pinMode(PIN_IN0_0, INPUT);
 
   // register CS and INT pins
+  Log.noticeln("[RFM.s] Registering pins...");
   if (!_ds->requestPin(PIN_SD_6, DRONE_SYSTEM_PIN_CAP_OUTPUT, this) ||
-      !_ds->requestPin(PIN_IN0_0, DRONE_SYSTEM_PIN_CAP_INPUT, this) ) {
+      !_ds->requestPin(34, DRONE_SYSTEM_PIN_CAP_INPUT, this) ) {
     Log.errorln(F("[RFM.s] Pins unavailable"));
     setError(1);
     disable();
+    return;
   }
 
   if (!_radio) {
+    Log.noticeln("[RFM.s] Configuring SPI...");
     _spi.setPins(19, 23, 18);  // MISO, MOSI, CLK
-    _radio = new RH_RF69(PIN_SD_6, PIN_IN0_0, _spi);   // CS, INT
+    Log.noticeln("[RFM.s] Create RFM object...");
+    _radio = new RH_RF69(PIN_SD_6, 34, _spi);   // CS, INT
   }
 
+  Log.noticeln("[RFM.s] Init radio...");
   if (!_radio->init()) {
     Log.errorln(F("Failed to init RFM69 radio"));
     setError(1);
   } else {
 
-    if (!_radio->setFrequency(915.0))
+    Log.noticeln("[RFM.s] Set frequency, power, etc...");
+    if (!_radio->setFrequency(_params[RFM69_TELEMETRY_PARAM_FREQUENCY_E].data.uint32[0]))
       Log.errorln("setFrequency failed");
 
 
@@ -132,7 +139,7 @@ void RFM69TelemetryModule::setup() {
 
     _interfaceState = true;
 
-    Log.noticeln(F("RFM69 initialised"));
+    Log.noticeln(F("[RFM.s] RFM69 initialised"));
   }
 }
 
@@ -199,7 +206,9 @@ void RFM69TelemetryModule::loop() {
         Serial.println();
         */
 
-        receivePacket(&_buffer[1], metric);
+        DRONE_LINK_TRANSPORT_ADDRESS ta;
+
+        receivePacket(&_buffer[1], metric, ta);
         _packetsReceived++;
       }
 
@@ -246,9 +255,15 @@ void RFM69TelemetryModule::loop() {
 }
 
 
-boolean RFM69TelemetryModule::sendPacket(uint8_t *buffer) {
+boolean RFM69TelemetryModule::sendPacket(uint8_t *buffer, DRONE_LINK_TRANSPORT_ADDRESS transportAddress) {
 
-  if (!_enabled) return false;
+  if (!_enabled || !_radio) return false;
+
+  // abandon DroneLinkMsg packets under the threshold
+  if (getDroneMeshMsgPayloadType(buffer) == DRONE_MESH_MSG_TYPE_DRONELINKMSG) {
+    if (getDroneMeshMsgPriority( buffer ) < _params[RFM69_TELEMETRY_PARAM_THRESHOLD_E].data.uint8[0]) return false;
+  }
+  
 
   // wrap the DroneMesh message in a start byte and end CRC
   uint8_t txSize = getDroneMeshMsgTotalSize(buffer) + 2;

@@ -1,4 +1,12 @@
 #include "DroneSystem.h"
+#include "DroneLogger.h"
+#include "esp_pm.h"
+
+static esp_pm_config_esp32_t pm_config = {
+  .max_freq_mhz =240,// CONFIG_EXAMPLE_MAX_CPU_FREQ_MHZ,
+  .min_freq_mhz = 10,//CONFIG_EXAMPLE_MIN_CPU_FREQ_MHZ,
+  .light_sleep_enable = true
+};
 
 // ----------------------------------------------------------------------------
 // protected
@@ -13,8 +21,9 @@ void DroneSystem::configurePin(uint8_t pin, uint8_t capabilities) {
 // public
 // ----------------------------------------------------------------------------
 
-DroneSystem::DroneSystem() : _server(80), dfs(this) {
+DroneSystem::DroneSystem() : _server(80), dfs(this), _fsEditor(LITTLEFS, _doLoop) {
   _motherboardVersion = 0;
+  _SDAvailable = false;
 
   // create and give SPI Sempahore
   _xSPISemaphore = xSemaphoreCreateBinary();
@@ -35,7 +44,8 @@ DroneSystem::DroneSystem() : _server(80), dfs(this) {
   for (uint8_t i=0; i<DRONE_SYSTEM_PINS; i++) {
     _pins[i].state = DRONE_SYSTEM_PIN_STATE_UNAVAILABLE;
     _pins[i].capabilities = 0;
-    _serialPorts[i].module = NULL;
+    _pins[i].strip = NULL;
+    _pins[i].stripIndex = 0;
   }
 
   // now set specific capabilities
@@ -73,6 +83,9 @@ DroneSystem::DroneSystem() : _server(80), dfs(this) {
   configurePin(4, DRONE_SYSTEM_PIN_CAP_INPUT | DRONE_SYSTEM_PIN_CAP_OUTPUT | DRONE_SYSTEM_PIN_CAP_ANALOG);
   configurePin(25, DRONE_SYSTEM_PIN_CAP_INPUT | DRONE_SYSTEM_PIN_CAP_OUTPUT | DRONE_SYSTEM_PIN_CAP_ANALOG);
   configurePin(26, DRONE_SYSTEM_PIN_CAP_INPUT | DRONE_SYSTEM_PIN_CAP_OUTPUT | DRONE_SYSTEM_PIN_CAP_ANALOG);
+
+  // enable light sleep
+  esp_pm_configure(&pm_config);
 }
 
 
@@ -140,12 +153,12 @@ boolean DroneSystem::requestPin(uint8_t pin, uint8_t capabilities, DroneModule* 
   // check available
   if (_pins[pin].state == DRONE_SYSTEM_PIN_STATE_AVAILABLE) {
     // check pin has requested capabilities
-    if (_pins[pin].capabilities & capabilities == capabilities) {
+    if ((_pins[pin].capabilities & capabilities) == capabilities) {
       _pins[pin].state = DRONE_SYSTEM_PIN_STATE_ACTIVE;
       _pins[pin].module = module;
       return true;
     } else {
-      Log.errorln("[ds.rP] Pin does not have requested capabilities %u, %u", pin, capabilities);
+      Log.errorln("[ds.rP] Pin does not have requested capabilities %u, %u != %u", pin, _pins[pin].capabilities, capabilities);
       return false;
     }
 
@@ -153,6 +166,32 @@ boolean DroneSystem::requestPin(uint8_t pin, uint8_t capabilities, DroneModule* 
     Log.errorln("[ds.rP] Pin unavailable %u", pin);
     return false;
   }
+}
+
+
+NeoPixelBrightnessBus<NeoGrbFeature, Neo800KbpsMethod>* DroneSystem::requestStrip(uint8_t pin, uint8_t pixels, DroneModule* module) {
+
+  // if there is an existing strip on this pin then return it
+  if (_pins[pin].strip) {
+    return _pins[pin].strip;
+  } else if (requestPin(pin, DRONE_SYSTEM_PIN_CAP_OUTPUT, module)) {
+    // create new strip
+    _pins[pin].strip = new NeoPixelBrightnessBus<NeoGrbFeature, Neo800KbpsMethod>(pixels, pin);
+    _pins[pin].strip->Begin();
+    _pins[pin].strip->Show();
+    _pins[pin].strip->SetBrightness(25);
+
+    return _pins[pin].strip;
+  };
+  return NULL;
+}
+
+void DroneSystem::setStripFirstPixel(uint8_t pin, uint8_t index) {
+  _pins[pin].stripIndex = index;
+}
+
+uint8_t DroneSystem::getStripFirstPixel(uint8_t pin) {
+  return _pins[pin].stripIndex;
 }
 
 
@@ -177,24 +216,19 @@ uint8_t DroneSystem::motherboardVersion() {
 
 void DroneSystem::createDefaultConfig() {
   // TODO - adapt to use FS class for file handle
-  // see if config.txt exists, if not create it
-  if (!LITTLEFS.exists("/config.txt")) {
-    File file = LITTLEFS.open("/config.txt", FILE_WRITE);
+  // see if config.ini exists, if not create it
+  if (!LITTLEFS.exists("/config.ini")) {
+    File file = LITTLEFS.open("/config.ini", FILE_WRITE);
     if(!file){
-        Log.errorln("[] Failed to open config.txt for writing");
+        Log.errorln("[] Failed to open config.ini for writing");
         return;
     }
-    file.println("node 1");
-    file.println("Management.new 1");
-    file.println("  name \"set me\"");
-    file.println("  .publish \"hostname\"");
-    file.println("  .publish \"IP\"");
-    file.println(".done");
-    file.println("UDPTelemetry.new 2");
-    file.println("  port 8007");
-    file.println("  broadcast 255 255 255 255");
-    file.println(".done");
-    file.println(".setup");
+    file.println("node= 1");
+    file.println("[Management = 1]");
+    file.println("  name =setMe");
+    file.println("  publish =hostname, IP");
+
+    file.println("[UDPTelemetry = 2]");
 
     file.close();
   }
@@ -203,27 +237,59 @@ void DroneSystem::createDefaultConfig() {
 
 void DroneSystem::createSafeModeScript() {
   // TODO - adapt to use FS class for file handle
-  // see if safeMode.txt exists, if not create it
-  if (!LITTLEFS.exists("/safeMode.txt")) {
-    File file = LITTLEFS.open("/safeMode.txt", FILE_WRITE);
+  // see if safeMode.ini exists, if not create it
+  if (!LITTLEFS.exists("/safeMode.ini")) {
+    File file = LITTLEFS.open("/safeMode.ini", FILE_WRITE);
     if(!file){
-        Log.errorln("[] Failed to open safeMode.txt for writing");
+        Log.errorln("[] Failed to open config.ini for writing");
         return;
     }
-    file.println("node 1");
-    file.println("Management.new 1");
-    file.println("  name \"safeMode\"");
-    file.println("  .publish \"hostname\"");
-    file.println("  .publish \"IP\"");
-    file.println(".done");
-    file.println("UDPTelemetry.new 2");
-    file.println("  port 8007");
-    file.println("  broadcast 255 255 255 255");
-    file.println(".done");
-    file.println(".setup");
+    file.println("node= 1");
+    file.println("[Management = 1]");
+    file.println("  name =safeMode");
+    file.println("  publish =hostname, IP");
+
+    file.println("[UDPTelemetry = 2]");
 
     file.close();
   }
+}
+
+
+void DroneSystem::servePinInfo(AsyncWebServerRequest *request) {
+  AsyncResponseStream *response = request->beginResponseStream("application/json");
+  response->addHeader("Server","ESP Async Web Server");
+  response->print("[");
+
+  uint8_t total = 0;
+  for (uint8_t i=0; i<DRONE_SYSTEM_PINS; i++) {
+    if (_pins[i].state > 0) {
+      if (total > 0 ) response->print(",");
+      total++;
+
+      response->print("{");
+      response->printf("\"id\":%u", i);
+      response->printf(",\"state\":%u", _pins[i].state );
+      
+      response->printf(",\"output\":%u", ((_pins[i].capabilities & DRONE_SYSTEM_PIN_CAP_OUTPUT) > 0) ? 1 : 0);
+      response->printf(",\"input\":%u", ((_pins[i].capabilities & DRONE_SYSTEM_PIN_CAP_INPUT) > 0) ? 1 : 0);
+      response->printf(",\"analog\":%u", ((_pins[i].capabilities & DRONE_SYSTEM_PIN_CAP_ANALOG) > 0) ? 1 : 0);
+      response->printf(",\"serial\":%u", ((_pins[i].capabilities & DRONE_SYSTEM_PIN_CAP_SERIAL) > 0) ? 1 : 0);
+      response->printf(",\"LED\":%u", ((_pins[i].capabilities & DRONE_SYSTEM_PIN_CAP_LED) > 0) ? 1 : 0);
+      
+      response->printf(",\"strip\":%u", (_pins[i].strip >  0) ? 1 : 0);
+      
+      if (_pins[i].module) {
+        response->printf(",\"module\": \"%u: %s\"", _pins[i].module->id(), _pins[i].module->getName());
+      }
+      response->print("}");
+    }
+  }
+
+  response->print("]");
+
+  //send the response last
+  request->send(response);
 }
 
 
@@ -251,7 +317,22 @@ void DroneSystem::setupWebServer() {
     _doLoop = true;
   });
 
+  // pins
+  _server.on("/pins", HTTP_GET, [&](AsyncWebServerRequest *request){
+    _doLoop = false;
+    servePinInfo(request);
+    _doLoop = true;
+  });
+
+  // I2C scan info
+  _server.on("/i2c", HTTP_GET, [&](AsyncWebServerRequest *request) {
+    _doLoop = false;
+    DroneWire::serveScanAllInfo(request);
+    _doLoop = true;
+  });
+
   // DEM handlers
+  /*
   _server.on("/macros", HTTP_GET, [&](AsyncWebServerRequest *request){
     _doLoop = false;
     dem->serveMacroInfo(request);
@@ -267,6 +348,7 @@ void DroneSystem::setupWebServer() {
     dem->serveCommandInfo(request);
     _doLoop = true;
   });
+  */
 
   /*
   _server.onNotFound([](AsyncWebServerRequest *request){
@@ -274,16 +356,16 @@ void DroneSystem::setupWebServer() {
   });
   */
 
-  /*
-  fsEditor.httpuser = "admin";
-  fsEditor.httppassword = "admin";
-  fsEditor.xSPISemaphore = xSPISemaphore;
-  fsEditor.configureWebServer(_server);
-  */
+  
+  _fsEditor.httpuser = "admin";
+  _fsEditor.httppassword = "admin";
+  _fsEditor.xSPISemaphore = _xSPISemaphore;
+  _fsEditor.configureWebServer(_server);
+  
 
   DefaultHeaders::Instance().addHeader("Access-Control-Allow-Origin", "*");
 
-  _server.serveStatic("/", LITTLEFS, "/").setDefaultFile("index.htm");
+  //_server.serveStatic("/", LITTLEFS, "/").setDefaultFile("index.htm");
 
   _server.begin();
 }
@@ -291,47 +373,38 @@ void DroneSystem::setupWebServer() {
 
 void DroneSystem::startInSafeMode() {
   Log.warningln(F("[] Prep SAFE start..."));
-  // attempt to load and run safeMode script
-  // define root macro
-  DEM_MACRO * safeMode = dem->createMacro("safeMode");
-  DEM_INSTRUCTION_COMPILED instr;
-  if (dem->compileLine(PSTR("load \"/safeMode.txt\""), &instr))
-    safeMode->commands->add(instr);
-  if (dem->compileLine(PSTR("run \"/safeMode.txt\""), &instr))
-    safeMode->commands->add(instr);
-
-  // prep execution of safeMode
-  DEM_CALLSTACK_ENTRY cse;
-  cse.i=0;
-  cse.macro = safeMode;
-  cse.continuation = false;
-  dem->callStackPush(cse);
+  dem->loadConfiguration("/safeMode.ini");
 }
 
 
 void DroneSystem::start() {
   Log.warningln(F("[] Prep NORMAL start..."));
+  dem->loadConfiguration("/config.ini");
+}
 
-  // prep and run normal boot process
-  // define root macro
-  DEM_MACRO * root = dem->createMacro("root");
-  DEM_INSTRUCTION_COMPILED instr;
-  if (dem->compileLine(PSTR("load \"/config.txt\""), &instr))
-    root->commands->add(instr);
-  dem->compileLine(PSTR("run \"/config.txt\""), &instr);
-  root->commands->add(instr);
-  dem->compileLine(PSTR("load \"/main.txt\""), &instr);
-  root->commands->add(instr);
-  // now execute main
-  dem->compileLine(PSTR("run \"/main.txt\""), &instr);
-  root->commands->add(instr);
 
-  // prep execution of root
-  DEM_CALLSTACK_ENTRY cse;
-  cse.i=0;
-  cse.macro = root;
-  cse.continuation = false;
-  dem->callStackPush(cse);
+void printDirectory(File dir, int numTabs) {
+  while (true) {
+
+    File entry =  dir.openNextFile();
+    if (! entry) {
+      // no more files
+      break;
+    }
+    for (uint8_t i = 0; i < numTabs; i++) {
+      Serial.print('\t');
+    }
+    Serial.print(entry.name());
+    if (entry.isDirectory()) {
+      Serial.println("/");
+      printDirectory(entry, numTabs + 1);
+    } else {
+      // files have sizes, directories do not
+      Serial.print("\t\t");
+      Serial.println(entry.size(), DEC);
+    }
+    entry.close();
+  }
 }
 
 
@@ -373,6 +446,10 @@ void DroneSystem::setup() {
   Log.noticeln(F("[] Init DroneWire..."));
   DroneWire::setup();
 
+  // I2C scan
+  //Log.noticeln(F("[] I2C bus scan..."));
+  //DroneWire::scanAll();
+
   // Detect motherboard version
   detectMotherboardVersion();
   Log.noticeln(F("[] Motherboard v%u"), _motherboardVersion);
@@ -380,18 +457,58 @@ void DroneSystem::setup() {
   // Setup status LED
   dled = new DroneLED(this);
 
+  // init DroneLogger
+  if (_motherboardVersion >= 4) {
+    // ensure pull ups on SPI pins
+    pinMode(23,INPUT_PULLUP); 
+
+    DroneLog.begin();
+    DroneLog.enable();
+  }
+
+  /*
+  SD CARD DEBUGGING
+  */
+
+  Log.noticeln("[] Initializing SD card...");
+
+  if (!SD.begin(4)) {
+    Serial.println("  initialization failed!");
+  } else {
+    _SDAvailable = true;
+    Log.noticeln("   initialization done.");
+  }
+  
+  if (_SDAvailable) {
+    // Create/Open file 
+    File myFile = SD.open("/test.txt", FILE_WRITE);
+    
+    // if the file opened okay, write to it:
+    if (myFile) {
+      Log.noticeln("   Writing to file...");
+      // Write to file
+      myFile.println("Testing text 1, 2 ,3...");
+      myFile.close(); // close the file
+      Log.noticeln("   Done.");
+    }
+    // if the file didn't open, print an error:
+    else {
+      Log.errorln("error opening test.txt");
+    }
+
+    // print contents
+    File root;
+    root = SD.open("/");
+
+    //printDirectory(root, 0);
+
+    Log.noticeln("   done!");
+  }
+  
+
   // Determine and setup filesystem
   Log.noticeln(F("[] Init DroneFS..."));
   dfs.setup();
-
-  // TODO refactor FS class
-  Log.noticeln(F("[] Opening startup.log..."));
-  _logFile = LITTLEFS.open("/startup.log", FILE_WRITE);
-
-  // switch to logging to startup.log file on flash
-  Log.noticeln(F("[] Sending log to startup.log..."));
-  Log.begin(LOG_LEVEL_VERBOSE, &_logFile);
-  //Log.begin(LOG_LEVEL_VERBOSE, &Serial);
 
   createDefaultConfig();
   createSafeModeScript();
@@ -411,7 +528,7 @@ void DroneSystem::setup() {
   dlm = new DroneLinkManager(&_wifiManager, &dfs);
   // TODO - rework event handling
   //dlm->onEvent = handleDLMEvent;
-  dmm = new DroneModuleManager(dlm);
+  dmm = new DroneModuleManager(dlm, LITTLEFS);
   // TODO - refactor to use FS class
   dem = new DroneExecutionManager(this, _logFile);
 
@@ -421,6 +538,16 @@ void DroneSystem::setup() {
 	ESP32PWM::allocateTimer(2);
 	ESP32PWM::allocateTimer(3);
 
+  // TODO refactor FS class
+  // switch to logging to startup.log file on flash if not in safeMode
+  if (!dem->safeMode() && false) {
+    Log.noticeln(F("[] Opening startup.log..."));
+    _logFile = LITTLEFS.open("/startup.log", FILE_WRITE);
+
+    Log.noticeln(F("[] Sending log to startup.log..."));
+    Log.begin(LOG_LEVEL_VERBOSE, &_logFile);
+  }
+
   // prep the startup scripts (will not execute until loop begins)
   if (dem->safeMode()) {
     startInSafeMode();
@@ -428,24 +555,30 @@ void DroneSystem::setup() {
     start();
   }
 
-  // scan I2C buses
-  // TODO - make this a serial or web interface function - no need todo on every boot
-  //DroneWire::scanAll();
+  dem->completeSetup();
 
-  // TODO - integrate OTA
-  /*
-  OTAMgr.onEvent = handleOTAEVent;
-  OTAMgr.init( dmm->hostname() );
-  */
+  // attempt VPN
+  //Husarnet.selfHostedSetup(husarnetDashboardURL);
+  //Husarnet.join(husarnetJoinCode, (const char*)dmm->hostname().c_str());
+  //Husarnet.start();
+
+  // TODO - handle update events
+  //_OTAMgr->onEvent = handleOTAEVent;
+  //_OTAMgr->init( dmm->hostname() );
 
   // flush and close _logFile
-  _logFile.flush();
-  _logFile.close();
+  if (_logFile) {
+    _logFile.flush();
+    _logFile.close();
+  }
 
-  // switch to serial logging
-  Log.begin(Log.getLevel(), &Serial);
-
-  Log.noticeln(F("[] End of setup"));
+  // switch to serial logging, unless we have telemetry enabled
+  if (_serialPorts[0].state == DRONE_SYSTEM_SERIAL_PORT_STATE_ACTIVE_MODULE) {
+    Log.begin(LOG_LEVEL_SILENT, &Serial);
+  } else {
+    Log.begin(LOG_LEVEL_VERBOSE, &Serial);
+    Log.noticeln("[] End of Setup");
+  }
 }
 
 
@@ -455,7 +588,7 @@ void DroneSystem::loop() {
   // TODO - add an FPS timer
   //loopTime = millis();
 
-  // TODO - rework status LED
+
   if (_wifiManager.isEnabled() && WiFi.status() == WL_CONNECTED) {
     dled->setState(DRONE_LED_STATE_RUNNING_WIFI);
   } else {
@@ -477,7 +610,7 @@ void DroneSystem::loop() {
         Serial.println(_serialCommand);
 
         // clear boot flag and restart
-        if (strcmp(_serialCommand, "execute")==0) {
+        if (strcmp(_serialCommand, "reset")==0) {
           Serial.println("restarting");
           dem->setBootStatus(DEM_BOOT_SUCCESS);
           dmm->restart();
@@ -514,8 +647,6 @@ void DroneSystem::loop() {
     }
   }
 
-  // TODO
-  //if (!OTAMgr.isUpdating && doLoop) {
   if (_doLoop) {
 
     dmm->watchdog();
@@ -530,17 +661,21 @@ void DroneSystem::loop() {
 
     yield();
 
-    dem->execute();
+    dem->processAddressQueue();
+
 
     //if (logFile) logFile.flush();
   } else {
-    // TODO - need an updating state
-    //digitalWrite(PIN_LED, HIGH);
+    //dled->setState(DRONE_LED_STATE_UPDATING);
+  }
+
+  //_OTAMgr->loop();
+
+  // show strips
+  for (uint8_t i=0; i<DRONE_SYSTEM_PINS; i++) {
+    if (_pins[i].strip) _pins[i].strip->Show();
   }
 
   // return SPI semaphore
   xSemaphoreGive( _xSPISemaphore );
-
-  //TODO
-  //OTAMgr.loop();
 }

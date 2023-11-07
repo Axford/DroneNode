@@ -9,6 +9,7 @@
 #include "Arduino.h"
 #include <Wire.h>
 #include <ArduinoLog.h>
+#include <ESPAsyncWebServer.h>
 
 #include "pinConfig.h"
 
@@ -31,6 +32,9 @@ namespace DroneWire {
   void scan();
 
   void scanAll();
+
+  void serveScanInfo(AsyncResponseStream *response);
+  void serveScanAllInfo(AsyncWebServerRequest *request);
 }
 
 #endif

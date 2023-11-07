@@ -8,9 +8,9 @@
 #include <ArduinoLog.h>
 #include <esp_task_wdt.h>
 
-OTAManager::OTAManager(AsyncEventSource * events) {
-  _events = events;
+OTAManager::OTAManager() {
   isUpdating = false;
+  _lastProg = 0;
   //_firmwareUrl = "http://192.168.0.23/firmware";
 }
 
@@ -32,37 +32,50 @@ void OTAManager::init(String hostname) {
 
     // backoff watchdog
     esp_task_wdt_init(60,0);
+    
 
     // clear interrupts
-    cli();
+    //cli();
 
-    _events->send("Update Start", "ota");
     if (onEvent) { onEvent(start, 0); }
   });
   ArduinoOTA.onEnd([&]() {
     Log.noticeln(F("[OTA] End"));
-    _events->send("Update End", "ota");
     esp_task_wdt_init(5,0);
     isUpdating = false;
-    if (onEvent) { onEvent(end, 100); }
+    if (onEvent) { onEvent(end, 1.0f); }
   });
 
   ArduinoOTA.onProgress([&](unsigned int prog, unsigned int total) {
-    char p[32];
+    char p[40];
     //float progress = (float) prog / total;
 
     if (onEvent) { onEvent(progress, (float) prog / total); }
 
-    sprintf(p, "Progress: %u%%\n", (prog/(total/100)));
-    _events->send(p, "ota");
+    uint8_t newProg = round(100.0f * prog / total) / 5;
+
+    if (newProg != _lastProg) {
+      uint8_t progChars = newProg;
+      _lastProg = newProg;
+      strcpy(p, "Downloading: [");
+      for (uint8_t i=0; i<20; i++) {
+        p[14+i] = (i <= progChars) ? '=' : ' ';
+      } 
+      p[34] = ']';
+      p[35] = 0;
+
+      Log.noticeln(p);
+    }
     //Serial.println(p);
   });
   ArduinoOTA.onError([&](ota_error_t error) {
-    if(error == OTA_AUTH_ERROR) _events->send("Auth Failed", "ota");
-    else if(error == OTA_BEGIN_ERROR) _events->send("Begin Failed", "ota");
-    else if(error == OTA_CONNECT_ERROR) _events->send("Connect Failed", "ota");
-    else if(error == OTA_RECEIVE_ERROR) _events->send("Recieve Failed", "ota");
-    else if(error == OTA_END_ERROR) _events->send("End Failed", "ota");
+    
+    if(error == OTA_AUTH_ERROR) Log.errorln("OTA Auth Failed");
+    else if(error == OTA_BEGIN_ERROR) Log.errorln("OTA Begin Failed");
+    else if(error == OTA_CONNECT_ERROR) Log.errorln("OTA Connect Failed");
+    else if(error == OTA_RECEIVE_ERROR) Log.errorln("OTA Recieve Failed");
+    else if(error == OTA_END_ERROR) Log.errorln("OTA End Failed");
+    
   });
 
   ArduinoOTA.setPort(3232);

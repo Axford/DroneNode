@@ -5,6 +5,8 @@
 #include "strings.h"
 #include "DroneSystem.h"
 
+// @type ODrive
+
 ODriveModule::ODriveModule(uint8_t id, DroneSystem* ds):
   DroneModule ( id, ds )
  {
@@ -34,6 +36,7 @@ ODriveModule::ODriveModule(uint8_t id, DroneSystem* ds):
    param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, ODRIVE_PARAM_LIMITS);
    setParamName(FPSTR(STRING_LIMITS), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_FLOAT, 8);
+   // @default limits=-1,1
    _params[ODRIVE_PARAM_LIMITS_E].data.f[0] = -1;
    _params[ODRIVE_PARAM_LIMITS_E].data.f[1] = 1;
 
@@ -41,6 +44,7 @@ ODriveModule::ODriveModule(uint8_t id, DroneSystem* ds):
    param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, ODRIVE_PARAM_PORT);
    setParamName(FPSTR(STRING_PORT), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_UINT8_T, 1);
+   // @default port=2
    _params[ODRIVE_PARAM_PORT_E].data.uint8[0] = 2;
 
    param = &_params[ODRIVE_PARAM_INVERT_E];
@@ -56,32 +60,6 @@ ODriveModule::ODriveModule(uint8_t id, DroneSystem* ds):
    param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_UINT8_T, 1);
    _params[ODRIVE_PARAM_SWITCH_E].data.uint8[0] = 0;
 
-}
-
-DEM_NAMESPACE* ODriveModule::registerNamespace(DroneExecutionManager *dem) {
-  // namespace for module type
-  return dem->createNamespace(ODRIVE_STR_ODRIVE,0,true);
-}
-
-void ODriveModule::registerParams(DEM_NAMESPACE* ns, DroneExecutionManager *dem) {
-  using std::placeholders::_1;
-  using std::placeholders::_2;
-  using std::placeholders::_3;
-  using std::placeholders::_4;
-
-  // writable mgmt params
-  DEMCommandHandler ph = std::bind(&DroneExecutionManager::mod_param, dem, _1, _2, _3, _4);
-  DEMCommandHandler pha = std::bind(&DroneExecutionManager::mod_subAddr, dem, _1, _2, _3, _4);
-
-  dem->registerCommand(ns, STRING_LEFT, DRONE_LINK_MSG_TYPE_FLOAT, ph);
-  dem->registerCommand(ns, PSTR("$left"), DRONE_LINK_MSG_TYPE_FLOAT, pha);
-  dem->registerCommand(ns, STRING_RIGHT, DRONE_LINK_MSG_TYPE_FLOAT, ph);
-  dem->registerCommand(ns, PSTR("$right"), DRONE_LINK_MSG_TYPE_FLOAT, pha);
-
-  dem->registerCommand(ns, STRING_LIMITS, DRONE_LINK_MSG_TYPE_FLOAT, ph);
-  dem->registerCommand(ns, STRING_PORT, DRONE_LINK_MSG_TYPE_UINT8_T, ph);
-  dem->registerCommand(ns, STRING_INVERT, DRONE_LINK_MSG_TYPE_UINT8_T, ph);
-  dem->registerCommand(ns, STRING_SWITCH, DRONE_LINK_MSG_TYPE_UINT8_T, ph);
 }
 
 

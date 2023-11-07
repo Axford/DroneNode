@@ -22,6 +22,7 @@ Manages the local set of pub/sub channels
 #include <uthash.h>
 #include "FS.h"
 
+#include "DroneLinkManagerStructs.h"
 #include "droneModules/NetworkInterfaceModule.h"
 
 // forward decl
@@ -35,11 +36,11 @@ class WiFiManager;
 
 #define DRONE_LINK_MANAGER_MAX_RETRY_INTERVAL   3000
 #define DRONE_LINK_MANAGER_MAX_ACK_INTERVAL     250
+#define DRONE_LINK_MANAGER_MIN_ACK_INTERVAL     50
 
 #define DRONE_LINK_MANAGER_LINK_CHECK_INTERVAL     2000
 
 #define DRONE_LINK_MANAGER_AVG_SAMPLES             16  // averaging window for avgAttempts, avgTxTime, etc
-
 
 // -----------------------------------------------------------------------------
 // aka routing entry
@@ -62,6 +63,7 @@ struct DRONE_LINK_NODE_INFO {
   uint32_t lastAck;  // time of last ack from this node
   float avgTxTime;  // avg ms to transmit a packet
   float avgAckTime; // avg time from packet creation to confirmed Ack
+  DRONE_LINK_TRANSPORT_ADDRESS transportAddress;
   DroneLinkMeshMsgSequencer *gSequencer;
 };
 
@@ -163,6 +165,7 @@ public:
 
     void processChannels();
     void processExternalSubscriptions();
+    void resetExternalSubscriptions(uint8_t extNode);
 
     void removeRoute(uint8_t node);
 
@@ -191,7 +194,7 @@ public:
 
     // mesh methods
     void registerInterface(NetworkInterfaceModule *interface);
-    void receivePacket(NetworkInterfaceModule *interface, uint8_t *buffer, uint8_t metric);
+    void receivePacket(NetworkInterfaceModule *interface, uint8_t *buffer, uint8_t metric, DRONE_LINK_TRANSPORT_ADDRESS transportAddress);
 
     void receiveAck(uint8_t *buffer);
 
@@ -219,7 +222,7 @@ public:
     void receiveFSFileRequest(NetworkInterfaceModule *interface, uint8_t *buffer, uint8_t metric);
     void receiveFSReadRequest(NetworkInterfaceModule *interface, uint8_t *buffer, uint8_t metric);
     void receiveFSWriteRequest(NetworkInterfaceModule *interface, uint8_t *buffer, uint8_t metric);
-    void receiveFSResizeRequest(NetworkInterfaceModule *interface, uint8_t *buffer, uint8_t metric);
+    void receiveFSManageRequest(NetworkInterfaceModule *interface, uint8_t *buffer, uint8_t metric);
 
 
     // standard forwarding mechanic for unicast packets
@@ -266,8 +269,8 @@ public:
 
     boolean generateFSFileResponse(NetworkInterfaceModule *interface, uint8_t dest, uint8_t nextHop, DroneFSEntry* entry);
     boolean generateFSReadResponse(NetworkInterfaceModule *interface, uint8_t dest, uint8_t nextHop, DroneFSEntry* entry, uint32_t offset);
-    boolean generateFSResizeResponse(NetworkInterfaceModule *interface, uint8_t dest, uint8_t nextHop, DroneFSEntry* entry, uint32_t newSize);
-    boolean generateFSWriteResponse(NetworkInterfaceModule *interface, uint8_t dest, uint8_t nextHop, DroneFSEntry* entry, uint32_t offset, uint8_t sizeWritten);
+    boolean generateFSManageResponse(NetworkInterfaceModule *interface, uint8_t dest, uint8_t nextHop, uint8_t flags, uint8_t status);
+    boolean generateFSWriteResponse(NetworkInterfaceModule *interface, uint8_t dest, uint8_t nextHop, uint8_t flags, uint32_t offset);
 
     boolean generateFirmwareStartResponse(NetworkInterfaceModule *interface, uint8_t dest, uint8_t status);
     boolean generateFirmwareRewind(NetworkInterfaceModule *interface, uint8_t dest, uint32_t offset);

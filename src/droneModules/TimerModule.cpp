@@ -25,6 +25,7 @@ void TimerModule::setup() {
 }
 
 void TimerModule::loop() {
+  DroneModule::loop();
   if (!_enabled) return;
 
   uint32_t t = millis();

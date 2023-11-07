@@ -9,7 +9,7 @@ RHSoftwareSPI::RHSoftwareSPI(Frequency frequency, BitOrder bitOrder, DataMode da
     :
     RHGenericSPI(frequency, bitOrder, dataMode)
 {
-    setPins(12, 11, 13);
+    //setPins(12, 11, 13);
 }
 
 // Caution: on Arduino Uno and many other CPUs, digitalWrite is quite slow, taking about 4us

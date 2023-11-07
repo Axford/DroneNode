@@ -3,6 +3,8 @@
 #include "../DroneLinkManager.h"
 #include "strings.h"
 
+// @type Neopixel
+
 NeopixelModule::NeopixelModule(uint8_t id, DroneSystem* ds):
   DroneModule ( id, ds )
  {
@@ -44,29 +46,8 @@ NeopixelModule::NeopixelModule(uint8_t id, DroneSystem* ds):
    param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, NEOPIXEL_PARAM_NUMPIXELS);
    setParamName(FPSTR(STRING_NUMPIXELS), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_UINT8_T, 1);
+   // @default numPixels = 4
    _params[NEOPIXEL_PARAM_NUMPIXELS_E].data.uint8[0] = 4;
-}
-
-
-DEM_NAMESPACE* NeopixelModule::registerNamespace(DroneExecutionManager *dem) {
-  // namespace for module type
-  return dem->createNamespace(NEOPIXEL_STR_NEOPIXEL,0,true);
-}
-
-void NeopixelModule::registerParams(DEM_NAMESPACE* ns, DroneExecutionManager *dem) {
-  using std::placeholders::_1;
-  using std::placeholders::_2;
-  using std::placeholders::_3;
-  using std::placeholders::_4;
-
-  // writable mgmt params
-  DEMCommandHandler ph = std::bind(&DroneExecutionManager::mod_param, dem, _1, _2, _3, _4);
-  DEMCommandHandler pha = std::bind(&DroneExecutionManager::mod_subAddr, dem, _1, _2, _3, _4);
-
-  dem->registerCommand(ns, STRING_PINS, DRONE_LINK_MSG_TYPE_UINT8_T, ph);
-  dem->registerCommand(ns, STRING_NUMPIXELS, DRONE_LINK_MSG_TYPE_UINT8_T, ph);
-  dem->registerCommand(ns, STRING_SCENE, DRONE_LINK_MSG_TYPE_UINT8_T, ph);
-  dem->registerCommand(ns, PSTR("$scene"), DRONE_LINK_MSG_TYPE_UINT8_T, pha);
 }
 
 

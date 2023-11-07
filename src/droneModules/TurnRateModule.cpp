@@ -3,6 +3,8 @@
 #include "../DroneLinkManager.h"
 #include "strings.h"
 
+// @type TurnRate
+
 TurnRateModule::TurnRateModule(uint8_t id, DroneSystem* ds):
   DroneModule ( id, ds )
  {
@@ -12,10 +14,11 @@ TurnRateModule::TurnRateModule(uint8_t id, DroneSystem* ds):
    _iError = 0;
    _dError = 0;
    _lastError = 0;
+   _lastHeading = 0;
 
    // mgmt
-   _mgmtParams[DRONE_MODULE_PARAM_TYPE_E].paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_CHAR, sizeof(TURN_RATE_STR_TURN_RATE));
-   strncpy_P(_mgmtParams[DRONE_MODULE_PARAM_TYPE_E].data.c, TURN_RATE_STR_TURN_RATE, sizeof(TURN_RATE_STR_TURN_RATE));
+   //_mgmtParams[DRONE_MODULE_PARAM_TYPE_E].paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_CHAR, sizeof(TURN_RATE_STR_TURN_RATE));
+   //strncpy_P(_mgmtParams[DRONE_MODULE_PARAM_TYPE_E].data.c, TURN_RATE_STR_TURN_RATE, sizeof(TURN_RATE_STR_TURN_RATE));
 
 
    // subs
@@ -41,7 +44,7 @@ TurnRateModule::TurnRateModule(uint8_t id, DroneSystem* ds):
    // pubs
    initParams(TURN_RATE_PARAM_ENTRIES);
 
-   _params[TURN_RATE_PARAM_TURN_RATE_E].paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_MEDIUM, TURN_RATE_PARAM_TURN_RATE);
+   _params[TURN_RATE_PARAM_TURN_RATE_E].paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_CRITICAL, TURN_RATE_PARAM_TURN_RATE);
    _params[TURN_RATE_PARAM_TURN_RATE_E].name = FPSTR(STRING_TURN_RATE);
    _params[TURN_RATE_PARAM_TURN_RATE_E].nameLen = sizeof(STRING_TURN_RATE);
    _params[TURN_RATE_PARAM_TURN_RATE_E].paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 4);
@@ -50,15 +53,17 @@ TurnRateModule::TurnRateModule(uint8_t id, DroneSystem* ds):
    _params[TURN_RATE_PARAM_THRESHOLD_E].name = FPSTR(STRING_THRESHOLD);
    _params[TURN_RATE_PARAM_THRESHOLD_E].nameLen = sizeof(STRING_THRESHOLD);
    _params[TURN_RATE_PARAM_THRESHOLD_E].paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_FLOAT, 4);
+   // @default threshold=20
    _params[TURN_RATE_PARAM_THRESHOLD_E].data.f[0] = 20;
 
    _params[TURN_RATE_PARAM_TIMEOUT_E].paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, TURN_RATE_PARAM_TIMEOUT);
    _params[TURN_RATE_PARAM_TIMEOUT_E].name = FPSTR(STRING_TIMEOUT);
    _params[TURN_RATE_PARAM_TIMEOUT_E].nameLen = sizeof(STRING_TIMEOUT);
    _params[TURN_RATE_PARAM_TIMEOUT_E].paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_FLOAT, 4);
+   // @default timeout=10
    _params[TURN_RATE_PARAM_TIMEOUT_E].data.f[0] = 10;
 
-   _params[TURN_RATE_PARAM_MODE_E].paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_MEDIUM, TURN_RATE_PARAM_MODE);
+   _params[TURN_RATE_PARAM_MODE_E].paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_CRITICAL, TURN_RATE_PARAM_MODE);
    _params[TURN_RATE_PARAM_MODE_E].name = FPSTR(STRING_MODE);
    _params[TURN_RATE_PARAM_MODE_E].nameLen = sizeof(STRING_MODE);
    _params[TURN_RATE_PARAM_MODE_E].paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_UINT8_T, 1);
@@ -66,32 +71,6 @@ TurnRateModule::TurnRateModule(uint8_t id, DroneSystem* ds):
 
    _gybeTimerStart = TURN_RATE_MODE_NORMAL;
    _positiveError = false;
-}
-
-
-DEM_NAMESPACE* TurnRateModule::registerNamespace(DroneExecutionManager *dem) {
-  // namespace for module type
-  return dem->createNamespace(TURN_RATE_STR_TURN_RATE,0,true);
-}
-
-void TurnRateModule::registerParams(DEM_NAMESPACE* ns, DroneExecutionManager *dem) {
-  using std::placeholders::_1;
-  using std::placeholders::_2;
-  using std::placeholders::_3;
-  using std::placeholders::_4;
-
-  // writable mgmt params
-  DEMCommandHandler ph = std::bind(&DroneExecutionManager::mod_param, dem, _1, _2, _3, _4);
-  DEMCommandHandler pha = std::bind(&DroneExecutionManager::mod_subAddr, dem, _1, _2, _3, _4);
-
-  dem->registerCommand(ns, STRING_TARGET, DRONE_LINK_MSG_TYPE_FLOAT, ph);
-  dem->registerCommand(ns, PSTR("$target"), DRONE_LINK_MSG_TYPE_FLOAT, pha);
-
-  dem->registerCommand(ns, STRING_HEADING, DRONE_LINK_MSG_TYPE_FLOAT, ph);
-  dem->registerCommand(ns, PSTR("$heading"), DRONE_LINK_MSG_TYPE_FLOAT, pha);
-
-  dem->registerCommand(ns, STRING_PID, DRONE_LINK_MSG_TYPE_FLOAT, ph);
-  dem->registerCommand(ns, PSTR("$PID"), DRONE_LINK_MSG_TYPE_FLOAT, pha);
 }
 
 
@@ -114,10 +93,16 @@ float TurnRateModule::getRotationDistance(float origin, float target){
 
 
 void TurnRateModule::loop() {
+  DroneModule::loop();
   if (!_setupDone) return;
 
   unsigned long updateTime = millis();
   float dt = (updateTime - _lastUpdate) / 1000.0;
+
+  // don't bother updating if dt too small
+  if (dt < 0.05) return;
+
+  _lastUpdate = updateTime;
 
   // calc and publish new speeds
 
@@ -131,6 +116,13 @@ void TurnRateModule::loop() {
   // local shortcuts
   float h = _subs[TURN_RATE_SUB_HEADING_E].param.data.f[0];
   float t = _subs[TURN_RATE_SUB_TARGET_E].param.data.f[0];
+
+  // check to see if heading has dramatically changed
+  if (fabs(getRotationDistance(_lastHeading, t)) > 45) {
+    // reset d and i errors
+    _iError = 0;
+    _dError = 0;
+  }
 
   // calc shortest signed distance
   // positive values indicate a clockwise turn
@@ -165,7 +157,10 @@ void TurnRateModule::loop() {
 
   // if gybe mode then invert err
   if (newMode == TURN_RATE_MODE_GYBE) {
-    err = -err;
+    // if _positiveError then when we first entered gybe we needed to turn clockwise to reach the targetHeading
+    if ((err > 0 && _positiveError) || (err < 0 && !_positiveError)) {
+      err = -err;
+    }
   }
 
   // limit to 90 for ease
@@ -175,6 +170,13 @@ void TurnRateModule::loop() {
   // update I and D terms
   _iError += err * dt;
   _dError = (err - _lastError) / dt;
+
+  // clamp i error
+  if (_subs[TURN_RATE_SUB_PID_E].param.data.f[1] > 0) {
+    if (fabs(_iError) > 100 / _subs[TURN_RATE_SUB_PID_E].param.data.f[1]) {
+      _iError = (_iError > 0 ? 100 : -100) / _subs[TURN_RATE_SUB_PID_E].param.data.f[1];
+    }
+  }
 
   // apply PID cooefficients
   float tr =
@@ -192,4 +194,5 @@ void TurnRateModule::loop() {
 
   updateAndPublishParam(&_params[TURN_RATE_PARAM_MODE_E], (uint8_t*)&newMode, sizeof(newMode));
 
+  _lastHeading = h;
 }

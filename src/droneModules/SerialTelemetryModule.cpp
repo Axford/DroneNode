@@ -4,6 +4,8 @@
 #include "strings.h"
 #include "../DroneSystem.h"
 
+// @type SerialTelemetry
+
 SerialTelemetryModule::SerialTelemetryModule(uint8_t id, DroneSystem* ds):
   NetworkInterfaceModule ( id, ds )
  {
@@ -12,7 +14,9 @@ SerialTelemetryModule::SerialTelemetryModule(uint8_t id, DroneSystem* ds):
    _decodeState = 0;
    _receivedSize = 0;
    _portNum = 2;
-   _baud = 57600;
+   _baud = 115200;
+
+   _broadcastCapable = false;
 
    _packetsReceived = 0;
    _packetsRejected = 0;
@@ -50,27 +54,8 @@ SerialTelemetryModule::SerialTelemetryModule(uint8_t id, DroneSystem* ds):
    param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, SERIAL_TELEMETRY_PARAM_BAUD);
    setParamName(FPSTR(STRING_BAUD), param);
    _params[SERIAL_TELEMETRY_PARAM_BAUD_E].paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_UINT32_T, 4);
+   // @default baud=115200
    _params[SERIAL_TELEMETRY_PARAM_BAUD_E].data.uint32[0] = 115200;
-}
-
-
-DEM_NAMESPACE* SerialTelemetryModule::registerNamespace(DroneExecutionManager *dem) {
-  // namespace for module type
-  return dem->createNamespace(SERIAL_TELEMETRY_STR_SERIAL_TELEMETRY,0,true);
-}
-
-
-void SerialTelemetryModule::registerParams(DEM_NAMESPACE* ns, DroneExecutionManager *dem) {
-  using std::placeholders::_1;
-  using std::placeholders::_2;
-  using std::placeholders::_3;
-  using std::placeholders::_4;
-
-  // writable mgmt params
-  DEMCommandHandler ph = std::bind(&DroneExecutionManager::mod_param, dem, _1, _2, _3, _4);
-
-  dem->registerCommand(ns, STRING_PORT, DRONE_LINK_MSG_TYPE_UINT8_T, ph);
-  dem->registerCommand(ns, STRING_BAUD, DRONE_LINK_MSG_TYPE_UINT32_T, ph);
 }
 
 
@@ -152,7 +137,9 @@ void SerialTelemetryModule::loop() {
 
         case 2: // reading payload
           if (_msgLen == _receivedSize - 1) {
-            receivePacket(&_buffer[1], 1);
+            DRONE_LINK_TRANSPORT_ADDRESS ta;
+
+            receivePacket(&_buffer[1], 1, ta);
             _packetsReceived++;
 
             _decodeState = 0;
@@ -195,14 +182,16 @@ void SerialTelemetryModule::setPort(Stream *port) {
 }
 
 
-boolean SerialTelemetryModule::sendPacket(uint8_t *buffer) {
+boolean SerialTelemetryModule::sendPacket(uint8_t *buffer, DRONE_LINK_TRANSPORT_ADDRESS transportAddress) {
 
   if (!_enabled) return false;
 
   // prefix the DroneMesh message in a start byte
   uint8_t txSize = getDroneMeshMsgTotalSize(buffer) + 1;
 
-  _port->write(SERIAL_TELEMETRY_START_OF_FRAME);
+  uint8_t startByte = SERIAL_TELEMETRY_START_OF_FRAME;
+
+  _port->write(&startByte, 1);
   _port->write(buffer, txSize-1);
   _port->flush();
 

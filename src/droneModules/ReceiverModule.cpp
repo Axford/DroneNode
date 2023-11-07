@@ -4,10 +4,12 @@
 #include "strings.h"
 #include "DroneSystem.h"
 
+// @type Receiver
+
 // globals for use in ISRs
 uint8_t _globalReceiveMode = RECEIVER_MODE_PPM;
-uint8_t _globalReceiverPins[4];
-unsigned long _globalReceiverRawTimers[4];
+uint8_t _globalReceiverPins[6];
+unsigned long _globalReceiverRawTimers[6];
 unsigned long _globalLastReceiverSignal;
 
 ReceiverModule::ReceiverModule(uint8_t id, DroneSystem* ds):
@@ -48,7 +50,7 @@ ReceiverModule::ReceiverModule(uint8_t id, DroneSystem* ds):
 
    sub = &_subs[RECEIVER_SUB_SWITCH_E];
    sub->addrParam = RECEIVER_SUB_SWITCH_ADDR;
-   sub->param.paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, RECEIVER_SUB_SWITCH);
+   sub->param.paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_HIGH, RECEIVER_SUB_SWITCH);
    setParamName(FPSTR(STRING_SWITCH), &sub->param);
    sub->param.data.f[0] = 1; // default to active mode
 
@@ -69,74 +71,54 @@ ReceiverModule::ReceiverModule(uint8_t id, DroneSystem* ds):
 
 
    param = &_params[RECEIVER_PARAM_VALUE1_E];
-   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, RECEIVER_PARAM_VALUE1);
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_CRITICAL, RECEIVER_PARAM_VALUE1);
    setParamName(FPSTR(STRING_VALUE1), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 4);
 
    param = &_params[RECEIVER_PARAM_VALUE2_E];
-   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, RECEIVER_PARAM_VALUE2);
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_CRITICAL, RECEIVER_PARAM_VALUE2);
    setParamName(FPSTR(STRING_VALUE2), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 4);
 
    param = &_params[RECEIVER_PARAM_VALUE3_E];
-   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, RECEIVER_PARAM_VALUE3);
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_CRITICAL, RECEIVER_PARAM_VALUE3);
    setParamName(FPSTR(STRING_VALUE3), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 4);
 
    param = &_params[RECEIVER_PARAM_VALUE4_E];
-   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, RECEIVER_PARAM_VALUE4);
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_CRITICAL, RECEIVER_PARAM_VALUE4);
    setParamName(FPSTR(STRING_VALUE4), param);
+   param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 4);
+
+   param = &_params[RECEIVER_PARAM_VALUE5_E];
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_CRITICAL, RECEIVER_PARAM_VALUE5);
+   setParamName(FPSTR(STRING_VALUE5), param);
+   param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 4);
+
+   param = &_params[RECEIVER_PARAM_VALUE6_E];
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_CRITICAL, RECEIVER_PARAM_VALUE6);
+   setParamName(FPSTR(STRING_VALUE6), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 4);
 
    param = &_params[RECEIVER_PARAM_LIMITS_E];
    param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, RECEIVER_PARAM_LIMITS);
    setParamName(FPSTR(STRING_LIMITS), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_UINT32_T, 8);
+   // @default limits=1000,2000
    param->data.uint32[0] = 1000;
    param->data.uint32[1] = 2000;
 
    param = &_params[RECEIVER_PARAM_INPUT_E];
-   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, RECEIVER_PARAM_INPUT);
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_HIGH, RECEIVER_PARAM_INPUT);
    setParamName(FPSTR(STRING_INPUT), param);
-   param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_UINT32_T, 16);
+   param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_UINT8_T, 6);
 
    param = &_params[RECEIVER_PARAM_MODE_E];
-   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, RECEIVER_PARAM_MODE);
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_CRITICAL, RECEIVER_PARAM_MODE);
    setParamName(FPSTR(STRING_MODE), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_UINT8_T, 1);
+   // @default mode=1
    param->data.uint8[0] = RECEIVER_MODE_PPM;
-}
-
-
-DEM_NAMESPACE* ReceiverModule::registerNamespace(DroneExecutionManager *dem) {
-  // namespace for module type
-  return dem->createNamespace(RECEIVER_STR_RECEIVER,0,true);
-}
-
-void ReceiverModule::registerParams(DEM_NAMESPACE* ns, DroneExecutionManager *dem) {
-  using std::placeholders::_1;
-  using std::placeholders::_2;
-  using std::placeholders::_3;
-  using std::placeholders::_4;
-
-  // writable mgmt params
-  DEMCommandHandler ph = std::bind(&DroneExecutionManager::mod_param, dem, _1, _2, _3, _4);
-  DEMCommandHandler pha = std::bind(&DroneExecutionManager::mod_subAddr, dem, _1, _2, _3, _4);
-
-  dem->registerCommand(ns, STRING_PINS, DRONE_LINK_MSG_TYPE_UINT8_T, ph);
-  dem->registerCommand(ns, STRING_LIMITS, DRONE_LINK_MSG_TYPE_UINT32_T, ph);
-  dem->registerCommand(ns, STRING_MODE, DRONE_LINK_MSG_TYPE_UINT8_T, ph);
-
-  dem->registerCommand(ns, STRING_INPUT1, DRONE_LINK_MSG_TYPE_FLOAT, ph);
-  dem->registerCommand(ns, PSTR("$input1"), DRONE_LINK_MSG_TYPE_FLOAT, pha);
-  dem->registerCommand(ns, STRING_INPUT2, DRONE_LINK_MSG_TYPE_FLOAT, ph);
-  dem->registerCommand(ns, PSTR("$input2"), DRONE_LINK_MSG_TYPE_FLOAT, pha);
-  dem->registerCommand(ns, STRING_INPUT3, DRONE_LINK_MSG_TYPE_FLOAT, ph);
-  dem->registerCommand(ns, PSTR("$input3"), DRONE_LINK_MSG_TYPE_FLOAT, pha);
-  dem->registerCommand(ns, STRING_INPUT4, DRONE_LINK_MSG_TYPE_FLOAT, ph);
-  dem->registerCommand(ns, PSTR("$input4"), DRONE_LINK_MSG_TYPE_FLOAT, pha);
-  dem->registerCommand(ns, STRING_SWITCH, DRONE_LINK_MSG_TYPE_FLOAT, ph);
-  dem->registerCommand(ns, PSTR("$switch"), DRONE_LINK_MSG_TYPE_FLOAT, pha);
 }
 
 
@@ -163,7 +145,7 @@ void IRAM_ATTR ReceiverModule::ISR1() {
 
     } else {
       // new pulse
-      if (pulseCounter < 4) {
+      if (pulseCounter < 6) {
         if (pulseTime > 500 && pulseTime < 2500) {
           // moving average of 5 samples
         _globalReceiverRawTimers[pulseCounter] = (4 * _globalReceiverRawTimers[pulseCounter]  + pulseTime) / 5;
@@ -295,11 +277,12 @@ float ReceiverModule::rawToValue(uint8_t chan) {
   float v;
   float minV = _params[RECEIVER_PARAM_LIMITS_E].data.uint32[0];
   float maxV = _params[RECEIVER_PARAM_LIMITS_E].data.uint32[1];
-  if (_globalReceiverRawTimers[chan] > minV && _globalReceiverRawTimers[chan] < maxV) {
-    v = (2 * (_globalReceiverRawTimers[chan] - minV) / (maxV - minV)) - 1;
-  } else {
-    v = 0;
-  }
+
+  // clamp to valid range
+  if (_globalReceiverRawTimers[chan] < minV) _globalReceiverRawTimers[chan] = minV;
+  if (_globalReceiverRawTimers[chan] > maxV) _globalReceiverRawTimers[chan] = maxV;  
+
+  v = (2 * (_globalReceiverRawTimers[chan] - minV) / (maxV - minV)) - 1;
   return v;
 }
 
@@ -309,7 +292,11 @@ void ReceiverModule::loop() {
   boolean validSignal = (millis() - _globalLastReceiverSignal) < 5000;
 
   // raw values
-  updateAndPublishParam(&_params[RECEIVER_PARAM_INPUT_E], (uint8_t*)&_globalReceiverRawTimers, sizeof(_globalReceiverRawTimers));
+  uint8_t rawU8[6];
+  for (uint8_t i=0; i<6; i++) {
+    rawU8[i] = _globalReceiverRawTimers[i] / 10;
+  }
+  updateAndPublishParam(&_params[RECEIVER_PARAM_INPUT_E], (uint8_t*)&rawU8, sizeof(rawU8));
 
   boolean passthroughMode = _subs[RECEIVER_SUB_SWITCH_E].param.data.f[0] < 0.5;
 
@@ -351,6 +338,12 @@ void ReceiverModule::loop() {
   }
   updateAndPublishParam(&_params[RECEIVER_PARAM_VALUE4_E], (uint8_t*)&v, sizeof(v));
 
+  // channel 5
+  v = validSignal ? rawToValue(4) : 0;
+  updateAndPublishParam(&_params[RECEIVER_PARAM_VALUE5_E], (uint8_t*)&v, sizeof(v));
 
+  // channel 6
+  v = validSignal ? rawToValue(5) : 0;
+  updateAndPublishParam(&_params[RECEIVER_PARAM_VALUE6_E], (uint8_t*)&v, sizeof(v));
 
 }

@@ -1,6 +1,7 @@
 /*
 @type          Polar
 @inherits      Drone
+@category      Logic
 @description   Sail polar calibration module
 
 @guide >>>
@@ -26,30 +27,19 @@ relative wind direction.  This may need a separate calibration process.</p>
 <<<
 
 @config >>>
-Polar.new 22
-  name "Polar"
-  interval 1000
-  $location [@>50.9]
-  $wind [@>50.10]
-  windSpeed 1
-  $heading [@>12.16]
-  target -1.7454870 51.5418469
-  threshold -1 100
-  radius 10 20 50
-  mode 1
-  .publish "location"
-  .publish "SOG"
-  .publish "wind"
-  .publish "windSpeed"
-  .publish "heading"
-  .publish "adjHeading"
-  .publish "mode"
-  .publish "target"
-  .publish "threshold"
-  .publish "radius"
-  .publish "samples"
-  .publish "polar"
-.done
+[Polar=13]
+  name="Polar"
+  interval=1000
+  $location=@>50.9
+  $wind=@>50.10
+  windSpeed =1
+  $heading=@>Sailor.course
+  target =-1.7454870, 51.5418469
+  threshold =-1, 100
+  radius =10, 20, 50
+  mode= 1
+  publish =l ocation, SOG, wind, windSpeed, heading, polar
+  publish = adjHeading, mode, target, threshold, radius, samples
 <<<
 */
 
@@ -73,31 +63,31 @@ Output parameters:
 
 */
 
-// @pub 8;f;5;target;Lon/Lat of target
+// @pub 8;f;5;r;target;Lon/Lat of target
 #define POLAR_PARAM_TARGET         8
 #define POLAR_PARAM_TARGET_E       0
 
-// @pub 9;u8;1;mode;Mode - passthrough (default), active, reset
+// @pub 9;u8;1;w;mode;Mode - passthrough (default), active, reset
 #define POLAR_PARAM_MODE           9
 #define POLAR_PARAM_MODE_E         1
 
-// @pub 10;f;2;threshold;Min SOG for tack and acceptable deviation from target heading
+// @pub 10;f;2;w;threshold;Min SOG for tack and acceptable deviation from target heading
 #define POLAR_PARAM_THRESHOLD      10
 #define POLAR_PARAM_THRESHOLD_E    2
 
-// @pub 11;u8;16;polar;Calculated polar plot
+// @pub 11;u8;16;r;polar;Calculated polar plot
 #define POLAR_PARAM_POLAR          11
 #define POLAR_PARAM_POLAR_E        3
 
-// @pub 12;u8;16;samples;Number of samples per polar bin
+// @pub 12;u8;16;r;samples;Number of samples per polar bin
 #define POLAR_PARAM_SAMPLES        12
 #define POLAR_PARAM_SAMPLES_E      4
 
-// @sub 13;f;3;radius;Inner, mid and outer target radii
+// @pub 13;f;3;w;radius;Inner, mid and outer target radii
 #define POLAR_PARAM_RADIUS         13
 #define POLAR_PARAM_RADIUS_E       5
 
-// @sub 14;f;2;adjHeading;Adjusted heading - either passthrough of <b>Heading</b> or generated heading depending on mode
+// @pub 14;f;2;r;adjHeading;Adjusted heading - either passthrough of <b>Heading</b> or generated heading depending on mode
 #define POLAR_PARAM_ADJ_HEADING    14
 #define POLAR_PARAM_ADJ_HEADING_E  6
 
@@ -127,12 +117,12 @@ Subs
 #define POLAR_SUB_WIND_ADDR          35
 #define POLAR_SUB_WIND_E             2
 
-// @sub 36;37;f;1;Wind speed
+// @sub 36;37;f;1;windSpeed;Wind speed
 #define POLAR_SUB_WIND_SPEED         36
 #define POLAR_SUB_WIND_SPEED_ADDR    37
 #define POLAR_SUB_WIND_SPEED_E       3
 
-// @sub 38;39;f;1;Target heading from Sailor
+// @sub 38;39;f;1;heading;Target heading from Sailor
 #define POLAR_SUB_HEADING            38
 #define POLAR_SUB_HEADING_ADDR       39
 #define POLAR_SUB_HEADING_E          4
@@ -163,9 +153,6 @@ protected:
 public:
 
   PolarModule(uint8_t id, DroneSystem* ds);
-
-  static DEM_NAMESPACE* registerNamespace(DroneExecutionManager *dem);
-  static void registerParams(DEM_NAMESPACE* ns, DroneExecutionManager *dem);
 
   uint8_t polarIndexForAngle(float ang);
 
