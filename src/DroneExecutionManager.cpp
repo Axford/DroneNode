@@ -22,6 +22,7 @@
 #include "droneModules/INA219Module.h"
 #include "droneModules/INA3221Module.h"
 #include "droneModules/JoystickModule.h"
+#include "droneModules/KiteControllerModule.h"
 #include "droneModules/LSM9DS1Module.h"
 #include "droneModules/ManagementModule.h"
 #include "droneModules/MotorModule.h"
@@ -532,6 +533,8 @@ DroneModule* DroneExecutionManager::instanceModule(char* typeName, uint8_t id) {
       newMod = new INA3221Module(id, _ds);
     } else if (strcmp_P(typeName, JOYSTICK_STR_JOYSTICK) == 0) {
       newMod = new JoystickModule(id, _ds);
+    } else if (strcmp_P(typeName, KITE_CONTROLLER_STR_KITE_CONTROLLER) == 0) {
+      newMod = new KiteControllerModule(id, _ds);
     } else if (strcmp_P(typeName, LSM9DS1_STR_LSM9DS1) == 0) {
       newMod = new LSM9DS1Module(id, _ds);
     } else if (strcmp_P(typeName, MANAGEMENT_STR_MANAGEMENT) == 0) {
