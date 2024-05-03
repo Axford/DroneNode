@@ -6,19 +6,27 @@
 @description   Manages an ODrive module via serial
 
 @config >>>
-ODrive.new 11
-  name "ODrive"
-  interval 100
-  port 2
-  limits -10 10
-  invert 0
-  $left [@>10.8]
-  $right [@>10.9]
+[ ODrive = 11]
+  name = "ODrive"
+  interval = 100
+  port = 2
+  limits = -10, 10
+  invert = 0
+  $left = @>10.8
+  $right = @>10.9
+  publish = left, right, limits, invert
 
-  // publish
-  .publish "left"
-  .publish "right"
-.done
+
+[ ODrive = 11]
+  name = "ODrive"
+  mode = 1
+  interval = 100
+  port = 2
+  limits = 1, 1
+  invert = 0
+  $left = @>10.8
+  $right = @>10.9
+  publish = left, right, limits, invert
 <<<
 
 */
