@@ -167,6 +167,7 @@ static const char STRING_WIND_SPEED[] = "windSpeed";
 static const char STRING_WING[] = "wing";
 static const char STRING_XAXIS[] = "xAxis";
 static const char STRING_YAXIS[] = "yAxis";
+static const char STRING_YAW[] = "yaw";
 static const char STRING_ZAXIS[] = "zAxis";
 
 
