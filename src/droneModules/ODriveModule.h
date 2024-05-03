@@ -30,7 +30,7 @@ ODrive.new 11
 
 // pubs
 
-// @pub 12;f;2;w;limits;Min and max speed limits in range -1 to 1 (default -1 1)
+// @pub 12;f;2;w;limits;In velocity mode these are Min and max speed limits in range -1 to 1 (default -1 1). In position mode these are limits for Velocity in turns/s [0] and Torque in Nm [1]
 #define ODRIVE_PARAM_LIMITS       12
 #define ODRIVE_PARAM_LIMITS_E     0
 
@@ -46,8 +46,11 @@ ODrive.new 11
 #define ODRIVE_PARAM_SWITCH       15
 #define ODRIVE_PARAM_SWITCH_E     3
 
+// @pub 16;u8;1;w;mode;Mode: 0=velocity control, 1=position control (default: 0)
+#define ODRIVE_PARAM_MODE         16
+#define ODRIVE_PARAM_MODE_E       4
 
-#define ODRIVE_PARAM_ENTRIES      4
+#define ODRIVE_PARAM_ENTRIES      5
 
 // subs
 // @sub 8;9;f;1;left;Desired left motor speed in range -1 to 1
@@ -63,6 +66,8 @@ ODrive.new 11
 #define ODRIVE_SUBS             2
 
 
+#define ODRIVE_MODE_VELOCITY_CONTROL   0
+#define ODRIVE_MODE_POSITION_CONTROL   1
 
 static const char ODRIVE_STR_ODRIVE[] PROGMEM = "ODrive";
 

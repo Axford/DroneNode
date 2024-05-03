@@ -60,6 +60,12 @@ ODriveModule::ODriveModule(uint8_t id, DroneSystem* ds):
    param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_UINT8_T, 1);
    _params[ODRIVE_PARAM_SWITCH_E].data.uint8[0] = 0;
 
+   param = &_params[ODRIVE_PARAM_MODE_E];
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, ODRIVE_PARAM_MODE);
+   setParamName(FPSTR(STRING_MODE), param);
+   param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_UINT8_T, 1);
+   _params[ODRIVE_PARAM_MODE_E].data.uint8[0] = ODRIVE_MODE_VELOCITY_CONTROL;
+
 }
 
 
@@ -101,9 +107,13 @@ void ODriveModule::setup() {
 
 void ODriveModule::disable() {
   DroneModule::disable();
-  _subs[ODRIVE_SUB_LEFT_E].param.data.f[0] = 0;
-  _subs[ODRIVE_SUB_RIGHT_E].param.data.f[0] = 0;
-  update();
+
+  if (_params[ODRIVE_PARAM_MODE_E].data.uint8[0] == ODRIVE_MODE_VELOCITY_CONTROL) {
+    _subs[ODRIVE_SUB_LEFT_E].param.data.f[0] = 0;
+    _subs[ODRIVE_SUB_RIGHT_E].param.data.f[0] = 0;
+
+    update();
+  }
 }
 
 
@@ -111,24 +121,51 @@ void ODriveModule::setVel(uint8_t axis, float v, boolean invert) {
 
   static char floatStr[10];
 
-  // limit range
-  if (v > 1) v = 1;
-  if (v< -1) v = -1;
+  uint8_t mode = _params[ODRIVE_PARAM_MODE_E].data.uint8[0];
 
-  // remap -1 to 1 into _limits[0] to _limits[1]
-  v = (v + 1) * (_params[ODRIVE_PARAM_LIMITS_E].data.f[1] - _params[ODRIVE_PARAM_LIMITS_E].data.f[0]) / (2) + _params[ODRIVE_PARAM_LIMITS_E].data.f[0];
+  if (mode == ODRIVE_MODE_VELOCITY_CONTROL) {
+    // limit range
+    if (v > 1) v = 1;
+    if (v< -1) v = -1;
 
-  if (invert) {
-    v = -v;
+    // remap -1 to 1 into _limits[0] to _limits[1]
+    v = (v + 1) * (_params[ODRIVE_PARAM_LIMITS_E].data.f[1] - _params[ODRIVE_PARAM_LIMITS_E].data.f[0]) / (2) + _params[ODRIVE_PARAM_LIMITS_E].data.f[0];
+
+    if (invert) {
+      v = -v;
+    }
+
+    _port->write("v ");
+    _port->write(axis == 0 ? "0" : "1");
+    _port->write(" ");
+    dtostrf(v,5, 1, floatStr);
+    _port->write(floatStr);
+    _port->write("\n");
+
+  } else {
+    // position control
+
+    if (invert) {
+      v = -v;
+    }
+
+    _port->write("p ");
+    _port->write(axis == 0 ? "0" : "1");
+    _port->write(" ");
+    // position target
+    dtostrf(v,5, 1, floatStr);
+    _port->write(floatStr);
+
+    _port->write(" ");
+    dtostrf(_params[ODRIVE_PARAM_LIMITS_E].data.f[0],5, 1, floatStr);
+    _port->write(floatStr);
+
+    _port->write(" ");
+    dtostrf(_params[ODRIVE_PARAM_LIMITS_E].data.f[1],5, 1, floatStr);
+    _port->write(floatStr);
+
+    _port->write("\n");
   }
-
-  dtostrf(v,5, 1, floatStr);
-
-  _port->write("v ");
-  _port->write(axis == 0 ? "0" : "1");
-  _port->write(" ");
-  _port->write(floatStr);
-  _port->write("\n");
 
 }
 
