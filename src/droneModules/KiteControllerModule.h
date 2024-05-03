@@ -30,14 +30,13 @@ Motor positions
   name = KiteController
   mode = 1
   trim = 0
-  PID = 0.02, 0, 0
-  limits = 0.2,1
-  threshold = 15
-  $target = @>Nav.adjTarget
-  $heading = @>50.8
-  $distance = @>Nav.distance
-  publish = moode, trim, PID, limits, threshold, target
-  publish = heading, distance, left, right
+  limits = -1, 1
+  $turnRate = @>TurnRate.analog
+  $yaw = @>Yaw.analog
+  $pitch = @>Analog.analog
+  publish = mode, trim, limits
+  publish = turnRate, yaw, pitch
+  publish = left, right
 <<<
 
 */
