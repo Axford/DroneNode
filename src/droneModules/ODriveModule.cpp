@@ -178,3 +178,10 @@ void ODriveModule::update() {
   setVel(swap ? 1 : 0, _subs[ODRIVE_SUB_LEFT_E].param.data.f[0], _params[ODRIVE_PARAM_INVERT_E].data.uint8[0]==1 );
   setVel(swap ? 0 : 1, _subs[ODRIVE_SUB_RIGHT_E].param.data.f[0], _params[ODRIVE_PARAM_INVERT_E].data.uint8[1]==1  );
 }
+
+
+void ODriveModule::loop() {
+  // tickle motor watchdog
+  _port->write("u 0\n");
+  _port->write("u 1\n");
+}

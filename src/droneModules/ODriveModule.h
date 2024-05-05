@@ -95,7 +95,7 @@ public:
   void setVel(uint8_t axis, float v, boolean invert);
 
   void update();
-
+  void loop();
 };
 
 #endif

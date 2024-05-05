@@ -93,6 +93,10 @@ void KiteControllerModule::loop() {
   float left = 0;
   float right = 0;
 
+  // set left and right based on turnRate
+  // right is considered the master and responds direcrly to turnRate.  Left is the opposite
+  right = tr;
+  left = -tr;
 
   // scale left/right using lerp to limits
   left = mmin + (mmax - mmin) * (left + 1) / 2;
