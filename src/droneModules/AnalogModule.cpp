@@ -14,6 +14,8 @@ AnalogModule::AnalogModule(uint8_t id, DroneSystem* ds):
    // @default interval = 1000
    _mgmtParams[DRONE_MODULE_PARAM_INTERVAL_E].data.uint32[0] = 1000;
 
+   _avgValue = 0;
+
    // subs
    initSubs(ANALOG_SUBS);
 
@@ -50,6 +52,12 @@ AnalogModule::AnalogModule(uint8_t id, DroneSystem* ds):
    setParamName(FPSTR(STRING_ANALOG), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 4);
    _params[ANALOG_PARAM_ANALOG_E].data.f[0] = 0;
+
+   param = &_params[ANALOG_PARAM_SAMPLES_E];
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, ANALOG_PARAM_SAMPLES);
+   setParamName(FPSTR(STRING_SAMPLES), param);
+   param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_UINT8_T, 1);
+   _params[ANALOG_PARAM_SAMPLES_E].data.uint8[0] = 1;
 }
 
 
@@ -74,7 +82,10 @@ void AnalogModule::loop() {
   // map using limits
   float f = _params[ANALOG_PARAM_LIMITS_E].data.f[0] + (_params[ANALOG_PARAM_LIMITS_E].data.f[1]-_params[ANALOG_PARAM_LIMITS_E].data.f[0]) * (raw/4095.0);
 
+  // over-sampling
+  _avgValue = (f + (_avgValue * _params[ANALOG_PARAM_SAMPLES_E].data.uint8[0])) / (_params[ANALOG_PARAM_SAMPLES_E].data.uint8[0] + 1.0f);
+
   // publish new values
-  updateAndPublishParam(&_params[ANALOG_PARAM_ANALOG_E], (uint8_t*)&f, sizeof(f));
+  updateAndPublishParam(&_params[ANALOG_PARAM_ANALOG_E], (uint8_t*)&_avgValue, sizeof(f));
   updateAndPublishParam(&_params[ANALOG_PARAM_RAW_E], (uint8_t*)&raw, sizeof(raw));
 }

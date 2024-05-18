@@ -22,18 +22,18 @@ KiteControllerModule::KiteControllerModule(uint8_t id, DroneSystem* ds):
 
   sub = &_subs[KITE_CONTROLLER_SUB_TURN_RATE_E];
   sub->addrParam = KITE_CONTROLLER_SUB_TURN_RATE_ADDR;
-  sub->param.paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, KITE_CONTROLLER_SUB_TURN_RATE);
+  sub->param.paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_CRITICAL, KITE_CONTROLLER_SUB_TURN_RATE);
   setParamName(FPSTR(STRING_TURN_RATE), &sub->param);
   sub->param.data.f[0] = 0;
 
   sub = &_subs[KITE_CONTROLLER_SUB_YAW_E];
   sub->addrParam = KITE_CONTROLLER_SUB_YAW_ADDR;
-  sub->param.paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, KITE_CONTROLLER_SUB_YAW);
+  sub->param.paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_CRITICAL, KITE_CONTROLLER_SUB_YAW);
   setParamName(FPSTR(STRING_YAW), &sub->param);
 
   sub = &_subs[KITE_CONTROLLER_SUB_PITCH_E];
   sub->addrParam = KITE_CONTROLLER_SUB_PITCH_ADDR;
-  sub->param.paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, KITE_CONTROLLER_SUB_PITCH);
+  sub->param.paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_CRITICAL, KITE_CONTROLLER_SUB_PITCH);
   setParamName(FPSTR(STRING_PITCH), &sub->param);
 
 

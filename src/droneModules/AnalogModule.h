@@ -41,7 +41,12 @@ Reads an analog value on specified pin (range 0..4095) and maps into the range l
 #define ANALOG_PARAM_ANALOG       13
 #define ANALOG_PARAM_ANALOG_E     3
 
-#define ANALOG_PARAM_ENTRIES      4
+// @pub 14;u8;1;w;samples;Number of samples (over-sampling)
+#define ANALOG_PARAM_SAMPLES      14
+#define ANALOG_PARAM_SAMPLES_E    4
+
+
+#define ANALOG_PARAM_ENTRIES      5
 
 // subs
 #define ANALOG_SUBS               0
@@ -51,6 +56,7 @@ static const char ANALOG_STR_ANALOG[] PROGMEM = "Analog";
 
 class AnalogModule:  public DroneModule {
 protected:
+  float _avgValue;
 public:
 
   AnalogModule(uint8_t id, DroneSystem* ds);
