@@ -70,6 +70,11 @@ KiteControllerModule::KiteControllerModule(uint8_t id, DroneSystem* ds):
   param->data.f[0] = -1;
   param->data.f[1] = 1;
 
+  param = &_params[KITE_CONTROLLER_PARAM_DISTANCE_E];
+  param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, KITE_CONTROLLER_PARAM_DISTANCE);
+  setParamName(FPSTR(STRING_DISTANCE), param);
+  param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_FLOAT, 4);
+
 }
 
 
@@ -104,6 +109,10 @@ void KiteControllerModule::loop() {
 
   // apply trim to right motor
   right += trim;
+
+  // add payout distance to both motors
+  left += _params[KITE_CONTROLLER_PARAM_DISTANCE_E].data.f[0];
+  right += _params[KITE_CONTROLLER_PARAM_DISTANCE_E].data.f[0];
 
   //_params[KITE_CONTROLLER_PARAM_LEFT_E].data.f[0] = left;
   updateAndPublishParam(&_params[KITE_CONTROLLER_PARAM_LEFT_E], (uint8_t*)&left, sizeof(left));

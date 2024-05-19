@@ -66,8 +66,12 @@ Motor positions
 #define KITE_CONTROLLER_PARAM_LIMITS        12
 #define KITE_CONTROLLER_PARAM_LIMITS_E      4
 
+// @pub 13;f;1;w;distance;Payout distance
+#define KITE_CONTROLLER_PARAM_DISTANCE      13
+#define KITE_CONTROLLER_PARAM_DISTANCE_E    5
 
-#define KITE_CONTROLLER_PARAM_ENTRIES       5
+
+#define KITE_CONTROLLER_PARAM_ENTRIES       6
 
 // subs
 // @sub 20;21;f;1;turnRate;Turn rate used to drive relative motor position and cause the kite to turn
