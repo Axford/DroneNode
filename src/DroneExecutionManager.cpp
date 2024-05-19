@@ -21,6 +21,7 @@
 #include "droneModules/HT16K33Module.h"
 #include "droneModules/INA219Module.h"
 #include "droneModules/INA3221Module.h"
+#include "droneModules/InjectModule.h"
 #include "droneModules/JoystickModule.h"
 #include "droneModules/KiteControllerModule.h"
 #include "droneModules/LSM9DS1Module.h"
@@ -39,6 +40,7 @@
 #include "droneModules/QMC5883LModule.h"
 #include "droneModules/ReceiverModule.h"
 #include "droneModules/RFM69TelemetryModule.h"
+#include "droneModules/RotaryModule.h"
 #include "droneModules/SailorModule.h"
 #include "droneModules/SerialTelemetryModule.h"
 #include "droneModules/ServoModule.h"
@@ -531,6 +533,8 @@ DroneModule* DroneExecutionManager::instanceModule(char* typeName, uint8_t id) {
       newMod = new INA219Module(id, _ds);
     } else if (strcmp_P(typeName, INA3221_STR_INA3221) == 0) {
       newMod = new INA3221Module(id, _ds);
+    } else if (strcmp_P(typeName, INJECT_STR_INJECT) == 0) {
+      newMod = new InjectModule(id, _ds);
     } else if (strcmp_P(typeName, JOYSTICK_STR_JOYSTICK) == 0) {
       newMod = new JoystickModule(id, _ds);
     } else if (strcmp_P(typeName, KITE_CONTROLLER_STR_KITE_CONTROLLER) == 0) {
@@ -565,6 +569,8 @@ DroneModule* DroneExecutionManager::instanceModule(char* typeName, uint8_t id) {
       newMod = new ReceiverModule(id, _ds);
     } else if (strcmp_P(typeName, RFM69_TELEMETRY_STR_RFM69_TELEMETRY) == 0) {
       newMod = new RFM69TelemetryModule(id, _ds);
+    } else if (strcmp_P(typeName, ROTARY_STR_ROTARY) == 0) {
+      newMod = new RotaryModule(id, _ds);
     } else if (strcmp_P(typeName, SAILOR_STR_SAILOR) == 0) {
       newMod = new SailorModule(id, _ds);
     } else if (strcmp_P(typeName, SERIAL_TELEMETRY_STR_SERIAL_TELEMETRY) == 0) {

@@ -102,8 +102,7 @@ void KiteControllerModule::loop() {
   left = mmin + (mmax - mmin) * (left + 1) / 2;
   right = mmin + (mmax - mmin) * (right + 1) / 2;
 
-  // apply trim
-  left -= trim;
+  // apply trim to right motor
   right += trim;
 
   //_params[KITE_CONTROLLER_PARAM_LEFT_E].data.f[0] = left;
