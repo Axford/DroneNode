@@ -70,8 +70,15 @@ Motor positions
 #define KITE_CONTROLLER_PARAM_DISTANCE      13
 #define KITE_CONTROLLER_PARAM_DISTANCE_E    5
 
+// @pub 14;f;4;r;vector;Latest state vector [yaw, pitch, distance, roll]
+#define KITE_CONTROLLER_PARAM_VECTOR        14
+#define KITE_CONTROLLER_PARAM_VECTOR_E      6
 
-#define KITE_CONTROLLER_PARAM_ENTRIES       6
+// @pub 15;f;3;w;target;Trajectory target defined as [pitch of centre, width in degrees, height in degrees, radius of each node in the trajectory]; default: [40, 30, 15, 3]
+#define KITE_CONTROLLER_PARAM_TARGET        15
+#define KITE_CONTROLLER_PARAM_TARGET_E      7
+
+#define KITE_CONTROLLER_PARAM_ENTRIES       8
 
 // subs
 // @sub 20;21;f;1;turnRate;Turn rate used to drive relative motor position and cause the kite to turn

@@ -7,6 +7,7 @@
 #include "DroneModule.h"
 
 // drone modules
+#include "droneModules/ADS1015Module.h"
 #include "droneModules/AnalogModule.h"
 #include "droneModules/AnemometerModule.h"
 #include "droneModules/AvoidModule.h"
@@ -505,7 +506,9 @@ DroneModule* DroneExecutionManager::instanceModule(char* typeName, uint8_t id) {
   DroneModule *newMod = NULL;
 
   if (id > 0 && id < 255) {
-    if (strcmp_P(typeName, ANALOG_STR_ANALOG) == 0) {
+    if (strcmp_P(typeName, ADS1015_STR_ADS1015) == 0) {
+      newMod = new ADS1015Module(id, _ds);
+    } else if (strcmp_P(typeName, ANALOG_STR_ANALOG) == 0) {
       newMod = new AnalogModule(id, _ds);
     } else if (strcmp_P(typeName, ANEMOMETER_STR_ANEMOMETER) == 0) {
       newMod = new AnemometerModule(id, _ds);
