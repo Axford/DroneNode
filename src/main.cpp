@@ -76,6 +76,10 @@ void setup() {
 
   OTAMgr.init(ds.dmm->hostname());
   OTAMgr.onEvent = handleOTAEVent;
+
+  Serial.println("Setup complete... taking a breath");
+  delay(50);
+  Serial.println("Starting loop");
 }
 
 
@@ -85,6 +89,7 @@ void loop() {
   unsigned long loopTime = millis();
   
   if (!OTAMgr.isUpdating) {
+
     ds.loop();
   } else {
     ds.dled->loop();
