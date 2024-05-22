@@ -76,10 +76,6 @@ void setup() {
 
   OTAMgr.init(ds.dmm->hostname());
   OTAMgr.onEvent = handleOTAEVent;
-
-  Serial.println("Setup complete... taking a breath");
-  delay(50);
-  Serial.println("Starting loop");
 }
 
 

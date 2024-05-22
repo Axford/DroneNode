@@ -13,6 +13,7 @@ ADS1015Module::ADS1015Module(uint8_t id, DroneSystem *ds) : I2CBaseModule(id, ds
 {
     setTypeName(FPSTR(ADS1015_STR_ADS1015));
 
+    _sensor = NULL;
 
     initParams(ADS1015_PARAM_ENTRIES);
 

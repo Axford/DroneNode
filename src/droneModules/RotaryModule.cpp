@@ -17,6 +17,7 @@ RotaryModule::RotaryModule(uint8_t id, DroneSystem *ds) : I2CBaseModule(id, ds)
     _encPositions[1] = 0;
     _encPositions[2] = 0;
     _encPositions[3] = 0;
+    _sensor = NULL;
 
     initParams(ROTARY_PARAM_ENTRIES);
 
@@ -120,21 +121,23 @@ void RotaryModule::loop()
 {
     I2CBaseModule::loop();
 
-    DroneWire::selectChannel(_params[I2CBASE_PARAM_BUS_E].data.uint8[0]);
+    if (_sensor && _error == 0) {
+        DroneWire::selectChannel(_params[I2CBASE_PARAM_BUS_E].data.uint8[0]);
 
-    // sample each encoder
-    for (int e = 0; e < 4; e++)
-    {
-        int32_t newPos = _sensor->getEncoderPosition(e) + _encOffsets[e];
-        // did we move around?
-        if (_encPositions[e] != newPos)
+        // sample each encoder
+        for (int e = 0; e < 4; e++)
         {
-            _encPositions[e] = newPos;
-            
-            // convert to output range and publish
-            float f = newPos * _params[ROTARY_PARAM_MAP_E].data.f[e];
+            int32_t newPos = _sensor->getEncoderPosition(e) + _encOffsets[e];
+            // did we move around?
+            if (_encPositions[e] != newPos)
+            {
+                _encPositions[e] = newPos;
+                
+                // convert to output range and publish
+                float f = newPos * _params[ROTARY_PARAM_MAP_E].data.f[e];
 
-            updateAndPublishParam(&_params[ROTARY_PARAM_INPUT1_E + e], (uint8_t*)&f, sizeof(f));
+                updateAndPublishParam(&_params[ROTARY_PARAM_INPUT1_E + e], (uint8_t*)&f, sizeof(f));
+            }
         }
     }
 }
