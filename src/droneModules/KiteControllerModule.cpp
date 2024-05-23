@@ -27,20 +27,21 @@ KiteControllerModule::KiteControllerModule(uint8_t id, DroneSystem* ds):
   KITE_CONTROLLER_MODULE_WAYPOINT t;
   t.radius = 5;
 
-  t.yaw = 15;
-  t.pitch = 8;
+  // use normalised dimensions, so they can be later scaled by target values
+  t.yaw = 1;
+  t.pitch = 1;
   _waypoints.add(t);
 
-  t.yaw = -15;
-  t.pitch = -8;
+  t.yaw = -1;
+  t.pitch = -1;
   _waypoints.add(t);
 
-  t.yaw = -15;
-  t.pitch = 8;
+  t.yaw = -1;
+  t.pitch = 1;
   _waypoints.add(t);
 
-  t.yaw = 15;
-  t.pitch = -8;
+  t.yaw = 1;
+  t.pitch = -1;
   _waypoints.add(t);
 
   // subs
@@ -125,6 +126,14 @@ KiteControllerModule::KiteControllerModule(uint8_t id, DroneSystem* ds):
   param->data.f[1] = 0;
   param->data.f[2] = 0;
 
+  param = &_params[KITE_CONTROLLER_PARAM_PID_E];
+  param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, KITE_CONTROLLER_PARAM_PID);
+  setParamName(FPSTR(STRING_PID), param);
+  param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_FLOAT, 12);
+  param->data.f[0] = 0.03;
+  param->data.f[1] = 0;
+  param->data.f[2] = 0;
+
 }
 
 void KiteControllerModule::selectWaypoint(uint8_t n) {
@@ -135,8 +144,8 @@ void KiteControllerModule::selectWaypoint(uint8_t n) {
 
   KITE_CONTROLLER_MODULE_WAYPOINT t = _waypoints.get(n);
   _waypoint = n;
-  _wp.yaw = t.yaw;
-  _wp.pitch = t.pitch + _params[KITE_CONTROLLER_PARAM_TARGET_E].data.f[0];
+  _wp.yaw = t.yaw * _params[KITE_CONTROLLER_PARAM_TARGET_E].data.f[1]/2;
+  _wp.pitch = t.pitch * _params[KITE_CONTROLLER_PARAM_TARGET_E].data.f[2]/2 + _params[KITE_CONTROLLER_PARAM_TARGET_E].data.f[0];
   _wp.radius = t.radius;
 }
 
@@ -175,7 +184,7 @@ float KiteControllerModule::autoMode() {
 
   float err = shortestSignedDistanceBetweenCircularValues(radiansToDegrees(_roll), radiansToDegrees(_angToWP));
 
-  float P = 0.03 * err;
+  float P = _params[KITE_CONTROLLER_PARAM_PID_E].data.f[0] * err;
 
   return P;
 }

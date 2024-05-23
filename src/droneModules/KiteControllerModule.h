@@ -75,15 +75,19 @@ Motor positions
 #define KITE_CONTROLLER_PARAM_VECTOR        14
 #define KITE_CONTROLLER_PARAM_VECTOR_E      6
 
-// @pub 15;f;3;w;target;Trajectory target defined as [pitch of centre, width in degrees, height in degrees, radius of each node in the trajectory]; default: [40, 30, 15, 3]
+// @pub 15;f;4;w;target;Trajectory target defined as [pitch of centre, width in degrees, height in degrees, radius of each node in the trajectory]; default: [40, 30, 15, 3]
 #define KITE_CONTROLLER_PARAM_TARGET        15
 #define KITE_CONTROLLER_PARAM_TARGET_E      7
 
-// @pub 16;f;3;w;waypoint;Current waypoint details [yaw, pitch, radius]
+// @pub 16;f;3;r;waypoint;Current waypoint details [yaw, pitch, radius]
 #define KITE_CONTROLLER_PARAM_WAYPOINT      16
 #define KITE_CONTROLLER_PARAM_WAYPOINT_E    8
 
-#define KITE_CONTROLLER_PARAM_ENTRIES       9
+// @pub 17;f;3;w;PID;PID values for control loop [P, I, D]
+#define KITE_CONTROLLER_PARAM_PID           17
+#define KITE_CONTROLLER_PARAM_PID_E         9
+
+#define KITE_CONTROLLER_PARAM_ENTRIES       10
 
 // subs
 // @sub 20;21;f;1;turnRate;Turn rate used to drive relative motor position and cause the kite to turn
