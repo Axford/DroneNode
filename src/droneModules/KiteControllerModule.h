@@ -44,6 +44,7 @@ Motor positions
 #define KITE_CONTROLLER_MODULE_H
 
 #include "../DroneModule.h"
+#include "LinkedList.h"
 
 //pubs
 // @pub 8;f;1;r;left;Left motor speed output in range -1..1
@@ -54,7 +55,7 @@ Motor positions
 #define KITE_CONTROLLER_PARAM_RIGHT         9
 #define KITE_CONTROLLER_PARAM_RIGHT_E       1
 
-// @pub 10;u8;1;w;mode;1=Automated (responds to speed and turnRate subs) or 0=Manual (ignores subs, but speed and turnRate values can be directly written to)
+// @pub 10;u8;1;w;mode;1=Automated (attempts to fly waypoint path) or 0=Manual (can be controlled by turnRate sub)
 #define KITE_CONTROLLER_PARAM_MODE          10
 #define KITE_CONTROLLER_PARAM_MODE_E        2
 
@@ -78,7 +79,11 @@ Motor positions
 #define KITE_CONTROLLER_PARAM_TARGET        15
 #define KITE_CONTROLLER_PARAM_TARGET_E      7
 
-#define KITE_CONTROLLER_PARAM_ENTRIES       8
+// @pub 16;f;3;w;waypoint;Current waypoint details [yaw, pitch, radius]
+#define KITE_CONTROLLER_PARAM_WAYPOINT      16
+#define KITE_CONTROLLER_PARAM_WAYPOINT_E    8
+
+#define KITE_CONTROLLER_PARAM_ENTRIES       9
 
 // subs
 // @sub 20;21;f;1;turnRate;Turn rate used to drive relative motor position and cause the kite to turn
@@ -103,6 +108,13 @@ Motor positions
 #define KITE_CONTROLLER_MODE_MANUAL        0
 #define KITE_CONTROLLER_MODE_AUTOMATIC     1
 
+// -----------------------------------------------------------------------------
+struct KITE_CONTROLLER_MODULE_WAYPOINT {
+  float yaw;
+  float pitch;
+  float radius;
+};
+
 
 static const char KITE_CONTROLLER_STR_KITE_CONTROLLER[] PROGMEM = "KiteController";
 
@@ -111,10 +123,27 @@ protected:
   unsigned long _lastUpdate;
   uint8_t _lastMode;
 
+  float _lastPos[2]; // last yaw, pitch values
+  float _roll; // internally estimated roll angle
+
+  IvanLinkedList::LinkedList<KITE_CONTROLLER_MODULE_WAYPOINT> _waypoints;
+  uint8_t _waypoint; // current waypoint
+  KITE_CONTROLLER_MODULE_WAYPOINT _wp;  // current waypoint cached and adjusted for pitch/yaw
+
 public:
 
   KiteControllerModule(uint8_t id, DroneSystem* ds);
+
+  void selectWaypoint(uint8_t n);
+  void nextWaypoint();
+  void checkWaypoint(); // see if we reached the current waypoint
+
+  void setup();
   
+  // modes should return turnRate signal used to control motors
+  float manualMode();
+  float autoMode();
+
   void loop();
 };
 
