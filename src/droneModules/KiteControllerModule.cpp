@@ -110,13 +110,11 @@ KiteControllerModule::KiteControllerModule(uint8_t id, DroneSystem* ds):
   param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_FLOAT, 16);
 
   param = &_params[KITE_CONTROLLER_PARAM_TARGET_E];
-  param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, KITE_CONTROLLER_PARAM_TARGET);
+  param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_HIGH, KITE_CONTROLLER_PARAM_TARGET);
   setParamName(FPSTR(STRING_TARGET), param);
-  param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_FLOAT, 16);
-  param->data.f[0] = 40;
-  param->data.f[1] = 30;
-  param->data.f[2] = 15;
-  param->data.f[3] = 3;
+  param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_FLOAT, 8);
+  param->data.f[0] = 0;
+  param->data.f[1] = 40;
 
   param = &_params[KITE_CONTROLLER_PARAM_WAYPOINT_E];
   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_HIGH, KITE_CONTROLLER_PARAM_WAYPOINT);
@@ -134,6 +132,14 @@ KiteControllerModule::KiteControllerModule(uint8_t id, DroneSystem* ds):
   param->data.f[1] = 0;
   param->data.f[2] = 0;
 
+  param = &_params[KITE_CONTROLLER_PARAM_SHAPE_E];
+  param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, KITE_CONTROLLER_PARAM_SHAPE);
+  setParamName(FPSTR(STRING_SHAPE), param);
+  param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_FLOAT, 12);
+  param->data.f[0] = 50;
+  param->data.f[1] = 20;
+  param->data.f[2] = 5;
+
 }
 
 void KiteControllerModule::selectWaypoint(uint8_t n) {
@@ -144,9 +150,9 @@ void KiteControllerModule::selectWaypoint(uint8_t n) {
 
   KITE_CONTROLLER_MODULE_WAYPOINT t = _waypoints.get(n);
   _waypoint = n;
-  _wp.yaw = t.yaw * _params[KITE_CONTROLLER_PARAM_TARGET_E].data.f[1]/2;
-  _wp.pitch = t.pitch * _params[KITE_CONTROLLER_PARAM_TARGET_E].data.f[2]/2 + _params[KITE_CONTROLLER_PARAM_TARGET_E].data.f[0];
-  _wp.radius = t.radius;
+  _wp.yaw = t.yaw * _params[KITE_CONTROLLER_PARAM_SHAPE_E].data.f[0]/2 + _params[KITE_CONTROLLER_PARAM_TARGET_E].data.f[0];
+  _wp.pitch = t.pitch * _params[KITE_CONTROLLER_PARAM_SHAPE_E].data.f[1]/2 + _params[KITE_CONTROLLER_PARAM_TARGET_E].data.f[1];
+  _wp.radius = _params[KITE_CONTROLLER_PARAM_SHAPE_E].data.f[2];
 }
 
 void KiteControllerModule::nextWaypoint() {

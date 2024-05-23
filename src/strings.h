@@ -124,6 +124,7 @@ static const char STRING_SCENE[] = "scene";
 static const char STRING_SCENES[] = "scenes";
 static const char STRING_SELECT[] = "select";
 static const char STRING_SERVER[] = "server";
+static const char STRING_SHAPE[] = "shape";
 static const char STRING_SHEET[] = "sheet";
 static const char STRING_SHUNT[] = "shunt";
 static const char STRING_SHUNTV[] = "shuntV";

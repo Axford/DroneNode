@@ -75,7 +75,7 @@ Motor positions
 #define KITE_CONTROLLER_PARAM_VECTOR        14
 #define KITE_CONTROLLER_PARAM_VECTOR_E      6
 
-// @pub 15;f;4;w;target;Trajectory target defined as [pitch of centre, width in degrees, height in degrees, radius of each node in the trajectory]; default: [40, 30, 15, 3]
+// @pub 15;f;4;w;target;Target position of the bowtie in the air [yaw, pitch]
 #define KITE_CONTROLLER_PARAM_TARGET        15
 #define KITE_CONTROLLER_PARAM_TARGET_E      7
 
@@ -87,7 +87,11 @@ Motor positions
 #define KITE_CONTROLLER_PARAM_PID           17
 #define KITE_CONTROLLER_PARAM_PID_E         9
 
-#define KITE_CONTROLLER_PARAM_ENTRIES       10
+// @pub 18;f;3;w;shape;Shape of the bowtie [width in degrees, height in degrees, radius of waypoints]
+#define KITE_CONTROLLER_PARAM_SHAPE           18
+#define KITE_CONTROLLER_PARAM_SHAPE_E         10
+
+#define KITE_CONTROLLER_PARAM_ENTRIES       11
 
 // subs
 // @sub 20;21;f;1;turnRate;Turn rate used to drive relative motor position and cause the kite to turn
