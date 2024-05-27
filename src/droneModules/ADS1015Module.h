@@ -47,8 +47,11 @@ https://learn.adafruit.com/adafruit-4-channel-adc-breakouts/arduino-code
 // @pub 15;u32;4;r;raw;Raw ADC readings 0..4095
 #define ADS1015_PARAM_RAW           (I2CBASE_SUBCLASS_PARAM_START+5) // 15
 
-// @pub 16;f;2;w;limits;Min and max values to map the raw readings into
-#define ADS1015_PARAM_LIMITS        (I2CBASE_SUBCLASS_PARAM_START+6) // 16
+// @pub 16;f;4;w;min;Min values to map the 0 raw reading to, one for each channel
+#define ADS1015_PARAM_MIN        (I2CBASE_SUBCLASS_PARAM_START+6) // 16
+
+// @pub 17;f;4;w;min;Max values to map the 4095 raw reading to, one for each channel
+#define ADS1015_PARAM_MAX        (I2CBASE_SUBCLASS_PARAM_START+7) // 17
 
 
 #define ADS1015_PARAM_VALUE1_E      (I2CBASE_PARAM_ENTRIES+0)
@@ -58,10 +61,11 @@ https://learn.adafruit.com/adafruit-4-channel-adc-breakouts/arduino-code
 
 #define ADS1015_PARAM_CHANNELS_E    (I2CBASE_PARAM_ENTRIES+4)
 #define ADS1015_PARAM_RAW_E         (I2CBASE_PARAM_ENTRIES+5)
-#define ADS1015_PARAM_LIMITS_E      (I2CBASE_PARAM_ENTRIES+6)
+#define ADS1015_PARAM_MIN_E         (I2CBASE_PARAM_ENTRIES+6)
+#define ADS1015_PARAM_MAX_E         (I2CBASE_PARAM_ENTRIES+7)
 
 
-#define ADS1015_PARAM_ENTRIES       (I2CBASE_PARAM_ENTRIES + 7)
+#define ADS1015_PARAM_ENTRIES       (I2CBASE_PARAM_ENTRIES + 8)
 
 
 // strings

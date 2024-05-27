@@ -52,12 +52,23 @@ ADS1015Module::ADS1015Module(uint8_t id, DroneSystem *ds) : I2CBaseModule(id, ds
     param->data.uint32[2] = 0;
     param->data.uint32[3] = 0;
 
-    param = &_params[ADS1015_PARAM_LIMITS_E];
-    param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, ADS1015_PARAM_LIMITS);
-    setParamName(FPSTR(STRING_LIMITS), param);
-    param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_FLOAT, 8);
+    param = &_params[ADS1015_PARAM_MIN_E];
+    param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, ADS1015_PARAM_MIN);
+    setParamName(FPSTR(STRING_MIN), param);
+    param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_FLOAT, 16);
     param->data.f[0] = 0;
-    param->data.f[1] = 3.3 / 4.096;  // to get a value of 1.0 at 3.3v
+    param->data.f[1] = 0;
+    param->data.f[2] = 0;
+    param->data.f[3] = 0;
+
+    param = &_params[ADS1015_PARAM_MAX_E];
+    param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, ADS1015_PARAM_MAX);
+    setParamName(FPSTR(STRING_MAX), param);
+    param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_FLOAT, 16);
+    param->data.f[0] = 1;
+    param->data.f[1] = 1;
+    param->data.f[2] = 1;
+    param->data.f[3] = 1;
 }
 
 ADS1015Module::~ADS1015Module()
@@ -117,7 +128,7 @@ void ADS1015Module::loop()
         av = _sensor->readADC_SingleEnded(i);
         raw[i] = av;
 
-        float f = _params[ADS1015_PARAM_LIMITS_E].data.f[0] + (_params[ADS1015_PARAM_LIMITS_E].data.f[1]-_params[ADS1015_PARAM_LIMITS_E].data.f[0]) * (av/4095.0);
+        float f = _params[ADS1015_PARAM_MIN_E].data.f[i] + (_params[ADS1015_PARAM_MAX_E].data.f[i]-_params[ADS1015_PARAM_MAX_E].data.f[i]) * (av/4095.0);
 
         updateAndPublishParam(&_params[ADS1015_PARAM_VALUE1_E + i], (uint8_t*)&f, sizeof(f));
     }
