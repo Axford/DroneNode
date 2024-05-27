@@ -189,6 +189,8 @@ public:
   // notified prior to a restart or shutdown
   virtual void doShutdown();
 
+  float loopRate(); 
+
   // in case modules want to display a progress indicator when an OTA is in progress
   virtual void onOTAProgress(float progress);
 

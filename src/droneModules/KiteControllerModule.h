@@ -22,7 +22,6 @@ Pitch
 Outputs:
 Motor positions
 
-
 <<<
 
 @config >>>
@@ -38,6 +37,19 @@ Motor positions
   publish = turnRate, yaw, pitch
   publish = left, right
 <<<
+
+
+TODO:
+ - Payout system - diff mode?  
+ - Will we need multiple flight paths?  (more than just bowtie)
+ - Torque feedback from oDrive: https://discourse.odriverobotics.com/t/get-current-control-iq-measured-through-uart-in-upper-computer-software/8127/2
+
+The odrive can not measure torque directly, but instead measures current. If you know the KV of your motor then you can estimate the torque using the following relationship: axis0Torque = 8.27*my_odrive.axis0.motor.current_control.Iq_setpoint/150) * 100), # Torque [N.cm] = (8.27 * Current [A] / KV) * 100 ]). If you don’t know the KV of your motor you can try estimating it using this guide 35 or one like it:
+https://fishpepper.de/2017/10/17/tutorial-how-to-measure-the-kv-of-a-brushless-motor/
+
+
+
+- 
 
 */
 #ifndef KITE_CONTROLLER_MODULE_H
@@ -63,11 +75,11 @@ Motor positions
 #define KITE_CONTROLLER_PARAM_TRIM          11
 #define KITE_CONTROLLER_PARAM_TRIM_E        3
  
-// @pub 12;f;2;w;limits;Min and max output speed range
+// @pub 12;f;2;w;limits;Min and max output position range for turning
 #define KITE_CONTROLLER_PARAM_LIMITS        12
 #define KITE_CONTROLLER_PARAM_LIMITS_E      4
 
-// @pub 13;f;1;w;distance;Payout distance
+// @pub 13;f;2;w;distance;Payout distance and payout rate limit [target, rate in units/second]
 #define KITE_CONTROLLER_PARAM_DISTANCE      13
 #define KITE_CONTROLLER_PARAM_DISTANCE_E    5
 
@@ -133,6 +145,7 @@ protected:
 
   float _lastPos[2]; // last yaw, pitch values
   float _roll; // internally estimated roll angle
+  float _payout;  // current payout
 
   IvanLinkedList::LinkedList<KITE_CONTROLLER_MODULE_WAYPOINT> _waypoints;
   uint8_t _waypoint; // current waypoint

@@ -572,6 +572,12 @@ void DroneModule::doShutdown() {
   _enabled = false;
 }
 
+float DroneModule::loopRate() {
+  if (_lastLoop <= _firstLoop) return 1;
+
+  return _loopUpdates / ((_lastLoop - _firstLoop) / 1000.0); // updates per second
+}
+
 
 boolean DroneModule::isAlive() { return true; }
 
@@ -1013,12 +1019,10 @@ void DroneModule::restartDiscovery() {
 void DroneModule::respondWithInfo(AsyncResponseStream *response) {
   DRONE_PARAM_ENTRY *p;
 
-  float loopRate = _loopUpdates / ((_lastLoop - _firstLoop) / 1000.0); // updates per second
-
   response->printf("\"HLMDuration\":%u", hLMDuration);
   response->printf(",\"loopDuration\":%u", loopDuration);
   response->print(",\"loopRate\":");
-  DroneLinkMsg::printFloatAsJson(loopRate, response);
+  DroneLinkMsg::printFloatAsJson(loopRate(), response);
 
   response->print(",\"mgmt\":[");
   for (uint8_t i=0; i<DRONE_MGMT_PARAM_ENTRIES; i++) {

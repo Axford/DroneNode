@@ -102,7 +102,9 @@ KiteControllerModule::KiteControllerModule(uint8_t id, DroneSystem* ds):
   param = &_params[KITE_CONTROLLER_PARAM_DISTANCE_E];
   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, KITE_CONTROLLER_PARAM_DISTANCE);
   setParamName(FPSTR(STRING_DISTANCE), param);
-  param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_FLOAT, 4);
+  param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_FLOAT, 8);
+  param->data.f[0] = 0;
+  param->data.f[1] = 1;
 
   param = &_params[KITE_CONTROLLER_PARAM_VECTOR_E];
   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_CRITICAL, KITE_CONTROLLER_PARAM_VECTOR);
@@ -229,11 +231,20 @@ void KiteControllerModule::loop() {
   float mmin = _params[KITE_CONTROLLER_PARAM_LIMITS_E].data.f[0];
   float mmax = _params[KITE_CONTROLLER_PARAM_LIMITS_E].data.f[1];
 
+  // update payout
+  if (_payout != _params[KITE_CONTROLLER_PARAM_DISTANCE_E].data.f[0]) {
+    // workout max rate
+    float payoutRate = _params[KITE_CONTROLLER_PARAM_DISTANCE_E].data.f[1] / loopRate();
+    // calc and constrain delta
+    float payoutDelta = constrain(_params[KITE_CONTROLLER_PARAM_DISTANCE_E].data.f[0] - _payout, -payoutRate, payoutRate);
+    _payout += payoutDelta;
+  }
+
   // merge into state vector
   float state[4];
   state[0] = _subs[KITE_CONTROLLER_SUB_YAW_E].param.data.f[0];
   state[1] = _subs[KITE_CONTROLLER_SUB_PITCH_E].param.data.f[0];
-  state[2] = _params[KITE_CONTROLLER_PARAM_DISTANCE_E].data.f[0];
+  state[2] = _payout;
   state[3] = radiansToDegrees(_roll);
 
 
@@ -245,16 +256,20 @@ void KiteControllerModule::loop() {
   right = tr;
   left = -tr;
 
-  // scale left/right using lerp to limits
-  left = mmin + (mmax - mmin) * (left + 1) / 2;
-  right = mmin + (mmax - mmin) * (right + 1) / 2;
+  // constrain left/right to limits
+  left = constrain(left, mmin, mmax);
+  right = constrain(right, mmin, mmax);
+
+  // old lerp
+  //left = mmin + (mmax - mmin) * (left + 1) / 2;
+  //right = mmin + (mmax - mmin) * (right + 1) / 2;
 
   // apply trim to right motor
   right += trim;
 
   // add payout distance to both motors
-  left += _params[KITE_CONTROLLER_PARAM_DISTANCE_E].data.f[0];
-  right += _params[KITE_CONTROLLER_PARAM_DISTANCE_E].data.f[0];
+  left += _payout;
+  right += _payout;
 
   updateAndPublishParam(&_params[KITE_CONTROLLER_PARAM_LEFT_E], (uint8_t*)&left, sizeof(left));
 
