@@ -62,7 +62,11 @@
 #define ODRIVE_PARAM_TORQUE       17
 #define ODRIVE_PARAM_TORQUE_E     5
 
-#define ODRIVE_PARAM_ENTRIES      6
+// @pub 18;u8;1;w;samples;Number of samples for moving average torque value
+#define ODRIVE_PARAM_SAMPLES      18
+#define ODRIVE_PARAM_SAMPLES_E    6
+
+#define ODRIVE_PARAM_ENTRIES      7
 
 // subs
 // @sub 8;9;f;1;left;Desired left motor speed in range -1 to 1
@@ -86,6 +90,9 @@ static const char ODRIVE_STR_ODRIVE[] PROGMEM = "ODrive";
 class ODriveModule:  public DroneModule {
 protected:
   Stream *_port;
+
+  char _buf[30];
+  uint8_t _bufLen;
 public:
 
   ODriveModule(uint8_t id, DroneSystem* ds);
@@ -99,6 +106,9 @@ public:
   void setVel(uint8_t axis, float v, boolean invert);
 
   void update();
+
+  float readFloatFromSerial();
+
   void loop();
 };
 
