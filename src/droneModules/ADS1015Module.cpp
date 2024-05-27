@@ -128,7 +128,7 @@ void ADS1015Module::loop()
         av = _sensor->readADC_SingleEnded(i);
         raw[i] = av;
 
-        float f = _params[ADS1015_PARAM_MIN_E].data.f[i] + (_params[ADS1015_PARAM_MAX_E].data.f[i]-_params[ADS1015_PARAM_MAX_E].data.f[i]) * (av/4095.0);
+        float f = _params[ADS1015_PARAM_MIN_E].data.f[i] + (_params[ADS1015_PARAM_MAX_E].data.f[i]-_params[ADS1015_PARAM_MIN_E].data.f[i]) * (av/4095.0);
 
         updateAndPublishParam(&_params[ADS1015_PARAM_VALUE1_E + i], (uint8_t*)&f, sizeof(f));
     }
