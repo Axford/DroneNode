@@ -66,6 +66,13 @@ ODriveModule::ODriveModule(uint8_t id, DroneSystem* ds):
    param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_UINT8_T, 1);
    _params[ODRIVE_PARAM_MODE_E].data.uint8[0] = ODRIVE_MODE_VELOCITY_CONTROL;
 
+   param = &_params[ODRIVE_PARAM_TORQUE_E];
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_CRITICAL, ODRIVE_PARAM_TORQUE);
+   setParamName(FPSTR(STRING_TORQUE), param);
+   param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 8);
+   _params[ODRIVE_PARAM_TORQUE_E].data.f[0] = 0;
+   _params[ODRIVE_PARAM_TORQUE_E].data.f[1] = 0;
+
 }
 
 
@@ -184,4 +191,14 @@ void ODriveModule::loop() {
   // tickle motor watchdog
   _port->write("u 0\n");
   _port->write("u 1\n");
+
+  // read motor currents
+  _port->write("r axis0.motor.current_control.Iq_measured\n");
+
+  while(Serial.available())
+  {
+    
+     incomingByte = Serial.read();
+  }
+
 }

@@ -58,7 +58,11 @@
 #define ODRIVE_PARAM_MODE         16
 #define ODRIVE_PARAM_MODE_E       4
 
-#define ODRIVE_PARAM_ENTRIES      5
+// @pub 17;f;2;r;torque;Estimated motor torques
+#define ODRIVE_PARAM_TORQUE       17
+#define ODRIVE_PARAM_TORQUE_E     5
+
+#define ODRIVE_PARAM_ENTRIES      6
 
 // subs
 // @sub 8;9;f;1;left;Desired left motor speed in range -1 to 1

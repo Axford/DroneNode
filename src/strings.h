@@ -151,6 +151,7 @@ static const char STRING_TELEMETRY[] = "telemetry";
 static const char STRING_TEMPERATURE[] = "temperature";
 static const char STRING_THRESHOLD[] = "threshold";
 static const char STRING_TIMEOUT[] = "timeout";
+static const char STRING_TORQUE[] = "torque";
 static const char STRING_TRIM[] = "trim";
 static const char STRING_TRUE[] = "true";
 static const char STRING_TURN_RATE[] = "turnRate";
