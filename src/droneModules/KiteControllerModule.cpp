@@ -19,6 +19,7 @@ KiteControllerModule::KiteControllerModule(uint8_t id, DroneSystem* ds):
   _roll = 0;
   _lastPos[0] = 0;
   _lastPos[1] = 0;
+  _payout = 0;
 
   _waypoint = 0;
   _waypoints = IvanLinkedList::LinkedList<KITE_CONTROLLER_MODULE_WAYPOINT>();
@@ -95,9 +96,10 @@ KiteControllerModule::KiteControllerModule(uint8_t id, DroneSystem* ds):
   param = &_params[KITE_CONTROLLER_PARAM_LIMITS_E];
   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, KITE_CONTROLLER_PARAM_LIMITS);
   setParamName(FPSTR(STRING_LIMITS), param);
-  param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_FLOAT, 8);
+  param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_FLOAT, 12);
   param->data.f[0] = -1;
   param->data.f[1] = 1;
+  param->data.f[2] = 20;
 
   param = &_params[KITE_CONTROLLER_PARAM_DISTANCE_E];
   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, KITE_CONTROLLER_PARAM_DISTANCE);
@@ -141,7 +143,6 @@ KiteControllerModule::KiteControllerModule(uint8_t id, DroneSystem* ds):
   param->data.f[0] = 50;
   param->data.f[1] = 20;
   param->data.f[2] = 5;
-
 }
 
 void KiteControllerModule::selectWaypoint(uint8_t n) {
@@ -234,11 +235,19 @@ void KiteControllerModule::loop() {
   // update payout
   if (_payout != _params[KITE_CONTROLLER_PARAM_DISTANCE_E].data.f[0]) {
     // workout max rate
-    float payoutRate = _params[KITE_CONTROLLER_PARAM_DISTANCE_E].data.f[1] / loopRate();
+    float lr = loopRate();
+    //Serial.print("loopRate: "); Serial.println(lr);
+    float payoutRate = _params[KITE_CONTROLLER_PARAM_DISTANCE_E].data.f[1] / lr;
+    //Serial.print("payoutRate: "); Serial.println(payoutRate);
     // calc and constrain delta
     float payoutDelta = constrain(_params[KITE_CONTROLLER_PARAM_DISTANCE_E].data.f[0] - _payout, -payoutRate, payoutRate);
     _payout += payoutDelta;
+    //Serial.print("payoutDelta: "); Serial.println(payoutDelta);
+    //Serial.print("_payout: "); Serial.println(_payout);
   }
+
+  // constrain payout
+  _payout = constrain(_payout, 0, _params[KITE_CONTROLLER_PARAM_LIMITS_E].data.f[2]);
 
   // merge into state vector
   float state[4];

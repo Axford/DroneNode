@@ -49,6 +49,24 @@ RotaryModule::RotaryModule(uint8_t id, DroneSystem *ds) : I2CBaseModule(id, ds)
     param->data.f[1] = 1;
     param->data.f[2] = 1;
     param->data.f[3] = 1;
+
+    param = &_params[ROTARY_PARAM_MIN_E];
+    param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, ROTARY_PARAM_MIN);
+    setParamName(FPSTR(STRING_MIN), param);
+    param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_FLOAT, 16);
+    param->data.f[0] = -100;
+    param->data.f[1] = -100;
+    param->data.f[2] = -100;
+    param->data.f[3] = -100;
+
+    param = &_params[ROTARY_PARAM_MAX_E];
+    param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, ROTARY_PARAM_MAX);
+    setParamName(FPSTR(STRING_MAX), param);
+    param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_FLOAT, 16);
+    param->data.f[0] = 100;
+    param->data.f[1] = 100;
+    param->data.f[2] = 100;
+    param->data.f[3] = 100;
 }
 
 RotaryModule::~RotaryModule()
@@ -135,6 +153,9 @@ void RotaryModule::loop()
                 
                 // convert to output range and publish
                 float f = newPos * _params[ROTARY_PARAM_MAP_E].data.f[e];
+
+                // constrain
+                f = constrain(f, _params[ROTARY_PARAM_MIN_E].data.f[e], _params[ROTARY_PARAM_MAX_E].data.f[e]);
 
                 updateAndPublishParam(&_params[ROTARY_PARAM_INPUT1_E + e], (uint8_t*)&f, sizeof(f));
             }

@@ -66,7 +66,15 @@
 #define ODRIVE_PARAM_SAMPLES      18
 #define ODRIVE_PARAM_SAMPLES_E    6
 
-#define ODRIVE_PARAM_ENTRIES      7
+// @pub 19;f;2;r;errors;Error state of each axis
+#define ODRIVE_PARAM_ERRORS       19
+#define ODRIVE_PARAM_ERRORS_E     7
+
+// @pub 19;u8;2;r;state;Active state of each axis
+#define ODRIVE_PARAM_STATE        20
+#define ODRIVE_PARAM_STATE_E      8
+
+#define ODRIVE_PARAM_ENTRIES      9
 
 // subs
 // @sub 8;9;f;1;left;Desired left motor speed in range -1 to 1
@@ -85,6 +93,14 @@
 #define ODRIVE_MODE_VELOCITY_CONTROL   0
 #define ODRIVE_MODE_POSITION_CONTROL   1
 
+
+#define ODRIVE_QUERY_CURRENT_0         0
+#define ODRIVE_QUERY_CURRENT_1         1
+#define ODRIVE_QUERY_ERROR_0           2
+#define ODRIVE_QUERY_ERROR_1           3
+#define ODRIVE_QUERY_STATE_0           4
+#define ODRIVE_QUERY_STATE_1           5
+
 static const char ODRIVE_STR_ODRIVE[] PROGMEM = "ODrive";
 
 class ODriveModule:  public DroneModule {
@@ -93,6 +109,16 @@ protected:
 
   char _buf[30];
   uint8_t _bufLen;
+
+  uint8_t _activeQuery;
+  float _lastSerialFloat;
+  uint32_t _lastSerialHeard;
+  boolean _firstSend;
+
+  float _motorCurrents[2] = {0,0};
+  float _errors[2] = {0,0};
+  uint8_t _states[2] = {0,0};
+
 public:
 
   ODriveModule(uint8_t id, DroneSystem* ds);
@@ -107,7 +133,8 @@ public:
 
   void update();
 
-  float readFloatFromSerial();
+  void generateNextSerialQuery();
+  void manageODriveSerial();
 
   void loop();
 };

@@ -42,6 +42,12 @@
 // @pub 14;f;4;w;map;Values to map integer rotary steps to output floats, default: [1,1,1,1]
 #define ROTARY_PARAM_MAP           (I2CBASE_SUBCLASS_PARAM_START+4) // 14
 
+// @pub 15;f;4;w;min;Minimum values for each input, default: [-100,-100,-100,-100]
+#define ROTARY_PARAM_MIN           (I2CBASE_SUBCLASS_PARAM_START+5) // 15
+
+// @pub 16;f;4;w;max;Maximum values for each input, default: [100,100,100,100]
+#define ROTARY_PARAM_MAX           (I2CBASE_SUBCLASS_PARAM_START+6) // 16
+
 
 #define ROTARY_PARAM_INPUT1_E      (I2CBASE_PARAM_ENTRIES+0)
 #define ROTARY_PARAM_INPUT2_E      (I2CBASE_PARAM_ENTRIES+1)
@@ -50,8 +56,11 @@
 
 #define ROTARY_PARAM_MAP_E         (I2CBASE_PARAM_ENTRIES+4)
 
+#define ROTARY_PARAM_MIN_E         (I2CBASE_PARAM_ENTRIES+5)
+#define ROTARY_PARAM_MAX_E         (I2CBASE_PARAM_ENTRIES+6)
 
-#define ROTARY_PARAM_ENTRIES       (I2CBASE_PARAM_ENTRIES + 5)
+
+#define ROTARY_PARAM_ENTRIES       (I2CBASE_PARAM_ENTRIES + 7)
 
 
 // strings

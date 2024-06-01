@@ -27,8 +27,12 @@
 #define INJECT_PARAM_TARGET        10
 #define INJECT_PARAM_TARGET_E      0
 
+// @pub 11;u8;1;w;mode;0=float, 1=uint8_t
+#define INJECT_PARAM_MODE          11
+#define INJECT_PARAM_MODE_E        1
 
-#define INJECT_PARAM_ENTRIES       1
+
+#define INJECT_PARAM_ENTRIES       2
 
 // subs
 
@@ -39,6 +43,9 @@
 
 #define INJECT_SUBS               1
 
+
+#define INJECT_MODE_FLOAT         0
+#define INJECT_MODE_UINT8_T       1
 
 static const char INJECT_STR_INJECT[] PROGMEM = "Inject";
 

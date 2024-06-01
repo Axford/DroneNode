@@ -75,7 +75,7 @@ https://fishpepper.de/2017/10/17/tutorial-how-to-measure-the-kv-of-a-brushless-m
 #define KITE_CONTROLLER_PARAM_TRIM          11
 #define KITE_CONTROLLER_PARAM_TRIM_E        3
  
-// @pub 12;f;2;w;limits;Min and max output position range for turning
+// @pub 12;f;3;w;limits;Min and max output position range for turning, max payout
 #define KITE_CONTROLLER_PARAM_LIMITS        12
 #define KITE_CONTROLLER_PARAM_LIMITS_E      4
 
