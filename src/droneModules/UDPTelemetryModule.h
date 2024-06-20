@@ -1,16 +1,15 @@
 /*
 
-@type UDPTelemetry
-@description Manages DroneLink telemetry using UDP broadcast over WiFi
+@type          UDPTelemetry
+@category      Networking
+@description   Manages DroneLink telemetry using UDP broadcast over WiFi
+@inherits      Drone
 
 @config >>>
-UDPTelemetry.new 2
-  name "UDPT"
-  status 1 // enable
-  port 8007
-  broadcast 255 255 255 255
-  .sub [@>0.0]
-.done
+[UDPTelemetry=2]
+  name=UDPT
+  port =8007
+  broadcast =255, 255, 255, 255
 <<<
 
 Publishes received messages
@@ -35,22 +34,31 @@ byte    = value
 [0...n] = DroneLinkMsg raw data
 */
 
-
+// @pub 8;u32;1;w;port;UDP port to broadcast to, default 8007
 #define UDP_PARAM_PORT               8
-#define UDP_PARAM_BROADCAST          9
-
 #define UDP_PARAM_PORT_E             0
+
+// @pub 9;u8;4;w;broadcast;IP address to broadcast to, default: 255,255,255,255
+#define UDP_PARAM_BROADCAST          9
 #define UDP_PARAM_BROADCAST_E        1
 
-// @pub 10;u32;3;packets;Packet counters for sent, received and rejected
+// @pub 10;u32;3;r;packets;Packet counters for sent, received and rejected
 #define UDP_TELEMETRY_PARAM_PACKETS        10
 #define UDP_TELEMETRY_PARAM_PACKETS_E      2
 
-// @pub 11;f;3;speed;Packet rates per second for sent, received and rejected
+// @pub 11;f;3;r;speed;Packet rates per second for sent, received and rejected
 #define UDP_TELEMETRY_PARAM_SPEED          11
 #define UDP_TELEMETRY_PARAM_SPEED_E        3
 
-#define UDP_PARAM_ENTRIES                  4
+// @pub 12;u8;4;w;server;Unicast server address (for remote servers)
+#define UDP_TELEMETRY_PARAM_SERVER          12
+#define UDP_TELEMETRY_PARAM_SERVER_E        4
+
+// @pub 13;c;15;w;URL;URL for a remote server (will resolve and populate the server parameter)
+#define UDP_TELEMETRY_PARAM_URL            13
+#define UDP_TELEMETRY_PARAM_URL_E          5
+
+#define UDP_PARAM_ENTRIES                  6
 
 
 #define UDP_TELEMETRY_PORT   8007
@@ -74,17 +82,15 @@ public:
 
   UDPTelemetryModule(uint8_t id, DroneSystem* ds);
 
-  static DEM_NAMESPACE* registerNamespace(DroneExecutionManager *dem);
-  static void registerParams(DEM_NAMESPACE* ns, DroneExecutionManager *dem);
-
-
   uint8_t getInterfaceType();
 
   virtual void setup();
   virtual void loop();
 
   // network interface methods
-  boolean sendPacket(uint8_t *buffer);
+  boolean sendPacket(uint8_t *buffer, DRONE_LINK_TRANSPORT_ADDRESS transportAddress);
+
+  void sendAddressedPacket(uint8_t *buffer, IPAddress ipAddress);
 };
 
 #endif

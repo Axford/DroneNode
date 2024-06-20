@@ -29,11 +29,36 @@ things that would be useful for all modules
 #include "SSD1306Wire.h"
 
 // defines for common params
-#define DRONE_MODULE_PARAM_STATUS      1  // 0=disabled, 1=enabled, write a value of 2 or above to trigger reset
-#define DRONE_MODULE_PARAM_NAME        2  // text
-#define DRONE_MODULE_PARAM_ERROR       3  // text or error code, module defined implementation
-#define DRONE_MODULE_PARAM_RESETCOUNT  4  // resetCount
-#define DRONE_MODULE_PARAM_TYPE        5  // classname - text
+
+// @publish status
+// @default status=1
+// @ui enum; status; disabled, enabled, waiting for valid inputs
+// @pub 1;u8;1;w;status;0=disabled, 1=enabled, 2=waiting for valid subscriptions, write a value of 255 to trigger reset (TODO)
+#define DRONE_MODULE_PARAM_STATUS      1 
+
+#define DRONE_MODULE_STATUS_DISABLED   0
+#define DRONE_MODULE_STATUS_ENABLED    1
+#define DRONE_MODULE_STATUS_WAITING    2
+
+// @publish name
+// @pub 2;c;16;w;name;Module name
+#define DRONE_MODULE_PARAM_NAME        2 
+
+// @publish error
+// @ui enum; error; no error, error
+// @pub 3;u8;1;r;error;Error flags: 1=error, 0=no error
+#define DRONE_MODULE_PARAM_ERROR       3 
+
+// @publish resetCount
+// @pub 4;u32;1;r;resetCount;Module reset count, e.g. for I2C errors
+#define DRONE_MODULE_PARAM_RESETCOUNT  4
+
+// @publish type
+// @pub 5;c;16;r;type;Module type name (class name)
+#define DRONE_MODULE_PARAM_TYPE        5
+
+// @publish interval
+// @pub 6;u32;1;w;interval;Number of milliseconds between updates
 #define DRONE_MODULE_PARAM_INTERVAL    6
 
 // indices
@@ -54,11 +79,12 @@ things that would be useful for all modules
 
 
 struct DRONE_PARAM_ENTRY {
-  uint8_t paramPriority;  // packed priorty adn param value as sent by dronelink
+  uint8_t paramPriority;  // packed priorty and param value as sent by dronelink
   const __FlashStringHelper *name; // pointer to PROGMEM string entry that describes this param
   uint8_t nameLen;
   uint8_t paramTypeLength;
   boolean publish;
+  boolean changed;  // if it has been change vs its default setting
   DRONE_LINK_PAYLOAD data;
 };
 
@@ -68,6 +94,7 @@ struct DRONE_PARAM_SUB {
   uint8_t addrParam; // param address of the addr value
   boolean received;  // set to true once first value received
   boolean enabled;  // set to false to block sub updates
+  boolean changed;  // if it has been change vs its default setting
   DRONE_LINK_ADDR addr;
   DRONE_PARAM_ENTRY param;
 };
@@ -115,7 +142,9 @@ protected:
   DRONE_MODULE_DISCOVERY_STATE _discoveryState;
   uint8_t _discoveryIndex;
 
+  unsigned long _firstLoop;
   unsigned long _lastLoop;
+  unsigned long _loopUpdates;  // count of how many loopUpdates since start, used to calculate loop Update rate per second
   boolean _setupDone;
 
   boolean _interfaceState;
@@ -138,18 +167,29 @@ public:
 
   uint8_t getParamIdByName(const char* name);
   uint8_t getSubIdByName(const char* name);
+  DRONE_PARAM_ENTRY* getParamEntryById(uint8_t id);
   DRONE_PARAM_ENTRY* getParamEntryByName(const char* name);
   DRONE_PARAM_SUB* getSubByName(const char* name);
 
-  static DEM_NAMESPACE* registerNamespace(DroneExecutionManager *dem);
-  static void registerConstructor(DEM_NAMESPACE* ns, DroneExecutionManager *dem);
-  static void registerMgmtParams(DEM_NAMESPACE* ns, DroneExecutionManager *dem);
+  void publishParamsFromList(char * paramList);
+  void setParamFromList(DRONE_PARAM_ENTRY* pe, char * paramList);
+  void setSubAddr(DRONE_PARAM_SUB* ps, uint8_t nodeId, uint8_t channelId, uint8_t paramId);
+
+  //static DEM_NAMESPACE* registerNamespace(DroneExecutionManager *dem);
+  //static void registerConstructor(DEM_NAMESPACE* ns, DroneExecutionManager *dem);
+  //static void registerMgmtParams(DEM_NAMESPACE* ns, DroneExecutionManager *dem);
+
+  void saveParamValue(DRONE_PARAM_ENTRY* p, File *f);
+  void saveParam(DRONE_PARAM_ENTRY* p, File *f);
+  void saveConfiguration(File *f);
 
   void reset();
   virtual void doReset();
 
   // notified prior to a restart or shutdown
   virtual void doShutdown();
+
+  float loopRate(); 
 
   // in case modules want to display a progress indicator when an OTA is in progress
   virtual void onOTAProgress(float progress);
@@ -167,6 +207,7 @@ public:
   virtual boolean publishSubs();
 
   virtual void onParamWrite(DRONE_PARAM_ENTRY *param);
+  virtual void onSubReceived(DRONE_PARAM_SUB *sub);
 
   // write new value(s) to a param, and publish if it has changed
   void updateAndPublishParam(DRONE_PARAM_ENTRY *param, uint8_t *newPayload, uint8_t length);
@@ -180,11 +221,12 @@ public:
 
   virtual void enable();
   virtual void disable();
+  virtual void waiting();
   virtual boolean isEnabled();
 
   virtual void setup();
 
-  void updateIfNeeded();
+  boolean updateIfNeeded();  // return true if update occurred
   virtual void update();
 
   virtual boolean readyToLoop();

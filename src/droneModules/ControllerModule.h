@@ -1,9 +1,20 @@
 /*
 
-Drive an OLED module based on SSD1306 driver
+@type          Controller
+@inherits      I2CBase
+@category      Logic
+@description   Manage a universal remote control using an SSD1306 display as UI
 
+@config >>>
+[Controller= 10]
+  name= "Controller"
+  bus= 0
+<<<
+
+*/
+
+/*
 display.begin(SSD1306_SWITCHCAPVCC, 0x3C)
-
 */
 #ifndef CONTROLLER_MODULE_H
 #define CONTROLLER_MODULE_H
@@ -12,68 +23,75 @@ display.begin(SSD1306_SWITCHCAPVCC, 0x3C)
 
 #include "../DroneModule.h"
 #include "../DroneWire.h"
+#include "../DroneLinkMsg.h"
 #include "I2CBaseModule.h"
 #include "LinkedList.h"
 
 #include "SSD1306Wire.h"
 
-
+/*
+@I2CAddress        0x3c
+@default addr = 60
+*/ 
 #define CONTROLLER_OLED_I2C_ADDRESS  0x3c
 
-#define CONTROLLER_ARM_BUTTON  PIN_OUT0_0
-
+// -----------------------------------------------------------------------------------
 // pubs
+// -----------------------------------------------------------------------------------
+#define CONTROLLER_PARAM_ENTRIES     (I2CBASE_PARAM_ENTRIES + 0)
 
 
-#define CONTROLLER_PARAM_LEFT        (I2CBASE_SUBCLASS_PARAM_START+0)  //10 - channel for left joystick
-#define CONTROLLER_PARAM_LEFT_E      (I2CBASE_PARAM_ENTRIES+0)
-
-#define CONTROLLER_PARAM_RIGHT       (I2CBASE_SUBCLASS_PARAM_START+1)   // channel for right joystick
-#define CONTROLLER_PARAM_RIGHT_E     (I2CBASE_PARAM_ENTRIES+1)
-
-#define CONTROLLER_PARAM_TELEMETRY   (I2CBASE_SUBCLASS_PARAM_START+2)   // channel for telemetry module
-#define CONTROLLER_PARAM_TELEMETRY_E (I2CBASE_PARAM_ENTRIES+2)
-
-#define CONTROLLER_PARAM_POWER       (I2CBASE_SUBCLASS_PARAM_START+3)   // channel for INA219 module
-#define CONTROLLER_PARAM_POWER_E     (I2CBASE_PARAM_ENTRIES+3)
-
-#define CONTROLLER_PARAM_ENTRIES     (I2CBASE_PARAM_ENTRIES + 4)
-
-
+// -----------------------------------------------------------------------------------
 // subs
+// -----------------------------------------------------------------------------------
+// @sub 20;21;f;1;select;Select button (e.g. JoyStick right button)
+#define CONTROLLER_SUB_SELECT              (I2CBASE_SUBCLASS_PARAM_START+10) //20
+#define CONTROLLER_SUB_SELECT_ADDR         (I2CBASE_SUBCLASS_PARAM_START+11) //21
+#define CONTROLLER_SUB_SELECT_E            0
 
-#define CONTROLLER_SUBS              0
+// @sub 22;23;f;1;cancel;Cancel button (e.g. JoyStick left button)
+#define CONTROLLER_SUB_CANCEL              (I2CBASE_SUBCLASS_PARAM_START+12) //22
+#define CONTROLLER_SUB_CANCEL_ADDR         (I2CBASE_SUBCLASS_PARAM_START+13) //23
+#define CONTROLLER_SUB_CANCEL_E            1
+
+// @sub 24;25;f;1;yAxis;yAxis for controlling menus (e.g. JoyStick right yAxis)
+#define CONTROLLER_SUB_YAXIS               (I2CBASE_SUBCLASS_PARAM_START+14) //24
+#define CONTROLLER_SUB_YAXIS_ADDR          (I2CBASE_SUBCLASS_PARAM_START+15) //25
+#define CONTROLLER_SUB_YAXIS_E             2
+
+// @sub 26;27;f;1;arm;Arm switch 
+#define CONTROLLER_SUB_ARM                 (I2CBASE_SUBCLASS_PARAM_START+14) //26
+#define CONTROLLER_SUB_ARM_ADDR            (I2CBASE_SUBCLASS_PARAM_START+15) //27
+#define CONTROLLER_SUB_ARM_E               3
+
+#define CONTROLLER_SUBS                4
 
 // strings
 static const char CONTROLLER_STR_CONTROLLER[] PROGMEM = "Controller";
 
 
-enum CONTROLLER_LABEL_STATE {
-    CONTROLLER_LABEL_NOT_NEEDED,
-    CONTROLLER_LABEL_NEEDED,
-    CONTROLLER_LABEL_REQUESTED,
-    CONTROLLER_LABEL_RECEIVED
+/*
+-------------------------------------------------------------------------------------
+*/
+
+struct CONTROLLER_DISPLAY_INFO {
+  char name[DRONE_LINK_MSG_MAX_PAYLOAD];
+  uint32_t position[2];
+  uint8_t precision;
+  uint8_t page;
+  DRONE_LINK_MSG value;
 };
 
-#define CONTROLLER_DISCOVERY_INTERVAL   250
-
-
-//typedef ustd::function<void(void*, boolean)> ManageMenuHandler;
-
-//typedef std::function<void(void*, uint8_t index, uint8_t y)> DrawMenuItemHandler;
-
-struct CONTROLLER_PARAM_INFO {
-  uint8_t param;
-  char name[17];
-  uint8_t paramTypeLength;
+struct CONTROLLER_CONTROL_INFO {
+  char name[DRONE_LINK_MSG_MAX_PAYLOAD];
+  DRONE_LINK_MSG value;
+  DRONE_LINK_ADDR target;
 };
 
-struct CONTROLLER_CHANNEL_INFO {
-  uint8_t channel;
-  char name[17];
-  uint8_t numFloats;
-  IvanLinkedList::LinkedList<CONTROLLER_PARAM_INFO*> *params;
-};
+
+/*
+-------------------------------------------------------------------------------------
+*/
 
 struct CONTROLLER_MENU_ITEM {
   uint8_t menu;
@@ -94,136 +112,84 @@ struct CONTROLLER_MENU_STATE {
 };
 
 #define CONTROLLER_MENU_ROOT       0
-#define CONTROLLER_MENU_MAIN       1
-#define CONTROLLER_MENU_START      2
-#define CONTROLLER_MENU_CREATE     3
-#define CONTROLLER_MENU_EDIT       4
-#define CONTROLLER_MENU_EDITAXIS   5
-#define CONTROLLER_MENU_INVERTAXIS 6
-#define CONTROLLER_MENU_CLEARAXIS  7
-#define CONTROLLER_MENU_BINDAXIS   8  // select module
-#define CONTROLLER_MENU_BINDAXIS2  9  // select parameter
-#define CONTROLLER_MENU_BINDAXIS3  10  // complete binding
-#define CONTROLLER_MENU_CLEAR      11
-#define CONTROLLER_MENU_EDITINFO   12
 
-#define CONTROLLER_MENU_COUNT      13
+#define CONTROLLER_MENU_COUNT      1
 
 #define CONTROLLER_MENU_INCREMENT_DATA_VALUE   255
 
-//static_assert(CONTROLLER_MENU_COUNT == 5, "Incorrect menu size");
 
-// axis indices
-#define CONTROLLER_AXIS_LEFT_X   0
-#define CONTROLLER_AXIS_LEFT_Y   1
-#define CONTROLLER_AXIS_LEFT_Z   2
-#define CONTROLLER_AXIS_LEFT_B   3
-#define CONTROLLER_AXIS_RIGHT_X  4
-#define CONTROLLER_AXIS_RIGHT_Y  5
-#define CONTROLLER_AXIS_RIGHT_Z  6
-#define CONTROLLER_AXIS_RIGHT_B  7
 
-#define CONTROLLER_INFO_COUNT    4
 
-#define LIPO_MIN_V    3.7f
-#define LIPO_MAX_V    4.2f
+/*
+-------------------------------------------------------------------------------------
+*/
+
+// dhysteresis array indices
+#define CONTROLLER_HYS_SELECT       0
+#define CONTROLLER_HYS_CANCEL       1
 
 // class
 class ControllerModule:  public I2CBaseModule {
 protected:
-  float _axes[8];
-  boolean _invert[8];  // axis inversion
-  boolean _neutral[8];  // set true if entered neutral deadband, do provide hysterisis for menus
 
-  DRONE_LINK_ADDR _bindings[8];
-  String _bindingLabels[8]; // friendly binding labels (i.e. named channel > param)
+  char _title[DRONE_LINK_MSG_MAX_PAYLOAD];
 
-  DroneLinkMsg _info[CONTROLLER_INFO_COUNT];
-  String _infoLabels[CONTROLLER_INFO_COUNT]; // friendly info labels (i.e. named channel > param)
-
-  float _RSSI;  // last received RSSI from telemetry module
+  IvanLinkedList::LinkedList<CONTROLLER_DISPLAY_INFO*> _displayItems;
+  IvanLinkedList::LinkedList<CONTROLLER_CONTROL_INFO*> _controlItems;
 
   uint8_t _brightness;
-  unsigned long _syncMenusTimer;
 
-  boolean _bindingAxis;  // true if we're in the menu for binding an axis, false if we're binding an info item
+  boolean _armed;  // true if we are sending control data
 
-  boolean _isBound;
-  String _bindingName;
-  uint8_t _binding;  // node id we're bound to
+  int _scroll;  // index of first item shown on screen i.e. top
+  float _spinner;
+
+  boolean _inMenu;  // whether menu system is active
+
+  uint8_t _page;
+  uint8_t _maxPage;
 
   uint8_t _menu;  // active menu
   uint8_t _lastMenu;  // last menu drawn
-
-  float _spinner;
-  float _cellVoltage;  // cell battery voltage measured from INA219
-  float _batteryCapacity; // 0..1 as approx battery %
-
-  boolean _armed;  // true if we are sending control data and overriding local navigation
-
-  // track modules for binding
-  boolean _channelInfoChanged;
-  unsigned long _lastDiscovery;
-  IvanLinkedList::LinkedList<CONTROLLER_CHANNEL_INFO*> _availChannels;
-
   CONTROLLER_MENU_STATE _menus[CONTROLLER_MENU_COUNT];
 
-  int _scroll;  // index of first item shown on screen i.e. top
+  boolean _buttons[2];     // flag if ui button pressed and needs handling
+  boolean _hysteresis[2];  // hysteresis flags for UI controls
 
   SSD1306Wire *_display;
-  DroneLinkMsg _queryMsg;
   DroneLinkMsg _sendMsg;
+  DroneLinkMsg _queryMsg;
 public:
 
   ControllerModule(uint8_t id, DroneSystem* ds);
   ~ControllerModule();
 
-  static DEM_NAMESPACE* registerNamespace(DroneExecutionManager *dem);
-  static void registerParams(DEM_NAMESPACE* ns, DroneExecutionManager *dem);
+  void bindSubscriptions();
+
+  void parseAddress(DRONE_LINK_ADDR *addressInfo, char * address);
+
+  void loadConfiguration(const char* filename);
+
+  void setMenuItem(uint8_t menu, uint8_t item, String name, uint8_t data, void* dataPointer, uint8_t nextMenu);
+
+  
+
+  void drawMenu();
+
+  void manageMenu();
+
+  void manageBinding();  // if binding is active
 
   void clear();
+  void drawSpinner();
 
   void doReset();
 
   void doShutdown();
 
-  void arm();
-  void disarm();
-
   void handleLinkMessage(DroneLinkMsg *msg);
 
   void setup();
-
-  CONTROLLER_PARAM_INFO* getParamInfo(CONTROLLER_CHANNEL_INFO *channel, uint8_t param);
-  CONTROLLER_CHANNEL_INFO* getChannelInfo(uint8_t channel);
-
-  void setMenuItem(uint8_t menu, uint8_t item, String name, uint8_t data, void* dataPointer, uint8_t nextMenu);
-
-  void publishEntry(uint8_t i);
-
-  void manageRoot(boolean syncMenu);
-  void manageStart(boolean syncMenu);
-  void manageClear(boolean syncMenu);
-
-  void manageCreate(boolean syncMenu);
-
-  void manageEdit(boolean syncMenu);
-  void drawEditMenuItem(uint8_t index, uint8_t y);
-
-  void manageEditAxis(boolean syncMenu);
-
-  void manageBindAxis(boolean syncMenu);
-  void drawBindAxisMenuItem(uint8_t index, uint8_t y);
-
-  void manageBindAxis2(boolean syncMenu);
-  void manageBindAxis3(boolean syncMenu);
-
-  void manageEditInfo(boolean syncMenu);
-  void drawEditInfoMenuItem(uint8_t index, uint8_t y);
-
-  void drawMenu();
-
-  void drawSpinner();
 
   void loop();
 

@@ -102,9 +102,7 @@ const char index_html[] PROGMEM = R"rawliteral(
       <button onclick="viewButton('/nodeInfo')">Network Info</button>
       <button onclick="viewButton('/channelInfo')">Channel Info</button>
       <button onclick="viewButton('/modules')">Loaded Modules</button>
-      <button onclick="viewButton('/execution')">DCode Execution</button>
-      <button onclick="viewButton('/macros')">Compiled Macros</button>
-      <button onclick="viewButton('/commands')">Available Commands</button>
+      <button onclick="viewButton('/pins')">Pin Assignments</button>
     </div>
     <div id="info" class="container">
       <div id="detailsheader"></div>
@@ -122,7 +120,7 @@ const char index_html[] PROGMEM = R"rawliteral(
     document.getElementById("detailsheader").innerHTML = "Rebooting ...";
     var xhr = new XMLHttpRequest();
     //window.open("/execution?execute","_self");
-    xhr.open("GET", "/execution?execute", true);
+    xhr.open("GET", "/reboot", true);
     xhr.send();
   }
   function listFilesButton() {

@@ -3,11 +3,14 @@
 #include "../DroneLinkManager.h"
 #include "strings.h"
 
+// @type INA219
+
 INA219Module::INA219Module(uint8_t id, DroneSystem* ds):
   I2CBaseModule ( id, ds )
  {
    setTypeName(FPSTR(INA219_STR_INA219));
    _sensor = NULL;
+   _lastLoopTime = 0;
    //_params[I2CBASE_PARAM_ADDR_E].data.uint8[0] = INA219_I2C_ADDRESS;
 
    // pubs
@@ -57,38 +60,25 @@ INA219Module::INA219Module(uint8_t id, DroneSystem* ds):
    param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, INA219_PARAM_CELLS);
    setParamName(FPSTR(STRING_CELLS), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_UINT8_T, 1);
+// @default cells=3
    _params[INA219_PARAM_CELLS_E].data.uint8[0] = 3;
 
    param = &_params[INA219_PARAM_THRESHOLD_E];
    param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, INA219_PARAM_THRESHOLD);
    setParamName(FPSTR(STRING_THRESHOLD), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_FLOAT, 4);
+// @default threshold=11.2
    _params[INA219_PARAM_THRESHOLD_E].data.f[0] = 11.2;
+
+   param = &_params[INA219_PARAM_USAGE_E];
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, INA219_PARAM_USAGE);
+   setParamName(FPSTR(STRING_USAGE), param);
+   param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 4);
+   param->data.f[0] = 0;
 }
 
 INA219Module::~INA219Module() {
   if (_sensor) delete _sensor;
-}
-
-
-DEM_NAMESPACE* INA219Module::registerNamespace(DroneExecutionManager *dem) {
-  // namespace for module type
-  return dem->createNamespace(INA219_STR_INA219,0,true);
-}
-
-void INA219Module::registerParams(DEM_NAMESPACE* ns, DroneExecutionManager *dem) {
-  I2CBaseModule::registerParams(ns, dem);
-
-  using std::placeholders::_1;
-  using std::placeholders::_2;
-  using std::placeholders::_3;
-  using std::placeholders::_4;
-
-  // writable mgmt params
-  DEMCommandHandler ph = std::bind(&DroneExecutionManager::mod_param, dem, _1, _2, _3, _4);
-
-  dem->registerCommand(ns, STRING_THRESHOLD, DRONE_LINK_MSG_TYPE_FLOAT, ph);
-  dem->registerCommand(ns, STRING_CELLS, DRONE_LINK_MSG_TYPE_UINT8_T, ph);
 }
 
 
@@ -116,11 +106,18 @@ void INA219Module::setup() {
     _sensor = new Adafruit_INA219(_params[I2CBASE_PARAM_ADDR_E].data.uint8[0]);
     _sensor->begin();
   }
+  _lastLoopTime = millis();
 }
 
 
 void INA219Module::loop() {
   I2CBaseModule::loop();
+
+  unsigned long loopTime = millis();
+  float dt = (loopTime - _lastLoopTime) / 1000.0; // in seconds
+  if (dt < 0.001) dt = 0.001;
+  if (dt > 100) dt = 1;  // in case of overflow
+  _lastLoopTime = loopTime;
 
   DroneWire::selectChannel(_params[I2CBASE_PARAM_BUS_E].data.uint8[0]);
 
@@ -135,6 +132,9 @@ void INA219Module::loop() {
 
   tempf = _sensor->getCurrent_mA() / 1000.0f;
   updateAndPublishParam(&_params[INA219_PARAM_CURRENT_E], (uint8_t*)&tempf, sizeof(tempf));
+
+  tempf = _params[INA219_PARAM_USAGE_E].data.f[0] + (tempf * dt/3600);
+  updateAndPublishParam(&_params[INA219_PARAM_USAGE_E], (uint8_t*)&tempf, sizeof(tempf));
 
   tempf = _sensor->getPower_mW() / 1000.0f;
   updateAndPublishParam(&_params[INA219_PARAM_POWER_E], (uint8_t*)&tempf, sizeof(tempf));
