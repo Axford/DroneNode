@@ -52,12 +52,14 @@ static const char BME280_STR_BME280[] PROGMEM = "BME280";
 // class
 class BME280Module:  public I2CBaseModule {
 protected:
-  Adafruit_BME280 _sensor;
+  Adafruit_BME280 *_sensor;
 public:
 
   BME280Module(uint8_t id, DroneSystem* ds);
 
   void doReset();
+
+  virtual void setup();
 
   virtual void loop();
 };
