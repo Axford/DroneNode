@@ -350,13 +350,16 @@ void DroneSystem::setupWebServer() {
   });
   */
 
-  /*
-  _server.onNotFound([](AsyncWebServerRequest *request){
-    request->send(404);
-  });
-  */
-
   
+  _server.onNotFound([](AsyncWebServerRequest *request){
+    if (request->method() == HTTP_OPTIONS) {
+      request->send(200);
+    } else {
+      request->send(404, "application/json", "{\"message\":\"Not found\"}");
+    }
+  });
+  
+
   _fsEditor.httpuser = "admin";
   _fsEditor.httppassword = "admin";
   _fsEditor.xSPISemaphore = _xSPISemaphore;
@@ -364,6 +367,8 @@ void DroneSystem::setupWebServer() {
   
 
   DefaultHeaders::Instance().addHeader("Access-Control-Allow-Origin", "*");
+  DefaultHeaders::Instance().addHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+  DefaultHeaders::Instance().addHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
 
   //_server.serveStatic("/", LITTLEFS, "/").setDefaultFile("index.htm");
 
