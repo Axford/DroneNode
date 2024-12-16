@@ -16,6 +16,7 @@ PanTiltModule::PanTiltModule(uint8_t id, DroneSystem* ds):
    _lastTarget = 0;
 
    // set default interval to 1000
+   // @default interval = 1000
    _mgmtParams[DRONE_MODULE_PARAM_INTERVAL_E].data.uint32[0] = 1000;
 
    // subs
@@ -59,32 +60,6 @@ PanTiltModule::PanTiltModule(uint8_t id, DroneSystem* ds):
    param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_FLOAT, 8);
    _params[PAN_TILT_PARAM_LIMITS_E].data.f[0] = -90;
    _params[PAN_TILT_PARAM_LIMITS_E].data.f[1] = 90;
-}
-
-
-DEM_NAMESPACE* PanTiltModule::registerNamespace(DroneExecutionManager *dem) {
-  // namespace for module type
-  return dem->createNamespace(PAN_TILT_STR_PAN_TILT,0,true);
-}
-
-void PanTiltModule::registerParams(DEM_NAMESPACE* ns, DroneExecutionManager *dem) {
-  using std::placeholders::_1;
-  using std::placeholders::_2;
-  using std::placeholders::_3;
-  using std::placeholders::_4;
-
-  // writable mgmt params
-  DEMCommandHandler ph = std::bind(&DroneExecutionManager::mod_param, dem, _1, _2, _3, _4);
-  DEMCommandHandler pha = std::bind(&DroneExecutionManager::mod_subAddr, dem, _1, _2, _3, _4);
-
-  dem->registerCommand(ns, STRING_TARGET, DRONE_LINK_MSG_TYPE_FLOAT, ph);
-  dem->registerCommand(ns, PSTR("$target"), DRONE_LINK_MSG_TYPE_FLOAT, pha);
-
-  dem->registerCommand(ns, STRING_HEADING, DRONE_LINK_MSG_TYPE_FLOAT, ph);
-  dem->registerCommand(ns, PSTR("$heading"), DRONE_LINK_MSG_TYPE_FLOAT, pha);
-
-  dem->registerCommand(ns, STRING_PID, DRONE_LINK_MSG_TYPE_FLOAT, ph);
-  dem->registerCommand(ns, STRING_LIMITS, DRONE_LINK_MSG_TYPE_FLOAT, ph);
 }
 
 

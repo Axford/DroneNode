@@ -2,6 +2,7 @@
 #include "WiFiManager.h"
 #include "WiFi.h"
 #include "esp_wifi.h"
+#include "lwip/dns.h"
 //#include "SPIFFS.h"
 
 //#include "esp_int_wdt.h"
@@ -99,6 +100,11 @@ void WiFiManager::enable() {
   for (uint8_t i=3; i<6; i++) {
     hostname += String(mac[i], HEX);
   }
+
+  // configure DNS server, workaround for DHCP issues
+  // using Google primary DNS 8.8.8.8
+  ip_addr_t dnsserver = IPADDR4_INIT(0x08080808);
+  dns_setserver(0, &dnsserver);
 
   //WiFi.softAP(hostname.c_str());
   vTaskDelay(2);

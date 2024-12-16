@@ -129,9 +129,6 @@ public:
 
   ProaModule(uint8_t id, DroneSystem* ds);
 
-  static DEM_NAMESPACE* registerNamespace(DroneExecutionManager *dem);
-  static void registerParams(DEM_NAMESPACE* ns, DroneExecutionManager *dem);
-
   uint8_t polarIndexForAngle(float ang);
   uint8_t polarForAngle(float ang);
 

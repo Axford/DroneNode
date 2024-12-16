@@ -3,6 +3,8 @@
 #include "../DroneLinkManager.h"
 #include "strings.h"
 
+// @type SpeedControl
+
 SpeedControlModule::SpeedControlModule(uint8_t id, DroneSystem* ds):
   DroneModule ( id, ds )
  {
@@ -23,6 +25,7 @@ SpeedControlModule::SpeedControlModule(uint8_t id, DroneSystem* ds):
    _params[SPEED_CONTROL_PARAM_LIMITS_E].name = FPSTR(STRING_LIMITS);
    _params[SPEED_CONTROL_PARAM_LIMITS_E].nameLen = sizeof(STRING_LIMITS);
    _params[SPEED_CONTROL_PARAM_LIMITS_E].paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_FLOAT, 8);
+   // @default limits=0.2,1
    _params[SPEED_CONTROL_PARAM_LIMITS_E].data.f[0] = 0.2; // just below deadband
    _params[SPEED_CONTROL_PARAM_LIMITS_E].data.f[1] = 1;
 
@@ -30,36 +33,13 @@ SpeedControlModule::SpeedControlModule(uint8_t id, DroneSystem* ds):
    _params[SPEED_CONTROL_PARAM_THRESHOLD_E].name = FPSTR(STRING_THRESHOLD);
    _params[SPEED_CONTROL_PARAM_THRESHOLD_E].nameLen = sizeof(STRING_THRESHOLD);
    _params[SPEED_CONTROL_PARAM_THRESHOLD_E].paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_FLOAT, 4);
+   // @default threshold=3
    _params[SPEED_CONTROL_PARAM_THRESHOLD_E].data.f[0] = 3;  // 3 meters
 
    _params[SPEED_CONTROL_PARAM_SPEED_E].paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_MEDIUM, SPEED_CONTROL_PARAM_SPEED);
    _params[SPEED_CONTROL_PARAM_SPEED_E].name = FPSTR(STRING_SPEED);
    _params[SPEED_CONTROL_PARAM_SPEED_E].nameLen = sizeof(STRING_SPEED);
    _params[SPEED_CONTROL_PARAM_SPEED_E].paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 4);
-}
-
-
-DEM_NAMESPACE* SpeedControlModule::registerNamespace(DroneExecutionManager *dem) {
-  // namespace for module type
-  return dem->createNamespace(SPEED_CONTROL_STR_SPEED_CONTROL,0,true);
-}
-
-void SpeedControlModule::registerParams(DEM_NAMESPACE* ns, DroneExecutionManager *dem) {
-  using std::placeholders::_1;
-  using std::placeholders::_2;
-  using std::placeholders::_3;
-  using std::placeholders::_4;
-
-  // writable mgmt params
-  DEMCommandHandler ph = std::bind(&DroneExecutionManager::mod_param, dem, _1, _2, _3, _4);
-  DEMCommandHandler pha = std::bind(&DroneExecutionManager::mod_subAddr, dem, _1, _2, _3, _4);
-
-  dem->registerCommand(ns, STRING_DISTANCE, DRONE_LINK_MSG_TYPE_FLOAT, ph);
-  dem->registerCommand(ns, PSTR("$distance"), DRONE_LINK_MSG_TYPE_FLOAT, pha);
-
-  dem->registerCommand(ns, STRING_LIMITS, DRONE_LINK_MSG_TYPE_FLOAT, ph);
-  dem->registerCommand(ns, STRING_THRESHOLD, DRONE_LINK_MSG_TYPE_FLOAT, ph);
-  dem->registerCommand(ns, STRING_SPEED, DRONE_LINK_MSG_TYPE_FLOAT, ph);
 }
 
 

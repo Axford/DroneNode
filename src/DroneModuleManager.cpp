@@ -8,10 +8,11 @@
 #include "strings.h"
 #include <ArduinoOTA.h>
 
-DroneModuleManager::DroneModuleManager(DroneLinkManager* dlm):
+DroneModuleManager::DroneModuleManager(DroneLinkManager* dlm, fs::FS &fs):
   _lastWatchdogCheck(0),
   _modules(IvanLinkedList::LinkedList<DroneModule*>()),
-  _dlm(dlm)
+  _dlm(dlm),
+  _fs(fs)
 {
   _hostname = "set_me";
   _buildCommit = GIT_COMMIT;
@@ -80,6 +81,7 @@ void DroneModuleManager::setSleep(uint32_t sleep) {
   _sleep = sleep;
 }
 
+
 String DroneModuleManager::buildCommit() {
   return _buildCommit;
 }
@@ -143,24 +145,28 @@ void DroneModuleManager::loopModules() {
   DroneModule* m;
   for(int i = 0; i < _modules.size(); i++) {
     m = _modules.get(i);
-    //Serial.print(m->getName());
+    //Log.noticeln(m->getName());
     unsigned long start= millis();
+    boolean processed = false;
 
     // see if update needed
-    m->updateIfNeeded();
+    processed = m->updateIfNeeded();
 
     // and check for main loop
     if (m->readyToLoop()) {
       //Serial.println(" Y");
       //Log.noticeln(F("[DMM.lM] %s"), m->getName());
       m->loop();
+      processed = true;
 
-      // update loopDuration
+    }
+
+    // update loopDuration
+    if (processed) {
       long duration = millis()-start;
       m->loopDuration = (m->loopDuration*15 + duration)/16;
-    } else {
-      //Serial.println(" N");
     }
+
     yield();
   }
 
@@ -215,14 +221,15 @@ void DroneModuleManager::watchdog() {
 
 void DroneModuleManager::serveModuleInfo(AsyncWebServerRequest *request) {
 
-  AsyncResponseStream *response = request->beginResponseStream("text/text");
+  AsyncResponseStream *response = request->beginResponseStream("application/json");
   response->addHeader("Server","ESP Async Web Server");
-  response->print(F("Modules: \n"));
-
+  response->print("[");
   DroneModule* m;
   for(uint8_t i = 0; i < _modules.size(); i++){
     m = _modules.get(i);
-    response->printf("%u: \n", m->id());
+    if (i > 0) response->printf(",");
+    response->print("{");
+    response->printf("\"id\":%u,", m->id());
 
     m->respondWithInfo(response);
 
@@ -234,8 +241,10 @@ void DroneModuleManager::serveModuleInfo(AsyncWebServerRequest *request) {
       response->printf("   %u: %s - %u\n", j, c.str, (c.handler != NULL ? 1 : 0));
     }
     */
-    response->print("\n");
+    response->print("}\n");
   }
+
+  response->print("]");
 
   //send the response last
   request->send(response);

@@ -5,6 +5,7 @@
 #include "strings.h"
 #include <SPIFFS.h>
 
+// @type Diagnostic
 
 DiagnosticModule::DiagnosticModule(uint8_t id, DroneSystem* ds):
   I2CBaseModule ( id, ds )
@@ -31,25 +32,6 @@ DiagnosticModule::~DiagnosticModule() {
   if (_display) delete _display;
 }
 
-
-DEM_NAMESPACE* DiagnosticModule::registerNamespace(DroneExecutionManager *dem) {
-  // namespace for module type
-  return dem->createNamespace(DIAGNOSTIC_STR_DIAGNOSTIC,0,true);
-}
-
-void DiagnosticModule::registerParams(DEM_NAMESPACE* ns, DroneExecutionManager *dem) {
-
-  I2CBaseModule::registerParams(ns, dem);
-
-  using std::placeholders::_1;
-  using std::placeholders::_2;
-  using std::placeholders::_3;
-  using std::placeholders::_4;
-
-  // writable mgmt params
-  DEMCommandHandler ph = std::bind(&DroneExecutionManager::mod_param, dem, _1, _2, _3, _4);
-  DEMCommandHandler pha = std::bind(&DroneExecutionManager::mod_subAddr, dem, _1, _2, _3, _4);
-}
 
 void DiagnosticModule::doReset() {
   Log.noticeln("[DM.dR]");

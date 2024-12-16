@@ -2,6 +2,7 @@
 #include "DroneLinkManager.h"
 #include "WiFiManager.h"
 #include <Update.h>
+#include "DroneLogger.h"
 
 DroneLinkManager::DroneLinkManager(WiFiManager *wifiManager, DroneFS* fs):
   _wifiManager(wifiManager),
@@ -86,12 +87,13 @@ void DroneLinkManager::subscribe(uint8_t node, uint8_t channel, DroneModule *sub
   // locate a matching channel (or create it if it doesn't exist)
   DroneLinkChannel* c = findChannel(node, channel);
   if (!c) {
-    Log.noticeln(F("Creating channel: %u > %u"), node, channel);
+    Log.noticeln(F("[DLM.s] Creating channel: %u > %u"), node, channel);
     c = new DroneLinkChannel(this, node, channel);
     _channels.add(c);
   }
 
   // wire up the subscriber to the channel
+  Log.noticeln("[DLM.s] Wiring subscriber...");
   c->subscribe(_node, subscriber, getDroneLinkMsgParam(param));
 
   // print new set of subscribers
@@ -158,9 +160,18 @@ void DroneLinkManager::processChannels() {
 }
 
 
+void DroneLinkManager::resetExternalSubscriptions(uint8_t extNode) {
+  // reset state on any external subscriptions to extNode
+  DroneLinkChannel* c;
+  for(int i = 0; i < _channels.size(); i++){
+    c = _channels.get(i);
+    c->resetExternalSubscriptions(extNode);
+  }
+}
+
+
 void DroneLinkManager::processExternalSubscriptions() {
   // check for pending subscriptions
-
   DroneLinkChannel* c;
   for(int i = 0; i < _channels.size(); i++){
     c = _channels.get(i);
@@ -176,6 +187,28 @@ void DroneLinkManager::removeRoute(uint8_t node) {
     nodeInfo->heard = false;
     // reset metric
     nodeInfo->metric = 255;
+
+    // clear sequencer
+    nodeInfo->gSequencer->clear();
+
+    /*
+    page->nodeInfo[i].heard = false;
+      page->nodeInfo[i].seq = 0;
+      page->nodeInfo[i].gSeq = 0;
+      page->nodeInfo[i].metric = 255;
+      page->nodeInfo[i].helloMetric = 255;
+      page->nodeInfo[i].name = NULL;
+      page->nodeInfo[i].interface = NULL;  // interface for current best route to node
+      page->nodeInfo[i].nextHop = 0;
+      page->nodeInfo[i].givenUp = 0;
+      page->nodeInfo[i].avgAttempts = 0;
+      page->nodeInfo[i].avgTxTime = 0;
+      page->nodeInfo[i].lastAck = 0;
+      page->nodeInfo[i].lastHello = 0;
+      page->nodeInfo[i].helloInterface = NULL;  // set to the interface we last received a hello via a tx Node - i.e. directly connected
+      page->nodeInfo[i].avgAckTime = 0;
+      page->nodeInfo[i].gSequencer = NULL;
+      */
 
     // udpate state for any associated ext subs
     // UPDATE: removing subscriptions is unhelpful - e.g. if routes are briefly down then we lose subs, e.g. to the server
@@ -359,16 +392,17 @@ DRONE_LINK_NODE_INFO* DroneLinkManager::getNodeInfo(uint8_t source, boolean hear
       page->nodeInfo[i].metric = 255;
       page->nodeInfo[i].helloMetric = 255;
       page->nodeInfo[i].name = NULL;
-      page->nodeInfo[i].interface = NULL;
+      page->nodeInfo[i].interface = NULL;  // interface for current best route to node
       page->nodeInfo[i].nextHop = 0;
       page->nodeInfo[i].givenUp = 0;
       page->nodeInfo[i].avgAttempts = 0;
       page->nodeInfo[i].avgTxTime = 0;
       page->nodeInfo[i].lastAck = 0;
       page->nodeInfo[i].lastHello = 0;
-      page->nodeInfo[i].helloInterface = NULL;
+      page->nodeInfo[i].helloInterface = NULL;  // set to the interface we last received a hello via a tx Node - i.e. directly connected
       page->nodeInfo[i].avgAckTime = 0;
       page->nodeInfo[i].gSequencer = NULL;
+      page->nodeInfo[i].transportAddress.ipAddress[0] = 0;
     }
   }
 
@@ -412,12 +446,47 @@ NetworkInterfaceModule* DroneLinkManager::getSourceInterface(uint8_t source) {
 
 
 void DroneLinkManager::serveNodeInfo(AsyncWebServerRequest *request) {
-  AsyncResponseStream *response = request->beginResponseStream("text/text");
+  AsyncResponseStream *response = request->beginResponseStream("application/json");
   response->addHeader("Server","ESP Async Web Server");
 
-  response->print(F("Routing table: \n"));
-
   unsigned long loopTime = millis();
+
+  response->print("{");
+  response->print(F("\"interfaces\": [ \n"));
+
+  NetworkInterfaceModule* inter;
+  for (uint8_t i=0; i< _interfaces.size(); i++) {
+    inter =_interfaces.get(i);
+
+    if (i>0) response->print(",");
+    response->print("{");
+    response->printf(" \"id\": %u, \"name\": \"%s\",", inter->id(), inter->getName());
+
+    response->print("\"type\":");
+    switch(inter->getInterfaceType()) {
+      case DRONE_MESH_INTERFACE_TYPE_UDP: response->print("\"UDP\""); break;
+      case DRONE_MESH_INTERFACE_TYPE_RFM69: response->print("\"RFM69\""); break;
+      case DRONE_MESH_INTERFACE_TYPE_SERIAL: response->print("\"Serial\""); break;
+      case DRONE_MESH_INTERFACE_TYPE_IRIDIUM: response->print("\"Iridium\""); break;
+    }
+
+    response->print(", \"state\":");
+    response->print(inter->getInterfaceState() ? "\"Up\"" : "\"Down\"");
+
+    response->print(", \"link\":");
+    response->print(inter->isBroadcastCapable() ? "\"Broadcast\"" : "\"P2P\"");    
+     
+    if (!inter->isBroadcastCapable() ) {
+      response->printf(", \"peer\": %u", inter->getPeerId());
+    }
+    response->print("}");
+    response->print("\n");
+  }
+  response->print("],");
+
+
+  response->print(F("\"routes\": ["));
+  uint8_t items = 0;
 
   DRONE_LINK_NODE_PAGE *page;
   for (uint8_t i=0; i<DRONE_LINK_NODE_PAGES; i++) {
@@ -425,51 +494,81 @@ void DroneLinkManager::serveNodeInfo(AsyncWebServerRequest *request) {
     if (page != NULL) {
       for (uint8_t j=0; j<DRONE_LINK_NODE_PAGE_SIZE; j++) {
         if (page->nodeInfo[j].heard) {
+
+          if (items > 0) response->print(",");
+          response->print("{");
+
           uint8_t id = (i << 4) + j;
           unsigned int age = (loopTime - page->nodeInfo[j].lastHeard) / 1000;
           char *interfaceName = NULL;
           if (page->nodeInfo[j].interface) interfaceName = page->nodeInfo[j].interface->getName();
-          response->printf("  %u > ", id);
+
+          response->printf("\"id\":%u", id);
+          response->print(",\"name\":");
           if (page->nodeInfo[j].name == NULL) {
-            response->print("???");
+            response->print("\"???\"");
           } else
-            response->printf("%s", page->nodeInfo[j].name);
-          response->printf(", Sq: %u, Mt: %u, Nx: %u, Ag: %u sec, Up: %u, I: %s (%u), At: %.1f, Tx: %.0fms, Ack: %.0fms, GU: %u\n", page->nodeInfo[j].seq, page->nodeInfo[j].metric, page->nodeInfo[j].nextHop, age, page->nodeInfo[j].uptime, interfaceName, page->nodeInfo[j].interface->getInterfaceType(), page->nodeInfo[j].avgAttempts, page->nodeInfo[j].avgTxTime, page->nodeInfo[j].avgAckTime, page->nodeInfo[i].givenUp);
+            response->printf("\"%s\"", page->nodeInfo[j].name);
+
+          response->printf(",\"seq\": %u", page->nodeInfo[j].seq);
+          response->printf(",\"metric\": %u", page->nodeInfo[j].metric);
+          response->printf(",\"helloMetric\": %u", page->nodeInfo[j].helloMetric);
+          response->printf(",\"nextHop\": %u", page->nodeInfo[j].nextHop);
+          response->printf(",\"age\": %u", age);
+          response->printf(",\"up\": %u", page->nodeInfo[j].uptime);
+          response->printf(",\"iName\": \"%s\"", interfaceName);
+          response->printf(",\"iType\": %u", page->nodeInfo[j].interface->getInterfaceType());
+          response->printf(",\"avgAt\": %.1f", page->nodeInfo[j].avgAttempts);
+          response->printf(",\"avgTx\": %.0f", page->nodeInfo[j].avgTxTime);
+          response->printf(",\"avgAck\": %.0f", page->nodeInfo[j].avgAckTime);
+          response->printf(",\"gU\": %u", page->nodeInfo[j].givenUp);
+          response->printf(", \"transAddr\":[%u,%u,%u,%u]", 
+                           page->nodeInfo[j].transportAddress.ipAddress[0], 
+                           page->nodeInfo[j].transportAddress.ipAddress[1], 
+                           page->nodeInfo[j].transportAddress.ipAddress[2], 
+                           page->nodeInfo[j].transportAddress.ipAddress[3]);
+          response->print("}");
+          items++;
         }
       }
     }
   }
 
-  response->printf(("\n\nTx Queue: %.1f (size %u), kicked: %u (%.1f), choked: %u (%.1f) \n"), (100*_utilisation), getTxQueueSize(), _kicked, _kickRate, _choked, _chokeRate);
+  response->print("], \"queue\":{");
+
+  response->printf("\"utilisation\": %.1f", (100*_utilisation));
+  response->printf(",\"size\": %u", getTxQueueSize());
+  response->printf(",\"kicked\": %u", _kicked);
+  response->printf(",\"kickRate\": %.1f", _kickRate);
+  response->printf(",\"choked\": %u", _choked);
+  response->printf(",\"chokeRate\": %.1f", _chokeRate);
 
   // print detailed queue info
+  response->print(", \"items\":[");
   for (uint8_t i=0; i<_txQueue.size(); i++) {
     DRONE_MESH_MSG_BUFFER* buffer = _txQueue.get(i);
 
-    response->printf("    %u: state=%u, int:%s, \n", i, buffer->state, buffer->interface->getName());
+    if (i > 0) response->print(",");
+    response->print("{");
+    response->printf("\"i\": %u", i);
+    response->printf(",\"state\": %u", buffer->state);
+    response->printf(",\"int\": \"%s\"", buffer->interface->getName());
 
     if (buffer->state > DRONE_MESH_MSG_BUFFER_STATE_EMPTY) {
       // decode message in buffer
-      response->print("      (");
-      response->print( isDroneMeshMsgAck(buffer->data) ? "A" : "S" );
-      response->printf(", %u) ", getDroneMeshMsgPayloadType(buffer->data));
-      response->printf("%u > %u > %u > %u ", getDroneMeshMsgSrcNode(buffer->data), getDroneMeshMsgTxNode(buffer->data), getDroneMeshMsgNextNode(buffer->data),
+      response->printf(",\"isAck\": %u", isDroneMeshMsgAck(buffer->data) ? 1 : 0);
+      response->printf(",\"payType\": %u", getDroneMeshMsgPayloadType(buffer->data));
+      response->printf(",\"pri\": %u", getDroneMeshMsgPriority(buffer->data));
+      response->printf(",\"addr\": [%u,%u,%u,%u]", getDroneMeshMsgSrcNode(buffer->data), getDroneMeshMsgTxNode(buffer->data), getDroneMeshMsgNextNode(buffer->data),
     getDroneMeshMsgDestNode(buffer->data));
-      response->printf("seq=%u [%u]", getDroneMeshMsgSeq(buffer->data), getDroneMeshMsgPayloadSize(buffer->data));
-
-      // if this is a DLM ... decode that too
-      if (getDroneMeshMsgPayloadType(buffer->data) == DRONE_MESH_MSG_TYPE_DRONELINKMSG) {
-        // upwrap contained msg
-        //uint8_t payloadSize = getDroneMeshMsgPayloadSize(buffer);
-
-        //memcpy((uint8_t*)&tempMsg._msg, &buffer[sizeof(DRONE_MESH_MSG_HEADER)], payloadSize);
-
-      }
-
-      response->print("\n");
+      response->printf(",\"seq\": %u", getDroneMeshMsgSeq(buffer->data));
+      response->printf(",\"paySize\": %u", getDroneMeshMsgPayloadSize(buffer->data));
     }
 
+    response->print("}");
   }
+
+  response->print("]}}");
 
   //send the response last
   request->send(response);
@@ -478,19 +577,27 @@ void DroneLinkManager::serveNodeInfo(AsyncWebServerRequest *request) {
 
 void DroneLinkManager::serveChannelInfo(AsyncWebServerRequest *request) {
 
-  AsyncResponseStream *response = request->beginResponseStream("text/text");
+  AsyncResponseStream *response = request->beginResponseStream("application/json");
   response->addHeader("Server","ESP Async Web Server");
-  response->print(F("Channels, queues and subscribers \n"));
-
+  
+  response->print("[");
   DroneLinkChannel* c;
   for(int i = 0; i < _channels.size(); i++){
+    if (i>0) response->print(",");
     c = _channels.get(i);
-    response->printf("%u>%u = size: %u (peak: %u)\n", c->node(), c->id(), c->size(), c->peakSize());
+    //response->printf("%u>%u = size: %u (peak: %u)\n", c->node(), c->id(), c->size(), c->peakSize());
 
     c->serveChannelInfo(response);
-    response->print("\n");
-  }
 
+    /*
+    if (c->id() == 0) {
+      // full debug on catch-all channel
+      response->print("\nQueue info:\n");
+      c->serveQueueInfo(response);
+    }
+    */
+  }
+  response->print("]");
 
   //send the response last
   request->send(response);
@@ -506,7 +613,7 @@ void DroneLinkManager::registerInterface(NetworkInterfaceModule *interface) {
 }
 
 
-void DroneLinkManager::receivePacket(NetworkInterfaceModule *interface, uint8_t *buffer, uint8_t metric) {
+void DroneLinkManager::receivePacket(NetworkInterfaceModule *interface, uint8_t *buffer, uint8_t metric, DRONE_LINK_TRANSPORT_ADDRESS transportAddress) {
   // validate packet
   uint8_t len = getDroneMeshMsgTotalSize(buffer);
   uint8_t crc = _CRC8.smbus((uint8_t*)buffer, len-1);
@@ -517,6 +624,14 @@ void DroneLinkManager::receivePacket(NetworkInterfaceModule *interface, uint8_t 
 
   // ignore it if this packet is from us
   if (getDroneMeshMsgSrcNode(buffer) == _node || getDroneMeshMsgTxNode(buffer) == _node) return;
+
+  // store packets that have passed CRC
+  DroneLog.write(buffer, len);
+
+  // update PeerId for point to point interfaces
+  if (!interface->isBroadcastCapable() && interface->getPeerId() == 0) {
+    interface->setPeerId(getDroneMeshMsgTxNode(buffer));
+  }
 
   // ignore it if this packet is not destined for us (unless its a broadcast)
   uint8_t nn = getDroneMeshMsgNextNode(buffer);
@@ -545,7 +660,10 @@ void DroneLinkManager::receivePacket(NetworkInterfaceModule *interface, uint8_t 
   // update lastHeard for txNode
   DRONE_MESH_MSG_HEADER *header = (DRONE_MESH_MSG_HEADER*)buffer;
   DRONE_LINK_NODE_INFO* txNodeInfo = getNodeInfo(header->txNode, false);
-  if (txNodeInfo) txNodeInfo->lastHeard = millis();
+  if (txNodeInfo) {
+    txNodeInfo->lastHeard = millis();
+    txNodeInfo->transportAddress = transportAddress;
+  }
 
   _packetsReceived++;
 
@@ -606,7 +724,7 @@ void DroneLinkManager::receivePacket(NetworkInterfaceModule *interface, uint8_t 
       // filesystem
       case DRONE_MESH_MSG_TYPE_FS_FILE_REQUEST: receiveFSFileRequest(interface, buffer, metric); break;
       case DRONE_MESH_MSG_TYPE_FS_READ_REQUEST: receiveFSReadRequest(interface, buffer, metric); break;
-      case DRONE_MESH_MSG_TYPE_FS_RESIZE_REQUEST: receiveFSResizeRequest(interface, buffer, metric); break;
+      case DRONE_MESH_MSG_TYPE_FS_MANAGE_REQUEST: receiveFSManageRequest(interface, buffer, metric); break;
       case DRONE_MESH_MSG_TYPE_FS_WRITE_REQUEST: receiveFSWriteRequest(interface, buffer, metric); break;
 
     default:
@@ -642,6 +760,8 @@ void DroneLinkManager::receiveAck(uint8_t *buffer) {
           nextNodeInfo->avgAttempts = (nextNodeInfo->avgAttempts * (DRONE_LINK_MANAGER_AVG_SAMPLES-1) + b->attempts) / DRONE_LINK_MANAGER_AVG_SAMPLES;
           nextNodeInfo->avgAckTime = (nextNodeInfo->avgAckTime * (DRONE_LINK_MANAGER_AVG_SAMPLES-1) + (millis() - b->created)) / DRONE_LINK_MANAGER_AVG_SAMPLES;
         }
+
+        b->attempts = 0;
       }
     }
   }
@@ -653,7 +773,7 @@ void DroneLinkManager::receiveHello(NetworkInterfaceModule *interface, uint8_t *
 
   unsigned long loopTime = millis();
 
-  Log.noticeln("[DLM.rP] Hello from %u tx by %u", header->srcNode, header->txNode);
+  //Log.noticeln("[DLM.rP] Hello from %u tx by %u", header->srcNode, header->txNode);
 
   DRONE_MESH_MSG_HELLO *hello = (DRONE_MESH_MSG_HELLO*)buffer;
 
@@ -695,7 +815,13 @@ void DroneLinkManager::receiveHello(NetworkInterfaceModule *interface, uint8_t *
     // if new uptime is significantly less than current uptime
     if (hello->uptime < nodeInfo->uptime * 0.9) {
       feasibleRoute = true;
-      Log.noticeln("Lower uptime %u", hello->uptime);
+      //Log.noticeln("Lower uptime %u", hello->uptime);
+
+      // probably means the remote node reset...  renew any subscriptions to it!!
+      resetExternalSubscriptions(header->srcNode);
+
+      // may also mean the packet sequencing has reset, so clear the sequencer just in case
+      nodeInfo->gSequencer->clear();
     }
 
     // if the interface has changed and there's a lower metric
@@ -705,19 +831,20 @@ void DroneLinkManager::receiveHello(NetworkInterfaceModule *interface, uint8_t *
       // is this a new sequence (allow for wrap-around)
       if ((header->seq > nodeInfo->seq) || (nodeInfo->seq > 128 && (header->seq < nodeInfo->seq - 128))) {
         feasibleRoute = true;
-        Log.noticeln("New seq %u", header->seq);
+        //Log.noticeln("New seq %u", header->seq);
       }
 
       // or is it the same seq, but with a better metric
       if (header->seq == nodeInfo->seq &&
           newMetric < nodeInfo->metric) {
         feasibleRoute = true;
-        Log.noticeln("Better metric %u", newMetric);
+        //Log.noticeln("Better metric %u", newMetric);
       }
     }
 
+
     if (feasibleRoute) {
-      Log.noticeln("Updating route info");
+      //Log.noticeln("Updating route info");
       nodeInfo->seq = header->seq;
       nodeInfo->metric = newMetric;
       nodeInfo->helloMetric = hello->metric;
@@ -727,21 +854,29 @@ void DroneLinkManager::receiveHello(NetworkInterfaceModule *interface, uint8_t *
       nodeInfo->uptime = hello->uptime;
 
       // if metric < 255 then retransmit the Hello on all interfaces
+      // unless this is a directly connected node on a point to point interface, in which case we'd just be sending its own packet back to it!
       if (newMetric < 255) {
         for (uint8_t i=0; i < _interfaces.size(); i++) {
           NetworkInterfaceModule* interface = _interfaces.get(i);
-          generateHello(interface, header->srcNode, header->seq, newMetric, hello->uptime);
+
+          if (!interface->isBroadcastCapable() && interface->getPeerId() == header->srcNode) {
+            // skip
+          } else 
+            generateHello(interface, header->srcNode, header->seq, newMetric, hello->uptime);
         }
       }
 
     } else {
-      Log.noticeln("New route infeasible");
+      //Log.noticeln("New route infeasible");
 
       if (loopTime > nodeInfo->lastBroadcast + DRONE_LINK_MANAGER_HELLO_INTERVAL) {
         // retransmit our current best route on all interfaces
         for (uint8_t i=0; i < _interfaces.size(); i++) {
           NetworkInterfaceModule* interface = _interfaces.get(i);
-          generateHello(interface, header->srcNode, nodeInfo->seq, nodeInfo->metric, nodeInfo->uptime);
+          if (!interface->isBroadcastCapable() && interface->getPeerId() == header->srcNode) {
+            // skip
+          } else 
+            generateHello(interface, header->srcNode, nodeInfo->seq, nodeInfo->metric, nodeInfo->uptime);
         }
 
         nodeInfo->lastBroadcast = loopTime;
@@ -757,13 +892,13 @@ void DroneLinkManager::receiveSubscriptionRequest(NetworkInterfaceModule *interf
   DRONE_MESH_MSG_HEADER *header = (DRONE_MESH_MSG_HEADER*)buffer;
   DRONE_MESH_MSG_SUBCSRIPTION_REQUEST *subBuffer = (DRONE_MESH_MSG_SUBCSRIPTION_REQUEST*)buffer;
 
-  Log.noticeln("[DLM.rS] Sub request from %u to %u", header->srcNode, header->destNode);
+  //Log.noticeln("[DLM.rS] Sub request from %u to %u", header->srcNode, header->destNode);
 
   // check if we are the nextNode... otherwise ignore it
   if (header->nextNode == _node) {
     // are we the destination?
     if (header->destNode == _node) {
-      Log.noticeln("[DLM.rS] Reached destination");
+      //Log.noticeln("[DLM.rS] Reached destination");
 
       // make a note that we need to send stuff to the subscribing (src) node
       subscribeExt(header->srcNode, subBuffer->channel, subBuffer->param);
@@ -772,7 +907,7 @@ void DroneLinkManager::receiveSubscriptionRequest(NetworkInterfaceModule *interf
       generateResponse(buffer, DRONE_MESH_MSG_TYPE_SUBSCRIPTION_RESPONSE);
 
     } else {
-      Log.noticeln("[DLM.rS] Intermediate hop");
+      //Log.noticeln("[DLM.rS] Intermediate hop");
 
       hopAlong(buffer);
     }
@@ -786,7 +921,7 @@ void DroneLinkManager::receiveSubscriptionResponse(NetworkInterfaceModule *inter
   DRONE_MESH_MSG_HEADER *header = (DRONE_MESH_MSG_HEADER*)buffer;
   DRONE_MESH_MSG_SUBCSRIPTION_REQUEST *subBuffer = (DRONE_MESH_MSG_SUBCSRIPTION_REQUEST*)buffer;
 
-  Log.noticeln("[DLM.rS] Sub response from %u to %u", header->srcNode, header->destNode);
+  //Log.noticeln("[DLM.rS] Sub response from %u to %u", header->srcNode, header->destNode);
 
   // check if we are the destination... otherwise ignore it
   if (header->destNode == _node) {
@@ -807,13 +942,13 @@ void DroneLinkManager::receiveSubscriptionResponse(NetworkInterfaceModule *inter
 void DroneLinkManager::receiveDroneLinkMsg(NetworkInterfaceModule *interface, uint8_t *buffer, uint8_t metric) {
   DRONE_MESH_MSG_HEADER *header = (DRONE_MESH_MSG_HEADER*)buffer;
 
-  Log.noticeln("[DLM.rDlM] DLM from %u to %u", header->srcNode, header->destNode);
+  //Log.noticeln("[DLM.rDlM] DLM from %u to %u", header->srcNode, header->destNode);
 
   // check if we are the nextNode... otherwise ignore it
   if (header->nextNode == _node) {
     // are we the destination?
     if (header->destNode == _node) {
-      Log.noticeln("[DLM.rDlM] Reached destination");
+      //Log.noticeln("[DLM.rDlM] Reached destination");
 
       // upwrap contained msg
       uint8_t payloadSize = getDroneMeshMsgPayloadSize(buffer);
@@ -824,7 +959,7 @@ void DroneLinkManager::receiveDroneLinkMsg(NetworkInterfaceModule *interface, ui
       publish(_receivedMsg);
 
     } else {
-      Log.noticeln("[DLM.rDlM] Intermediate hop");
+      //Log.noticeln("[DLM.rDlM] Intermediate hop");
 
       hopAlong(buffer);
     }
@@ -835,14 +970,14 @@ void DroneLinkManager::receiveDroneLinkMsg(NetworkInterfaceModule *interface, ui
 void DroneLinkManager::receiveRouterRequest(NetworkInterfaceModule *interface, uint8_t *buffer, uint8_t metric) {
   DRONE_MESH_MSG_HEADER *header = (DRONE_MESH_MSG_HEADER*)buffer;
 
-  Log.noticeln("[DLM.rT] Router request from %u to %u", header->srcNode, header->destNode);
+  //Log.noticeln("[DLM.rT] Router request from %u to %u", header->srcNode, header->destNode);
 
   // check if we are the nextNode... otherwise ignore it
   if (header->nextNode == _node) {
 
     // are we the destination?
     if (header->destNode == _node) {
-      Log.noticeln("  Reached destination");
+      //Log.noticeln("  Reached destination");
 
       //DRONE_MESH_MSG_ROUTER_REQUEST* req = (DRONE_MESH_MSG_ROUTER_REQUEST*)buffer;
 
@@ -861,7 +996,7 @@ void DroneLinkManager::receiveRouterRequest(NetworkInterfaceModule *interface, u
 
 
     } else {
-      Log.noticeln("  Intermediate hop");
+      //Log.noticeln("  Intermediate hop");
       hopAlong(buffer);
     }
   }
@@ -1007,6 +1142,8 @@ void DroneLinkManager::receiveFSFileRequest(NetworkInterfaceModule *interface, u
 
       } else if (rbuffer->flags == DRONE_MESH_MSG_FS_FLAG_INDEX_INFO) {
         entry = _fs->getEntryByIndex((char*)rbuffer->path, rbuffer->id);
+      } else if (rbuffer->flags == DRONE_MESH_MSG_FS_FLAG_DELETE) {
+        _fs->deleteEntryByPath((char*)rbuffer->path);
       }
       generateFSFileResponse(interface, header->srcNode, header->txNode, entry);
 
@@ -1056,19 +1193,12 @@ void DroneLinkManager::receiveFSWriteRequest(NetworkInterfaceModule *interface, 
 
       DRONE_MESH_MSG_FS_WRITE_REQUEST* rbuffer = (DRONE_MESH_MSG_FS_WRITE_REQUEST*)buffer;
 
-      // handle request type
-      DroneFSEntry* entry = NULL;
-      entry = _fs->getEntryById(rbuffer->id);
+      boolean res = _fs->writeUploadBlock(rbuffer->offset, rbuffer->data, rbuffer->size);
 
-      uint8_t sizeWritten = 0;
-
-      if (entry) {
-        if (entry->writeBlock(rbuffer->offset, rbuffer->data, rbuffer->size)) {
-          sizeWritten = rbuffer->size;
-        }
-      }
-
-      generateFSWriteResponse(interface, header->srcNode, header->txNode, entry, rbuffer->offset, sizeWritten);
+      uint8_t flags = res ? DRONE_MESH_MSG_FS_FLAG_SUCCESS : DRONE_MESH_MSG_FS_FLAG_ERROR;
+      
+      generateFSWriteResponse(interface, header->srcNode, header->txNode, flags, rbuffer->offset);
+      
 
     } else {
       hopAlong(buffer);
@@ -1077,10 +1207,10 @@ void DroneLinkManager::receiveFSWriteRequest(NetworkInterfaceModule *interface, 
 }
 
 
-void DroneLinkManager::receiveFSResizeRequest(NetworkInterfaceModule *interface, uint8_t *buffer, uint8_t metric) {
+void DroneLinkManager::receiveFSManageRequest(NetworkInterfaceModule *interface, uint8_t *buffer, uint8_t metric) {
   DRONE_MESH_MSG_HEADER *header = (DRONE_MESH_MSG_HEADER*)buffer;
 
-  Log.noticeln("[DLM.rT] FS Resize request from %u to %u", header->srcNode, header->destNode);
+  Log.noticeln("[DLM.rT] FS Manage request from %u to %u", header->srcNode, header->destNode);
 
   // check if we are the nextNode... otherwise ignore it
   if (header->nextNode == _node) {
@@ -1088,25 +1218,36 @@ void DroneLinkManager::receiveFSResizeRequest(NetworkInterfaceModule *interface,
     // are we the destination?
     if (header->destNode == _node) {
 
-      DRONE_MESH_MSG_FS_RESIZE_REQUEST* rbuffer = (DRONE_MESH_MSG_FS_RESIZE_REQUEST*)buffer;
+      DRONE_MESH_MSG_FS_MANAGE_REQUEST* rbuffer = (DRONE_MESH_MSG_FS_MANAGE_REQUEST*)buffer;
 
-      // handle request type
-      DroneFSEntry* entry = NULL;
-      entry = _fs->getEntryByPath((char*)rbuffer->path);
+      uint8_t flags = 0;
+      uint8_t status = 0;
 
-      uint32_t newSize = 0;
+      switch(rbuffer->flags) {
+        case DRONE_MESH_MSG_FS_FLAG_START:
+          Log.noticeln("[DLM.rT] Start");
+          flags = _fs->startUpload((char*)rbuffer->path, rbuffer->size) ? DRONE_MESH_MSG_FS_FLAG_SUCCESS : DRONE_MESH_MSG_FS_FLAG_ERROR;
+          break;
 
-      if (entry) {
-        // request resize
-        if (entry->setSize(rbuffer->size)) {
-          newSize = rbuffer->size;
-        }
-      } else {
-        // need to create a new entry
-        // TODO
+        case DRONE_MESH_MSG_FS_FLAG_QUERY:
+          flags = DRONE_MESH_MSG_FS_FLAG_SUCCESS;
+          break;
+
+        case DRONE_MESH_MSG_FS_FLAG_SAVE:
+          Log.noticeln("[DLM.rT] Save");
+          flags = _fs->saveUpload() ? DRONE_MESH_MSG_FS_FLAG_SUCCESS : DRONE_MESH_MSG_FS_FLAG_ERROR;
+          break;
+
+        case DRONE_MESH_MSG_FS_FLAG_CANCEL:
+          Log.noticeln("[DLM.rT] Cancel");
+          _fs->cancelUpload();
+          flags = DRONE_MESH_MSG_FS_FLAG_SUCCESS;
+          break;
       }
+      status = _fs->getUploadState();
+      Log.noticeln("[DLM.rT] Status: %u", status);
 
-      generateFSResizeResponse(interface, header->srcNode, header->txNode, entry, newSize);
+      generateFSManageResponse(interface, header->srcNode, header->txNode, flags, status);
 
     } else {
       hopAlong(buffer);
@@ -1308,7 +1449,7 @@ void DroneLinkManager::receiveRouterResponse(NetworkInterfaceModule *interface, 
 void DroneLinkManager::receiveLinkCheckRequest(NetworkInterfaceModule *interface, uint8_t *buffer, uint8_t metric) {
   DRONE_MESH_MSG_HEADER *header = (DRONE_MESH_MSG_HEADER*)buffer;
 
-  Log.noticeln("[DLM.rT] Link Check request from %u to %u", header->srcNode, header->destNode);
+  //Log.noticeln("[DLM.rT] Link Check request from %u to %u", header->srcNode, header->destNode);
 
   // ignore if we're not the next node
   if (header->nextNode == _node) {
@@ -1326,7 +1467,7 @@ void DroneLinkManager::receiveLinkCheckRequest(NetworkInterfaceModule *interface
 void DroneLinkManager::hopAlong(uint8_t *buffer) {
   DRONE_MESH_MSG_HEADER *header = (DRONE_MESH_MSG_HEADER*)buffer;
 
-  Log.noticeln("[DLM.hA] %u --> %u", header->srcNode, header->destNode);
+  //] %u --> %u", header->srcNode, header->destNode);
 
   // check if we are the nextNode... otherwise ignore it
   if (header->nextNode == _node) {
@@ -1364,7 +1505,7 @@ void DroneLinkManager::generateResponse(uint8_t *buffer, uint8_t newType) {
 
   DRONE_MESH_MSG_HEADER *header = (DRONE_MESH_MSG_HEADER*)buffer;
 
-  Log.noticeln("[DLM.gR] Responding %u --> %u", header->destNode, header->srcNode);
+  //Log.noticeln("[DLM.gR] Responding %u --> %u", header->destNode, header->srcNode);
 
   // flip src and dest
   uint8_t oldSrc = header->srcNode;
@@ -1475,17 +1616,19 @@ DRONE_MESH_MSG_BUFFER* DroneLinkManager::getTransmitBuffer(NetworkInterfaceModul
     _txQueue.add(buffer);
   }
 
-  // failing that, lets see if there's one of lower priority we can repurpose
+  // failing that, lets see if there's one of lower priority we can repurpose - find the lowest priority to kick
   if (!buffer) {
+    uint8_t lowestPriority = priority;
     for (uint8_t i=0; i<_txQueue.size(); i++) {
       DRONE_MESH_MSG_BUFFER *b = _txQueue.get(i);
       // if not an Ack and lower priority
       if (getDroneMeshMsgPriority(b->data) < priority &&
+          getDroneMeshMsgPriority(b->data) < lowestPriority &&
           !isDroneMeshMsgAck(b->data)) {
         buffer = b;
+        lowestPriority = priority;
         _kicked++;
         isKicked = true;
-        break;
       }
     }
   }
@@ -1574,12 +1717,13 @@ void DroneLinkManager::processTransmitQueue() {
   for (uint8_t i=0; i<_txQueue.size(); i++) {
     DRONE_MESH_MSG_BUFFER *b = _txQueue.get(i);
 
+    // update stats on nextNode
+    DRONE_LINK_NODE_INFO* nextNodeInfo = getNodeInfo(getDroneMeshMsgNextNode(b->data), false);
+
     // check age of packet
     if (b->state > DRONE_MESH_MSG_BUFFER_STATE_EMPTY &&
         loopTime > b->created + DRONE_LINK_MANAGER_MAX_RETRY_INTERVAL) {
 
-      // update stats on nextNode
-      DRONE_LINK_NODE_INFO* nextNodeInfo = getNodeInfo(getDroneMeshMsgNextNode(b->data), false);
       if (nextNodeInfo) {
         nextNodeInfo->avgAttempts = (nextNodeInfo->avgAttempts * (DRONE_LINK_MANAGER_AVG_SAMPLES-1) + b->attempts) / DRONE_LINK_MANAGER_AVG_SAMPLES;
         nextNodeInfo->givenUp++;
@@ -1587,13 +1731,21 @@ void DroneLinkManager::processTransmitQueue() {
 
       // give up and release the buffer
       b->state = DRONE_MESH_MSG_BUFFER_STATE_EMPTY;
+      b->attempts = 0;
     }
 
     // check for packets ready to send
     if (b->state == DRONE_MESH_MSG_BUFFER_STATE_READY) {
 
+      DRONE_LINK_TRANSPORT_ADDRESS transportAddress;
+      if (nextNodeInfo) {
+        transportAddress = nextNodeInfo->transportAddress;
+      } else {
+        transportAddress.ipAddress[0] = 0;
+      }
+
       if (!sentAPacket &&
-          b->interface->sendPacket(b->data)) {
+          b->interface->sendPacket(b->data, transportAddress)) {
         _packetsSent++;
 
         // if this is guaranteed, then flag to wait for a reply
@@ -1604,7 +1756,6 @@ void DroneLinkManager::processTransmitQueue() {
           // otherwise set to empty
           b->state = DRONE_MESH_MSG_BUFFER_STATE_EMPTY;
           // update stats
-          DRONE_LINK_NODE_INFO* nextNodeInfo = getNodeInfo(getDroneMeshMsgNextNode(b->data), false);
           if (nextNodeInfo) {
             nextNodeInfo->avgTxTime = (nextNodeInfo->avgTxTime * (DRONE_LINK_MANAGER_AVG_SAMPLES-1) + (loopTime - b->created)) / DRONE_LINK_MANAGER_AVG_SAMPLES;
           }
@@ -1619,10 +1770,11 @@ void DroneLinkManager::processTransmitQueue() {
 
       // get avgAck time for this link to compare against
       uint32_t t = DRONE_LINK_MANAGER_MAX_ACK_INTERVAL;
-      DRONE_LINK_NODE_INFO* nextNodeInfo = getNodeInfo(getDroneMeshMsgNextNode(b->data), false);
       if (nextNodeInfo) {
         // use avgAckTime + 10% to reduce duplicate packet transmission
         t = min(t, (uint32_t)(1.1 * nextNodeInfo->avgAckTime));
+        // ensure wait time is at least xx ms
+        t = max(t, (uint32_t)DRONE_LINK_MANAGER_MIN_ACK_INTERVAL);
       }
 
       if (loopTime > b->sent + t) {
@@ -1770,7 +1922,7 @@ boolean DroneLinkManager::generateSubscriptionRequest(NetworkInterfaceModule *in
   //if (!getInterfaceState()) return false;
 
   // request a new buffer in the transmit queue
-  DRONE_MESH_MSG_BUFFER *buffer = getTransmitBuffer(interface, DRONE_MESH_MSG_PRIORITY_MEDIUM);
+  DRONE_MESH_MSG_BUFFER *buffer = getTransmitBuffer(interface, DRONE_MESH_MSG_PRIORITY_CRITICAL);
 
   // if successful
   if (buffer) {
@@ -1784,7 +1936,7 @@ boolean DroneLinkManager::generateSubscriptionRequest(NetworkInterfaceModule *in
     subBuffer->header.destNode = dest;
     subBuffer->header.seq = _gSeq++;
     //subBuffer->header.type = DRONE_MESH_MSG_TYPE_SUBSCRIPTION_REQUEST;
-    setDroneMeshMsgPriorityAndPayloadType(buffer->data, DRONE_MESH_MSG_PRIORITY_MEDIUM, DRONE_MESH_MSG_TYPE_SUBSCRIPTION_REQUEST);
+    setDroneMeshMsgPriorityAndPayloadType(buffer->data, DRONE_MESH_MSG_PRIORITY_CRITICAL, DRONE_MESH_MSG_TYPE_SUBSCRIPTION_REQUEST);
     subBuffer->channel = channel;
     subBuffer->param = param;
 
@@ -1942,21 +2094,35 @@ boolean DroneLinkManager::sendDroneLinkMessage(NetworkInterfaceModule *interface
   uint8_t payloadSize = msg->totalSize();
   uint8_t totalSize = payloadSize + sizeof(DRONE_MESH_MSG_HEADER) + 1;
 
+  uint8_t priority = msg->priority();
+  uint32_t timeout = 1000;
+  // set rate limit timeouts based on packet priority
+  switch (priority) {
+    case DRONE_LINK_MSG_PRIORITY_CRITICAL: timeout = 500; break;
+    case DRONE_LINK_MSG_PRIORITY_HIGH:     timeout = 2000; break;
+    case DRONE_LINK_MSG_PRIORITY_MEDIUM:   timeout = 4000; break;
+    case DRONE_LINK_MSG_PRIORITY_LOW:      timeout = 8000; break;
+  }
+
   // ignore anything where the source node is not this node
-  if (msg->source() != _node) return true;
+  if (msg->source() != _node) {
+    return true;
+  }
 
   // param filter check only relevant to local address space
   // and can be ignored for name responses
   if (msg->node() == _node && msg->type() < DRONE_LINK_MSG_TYPE_NAME) {
     // calc hashmap index
-    int index = (msg->_msg.channel << 8) | getDroneLinkMsgParam(msg->_msg.paramPriority);
+    uint32_t index = (destNode << 16) | (msg->_msg.channel << 8) | getDroneLinkMsgParam(msg->_msg.paramPriority);
 
     // see if we already have an entry in the hasmap
     struct DRONE_LINK_PARAM_FILTER *pf;
     HASH_FIND_INT(_paramFilter, &index, pf);
     if (pf) {
       // check last tx time
-      if (millis() <= pf->lastTxTime + 1000) return true; // abandon packet
+      if (millis() <= pf->lastTxTime + timeout) {
+        return true; // abandon packet
+      }
 
       // update lastTxTime
       pf->lastTxTime = millis();
@@ -1977,7 +2143,7 @@ boolean DroneLinkManager::sendDroneLinkMessage(NetworkInterfaceModule *interface
   for (uint8_t i=0; i<_txQueue.size(); i++) {
     DRONE_MESH_MSG_BUFFER *b = _txQueue.get(i);
     // check for packets ready to send
-    if (b->state > DRONE_MESH_MSG_BUFFER_STATE_EMPTY) {
+    if (b->state == DRONE_MESH_MSG_BUFFER_STATE_READY) {
       if (getDroneMeshMsgPayloadType(b->data) == DRONE_MESH_MSG_TYPE_DRONELINKMSG) {
         // compare signatures and destNodes
         uint8_t offset = sizeof(DRONE_MESH_MSG_HEADER);
@@ -2137,7 +2303,7 @@ boolean DroneLinkManager::generateFSReadResponse(NetworkInterfaceModule *interfa
 }
 
 
-boolean DroneLinkManager::generateFSWriteResponse(NetworkInterfaceModule *interface, uint8_t dest, uint8_t nextHop, DroneFSEntry* entry, uint32_t offset, uint8_t sizeWritten) {
+boolean DroneLinkManager::generateFSWriteResponse(NetworkInterfaceModule *interface, uint8_t dest, uint8_t nextHop, uint8_t flags, uint32_t offset) {
 
     // request a new buffer in the transmit queue
     DRONE_MESH_MSG_BUFFER *buffer = getTransmitBuffer(interface, DRONE_MESH_MSG_PRIORITY_HIGH);
@@ -2156,16 +2322,8 @@ boolean DroneLinkManager::generateFSWriteResponse(NetworkInterfaceModule *interf
       setDroneMeshMsgPriorityAndPayloadType(buffer->data, DRONE_MESH_MSG_PRIORITY_HIGH, DRONE_MESH_MSG_TYPE_FS_WRITE_RESPONSE);
 
       // populate info
-      if (entry) {
-        rBuffer->id = entry->getId();
-        rBuffer->offset = offset;
-        rBuffer->size = sizeWritten;
-
-      } else {
-        rBuffer->id = 0;
-        rBuffer->offset = 0;
-        rBuffer->size = 0;
-      }
+      rBuffer->offset = offset;
+      rBuffer->flags = flags;
 
       // calc CRC
       rBuffer->crc = _CRC8.smbus((uint8_t*)rBuffer, sizeof(DRONE_MESH_MSG_FS_WRITE_RESPONSE)-1);
@@ -2177,37 +2335,30 @@ boolean DroneLinkManager::generateFSWriteResponse(NetworkInterfaceModule *interf
 }
 
 
-boolean DroneLinkManager::generateFSResizeResponse(NetworkInterfaceModule *interface, uint8_t dest, uint8_t nextHop, DroneFSEntry* entry, uint32_t newSize) {
+boolean DroneLinkManager::generateFSManageResponse(NetworkInterfaceModule *interface, uint8_t dest, uint8_t nextHop, uint8_t flags, uint8_t status) {
 
   // request a new buffer in the transmit queue
   DRONE_MESH_MSG_BUFFER *buffer = getTransmitBuffer(interface, DRONE_MESH_MSG_PRIORITY_HIGH);
 
   // if successful
   if (buffer) {
-    DRONE_MESH_MSG_FS_RESIZE_RESPONSE *rBuffer = (DRONE_MESH_MSG_FS_RESIZE_RESPONSE*)buffer->data;
+    DRONE_MESH_MSG_FS_MANAGE_RESPONSE *rBuffer = (DRONE_MESH_MSG_FS_MANAGE_RESPONSE*)buffer->data;
 
     // populate packet
-    rBuffer->header.typeGuaranteeSize = DRONE_MESH_MSG_SEND | DRONE_MESH_MSG_GUARANTEED | (sizeof(DRONE_MESH_MSG_FS_RESIZE_RESPONSE) - sizeof(DRONE_MESH_MSG_HEADER) - 2) ;
+    rBuffer->header.typeGuaranteeSize = DRONE_MESH_MSG_SEND | DRONE_MESH_MSG_GUARANTEED | (sizeof(DRONE_MESH_MSG_FS_MANAGE_RESPONSE) - sizeof(DRONE_MESH_MSG_HEADER) - 2) ;
     rBuffer->header.txNode = node();;
     rBuffer->header.srcNode = node();
     rBuffer->header.nextNode = nextHop;
     rBuffer->header.destNode = dest;
     rBuffer->header.seq = _gSeq++;
-    setDroneMeshMsgPriorityAndPayloadType(buffer->data, DRONE_MESH_MSG_PRIORITY_HIGH, DRONE_MESH_MSG_TYPE_FS_RESIZE_RESPONSE);
+    setDroneMeshMsgPriorityAndPayloadType(buffer->data, DRONE_MESH_MSG_PRIORITY_HIGH, DRONE_MESH_MSG_TYPE_FS_MANAGE_RESPONSE);
 
     // populate info
-    // populate info
-    if (entry) {
-      rBuffer->size = newSize;
-      entry->getPath((char*)rBuffer->path, DRONE_MESH_MSG_FS_MAX_PATH_SIZE-1);
-
-    } else {
-      rBuffer->size = 0;
-      rBuffer->path[0] = 0;
-    }
+    rBuffer->flags = flags;
+    rBuffer->status = status;
 
     // calc CRC
-    rBuffer->crc = _CRC8.smbus((uint8_t*)rBuffer, sizeof(DRONE_MESH_MSG_FS_RESIZE_RESPONSE)-1);
+    rBuffer->crc = _CRC8.smbus((uint8_t*)rBuffer, sizeof(DRONE_MESH_MSG_FS_MANAGE_RESPONSE)-1);
 
     return true;
   }

@@ -96,3 +96,62 @@ GeographicPoint calculateDestinationFromDistanceAndBearing(GeographicPoint start
   p.lon = fmod((p.lon + 540),360) - 180;
   return p;
 }
+
+GeographicPoint calculateDestinationFromDistanceAndBearing2(float lon1, float lat1, float d, float bearing) {
+  GeographicPoint p;
+  float R = RADIUS_OF_EARTH; // metres
+  float lat1r = lat1 * PI/180; // φ, λ in radians
+  float lon1r = lon1 * PI/180;
+  float br = bearing * PI/180;
+
+  float a = sin(lat1r)*cos(d/R) + cos(lat1r)*sin(d/R)*cos(br);
+  p.lat = asin( a );
+  p.lon = lon1r + atan2(
+    sin(br)*sin(d/R)*cos(lat1r),
+    cos(d/R) - sin(lat1r)*a
+  );
+  // convert to degrees
+  p.lat = p.lat * 180/PI;
+  p.lon = p.lon * 180/PI;
+  // normalise lon
+  p.lon = fmod((p.lon + 540),360) - 180;
+  return p;
+}
+
+
+CrosstrackInfo calculateCrosstrackInfo(
+   double lon1, double lat1, 
+   double lon2, double lat2, 
+   double lon3, double lat3
+) {
+  // calculate cross-track distance and along distance from p3 to line between p1 and p2
+  // in meters
+
+  CrosstrackInfo res;
+  res.across = 0;
+  res.along = 0;  
+
+  if (lon1 == 0 ||
+      lon2 == 0 ||
+      lon3 == 0) return res;
+
+
+  double y = sin(lon3 - lon1) * cos(lat3);
+  double x = cos(lat1) * sin(lat3) - sin(lat1) * cos(lat3) * cos(lat3 - lat1);
+  double bearing13 = radiansToDegrees(atan2(y, x));
+  bearing13 = fmod((bearing13 + 360), 360);
+
+  double y2 = sin(lon2 - lon1) * cos(lat2);
+  double x2 = cos(lat1) * sin(lat2) - sin(lat1) * cos(lat2) * cos(lat2 - lat1);
+  double bearing12 = radiansToDegrees(atan2(y2, x2));
+  bearing12 = fmod((bearing12 + 360), 360);
+
+  // get distance from p1 to p3
+  double distanceACbyE = calculateDistanceBetweenCoordinates(lon3, lat3, lon1, lat1) / RADIUS_OF_EARTH;
+
+  res.across = -(asin(sin(distanceACbyE)*sin(degreesToRadians(bearing13)-degreesToRadians(bearing12))) * RADIUS_OF_EARTH);
+
+  res.along = acos(cos(distanceACbyE)/cos(res.across/RADIUS_OF_EARTH)) * RADIUS_OF_EARTH;
+
+  return res;
+}

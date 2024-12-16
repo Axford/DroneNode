@@ -136,43 +136,6 @@ ProaModule::ProaModule(uint8_t id, DroneSystem* ds):
 }
 
 
-DEM_NAMESPACE* ProaModule::registerNamespace(DroneExecutionManager *dem) {
-  // namespace for module type
-  return dem->createNamespace(PROA_STR_PROA,0,true);
-}
-
-void ProaModule::registerParams(DEM_NAMESPACE* ns, DroneExecutionManager *dem) {
-  using std::placeholders::_1;
-  using std::placeholders::_2;
-  using std::placeholders::_3;
-  using std::placeholders::_4;
-
-  // writable mgmt params
-  DEMCommandHandler ph = std::bind(&DroneExecutionManager::mod_param, dem, _1, _2, _3, _4);
-  DEMCommandHandler pha = std::bind(&DroneExecutionManager::mod_subAddr, dem, _1, _2, _3, _4);
-
-  dem->registerCommand(ns, STRING_TARGET, DRONE_LINK_MSG_TYPE_FLOAT, ph);
-  dem->registerCommand(ns, PSTR("$target"), DRONE_LINK_MSG_TYPE_ADDR, pha);
-
-  dem->registerCommand(ns, STRING_HEADING, DRONE_LINK_MSG_TYPE_FLOAT, ph);
-  dem->registerCommand(ns, PSTR("$heading"), DRONE_LINK_MSG_TYPE_ADDR, pha);
-
-  dem->registerCommand(ns, STRING_WIND, DRONE_LINK_MSG_TYPE_FLOAT, ph);
-  dem->registerCommand(ns, PSTR("$wind"), DRONE_LINK_MSG_TYPE_ADDR, pha);
-
-  dem->registerCommand(ns, STRING_CROSSTRACK, DRONE_LINK_MSG_TYPE_FLOAT, ph);
-  dem->registerCommand(ns, PSTR("$crosstrack"), DRONE_LINK_MSG_TYPE_ADDR, pha);
-
-  dem->registerCommand(ns, STRING_COW, DRONE_LINK_MSG_TYPE_FLOAT, ph);
-  dem->registerCommand(ns, PSTR("$COW"), DRONE_LINK_MSG_TYPE_ADDR, pha);
-
-  dem->registerCommand(ns, STRING_POLAR, DRONE_LINK_MSG_TYPE_UINT8_T, ph);
-  dem->registerCommand(ns, STRING_PID, DRONE_LINK_MSG_TYPE_FLOAT, ph);
-  dem->registerCommand(ns, STRING_AOA, DRONE_LINK_MSG_TYPE_FLOAT, ph);
-  dem->registerCommand(ns, STRING_MODE, DRONE_LINK_MSG_TYPE_UINT8_T, ph);
-}
-
-
 uint8_t ProaModule::polarIndexForAngle(float ang) {
   //float w = _subs[PROA_SUB_WIND_E].param.data.f[0];
 

@@ -11,32 +11,28 @@ def get_build_flag_value(flag_name):
     return defines.get(flag_name)
 
 
-def after_build(source, target, env):
-    print("after_build")
+def after_upload(source, target, env):
+    print("after_upload")
 
-
-
-def before_upload(source, target, env):
-    print("before_upload")
-
-    # copy firmware bin file to server
-    shutil.copy2('.pio/build/esp32doit-devkit-v1/firmware.bin', '../DroneLinkServer/public/firmware/firmware.bin')
+    print("Copy firmware bin file to server directory")
+    try:
+        shutil.copy2('.pio/build/esp32doit-devkit-v1/firmware.bin', '../DroneLinkServer/public/firmware/firmware.bin')
+    except Exception as inst:
+        print("Error copying file")
+        print(inst)
 
     # save git commit marker to file for server to use
+    print("Get GIT Commit marker to save to server for reference...")
     git_commit = get_build_flag_value("GIT_COMMIT")
     # strip double quotes
     git_commit = git_commit.replace('"', '')
+
+    print(git_commit)
+
     f = open("../DroneLinkServer/public/firmware/firmware.ver", "w")
     f.write(git_commit)
     f.close()
 
 
-def after_upload(source, target, env):
-    print("after_upload")
-
-
-
-
-env.AddPreAction("upload", before_upload)
 env.AddPostAction("upload", after_upload)
-env.AddPostAction("buildprog", after_build)
+env.AddPostAction("buildprog", after_upload)

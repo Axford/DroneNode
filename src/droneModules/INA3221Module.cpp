@@ -4,11 +4,14 @@
 #include "strings.h"
 #include "OLEDTomThumbFont.h"
 
+// @type INA3221
+
 INA3221Module::INA3221Module(uint8_t id, DroneSystem* ds):
   I2CBaseModule ( id, ds )
  {
    setTypeName(FPSTR(INA3221_STR_INA3221));
    _sensor = NULL;
+   _lastLoopTime = 0;
    //_params[I2CBASE_PARAM_ADDR_E].data.uint8[0] = INA3221_I2C_ADDRESS;
 
    // pubs
@@ -59,6 +62,7 @@ INA3221Module::INA3221Module(uint8_t id, DroneSystem* ds):
    param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, INA3221_PARAM_CELLS);
    setParamName(FPSTR(STRING_CELLS), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_UINT8_T, 3);
+   // @default cells=3,3,3
    param->data.uint8[0] = 3;
    param->data.uint8[1] = 3;
    param->data.uint8[2] = 3;
@@ -67,34 +71,31 @@ INA3221Module::INA3221Module(uint8_t id, DroneSystem* ds):
    param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, INA3221_PARAM_THRESHOLD);
    setParamName(FPSTR(STRING_THRESHOLD), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_FLOAT, 12);
+   // @default threshold=11.2,11.2,11.2
    param->data.f[0] = 11.2;
    param->data.f[1] = 11.2;
    param->data.f[2] = 11.2;
+
+   param = &_params[INA3221_PARAM_SHUNT_E];
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, INA3221_PARAM_SHUNT);
+   setParamName(FPSTR(STRING_SHUNT), param);
+   param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_FLOAT, 12);
+   // @default shunt=100,100,100
+   param->data.f[0] = 100;
+   param->data.f[1] = 100;
+   param->data.f[2] = 100;
+
+   param = &_params[INA3221_PARAM_USAGE_E];
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, INA3221_PARAM_USAGE);
+   setParamName(FPSTR(STRING_USAGE), param);
+   param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 12);
+   param->data.f[0] = 0;
+   param->data.f[1] = 0;
+   param->data.f[2] = 0;
 }
 
 INA3221Module::~INA3221Module() {
   if (_sensor) delete _sensor;
-}
-
-
-DEM_NAMESPACE* INA3221Module::registerNamespace(DroneExecutionManager *dem) {
-  // namespace for module type
-  return dem->createNamespace(INA3221_STR_INA3221,0,true);
-}
-
-void INA3221Module::registerParams(DEM_NAMESPACE* ns, DroneExecutionManager *dem) {
-  I2CBaseModule::registerParams(ns, dem);
-
-  using std::placeholders::_1;
-  using std::placeholders::_2;
-  using std::placeholders::_3;
-  using std::placeholders::_4;
-
-  // writable mgmt params
-  DEMCommandHandler ph = std::bind(&DroneExecutionManager::mod_param, dem, _1, _2, _3, _4);
-
-  dem->registerCommand(ns, STRING_THRESHOLD, DRONE_LINK_MSG_TYPE_FLOAT, ph);
-  dem->registerCommand(ns, STRING_CELLS, DRONE_LINK_MSG_TYPE_UINT8_T, ph);
 }
 
 
@@ -124,23 +125,37 @@ void INA3221Module::setup() {
     _sensor->reset();
 
     // Set shunt resistors to 100 mOhm for all channels
-    _sensor->setShuntRes(100, 100, 100);
+    _sensor->setShuntRes(_params[INA3221_PARAM_SHUNT_E].data.f[0], _params[INA3221_PARAM_SHUNT_E].data.f[1], _params[INA3221_PARAM_SHUNT_E].data.f[2]);
   }
+  _lastLoopTime = millis();
 }
 
 
 void INA3221Module::loop() {
   I2CBaseModule::loop();
 
+  unsigned long loopTime = millis();
+  float dt = (loopTime - _lastLoopTime) / 1000.0; // in seconds
+  if (dt < 0.001) dt = 0.001;
+  if (dt > 100) dt = 1;  // in case of overflow
+  _lastLoopTime = loopTime;
+
   DroneWire::selectChannel(_params[I2CBASE_PARAM_BUS_E].data.uint8[0]);
 
   // get sensor values
-  float current[3], voltage[3];
+  float current[3], voltage[3], usage[3];
 
   current[0] = _sensor->getCurrent(INA3221_CH1);
   current[1] = _sensor->getCurrent(INA3221_CH2);
   current[2] = _sensor->getCurrent(INA3221_CH3);
   updateAndPublishParam(&_params[INA3221_PARAM_CURRENT_E], (uint8_t*)&current, sizeof(current));
+
+
+  for (uint8_t i=0; i<3; i++) {
+    usage[i] = _params[INA3221_PARAM_USAGE_E].data.f[i] + (current[i] * dt/3600);
+  }
+  updateAndPublishParam(&_params[INA3221_PARAM_USAGE_E], (uint8_t*)&usage, sizeof(usage));
+
 
   voltage[0] = _sensor->getVoltage(INA3221_CH1);
   voltage[1] = _sensor->getVoltage(INA3221_CH2);

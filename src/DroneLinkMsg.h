@@ -78,6 +78,7 @@ Strings of up to 16 characters can be sent as char
 uint8_t setDroneLinkMsgPriorityParam(uint8_t pri, uint8_t param);
 
 uint8_t getDroneLinkMsgParam(uint8_t paramPriority);
+uint8_t getDroneLinkMsgPriority(uint8_t paramPriority);
 
 class DroneLinkMsg
 {
@@ -135,6 +136,10 @@ public:
     static void printPayload(DRONE_LINK_PAYLOAD *payload, uint8_t paramTypeLength);
 
     static void printPayload(DRONE_LINK_PAYLOAD *payload, uint8_t paramTypeLength, AsyncResponseStream *response);
+
+    static void printFloatAsJson(float f, AsyncResponseStream *response);
+
+    static void printPayloadAsJson(DRONE_LINK_PAYLOAD *payload, uint8_t paramTypeLength, AsyncResponseStream *response);
 
     boolean sameAddress(DRONE_LINK_ADDR *addr);
 
