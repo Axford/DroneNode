@@ -25,3 +25,11 @@ Startup behaviour is configured per DroneNode, as confirmed by the user on 2026-
 See [target architecture](../../DroneLinkDatastore/docs/architecture/target.md) and [ADR-0003](../../DroneLinkDatastore/docs/decisions/0003-repository-boundaries.md) for the accepted target allocation and [SEP](../../DroneLinkDatastore/docs/planning/repository-separation.md) for review/extraction gates. No runtime relocation is implemented.
 
 Accepted on 2026-11-05: this repository owns firmware, hardware interfaces and autonomous execution. This is target ownership; the observed source described above has not yet moved.
+
+## Workbench integration boundary
+
+The accepted workbench baseline uses a lightweight local Server gateway; direct browser-to-node/WebSocket firmware work is deferred. Reuse existing UDP/serial routing, HTTP diagnostics/file operations and explicit restart. Uploading a config/supporting file does not mean the startup-loaded runtime configuration has changed; keep Upload and Restart separate. Node files are the authoritative editing starting point, while cloud backups are optional by hosting context and never auto-deploy. Preserve/verify these existing node paths during initial cloud changes; modern shared-Client workbench delivery follows that release. No firmware change is implemented by this documentation.
+
+## Iridium command target — later S1
+
+Later S1 satellite command intent is node-initiated polling/retrieval from the Iridium store-and-forward service, followed by unpacking/executing commands. The cloud Server submits to the service without a separate satellite delivery queue/retry loop. Exact modem/service APIs and packing remain implementation work.
