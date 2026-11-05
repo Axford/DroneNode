@@ -253,7 +253,7 @@ def export_firmware(environment, metadata_path, output):
         # environment variables. The snapshot never gets a Server sibling.
         subprocess.run([pio, 'run', '-e', environment], cwd=snapshot, check=True)
         image = snapshot / '.pio/build' / environment / 'firmware.bin'
-        resolved = json.loads(subprocess.check_output([pio, 'pkg', 'list', '--json-output'], cwd=snapshot))
+        resolved = subprocess.check_output([pio, 'pkg', 'list', '-e', environment, '--verbose'], cwd=snapshot).decode().strip()
         config = json.loads(subprocess.check_output([pio, 'project', 'config', '--json-output'], cwd=snapshot))
         tools = subprocess.check_output([pio, '--version']).decode().strip()
         data = image.read_bytes()
