@@ -10,5 +10,8 @@ See this article for more information: https://robotboatpioneers.blogspot.com/20
 
 ## Compiling ##
 
-Requires Platform.io.  Tested on Mac, Windows and Linux.  Intended for an ESP32 DevKit v1 in combination with a DroneLink motherboard.  
+Requires Platform.io.  Tested on Mac, Windows and Linux.  Intended for an ESP32 DevKit v1 in combination with a DroneLink motherboard.
 
+## Documentation
+
+Start with the [repository documentation](docs/README.md) for architecture, setup and links to the shared contracts, system summary and roadmap.
