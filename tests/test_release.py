@@ -6,6 +6,9 @@ import json
 from pathlib import Path
 import tarfile
 import tempfile
+import subprocess
+import os
+import sys
 import unittest
 from unittest.mock import patch
 
@@ -38,7 +41,7 @@ class ReleaseTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp:
             p = Path(temp) / 'module.h'
             with patch.object(release, 'ROOT', Path(temp)), patch.object(release, 'annotation_files', return_value=[p]):
-                for text in ['@type Test\n@sub 12;13;f;1;missing', '@type Test\n@pub nope;u8;1;w;x;desc', '@type Test\n@guide >>>\nunfinished', '@type Test\n@inherits Test', '@type ../escape', '@type Test\n@pub 1;f;1;w;x;desc\n@pub 1;f;1;w;y;desc']:
+                for text in ['@type Test\n@sub 12;13;f;1;missing', '@type Test\n@pub nope;u8;1;w;x;desc', '@type Test\n@pub 1;unknown;1;w;x;desc', '@type Test\n@guide >>>\nunfinished', '@type Test\n@inherits Test', '@type ../escape', '@type Test\n@pub 1;f;1;w;x;desc\n@pub 1;f;1;w;y;desc']:
                     p.write_text(text)
                     with self.subTest(text=text), self.assertRaises(ValueError): release.metadata()
                 p.write_text('@type Test\n@guide >>>\n<h2>Guide</h2>\n<<<\n@pub 1;u8;1;r;value;Description')
@@ -75,6 +78,59 @@ class ReleaseTests(unittest.TestCase):
     def test_dirty_source_cannot_export(self):
         with patch.object(release, 'git', return_value=' M src/module.h'):
             with self.assertRaisesRegex(ValueError, 'clean committed'): release.export_metadata('/tmp/not-published')
+
+    def source_repository(self, directory):
+        root = Path(directory) / 'source'
+        (root / 'tools').mkdir(parents=True)
+        (root / 'src/droneModules').mkdir(parents=True)
+        (root / 'tools/release.py').write_bytes((ROOT / 'tools/release.py').read_bytes())
+        (root / 'src/DroneModule.h').write_text('@type Drone\n@pub 1;u8;1;w;status;Status')
+        (root / '.gitignore').write_text('Injected.h\n.pio/\n')
+        subprocess.run(['git', 'init', '--quiet', str(root)], check=True)
+        subprocess.run(['git', 'add', '.'], cwd=root, check=True)
+        subprocess.run(['git', '-c', 'user.name=Test', '-c', 'user.email=test@example.invalid', 'commit', '--quiet', '-m', 'Committed synthetic producer'], cwd=root, check=True)
+        return root
+
+    def test_committed_tree_excludes_ignored_source_and_rejects_hidden_tracked_edits(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = self.source_repository(temp)
+            (root / 'src/droneModules/Injected.h').write_text('@type Injected')
+            command = [sys.executable, 'tools/release.py', 'export-metadata', '--output-dir', str(Path(temp) / 'exports')]
+            output = subprocess.check_output(command, cwd=root).decode().strip()
+            self.assertEqual(set(json.loads(release.verify_archive(output)[1]['moduleInfo.json'])), {'Drone'})
+            subprocess.run(['git', 'update-index', '--assume-unchanged', 'src/DroneModule.h'], cwd=root, check=True)
+            (root / 'src/DroneModule.h').write_text('@type Changed')
+            result = subprocess.run(command, cwd=root, capture_output=True)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn(b'differs from committed', result.stderr)
+
+    def test_measured_board_and_actual_build_marker(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = self.source_repository(temp)
+            metadata = subprocess.check_output([sys.executable, 'tools/release.py', 'export-metadata', '--output-dir', str(Path(temp) / 'exports')], cwd=root).decode().strip()
+            fake = Path(temp) / 'pio'
+            fake.write_text('#!' + sys.executable + """
+import sys,os,json,subprocess
+from pathlib import Path
+if sys.argv[1:3] == ['project','config']:
+ subprocess.run(['git','config','core.abbrev','12'],check=True)
+ print(json.dumps([['env:esp32doit-devkit-v1',[['board',os.environ['TEST_BOARD']]]]]))
+elif sys.argv[1] == 'run':
+ target=Path('.pio/build/esp32doit-devkit-v1');target.mkdir(parents=True);(target/'firmware.bin').write_bytes(b'synthetic image')
+else: print('Synthetic resolved tool versions')
+""")
+            fake.chmod(0o755)
+            command = [sys.executable, 'tools/release.py', 'export-firmware', '--metadata', metadata, '--environment', 'esp32doit-devkit-v1', '--output-dir', str(Path(temp) / 'exports')]
+            env = {**os.environ, 'DRONELINK_PIO': str(fake), 'TEST_BOARD': 'unsupported-board'}
+            result = subprocess.run(command, cwd=root, env=env, capture_output=True)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn(b'Unsupported effective board', result.stderr)
+            env['TEST_BOARD'] = 'esp32doit-devkit-v1'
+            output = subprocess.check_output(command, cwd=root, env=env).decode().strip()
+            manifest, payload = release.verify_archive(output)
+            self.assertEqual(manifest['board'], 'esp32doit-devkit-v1')
+            self.assertEqual(len(manifest['buildMarker']), 12)
+            self.assertEqual(payload['firmware.ver'].decode(), manifest['buildMarker'])
 
     def test_build_hook_has_no_upload_or_build_publication_action(self):
         actions = []

@@ -48,9 +48,38 @@ def hashes(paths):
     return {p.relative_to(ROOT).as_posix(): source_digest(p) for p in sorted(paths)}
 
 
+def tree_entries(revision):
+    entries = {}
+    for row in git('ls-tree', '-rz', revision).split('\0'):
+        if row:
+            header, name = row.split('\t', 1)
+            mode, kind, checksum = header.split()
+            if kind != 'blob':
+                raise ValueError(f'Unsupported source tree entry: {name}')
+            entries[name] = (mode, checksum)
+    return entries
+
+
+def assert_committed(revision, paths):
+    entries = tree_entries(revision)
+    for p in paths:
+        name = p.relative_to(ROOT).as_posix()
+        mode, expected = entries.get(name, ('', ''))
+        if p.is_symlink():
+            if not p.resolve().is_relative_to(ROOT):
+                raise ValueError(f'Source link escapes project: {name}')
+            raw = os.readlink(p).encode()
+        else:
+            raw = p.read_bytes()
+        actual = hashlib.sha1(b'blob ' + str(len(raw)).encode() + b'\0' + raw).hexdigest()
+        if actual != expected or p.is_symlink() != (mode == '120000'):
+            raise ValueError(f'Source differs from committed revision: {name}')
+
+
 def annotation_files():
-    return [ROOT / 'src/DroneModule.h', *sorted([*(ROOT / 'src/droneModules').glob('*.h'),
-            *(ROOT / 'src/droneModules').glob('*.cpp')])]
+    names = tree_entries(git('rev-parse', 'HEAD'))
+    modules = sorted(p for p in names if p.startswith('src/droneModules/') and p.count('/') == 2 and Path(p).suffix in ('.h', '.cpp'))
+    return [ROOT / 'src/DroneModule.h', *(ROOT / p for p in modules)]
 
 
 def metadata():
@@ -94,7 +123,7 @@ def metadata():
                         address, addr, typ, count, pname, description = parts
                         value = dict(address=int(address), addrAddress=int(addr), type=typ,
                                      numValues=int(count), name=pname, description=description)
-                    if not 0 <= value['address'] <= 255 or not 1 <= value['numValues'] <= 16 or not pname or not description or not typ:
+                    if not 0 <= value['address'] <= 255 or not 1 <= value['numValues'] <= 16 or not pname or not description or typ not in ('u8', 'u32', 'f', 'c', 'addr'):
                         raise ValueError('invalid address, count or empty required field')
                     if name == 'sub' and not 0 <= value['addrAddress'] <= 255:
                         raise ValueError('invalid subscription address')
@@ -133,7 +162,7 @@ def validate_catalog(catalog):
             raise ValueError(f"Invalid catalog entry: {kind}")
         for name in ('pub', 'sub'):
             entries = tags.get(name, [])
-            if not isinstance(entries, list) or any(not isinstance(e, dict) or not isinstance(e.get("address"), int) or not 0 <= e["address"] <= 255 or not isinstance(e.get("numValues"), int) or not 1 <= e["numValues"] <= 16 or not all(isinstance(e.get(f), str) and e[f] for f in ("name", "description", "type")) or (not isinstance(e.get("writeable"), bool) if name == "pub" else not isinstance(e.get("addrAddress"), int) or not 0 <= e["addrAddress"] <= 255) for e in entries):
+            if not isinstance(entries, list) or any(not isinstance(e, dict) or not isinstance(e.get("address"), int) or not 0 <= e["address"] <= 255 or not isinstance(e.get("numValues"), int) or not 1 <= e["numValues"] <= 16 or not all(isinstance(e.get(f), str) and e[f] for f in ("name", "description", "type")) or e["type"] not in ("u8", "u32", "f", "c", "addr") or (not isinstance(e.get("writeable"), bool) if name == "pub" else not isinstance(e.get("addrAddress"), int) or not 0 <= e["addrAddress"] <= 255) for e in entries):
                 raise ValueError(f"{kind}: malformed @{name}")
             if len({e['address'] for e in entries}) != len(entries) or len({e['name'] for e in entries}) != len(entries):
                 raise ValueError(f'{kind}: ambiguous duplicate @{name} address/name')
@@ -183,7 +212,7 @@ def verify_archive(path):
         raise ValueError('Payload file set/hash mismatch')
     if manifest['kind'] == 'metadata':
         validate_catalog(json.loads(files['moduleInfo.json']))
-    elif not HEX.fullmatch(manifest['metadataIdentity']) or manifest['environment'] != 'esp32doit-devkit-v1' or manifest['board'] != 'esp32doit-devkit-v1' or not files['firmware.bin'] or files['firmware.ver'].decode() != manifest['sourceRevision'][:7]:
+    elif not HEX.fullmatch(manifest['metadataIdentity']) or manifest['environment'] != 'esp32doit-devkit-v1' or manifest['board'] != 'esp32doit-devkit-v1' or not files['firmware.bin'] or not re.fullmatch(r'[0-9a-f]{4,40}', manifest['buildMarker']) or not manifest['sourceRevision'].startswith(manifest['buildMarker']) or files['firmware.ver'].decode() != manifest['buildMarker']:
         raise ValueError('Invalid firmware metadata/environment/version')
     return manifest, files
 
@@ -225,17 +254,22 @@ def publish(kind, revision, source_files, payload, output, **extra):
 
 def export_metadata(output):
     revision = clean_revision()
-    inputs = hashes([*annotation_files(), Path(__file__).resolve()])
+    paths = [*annotation_files(), Path(__file__).resolve()]
+    assert_committed(revision, paths)
+    inputs = hashes(paths)
     catalog = metadata()
     if revision != clean_revision() or inputs != hashes([*annotation_files(), Path(__file__).resolve()]):
         raise ValueError('Source changed during metadata export')
+    assert_committed(revision, paths)
     return publish('metadata', revision, inputs, {'moduleInfo.json': canonical(catalog)}, output)
 
 
 def export_firmware(environment, metadata_path, output):
     revision = clean_revision()
     manifest, payload = verify_archive(metadata_path)
-    expected_inputs = hashes([*annotation_files(), Path(__file__).resolve()])
+    metadata_paths = [*annotation_files(), Path(__file__).resolve()]
+    assert_committed(revision, metadata_paths)
+    expected_inputs = hashes(metadata_paths)
     if manifest['kind'] != 'metadata' or manifest['sourceRevision'] != revision or manifest['sourceFiles'] != expected_inputs or payload['moduleInfo.json'] != canonical(metadata()):
         raise ValueError('Metadata does not match current committed firmware source')
     if environment != 'esp32doit-devkit-v1':
@@ -243,6 +277,7 @@ def export_firmware(environment, metadata_path, output):
     # Fresh build from a frozen Git snapshot: no stale build image can be selected.
     tracked = git('ls-files', '-z').split('\0')
     paths = [ROOT / p for p in tracked if p and (p.startswith(('src/', 'lib/')) or p in ('platformio.ini', 'git_rev_macro.py', 'post_build.py', 'tools/release.py'))]
+    assert_committed(revision, paths)
     inputs = hashes(paths)
     with tempfile.TemporaryDirectory(prefix='dronelink-release-') as work:
         snapshot = Path(work) / 'DroneNode'
@@ -251,21 +286,27 @@ def export_firmware(environment, metadata_path, output):
         pio = os.environ.get('DRONELINK_PIO', 'pio')
         # Dependency caches can be configured explicitly via standard PlatformIO
         # environment variables. The snapshot never gets a Server sibling.
+        config = json.loads(subprocess.check_output([pio, 'project', 'config', '--json-output'], cwd=snapshot))
+        effective = dict(dict(config).get('env:' + environment, []))
+        board = effective.get('board')
+        if board != 'esp32doit-devkit-v1':
+            raise ValueError(f'Unsupported effective board: {board}')
+        marker = subprocess.check_output(['git', 'log', '-n1', '--format=%h'], cwd=snapshot).decode().strip()
         subprocess.run([pio, 'run', '-e', environment], cwd=snapshot, check=True)
         image = snapshot / '.pio/build' / environment / 'firmware.bin'
         resolved = subprocess.check_output([pio, 'pkg', 'list', '-e', environment, '--verbose'], cwd=snapshot).decode().strip()
-        config = json.loads(subprocess.check_output([pio, 'project', 'config', '--json-output'], cwd=snapshot))
         tools = subprocess.check_output([pio, '--version']).decode().strip()
         data = image.read_bytes()
         # A build may create ignored dependency files, but must not alter inputs.
         if hashes(paths) != inputs or clean_revision() != revision:
             raise ValueError('Source changed during firmware export')
+        assert_committed(revision, paths)
         for relative, checksum in inputs.items():
             if source_digest(snapshot / relative) != checksum:
                 raise ValueError(f'Build changed source input: {relative}')
         return publish('firmware', revision, inputs,
-                       {'firmware.bin': data, 'firmware.ver': revision[:7].encode()}, output,
-                       environment=environment, board=environment, metadataIdentity=manifest['identity'],
+                       {'firmware.bin': data, 'firmware.ver': marker.encode()}, output,
+                       environment=environment, board=board, buildMarker=marker, metadataIdentity=manifest['identity'],
                        buildFlags=config, buildTools={'platformio': tools, 'resolvedPackages': resolved})
 
 
