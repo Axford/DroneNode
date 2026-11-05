@@ -19,8 +19,8 @@
 #define DRONE_LINK_MSG_TYPE_FLOAT     3
 #define DRONE_LINK_MSG_TYPE_CHAR      4
 #define DRONE_LINK_MSG_TYPE_NAME      5   // reply with param name in char format
-#define DRONE_LINK_MSG_TYPE_NAMEQUERY 6  // query for the param name
-#define DRONE_LINK_MSG_TYPE_QUERY     7  // to query the value of a param, payload should be empty
+#define DRONE_LINK_MSG_TYPE_NAMEQUERY 6  // query for the param name; include at least one payload byte, ignored by the receiver
+#define DRONE_LINK_MSG_TYPE_QUERY     7  // query for the param value; include at least one payload byte, ignored by the receiver
 
 #define DRONE_LINK_MSG_WRITABLE       0b10000000  // top bit indicates if param is writable
 

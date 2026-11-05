@@ -33,3 +33,9 @@ The accepted workbench baseline uses a lightweight local Server gateway; direct 
 ## Iridium command target — later S1
 
 Later S1 satellite command intent is node-initiated polling/retrieval from the Iridium store-and-forward service, followed by unpacking/executing commands. The cloud Server submits to the service without a separate satellite delivery queue/retry loop. Exact modem/service APIs and packing remain implementation work.
+
+## SEP-01 protocol authority and evidence — 2026-11-05
+
+Firmware headers remain authoritative. The only firmware edit in SEP-01 corrects QUERY/NAMEQUERY comments: the packet requires at least one payload byte, ignored by query handlers. Definitions and runtime behavior are unchanged. Datastore's portable protocol package freezes the reviewed headers and relevant message implementation with exact checksums, base revision and the explicit comment amendment; it distributes constants to JS/TS consumers, not to firmware.
+
+The actual `DroneLinkMsg.cpp`, packed structs and 16 independent non-query fixtures compile/run on the host using platform/I/O stubs. This is software layout/message evidence, not ESP32, device or transport validation. Query captures, framing and physical parity remain pending. See [SEP-01 evidence](../../DroneLinkDatastore/docs/planning/sep-01-protocol-compatibility.md).
