@@ -32,7 +32,6 @@
 #include "droneModules/NavModule.h"
 #include "droneModules/NeopixelModule.h"
 #include "droneModules/NMEAModule.h"
-#include "droneModules/NunchuckJoystickModule.h"
 #include "droneModules/ODriveModule.h"
 #include "droneModules/PanSerialModule.h"
 #include "droneModules/PanTiltModule.h"
@@ -554,8 +553,6 @@ DroneModule* DroneExecutionManager::instanceModule(char* typeName, uint8_t id) {
       newMod = new NMEAModule(id, _ds);
     } else if (strcmp_P(typeName, NEOPIXEL_STR_NEOPIXEL) == 0) {
       newMod = new NeopixelModule(id, _ds);
-    } else if (strcmp_P(typeName, NunJOYSTICK_STR_NunJOYSTICK) == 0) {
-      newMod = new NunchuckJoystick(id, _ds);
     } else if (strcmp_P(typeName, ODRIVE_STR_ODRIVE) == 0) {
       newMod = new ODriveModule(id, _ds);
     } else if (strcmp_P(typeName, PAN_SERIAL_STR_PAN_SERIAL) == 0) {

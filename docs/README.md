@@ -3,7 +3,7 @@
 Reviewed: 2026-11-04. Role: ESP32 firmware.
 
 - [Local architecture](architecture.md)
-- [Local operations](operations.md)
+- [Local operations and serial discovery runbook](operations.md)
 - [System documentation index](../../DroneLinkDatastore/docs/README.md)
 - [Critical system summary](../../DroneLinkDatastore/docs/SUMMARY.md)
 - [Shared packet/API contracts](../../DroneLinkDatastore/docs/contracts/README.md)

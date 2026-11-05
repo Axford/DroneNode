@@ -39,3 +39,11 @@ Later S1 satellite command intent is node-initiated polling/retrieval from the I
 Firmware headers remain authoritative. The only firmware edit in SEP-01 corrects QUERY/NAMEQUERY comments: the packet requires at least one payload byte, ignored by query handlers. Definitions and runtime behavior are unchanged. Datastore's portable protocol package freezes the reviewed headers and relevant message implementation with exact checksums, base revision and the explicit comment amendment; it distributes constants to JS/TS consumers, not to firmware.
 
 The actual `DroneLinkMsg.cpp`, packed structs and 16 independent non-query fixtures compile/run on the host using platform/I/O stubs. This is software layout/message evidence, not ESP32, device or transport validation. Query captures, framing and physical parity remain pending. See [SEP-01 evidence](../../DroneLinkDatastore/docs/planning/sep-01-protocol-compatibility.md).
+
+## Operator serial discovery — 2026-11-05
+
+[tools/discover_nodes.py](../tools/discover_nodes.py) is firmware-development/operator tooling that passively identifies likely serial connections from specific log markers or CRC-checked mesh frames. It changes no firmware/runtime definitions and is not a gateway replacement, transport adapter migration, authenticated identity service or automatic uploader. The [local runbook](operations.md) separates likelihood/evidence from user confirmation of an appropriate test/deployment target and records serial-open/control-line limitations. Automated tests exercise classification and the no-transmit lifecycle; live samples remain in ignored local storage.
+
+## Disabled legacy Nunchuck module — 2026-11-05
+
+The user authorised disabling the unused Nunchuck/WiiChuck integration during build recovery. The PlatformIO source filter excludes `NunchuckJoystickModule.cpp`, the WiiChuck library dependency is removed, and `DroneExecutionManager` no longer includes/instantiates the module. Its source remains as reference; configuration scripts requesting `Nunchuck` now follow the existing unknown-type error path. No wire IDs, packet definitions or other module implementation changed. Build verification and the discovered external-tooling issues are recorded in [operations](operations.md).
