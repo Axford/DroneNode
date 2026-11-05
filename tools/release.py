@@ -36,8 +36,16 @@ def clean_revision():
     return git('rev-parse', 'HEAD')
 
 
+def source_digest(path):
+    # Git tracks uthash/include as a relative directory symlink. Hash the link
+    # itself, as Git does, rather than reading a directory as source bytes.
+    if path.is_symlink():
+        return digest(b'symlink:' + os.readlink(path).encode())
+    return digest(path.read_bytes())
+
+
 def hashes(paths):
-    return {p.relative_to(ROOT).as_posix(): digest(p.read_bytes()) for p in sorted(paths)}
+    return {p.relative_to(ROOT).as_posix(): source_digest(p) for p in sorted(paths)}
 
 
 def annotation_files():
@@ -253,7 +261,7 @@ def export_firmware(environment, metadata_path, output):
         if hashes(paths) != inputs or clean_revision() != revision:
             raise ValueError('Source changed during firmware export')
         for relative, checksum in inputs.items():
-            if digest((snapshot / relative).read_bytes()) != checksum:
+            if source_digest(snapshot / relative) != checksum:
                 raise ValueError(f'Build changed source input: {relative}')
         return publish('firmware', revision, inputs,
                        {'firmware.bin': data, 'firmware.ver': revision[:7].encode()}, output,
