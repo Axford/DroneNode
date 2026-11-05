@@ -35,7 +35,7 @@ PanTilt.new 21
 #define PAN_TILT_SUB_TARGET_ADDR     11
 #define PAN_TILT_SUB_TARGET_E        0
 
-// @sub 12;13;f;1;Current heading (e.g. from Compass)
+// @sub 12;13;f;1;heading;Current heading (e.g. from Compass)
 #define PAN_TILT_SUB_HEADING         12
 #define PAN_TILT_SUB_HEADING_ADDR    13
 #define PAN_TILT_SUB_HEADING_E       1

@@ -50,7 +50,7 @@ https://learn.adafruit.com/adafruit-4-channel-adc-breakouts/arduino-code
 // @pub 16;f;4;w;min;Min values to map the 0 raw reading to, one for each channel
 #define ADS1015_PARAM_MIN        (I2CBASE_SUBCLASS_PARAM_START+6) // 16
 
-// @pub 17;f;4;w;min;Max values to map the 4095 raw reading to, one for each channel
+// @pub 17;f;4;w;max;Max values to map the 4095 raw reading to, one for each channel
 #define ADS1015_PARAM_MAX        (I2CBASE_SUBCLASS_PARAM_START+7) // 17
 
 

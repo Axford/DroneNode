@@ -70,7 +70,7 @@
 #define ODRIVE_PARAM_ERRORS       19
 #define ODRIVE_PARAM_ERRORS_E     7
 
-// @pub 19;u8;2;r;state;Active state of each axis
+// @pub 20;u8;2;r;state;Active state of each axis
 #define ODRIVE_PARAM_STATE        20
 #define ODRIVE_PARAM_STATE_E      8
 

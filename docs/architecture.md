@@ -10,7 +10,7 @@ Status: observed source. Reviewed: 2026-11-04.
 
 `src/droneModules/` contains sensors, actuators, telemetry, navigation/sailing and KiteBot/ODrive modules. `data/` contains example filesystem/configuration scripts. `lib/` vendors libraries; their tests do not constitute a project firmware regression suite.
 
-[Module authoring notes](../src/droneModules/README.md) contain useful legacy guidance, but references to JSON loading/moduleSchema are older than current config-script/metadata tooling. Confirm actual module registration and header annotations against source. Server `parseModules.js` extracts metadata/help, and [post_build.py](../post_build.py) copies firmware/version into sibling Server. These cross-repo generation steps need explicit validation.
+[Module authoring notes](../src/droneModules/README.md) contain useful legacy guidance, but references to JSON loading/moduleSchema are older than current config-script/metadata tooling. Confirm actual module registration and header annotations against source. DroneNode [release tooling](../tools/release.py) now extracts catalog metadata and explicitly exports local metadata/firmware archives. [post_build.py](../post_build.py) no longer registers sibling-write actions. Server owns help rendering from the exported catalog; it does not parse firmware source. The release handoff and pending acceptance are tracked in SEP-05.
 
 ## Existing per-node startup configuration
 
