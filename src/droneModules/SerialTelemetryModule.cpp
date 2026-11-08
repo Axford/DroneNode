@@ -1,3 +1,4 @@
+#include "../DroneConsole.h"
 #include "SerialTelemetryModule.h"
 #include "../DroneLinkMsg.h"
 #include "../DroneLinkManager.h"
@@ -10,12 +11,6 @@ SerialTelemetryModule::SerialTelemetryModule(uint8_t id, DroneSystem* ds):
   NetworkInterfaceModule ( id, ds )
  {
    setTypeName(FPSTR(SERIAL_TELEMETRY_STR_SERIAL_TELEMETRY));
-   _buffer[0] = SERIAL_TELEMETRY_START_OF_FRAME;
-   _decodeState = 0;
-   _receivedSize = 0;
-   _portNum = 2;
-   _baud = 115200;
-
    _broadcastCapable = false;
 
    _packetsReceived = 0;
@@ -69,8 +64,9 @@ void SerialTelemetryModule::setup() {
   DroneModule::setup();
 
   // request the serial port
+  const int logLevel = Log.getLevel();
   if (!_ds->requestSerialPort(_params[SERIAL_TELEMETRY_PARAM_PORT_E].data.uint8[0], this)) {
-    _port = NULL;
+    setPort(nullptr);
     Log.errorln(F("[Serial.s] Unable to access serial port: %u"), _params[SERIAL_TELEMETRY_PARAM_PORT_E].data.uint8[0]);
     setError(1);
     return;
@@ -83,6 +79,7 @@ void SerialTelemetryModule::setup() {
       // reset serial for telemetry
       Serial.updateBaudRate(_params[SERIAL_TELEMETRY_PARAM_BAUD_E].data.uint32[0]);
       setPort(&Serial);
+      Log.setLevel(logLevel);
       break;
     case 1:
       Log.noticeln(F("[Serial.s] Serial 1 at %u"), _params[SERIAL_TELEMETRY_PARAM_BAUD_E].data.uint32[0]);
@@ -105,53 +102,19 @@ void SerialTelemetryModule::setup() {
 void SerialTelemetryModule::loop() {
   DroneModule::loop();
 
-  if (_port->available()) {
-    //Serial.print("T: ");
-    while (_port->available())
-    {
-      uint8_t b = _port->read();
-      if (_receivedSize < sizeof(_buffer))
-        _buffer[_receivedSize] = b;
-
-      //Serial.print(b, HEX);
-
-      switch(_decodeState) {
-        case 0: // waiting for start
-          if (b == SERIAL_TELEMETRY_START_OF_FRAME) {
-            _decodeState = 1;
-            _receivedSize = 1;
-          }
-          break;
-
-        case 1: // found start, waiting to confirm payload length
-          _msgLen = getDroneMeshMsgTotalSize(&_buffer[1]);
-          if (_msgLen < 8 || _msgLen > DRONE_MESH_MSG_MAX_PACKET_SIZE) {
-            Log.errorln("[Serial.rP] Invalid size");
-            _packetsRejected++;
-            _decodeState = 0;
-          } else {
-            _decodeState = 2;
-            _receivedSize++;
-          }
-          break;
-
-        case 2: // reading payload
-          if (_msgLen == _receivedSize - 1) {
-            DRONE_LINK_TRANSPORT_ADDRESS ta;
-
-            receivePacket(&_buffer[1], 1, ta);
-            _packetsReceived++;
-
-            _decodeState = 0;
-            _receivedSize = 0;
-          }
-          _receivedSize++;
-          break;
+  if (_port) {
+    while (_port->available()) {
+      int byte = _port->read();
+      if (byte < 0) break;
+      auto result = _decoder.consume(static_cast<uint8_t>(byte));
+      if (result == serialTransport::MeshDecoder::Rejected) ++_packetsRejected;
+      if (result == serialTransport::MeshDecoder::Complete) {
+        DRONE_LINK_TRANSPORT_ADDRESS address = {};
+        receivePacket(const_cast<uint8_t*>(_decoder.data()), 1, address);
+        ++_packetsReceived;
       }
     }
-    //Serial.print('\n');
   }
-
 
   // update and publish packet counters
   if (millis() > _packetsTimer + 5000) {
@@ -178,24 +141,29 @@ void SerialTelemetryModule::loop() {
 }
 
 void SerialTelemetryModule::setPort(Stream *port) {
+  if (_port != port) {
+    _decoder.reset();
+    if (_port == &Serial) DroneConsole.telemetry(false);
+    if (port == &Serial) DroneConsole.telemetry(true);
+  }
   _port = port;
 }
 
 
-boolean SerialTelemetryModule::sendPacket(uint8_t *buffer, DRONE_LINK_TRANSPORT_ADDRESS transportAddress) {
-
-  if (!_enabled) return false;
-
-  // prefix the DroneMesh message in a start byte
-  uint8_t txSize = getDroneMeshMsgTotalSize(buffer) + 1;
-
-  uint8_t startByte = SERIAL_TELEMETRY_START_OF_FRAME;
-
-  _port->write(&startByte, 1);
-  _port->write(buffer, txSize-1);
+boolean SerialTelemetryModule::sendPacket(uint8_t *buffer, DRONE_LINK_TRANSPORT_ADDRESS) {
+  const size_t size = serialTransport::meshSize(buffer);
+  if (!_enabled || !_port || !size) return false;
+  if (_port == &Serial) {
+    if (!DroneConsole.sendMesh(buffer)) return false;
+    ++_packetsSent;
+    return true;
+  }
+  uint8_t frame[serialTransport::MaxMesh + 1];
+  frame[0] = SERIAL_TELEMETRY_START_OF_FRAME;
+  memcpy(frame + 1, buffer, size);
+  const size_t written = _port->write(frame, size + 1);
   _port->flush();
-
-  _packetsSent++;
-
+  if (written != size + 1) return false;
+  ++_packetsSent;
   return true;
 }

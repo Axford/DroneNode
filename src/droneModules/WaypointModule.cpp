@@ -1,3 +1,4 @@
+#include "../DroneConsole.h"
 #include "WaypointModule.h"
 #include "../DroneLinkMsg.h"
 #include "../DroneLinkManager.h"
@@ -102,7 +103,7 @@ void WaypointModule::loadWaypoints() {
     File file = LITTLEFS.open(F("/waypoint.csv"), FILE_READ);
 
     if (!file) {
-      Serial.println("[w.lW] Error opening waypoint.csv");
+      DroneConsole.println("[w.lW] Error opening waypoint.csv");
     } else {
       /*
       1) read first line (header) and parse column indices for lon, lat and radius
@@ -203,7 +204,7 @@ void WaypointModule::loadWaypoints() {
 
     file.close();
   } else {
-    Serial.println("[W.lW] No waypoint.csv");
+    DroneConsole.println("[W.lW] No waypoint.csv");
   }
 
   // loop back over waypoints and calculate distance remaining

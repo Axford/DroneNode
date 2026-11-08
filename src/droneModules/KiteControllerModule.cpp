@@ -1,3 +1,4 @@
+#include "../DroneConsole.h"
 #include "KiteControllerModule.h"
 #include "../DroneLinkMsg.h"
 #include "../DroneLinkManager.h"
@@ -147,7 +148,7 @@ KiteControllerModule::KiteControllerModule(uint8_t id, DroneSystem* ds):
 
 void KiteControllerModule::selectWaypoint(uint8_t n) {
   if (n <0 || n >= _waypoints.size()) {
-    Serial.println("Invalid waypoint number");
+    DroneConsole.println("Invalid waypoint number");
     return;
   }
 

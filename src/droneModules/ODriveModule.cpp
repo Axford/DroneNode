@@ -1,3 +1,4 @@
+#include "../DroneConsole.h"
 #include "ODriveModule.h"
 #include "../DroneLinkMsg.h"
 #include "../DroneLinkManager.h"
@@ -312,7 +313,7 @@ void ODriveModule::manageODriveSerial()
   {
     _lastSerialHeard = _lastLoop;
     char c = _port->read();
-    Serial.write(c);
+    DroneConsole.write(c);
     if ((c == '\n' || c == '\r'))
     {
       if (_bufLen > 0)

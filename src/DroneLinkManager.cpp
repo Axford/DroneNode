@@ -1,3 +1,4 @@
+#include "DroneConsole.h"
 #include "Arduino.h"
 #include "DroneLinkManager.h"
 #include "WiFiManager.h"
@@ -618,7 +619,7 @@ void DroneLinkManager::receivePacket(NetworkInterfaceModule *interface, uint8_t 
   uint8_t len = getDroneMeshMsgTotalSize(buffer);
   uint8_t crc = _CRC8.smbus((uint8_t*)buffer, len-1);
   if (buffer[len-1] != crc) {
-    Serial.println("[DLM.rP] CRC fail");
+    DroneConsole.println("[DLM.rP] CRC fail");
     return;
   }
 

@@ -1,3 +1,4 @@
+#include "../DroneConsole.h"
 #include "BME280Module.h"
 #include "../DroneLinkMsg.h"
 #include "../DroneLinkManager.h"
@@ -67,7 +68,7 @@ void BME280Module::setup()
 void BME280Module::loop() {
   I2CBaseModule::loop();
 
-  Serial.println("[BME280] .loop");
+  DroneConsole.println("[BME280] .loop");
 
   DroneWire::selectChannel(_params[I2CBASE_PARAM_BUS_E].data.uint8[0]);
 

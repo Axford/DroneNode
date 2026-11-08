@@ -1,3 +1,4 @@
+#include "DroneConsole.h"
 #include "DroneSystem.h"
 #include "DroneExecutionManager.h"
 #include "DroneLinkManager.h"
@@ -304,8 +305,8 @@ void DroneExecutionManager::loadConfiguration(const char* filename) {
     File file = LITTLEFS.open(F(filename), FILE_READ);
 
     if (!file) {
-      Serial.print("[w.lW] Error opening: ");
-      Serial.println (filename);
+      DroneConsole.print("[w.lW] Error opening: ");
+      DroneConsole.println(filename);
     } else {
       
       
@@ -446,8 +447,8 @@ void DroneExecutionManager::loadConfiguration(const char* filename) {
 
     file.close();
   } else {
-    Serial.print("[W.lW] No: ");
-    Serial.println(filename);
+    DroneConsole.print("[W.lW] No: ");
+    DroneConsole.println(filename);
   }
 }
 
@@ -492,7 +493,7 @@ void DroneExecutionManager::completeSetup() {
   // redirect logging to serial
 
   if (_logFile) _logFile.close();
-  Log.begin(LOG_LEVEL_VERBOSE, &Serial);
+  Log.begin(LOG_LEVEL_VERBOSE, &DroneConsole);
 }
 
 

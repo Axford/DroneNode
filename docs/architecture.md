@@ -47,3 +47,10 @@ The actual `DroneLinkMsg.cpp`, packed structs and 16 independent non-query fixtu
 ## Disabled legacy Nunchuck module — 2026-11-05
 
 The user authorised disabling the unused Nunchuck/WiiChuck integration during build recovery. The PlatformIO source filter excludes `NunchuckJoystickModule.cpp`, the WiiChuck library dependency is removed, and `DroneExecutionManager` no longer includes/instantiates the module. Its source remains as reference; configuration scripts requesting `Nunchuck` now follow the existing unknown-type error path. No wire IDs, packet definitions or other module implementation changed. Build verification and the discovered external-tooling issues are recorded in [operations](operations.md).
+
+
+## Serial telemetry and shared Serial0 diagnostics
+
+The bounded M1.2 serial implementation uses `SerialTransport.h` for raw-size-checked mesh assembly and fixed-buffer record serialization. SerialTelemetry hands a complete mesh frame to the existing DLM path on the final byte; DLM retains its CRC check before routing. Transport RX counts complete handoffs, not CRC acceptance; rejected counts framing/length errors. Port absence/failed claims and Stream rebinding are guarded.
+
+`DroneConsole` is the application's Print sink. When SerialTelemetry owns Serial0, it automatically frames live logger/direct diagnostic output while sharing complete-record write ownership with mesh TX. Other UARTs retain mesh-only framing and other UART0 owners retain logging suppression. Console commands remain disabled during module ownership. Fixed storage and diagnostic loss are deliberate; no startup replay or delivery guarantee is added. The [shared serial contract](../../DroneLinkDatastore/docs/contracts/packet.md#proposed-serial-diagnostic-extension) owns record bytes, limits and compatibility; frozen protocol releases are unchanged.

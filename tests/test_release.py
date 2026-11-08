@@ -34,6 +34,7 @@ class ReleaseTests(unittest.TestCase):
         for entry in expected['TankSteer']['pub']:
             if entry['name'] in ['mode', 'trim', 'limits', 'threshold']:
                 entry['address'] = {'mode': 10, 'trim': 11, 'limits': 13, 'threshold': 14}[entry['name']]
+        expected['SerialTelemetry']['pub'][1]['description'] = 'Counters: sent, complete RX handoffs (before DLM CRC), framing rejects'
         self.assertEqual(release.metadata(), expected)
         self.assertEqual(len(expected), 51)
 

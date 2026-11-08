@@ -1,3 +1,4 @@
+#include "../DroneConsole.h"
 #include "DepthModule.h"
 #include "../DroneLinkMsg.h"
 #include "../DroneLinkManager.h"
@@ -106,8 +107,8 @@ void DepthModule::loop() {
   // 2 * 1000000 * max measurable value / speed of sound
   unsigned long timeout = 10 * 2000000 * _params[DEPTH_PARAM_LIMITS_E].data.f[1] / _params[DEPTH_PARAM_SPEED_E].data.f[0];
 
-  Serial.print("[DM.l] timeout: ");
-  Serial.println(timeout);
+  DroneConsole.print("[DM.l] timeout: ");
+  DroneConsole.println(timeout);
 
   // send a pulse
   digitalWrite(_params[DEPTH_PARAM_PINS_E].data.uint8[DEPTH_PIN_TRIGGER], HIGH);
@@ -148,11 +149,11 @@ void DepthModule::loop() {
   }
 
   if(duration==0){
-    Serial.println("[DM.l] Warning: no pulse from depth sensor");
+    DroneConsole.println("[DM.l] Warning: no pulse from depth sensor");
   } else {
-    Serial.print("[DM.l] Depth: ");
-    Serial.print(d);
-    Serial.print("m, raw: ");
-    Serial.print(duration);
+    DroneConsole.print("[DM.l] Depth: ");
+    DroneConsole.print(d);
+    DroneConsole.print("m, raw: ");
+    DroneConsole.print(duration);
   }
 }

@@ -1,3 +1,4 @@
+#include "../DroneConsole.h"
 #include "AvoidModule.h"
 #include "../DroneLinkMsg.h"
 #include "../DroneLinkManager.h"
@@ -165,7 +166,7 @@ void AvoidModule::setup() {
 
     });
   } else {
-    Serial.println("ERROR: unable to bind to port 8008");
+    DroneConsole.println("ERROR: unable to bind to port 8008");
   }
 }
 
@@ -234,13 +235,13 @@ void AvoidModule::loop() {
         // see if we're in front of the vessel
         if (abs(vesselToNodeToHeading) < 90) {
           // in front
-          Serial.println("AIS - in front");
+          DroneConsole.println("AIS - in front");
 
           // calculate cross track info
           calcCrosstrack = true;
         } else {
           //behind
-          Serial.println("AIS - behind");
+          DroneConsole.println("AIS - behind");
         }
       }
 

@@ -1,3 +1,4 @@
+#include "DroneConsole.h"
 #include "DroneLinkMsg.h"
 
 uint8_t setDroneLinkMsgPriorityParam(uint8_t pri, uint8_t param)
@@ -120,13 +121,13 @@ boolean DroneLinkMsg::sameSignature(DroneLinkMsg *msg)
 
 void DroneLinkMsg::printAddress(DRONE_LINK_ADDR *addr)
 {
-  Serial.print(addr->source);
-  Serial.print(':');
-  Serial.print(addr->node);
-  Serial.print('>');
-  Serial.print(addr->channel);
-  Serial.print('.');
-  Serial.print(addr->paramPriority & 0b00111111);
+  DroneConsole.print(addr->source);
+  DroneConsole.print(':');
+  DroneConsole.print(addr->node);
+  DroneConsole.print('>');
+  DroneConsole.print(addr->channel);
+  DroneConsole.print('.');
+  DroneConsole.print(addr->paramPriority & 0b00111111);
 }
 
 void DroneLinkMsg::printAddress(DRONE_LINK_ADDR *addr, AsyncResponseStream *response)
@@ -142,14 +143,14 @@ void DroneLinkMsg::printAddress(DRONE_LINK_ADDR *addr, AsyncResponseStream *resp
 
 void DroneLinkMsg::print()
 {
-  Serial.print(source());
-  Serial.print(':');
-  Serial.print(node());
-  Serial.print('>');
-  Serial.print(channel());
-  Serial.print('.');
-  Serial.print(param());
-  Serial.print(' ');
+  DroneConsole.print(source());
+  DroneConsole.print(':');
+  DroneConsole.print(node());
+  DroneConsole.print('>');
+  DroneConsole.print(channel());
+  DroneConsole.print('.');
+  DroneConsole.print(param());
+  DroneConsole.print(' ');
   printPayload(&_msg.payload, _msg.paramTypeLength);
 }
 
@@ -160,38 +161,38 @@ void DroneLinkMsg::printPayload(DRONE_LINK_PAYLOAD *payload, uint8_t paramTypeLe
   switch (ty)
   {
   case DRONE_LINK_MSG_TYPE_UINT8_T:
-    Serial.print(F("u8"));
+    DroneConsole.print(F("u8"));
     break;
   case DRONE_LINK_MSG_TYPE_ADDR:
-    Serial.print(F("a"));
+    DroneConsole.print(F("a"));
     break;
   case DRONE_LINK_MSG_TYPE_UINT32_T:
-    Serial.print(F("u32"));
+    DroneConsole.print(F("u32"));
     break;
   case DRONE_LINK_MSG_TYPE_FLOAT:
-    Serial.print(F("f"));
+    DroneConsole.print(F("f"));
     break;
   case DRONE_LINK_MSG_TYPE_CHAR:
-    Serial.print(F("c"));
+    DroneConsole.print(F("c"));
     break;
   case DRONE_LINK_MSG_TYPE_NAME:
-    Serial.print(F("N"));
+    DroneConsole.print(F("N"));
     break;
   case DRONE_LINK_MSG_TYPE_NAMEQUERY:
-    Serial.print(F("NQ"));
+    DroneConsole.print(F("NQ"));
     break;
   case DRONE_LINK_MSG_TYPE_QUERY:
-    Serial.print(F("Q"));
+    DroneConsole.print(F("Q"));
     break;
   }
   if (ty != DRONE_LINK_MSG_TYPE_QUERY)
   {
-    Serial.print('[');
-    Serial.print(len);
+    DroneConsole.print('[');
+    DroneConsole.print(len);
     if ((paramTypeLength & DRONE_LINK_MSG_WRITABLE) > 0)
-      Serial.print(",W");
-    Serial.print(']');
-    Serial.print('=');
+      DroneConsole.print(",W");
+    DroneConsole.print(']');
+    DroneConsole.print('=');
   }
 
   uint8_t numValues = len / DRONE_LINK_MSG_TYPE_SIZES[ty];
@@ -200,16 +201,16 @@ void DroneLinkMsg::printPayload(DRONE_LINK_PAYLOAD *payload, uint8_t paramTypeLe
     switch (ty)
     {
     case DRONE_LINK_MSG_TYPE_UINT8_T:
-      Serial.print(payload->uint8[i]);
+      DroneConsole.print(payload->uint8[i]);
       break;
     case DRONE_LINK_MSG_TYPE_UINT32_T:
-      Serial.print(payload->uint32[i]);
+      DroneConsole.print(payload->uint32[i]);
       break;
     case DRONE_LINK_MSG_TYPE_FLOAT:
-      Serial.print(payload->f[i]);
+      DroneConsole.print(payload->f[i]);
       break;
     case DRONE_LINK_MSG_TYPE_CHAR:
-      Serial.print(char(payload->c[i]));
+      DroneConsole.print(char(payload->c[i]));
       break;
     case DRONE_LINK_MSG_TYPE_ADDR:
       printAddress(&payload->addr[i]);
@@ -217,9 +218,9 @@ void DroneLinkMsg::printPayload(DRONE_LINK_PAYLOAD *payload, uint8_t paramTypeLe
       // case DRONE_LINK_MSG_TYPE_QUERY: response->print(F("Query")); break;
     }
     if (ty != DRONE_LINK_MSG_TYPE_CHAR)
-      Serial.print(' ');
+      DroneConsole.print(' ');
   }
-  Serial.print('\n');
+  DroneConsole.print('\n');
 }
 
 void DroneLinkMsg::printPayload(DRONE_LINK_PAYLOAD *payload, uint8_t paramTypeLength, AsyncResponseStream *response)

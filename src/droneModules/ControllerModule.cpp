@@ -1,3 +1,4 @@
+#include "../DroneConsole.h"
 #include "ControllerModule.h"
 #include "../DroneLinkMsg.h"
 #include "../DroneLinkManager.h"
@@ -230,8 +231,8 @@ void ControllerModule::loadConfiguration(const char* filename) {
     File file = LITTLEFS.open(F(filename), FILE_READ);
 
     if (!file) {
-      Serial.print("[CM.lC] Error opening: ");
-      Serial.println (filename);
+      DroneConsole.print("[CM.lC] Error opening: ");
+      DroneConsole.println(filename);
     } else {
       
       
@@ -299,8 +300,8 @@ void ControllerModule::loadConfiguration(const char* filename) {
             // do the thing
             switch(outerState) {
               case CM_PARSER_GENERAL:
-                Serial.print("General: ");
-                  Serial.println(nameBuffer);
+                DroneConsole.print("General: ");
+                  DroneConsole.println(nameBuffer);
                   if (strcmp(nameBuffer, "title")==0) {
                     strcpy(_title, valueBuffer);
                   }
@@ -308,8 +309,8 @@ void ControllerModule::loadConfiguration(const char* filename) {
                   break;
 
               case CM_PARSER_SECTION_TITLE:
-                  Serial.print("Section Title: ");
-                  Serial.println(nameBuffer);
+                  DroneConsole.print("Section Title: ");
+                  DroneConsole.println(nameBuffer);
 
                   // clear any existing items
                   displayItem = NULL;
@@ -349,8 +350,8 @@ void ControllerModule::loadConfiguration(const char* filename) {
                   break;
 
               case CM_PARSER_SECTION:
-                Serial.print("Section: ");
-                  Serial.println(nameBuffer);
+                DroneConsole.print("Section: ");
+                  DroneConsole.println(nameBuffer);
 
                   if (displayItem) {
                     if (strcmp(nameBuffer, "source")==0) {
@@ -394,8 +395,8 @@ void ControllerModule::loadConfiguration(const char* filename) {
 
     file.close();
   } else {
-    Serial.print("[CM.lC] No: ");
-    Serial.println(filename);
+    DroneConsole.print("[CM.lC] No: ");
+    DroneConsole.println(filename);
   }
 }
 
@@ -640,9 +641,9 @@ void ControllerModule::handleLinkMessage(DroneLinkMsg *msg)
         _sendMsg._msg.paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_CRITICAL, temp->target.paramPriority);
         
         // publish
-        Serial.print("Send ");
-        Serial.print(_sendMsg._msg.payload.f[0]);
-        Serial.print(" to: ");
+        DroneConsole.print("Send ");
+        DroneConsole.print(_sendMsg._msg.payload.f[0]);
+        DroneConsole.print(" to: ");
         DroneLinkMsg::printAddress(&temp->target);
         DroneLinkMsg::printPayload(&_sendMsg._msg.payload, _sendMsg._msg.paramTypeLength);
 
@@ -698,25 +699,25 @@ void ControllerModule::setup()
   loadConfiguration("/compass.con");
 
   // debug display Items
-  Serial.println("Display Items...");
+  DroneConsole.println("Display Items...");
   for (uint8_t i = 0; i < _displayItems.size(); i++)
   {
     CONTROLLER_DISPLAY_INFO *temp = _displayItems.get(i);
 
-    Serial.print(i);
-    Serial.print(": ");
-    Serial.println(temp->name);
+    DroneConsole.print(i);
+    DroneConsole.print(": ");
+    DroneConsole.println(temp->name);
 
-    Serial.print("  position: ");
-    Serial.print(temp->position[0]);
-    Serial.print(", ");
-    Serial.println(temp->position[1]);
+    DroneConsole.print("  position: ");
+    DroneConsole.print(temp->position[0]);
+    DroneConsole.print(", ");
+    DroneConsole.println(temp->position[1]);
 
-    Serial.print("  precision: ");
-    Serial.println(temp->precision);
+    DroneConsole.print("  precision: ");
+    DroneConsole.println(temp->precision);
 
-    Serial.print("  page: ");
-    Serial.println(temp->page);
+    DroneConsole.print("  page: ");
+    DroneConsole.println(temp->page);
   }
 
   // bind subscriptions

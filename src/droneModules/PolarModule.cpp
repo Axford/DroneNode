@@ -1,3 +1,4 @@
+#include "../DroneConsole.h"
 #include "PolarModule.h"
 #include "../DroneLinkMsg.h"
 #include "../DroneLinkManager.h"
@@ -131,10 +132,10 @@ void PolarModule::updatePolar() {
   // calc averages per bin and find peak value
   float avgs[16];
   float peakVal = 0;
-  Serial.print("pv: ");
+  DroneConsole.print("pv: ");
   for (uint8_t i=0; i<16; i++) {
-    Serial.print(_polarVals[i]);
-    Serial.print(" ");
+    DroneConsole.print(_polarVals[i]);
+    DroneConsole.print(" ");
     if ( _params[POLAR_PARAM_SAMPLES_E].data.uint8[i] > 0 ) {
       avgs[i] = _polarVals[i] / _params[POLAR_PARAM_SAMPLES_E].data.uint8[i];
     } else {
@@ -143,7 +144,7 @@ void PolarModule::updatePolar() {
 
     if (avgs[i] > peakVal) peakVal = avgs[i];
   }
-  Serial.println("");
+  DroneConsole.println("");
 
   // update polar
   if (peakVal  > 0) {
@@ -217,7 +218,7 @@ void PolarModule::loopActive() {
 
     // did we just cross into mid from in?  i.e. end of run
     if (_region == POLAR_REGION_IN) {
-      Serial.println("[PM.lA] end of run");
+      DroneConsole.println("[PM.lA] end of run");
       /*
       calculate effective heading and if close enough to target heading, then record the end location and time, compute the average speed and add to polar info.
       */
@@ -236,8 +237,8 @@ void PolarModule::loopActive() {
       // and thus average speed
       float avgSpeed = distTravelled / timeTaken;
 
-      Serial.print("[PM.lA] avgSpeed ");
-      Serial.println(avgSpeed);
+      DroneConsole.print("[PM.lA] avgSpeed ");
+      DroneConsole.println(avgSpeed);
 
       // and on what effective heading
       float effectiveHeading = calculateInitialBearingBetweenCoordinates(
@@ -247,14 +248,14 @@ void PolarModule::loopActive() {
         _subs[POLAR_SUB_LOCATION_E].param.data.f[1]
       );
 
-      Serial.print("[PM.lA] effectiveHeading ");
-      Serial.println(effectiveHeading);
+      DroneConsole.print("[PM.lA] effectiveHeading ");
+      DroneConsole.println(effectiveHeading);
 
       // calc leeway
       float leeway = fabs(shortestSignedDistanceBetweenCircularValues(effectiveHeading, _params[POLAR_PARAM_ADJ_HEADING_E].data.f[0]));
 
-      Serial.print("[PM.lA] leeway ");
-      Serial.println(leeway);
+      DroneConsole.print("[PM.lA] leeway ");
+      DroneConsole.println(leeway);
 
       // if leeway less than threshold
       // and we've travelled at least the target radius in distance
@@ -291,7 +292,7 @@ void PolarModule::loopActive() {
     */
     if (_subs[POLAR_SUB_SOG_E].param.data.f[0] < _params[POLAR_PARAM_THRESHOLD_E].data.f[0]) {
       // SOG too slow... so try to keep on orbiting clockwise along mid-radius
-      Serial.println("[PM.lA] SOG too slow, orbit ");
+      DroneConsole.println("[PM.lA] SOG too slow, orbit ");
 
       // chase a point 10 degrees clockwise of where we are now
       GeographicPoint target;
@@ -305,15 +306,15 @@ void PolarModule::loopActive() {
       );
       bearing += 10;
 
-      Serial.print("[PM.lA] bearing ");
-      Serial.println(bearing);
+      DroneConsole.print("[PM.lA] bearing ");
+      DroneConsole.println(bearing);
 
       GeographicPoint targetPoint = calculateDestinationFromDistanceAndBearing(target, _params[POLAR_PARAM_RADIUS_E].data.f[1], bearing);
 
-      Serial.print("[PM.lA] destination ");
-      Serial.print(targetPoint.lon);
-      Serial.print(" ");
-      Serial.println(targetPoint.lat);
+      DroneConsole.print("[PM.lA] destination ");
+      DroneConsole.print(targetPoint.lon);
+      DroneConsole.print(" ");
+      DroneConsole.println(targetPoint.lat);
 
       // now calculate heading from current location to targetPoint
       float heading = calculateInitialBearingBetweenCoordinates(
@@ -323,8 +324,8 @@ void PolarModule::loopActive() {
         targetPoint.lat
       );
 
-      Serial.print("[PM.lA] heading ");
-      Serial.println(heading);
+      DroneConsole.print("[PM.lA] heading ");
+      DroneConsole.println(heading);
 
       // and publish the new heading
       updateAndPublishParam(&_params[POLAR_PARAM_ADJ_HEADING_E], (uint8_t*)&heading, sizeof(heading));
@@ -390,8 +391,8 @@ void PolarModule::loopActive() {
       _startPos[0] = _subs[POLAR_SUB_LOCATION_E].param.data.f[0];
       _startPos[1] = _subs[POLAR_SUB_LOCATION_E].param.data.f[1];
 
-      Serial.print("[PM.lA] start of run ");
-      Serial.println(_startTime);
+      DroneConsole.print("[PM.lA] start of run ");
+      DroneConsole.println(_startTime);
     }
   }
 

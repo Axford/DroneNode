@@ -1,3 +1,4 @@
+#include "DroneConsole.h"
 #include "DroneSystem.h"
 #include "DroneLogger.h"
 #include "esp_pm.h"
@@ -101,8 +102,8 @@ boolean DroneSystem::requestSerialPort(uint8_t port, DroneModule* module) {
     // module request for port 0?
     if (port == 0 && module != NULL) {
       // pins already registered at startup
-      // disable logging to serial
-      Log.noticeln(F("[ds.rSP] Silent log"));
+      // Other UART0 owners retain console suppression. SerialTelemetry restores
+      // its prior log level only after binding the shared framed output.
       Log.setLevel(LOG_LEVEL_SILENT);
     } else {
       // register pins
@@ -397,16 +398,16 @@ void printDirectory(File dir, int numTabs) {
       break;
     }
     for (uint8_t i = 0; i < numTabs; i++) {
-      Serial.print('\t');
+      DroneConsole.print('\t');
     }
-    Serial.print(entry.name());
+    DroneConsole.print(entry.name());
     if (entry.isDirectory()) {
-      Serial.println("/");
+      DroneConsole.println("/");
       printDirectory(entry, numTabs + 1);
     } else {
       // files have sizes, directories do not
-      Serial.print("\t\t");
-      Serial.println(entry.size(), DEC);
+      DroneConsole.print("\t\t");
+      DroneConsole.println(entry.size(), DEC);
     }
     entry.close();
   }
@@ -438,10 +439,11 @@ void DroneSystem::setup() {
   // Start serial
   requestSerialPort(0, NULL);
   Serial.begin(115200);
+  DroneConsole.begin();
   while(!Serial) {  }
 
   // Init log
-  Log.begin(LOG_LEVEL_VERBOSE, &Serial);
+  Log.begin(LOG_LEVEL_VERBOSE, &DroneConsole);
 
   delay(2500); // to allow serial to reconnect after programming
 
@@ -478,7 +480,7 @@ void DroneSystem::setup() {
   Log.noticeln("[] Initializing SD card...");
 
   if (!SD.begin(4)) {
-    Serial.println("  initialization failed!");
+    DroneConsole.println("  initialization failed!");
   } else {
     _SDAvailable = true;
     Log.noticeln("   initialization done.");
@@ -577,17 +579,15 @@ void DroneSystem::setup() {
     _logFile.close();
   }
 
-  // switch to serial logging, unless we have telemetry enabled
-  if (_serialPorts[0].state == DRONE_SYSTEM_SERIAL_PORT_STATE_ACTIVE_MODULE) {
-    Log.begin(LOG_LEVEL_SILENT, &Serial);
-  } else {
-    Log.begin(LOG_LEVEL_VERBOSE, &Serial);
-    Log.noticeln("[] End of Setup");
-  }
+  // Other UART0 modules retain suppression; SerialTelemetry uses framed logs.
+  const bool otherOwner = _serialPorts[0].state == DRONE_SYSTEM_SERIAL_PORT_STATE_ACTIVE_MODULE && !DroneConsole.telemetryActive();
+  Log.begin(otherOwner ? LOG_LEVEL_SILENT : LOG_LEVEL_VERBOSE, &DroneConsole);
+  Log.noticeln("[] End of Setup");
 }
 
 
 void DroneSystem::loop() {
+  DroneConsole.service();
   //long loopTime;
 
   // TODO - add an FPS timer
@@ -602,35 +602,35 @@ void DroneSystem::loop() {
 
 
   // serial command interface
-  // disable if logging is silent.. indicates we're using the serial port for telemtry
+  // Keep console commands disabled whenever a module owns UART0.
   if (_serialPorts[0].state == DRONE_SYSTEM_SERIAL_PORT_STATE_ACTIVE_BUILTIN) {
     if (Serial.available()) {
       char c = Serial.read();
-      Serial.print(c);
+      DroneConsole.print(c);
 
       if (c == '\n' || c == '\r') {
         // null terminate
         _serialCommand[_serialCommandLen] = 0;
-        Serial.print("Executing: ");
-        Serial.println(_serialCommand);
+        DroneConsole.print("Executing: ");
+        DroneConsole.println(_serialCommand);
 
         // clear boot flag and restart
         if (strcmp(_serialCommand, "reset")==0) {
-          Serial.println("restarting");
+          DroneConsole.println("restarting");
           dem->setBootStatus(DEM_BOOT_SUCCESS);
           dmm->restart();
         }
 
         // format filesystem
         if (strcmp(_serialCommand, "format")==0) {
-          Serial.println("Formatting");
+          DroneConsole.println("Formatting");
           LITTLEFS.format();
           dmm->restart();
         }
 
         // enable wifi
         if (strcmp(_serialCommand, "wifi")==0) {
-          Serial.println("Enabling WiFi");
+          DroneConsole.println("Enabling WiFi");
           dlm->enableWiFi();
         }
 

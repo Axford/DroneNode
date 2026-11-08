@@ -1,3 +1,4 @@
+#include "../DroneConsole.h"
 #include "AisSentence.h"
 #include "Arduino.h"
 
@@ -8,9 +9,9 @@ AisSentence::AisSentence() {
 
 boolean AisSentence::parse(char * msg, uint8_t len) {
 
-  Serial.print(" NMEA: ");
-  Serial.write(msg, len);
-  Serial.println();
+  DroneConsole.print(" NMEA: ");
+  DroneConsole.write(msg, len);
+  DroneConsole.println();
   // !AIVDM,1,1,0,A,B3P8C0h007tmj8WGIPH><03WCP06,0*6A
 
   // reset
@@ -19,7 +20,7 @@ boolean AisSentence::parse(char * msg, uint8_t len) {
 
   // see if msg begins with !AIVDM,1,1,
   if (len < 48 || strncmp(msg, "!AIVDM,1,1,", 11) !=0 ) {
-    Serial.println("  Not AIS");
+    DroneConsole.println("  Not AIS");
     return false;
   }
 
@@ -36,13 +37,13 @@ boolean AisSentence::parse(char * msg, uint8_t len) {
 
   // now compare checksums
   if (msg[i] != '*') {
-    Serial.println("  Missing checksum");
+    DroneConsole.println("  Missing checksum");
     return false;
   }
   i++;
 
   if (msg[i] != checksumHex[0] && msg[i+1] != checksumHex[1]) {
-    Serial.println("  Failed Checksum");
+    DroneConsole.println("  Failed Checksum");
     return false;
   }
 
@@ -75,26 +76,26 @@ boolean AisSentence::parse(char * msg, uint8_t len) {
 
                   // get the message type
                   _aisType = _bitField.getInt(0,6);
-                  Serial.print("  Type: ");
-                  Serial.println(_aisType);
+                  DroneConsole.print("  Type: ");
+                  DroneConsole.println(_aisType);
 
                   if (_aisType == 18) {
                     // decode
                     _m18.parseFromBitField(&_bitField);
 
                     // print
-                    Serial.print("  MMSI: ");
-                    Serial.println(_m18.mmsi);
-                    Serial.print("  Lat: ");
-                    Serial.println(_m18.lat);
-                    Serial.print("  Lon: ");
-                    Serial.println(_m18.lon);
-                    Serial.print("  SOG: ");
-                    Serial.println(_m18.speedOverGround);
-                    Serial.print("  COG: ");
-                    Serial.println(_m18.courseOverGround);
-                    Serial.print("  H: ");
-                    Serial.println(_m18.heading);
+                    DroneConsole.print("  MMSI: ");
+                    DroneConsole.println(_m18.mmsi);
+                    DroneConsole.print("  Lat: ");
+                    DroneConsole.println(_m18.lat);
+                    DroneConsole.print("  Lon: ");
+                    DroneConsole.println(_m18.lon);
+                    DroneConsole.print("  SOG: ");
+                    DroneConsole.println(_m18.speedOverGround);
+                    DroneConsole.print("  COG: ");
+                    DroneConsole.println(_m18.courseOverGround);
+                    DroneConsole.print("  H: ");
+                    DroneConsole.println(_m18.heading);
 
                     return true;
                   }
