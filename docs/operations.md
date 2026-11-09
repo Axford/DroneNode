@@ -187,3 +187,45 @@ The addressed link receive path now calls `DroneLinkMsg::tryParse` before copyin
 ### M1-F bounded physical acceptance complete — 2026-11-09
 
 Committed guard firmware `c017040` passes the isolated export and attached DevKit serial/UDP/inspector/reconnect gate. Five malformed inner-link cases reject before publication and each subsequent read-only query succeeds; a16-byte nonzero NAMEQUERY remains valid. App0 write hash and on-device build marker verify. Original3 file hashes match after temporary Serial0 configuration restoration and separate restart. The new firmware stays installed with the original configuration. Central M1-F records image/capture hashes, measured slot fit and the board's intermittent programming behavior; this remains bounded bench evidence, excluding other boards/endurance.
+
+## CloudTelemetry G.1 configuration and local verification
+
+CloudTelemetry is absent unless explicitly configured. G.1 implements the device producer only: **do not activate packed uploads against staging until G.2 supplies and verifies `/addPackets`**. No G.1 device programming or managed activation has occurred. The existing USB-connected ESP32 is the intended later bench target, subject to live identity/file/application inventory;4G remains deferred. See the [owning M1-G plan](../../DroneLinkDatastore/docs/planning/m1-g-device-http-telemetry.md).
+
+Illustrative disabled configuration (names must match actual configured modules):
+
+```ini
+node = 11
+[CloudTelemetry = 20]
+  status = 0
+  endpoint = "https://staging.dronewright.com"
+  domain = "REPLACE_WITH_FIXTURE_DOMAIN"
+  apiKey = "REPLACE_WITH_FIXTURE_KEY"
+  reportInterval = 10000
+  subscriptions = @>Management.*
+  subscriptions = @>GPS.location, Hull>4.8
+  subscriptions = 12>5.*
+```
+
+Repeated subscription lines append and overlapping selections deduplicate. Local symbolic names and lazy peer-node names are supported; peer module/parameter names are not. Malformed/range/oversize settings disable only this module and identify the configuration line without echoing values; valid unavailable targets remain pending. Resolved/pending counters describe address resolution, not proof of live connectivity. Endpoint/Domain/key/subscriptions apply after explicit Upload and separate Restart and survive configuration save, including an open `publish` list. Quoted long strings escape quote/backslash. Domain is limited to200 printable bytes, key512, HTTPS origin256, decoded setting768 and64 selection clauses/4096 selection bytes. The key remains accessible through deliberate local file access; it is never a public packet parameter.
+
+`reportInterval` is uint32 parameter8,1000–86400000ms, default10000. It may be tuned through existing local parameter tools; changes retain pending observations and start a fresh interval after the current cycle. `interval` retains its existing module-loop meaning. Parameter9 reports attempted requests/admitted pipeline counts/failed-or-uncertain requests;10 resolved clauses/pending clauses/new-address drops;11 free heap/minimum heap/worker stack high-water bytes/largest free block;12 max service gap/report duration/last HTTP status;13 captured/coalesced publications/tracked addresses. These are local diagnostics, excluded from this module's own upload. Buffered admission counts are not durable packet delivery or persistence evidence.
+
+Run actual-production policy/framing and module/loader/save/channel harnesses:
+
+```sh
+python3 -m unittest discover -s tests -p 'test_cloud_telemetry.py' -v
+python3 -m unittest discover -s tests -v
+pio run -e esp32doit-devkit-v1
+```
+
+Host C++ tests use address/undefined sanitizers and narrow platform adapters; they do not measure real FreeRTOS scheduling or ESP32 TLS resources. The complete suite also creates temporary self-signed certificates with the installed OpenSSL and an owned loopback-only TLS fault server. No test opens a serial device or contacts staging. The operator helper supports explicit controlled faults without automating hardware or deployment:
+
+```sh
+python3 tools/cloud_telemetry_acceptance.py serve --bind 127.0.0.1 --port 8443 --cert /private/tmp/test-cert.pem --key /private/tmp/test-key.pem --mode partial
+python3 tools/cloud_telemetry_acceptance.py analyze --input /private/tmp/metrics.json
+```
+
+`serve` modes are valid/partial/stall/lost/oversize/redirect. A later explicitly chosen LAN bind can support a confirmed bench run; no endpoint, network or device is chosen automatically. Request logs contain only size/count/mode. `analyze` accepts a private array of numeric metric objects and emits only freeHeap/minHeap/stackBytes/serviceGapMs/reportDurationMs/httpStatus summaries. Capture actual request sizes/counts, reconnect/handshake and encoding/complete-report times separately during bench acceptance. This helper is a fault fixture, not proof of the production Server's admission contract.
+
+G.1 final local evidence:27 Python suite tests pass (including sanitizer-backed C++ harnesses and real loopback TLS fixture);38 coordinated protocol checks pass. A clean isolated-cache PlatformIO build fits the unchanged1,310,720-byte application slot:1,274,697 bytes flash and52,544 bytes static RAM. These are link-time sizes, not runtime heap/stack measurements. Initial TLS build exceeded the slot; `-flto` and `-fno-exceptions` now retain all modules and the existing partition layout. Firmware has no C++ exception handlers; required allocations use nothrow/failure paths. The post hook removes the framework's conflicting link flag and selects GCC plugin-aware archivers for both main and cloned library builders. Invalidate old non-plugin archive caches when changing LTO options; a clean isolated build cache established the recorded pass. Existing vendored sensor-library warnings remain. No release archive, hardware claim or deployment is implied; G.3/G.4 own those gates.

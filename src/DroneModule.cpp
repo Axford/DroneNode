@@ -542,6 +542,7 @@ void DroneModule::saveConfiguration(File *f) {
   }
 
   f->println("");
+  saveExtraConfiguration(f);
 }
 
 

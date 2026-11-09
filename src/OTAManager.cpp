@@ -26,6 +26,7 @@ void OTAManager::init(String hostname) {
     else // U_SPIFFS
       Log.noticeln("[OTA] Start updating filesystem");
 
+    if (onEvent) { onEvent(start, 0); }
     LITTLEFS.end();
 
     isUpdating = true;
@@ -37,7 +38,6 @@ void OTAManager::init(String hostname) {
     // clear interrupts
     //cli();
 
-    if (onEvent) { onEvent(start, 0); }
   });
   ArduinoOTA.onEnd([&]() {
     Log.noticeln(F("[OTA] End"));

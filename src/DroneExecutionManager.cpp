@@ -1,4 +1,6 @@
 #include "DroneConsole.h"
+#include "ConfigurationLine.h"
+#include "droneModules/CloudTelemetryModule.h"
 #include "DroneSystem.h"
 #include "DroneExecutionManager.h"
 #include "DroneLinkManager.h"
@@ -282,174 +284,63 @@ void DroneExecutionManager::processAddressQueue() {
 
 
 void DroneExecutionManager::loadConfiguration(const char* filename) {
-
-  uint8_t outerState = DEM_PARSER_GENERAL;
-  uint8_t inValue = false;  
-  boolean inString = false;
-  boolean inComment = false;
-  boolean addToBuffer = false;
-
-  uint8_t nodeId = 0;
-  uint8_t moduleId = 0;
-  DroneModule *newMod = NULL;
-
-  uint32_t line = 0;
-  char valueBuffer[DEM_PARSER_VALUE_BUFFER_SIZE];  // parsing buffer
-  uint8_t vBufLen = 0;  // how many valid chars are in the buffer
-  
-  char nameBuffer[DEM_PARSER_NAME_BUFFER_SIZE];
-  uint8_t nBufLen = 0;
-
-
-  if (LITTLEFS.exists(F(filename))) {
-    File file = LITTLEFS.open(F(filename), FILE_READ);
-
-    if (!file) {
-      DroneConsole.print("[w.lW] Error opening: ");
-      DroneConsole.println(filename);
-    } else {
-      
-      
-      
-      while (file.available()) {
-        char c = file.read();
-
-        addToBuffer = false;
-
-        if (!inComment) {
-          if (inString) {
-            // keep accumulating characters until we find a "
-            if (c == '"') {
-              inString = false;
-            } else {
-              addToBuffer = true;
-            }
-          } else {
-            addToBuffer = (c != '\t' && 
-                          c != ' ' && 
-                          c != '\r' && 
-                          c != '\n' &&
-                          c != '=' && 
-                          c != '[' &&
-                          c != ']' &&
-                          c != '"' &&
-                          c != ';');
-            if (c == '"') inString = true;
-            if (c == ';') inComment = true;
-          }
-
-          // accumulate string buffer
-          if (addToBuffer) {
-            if (inValue) {
-              if (vBufLen < DEM_PARSER_VALUE_BUFFER_SIZE-1) {
-                valueBuffer[vBufLen] = c;
-                vBufLen++;
-              }
-            } else {
-              if (nBufLen < DEM_PARSER_NAME_BUFFER_SIZE-1) {
-                nameBuffer[nBufLen] = c;
-                nBufLen++;
-              }
-            }
-          }
-
-          if (c == '=' && !inValue) {
-            inValue = true;
-            vBufLen = 0;
-          } else if (c == '[' && nBufLen == 0) {
-            outerState = DEM_PARSER_SECTION_TITLE;
-            nBufLen = 0;
-          }
-        }
-        
-
-        // if end of line or end of file
-        if (c == '\n' || !file.available()) {
-          
-          // see if we have a valid name=value pair
-          if (inValue && vBufLen > 0 && nBufLen > 0) {
-            // null terminate
-            nameBuffer[nBufLen] = 0;
-            valueBuffer[vBufLen] = 0;
-
-            // do the thing
-            switch(outerState) {
-              case DEM_PARSER_GENERAL:
-                  // do we have a node address
-                  if (strcmp(nameBuffer, "node") == 0) {
-                    nodeId = atoi(valueBuffer);
-                    if (nodeId > 0 && nodeId < 255) {
-                      // set node address
-                      _dmm->node(nodeId);
-                      _dlm->node(nodeId);
-                      Log.noticeln(F("[DEM.lC] node= %d ..."), nodeId);
-                    } else
-                      Log.errorln(F("[DEM.lC] invalid node address"));
-                  }
-                  
-                  break;
-
-              case DEM_PARSER_SECTION_TITLE:
-
-                  // parse module id
-                   moduleId= atoi(valueBuffer);
-                  if (moduleId > 0 && moduleId < 255) {
-                    Log.noticeln(F("[DEM.lC] module= %d ..."), moduleId);
-
-                    // see if there is a matching module to instance
-                    newMod = instanceModule(nameBuffer, moduleId);
-
-                    yield();
-                  } else
-                    Log.errorln(F("[DEM.lC] invalid module address"));
-                  
-                  outerState = DEM_PARSER_SECTION;
-                  break;
-
-              case DEM_PARSER_SECTION:
-
-                  if (newMod) {
-                    if (strcmp(nameBuffer, "publish")==0) {
-                      Log.noticeln("[DEM.lC] publishing: %s", valueBuffer);
-                      // parse and publish list of params
-                      newMod->publishParamsFromList(valueBuffer);
-                    } else if (nameBuffer[0] == '$') {
-                      // parse sub
-                      addToAddressQueue(newMod, &nameBuffer[1], valueBuffer);
-
-                    } else {
-                      // regular param setting
-                      Log.noticeln("[DEM.lC] Setting param: %s", nameBuffer);
-                      DRONE_PARAM_ENTRY* pe = newMod->getParamEntryByName(nameBuffer);
-                      if (pe) {
-                        newMod->setParamFromList(pe, valueBuffer);
-                      } else {
-                        Log.errorln(F("[DEM.lC] Unknown param: %s"), nameBuffer);
-                      }
-                    }
-                    
-                  } else 
-                    Log.errorln(F("[DEM.lC] no valid module to configure"));
-                  break;
-            }
-          }
-          
-
-          nBufLen = 0;
-          vBufLen = 0;
-          inValue = false;
-          line++;
-          inString = false;
-          inComment = false;
-        }
+  File file=LITTLEFS.open(filename,FILE_READ);
+  if(!file) { Log.errorln("[DEM] Unable to open configuration"); return; }
+  DroneModule* module=nullptr;bool inSection=false;
+  char raw[2049]; size_t used=0; bool overflow=false; uint32_t lineNumber=0;
+  auto applyLine=[&]() {
+    ++lineNumber; raw[used]=0;
+    configuration::Line line;
+    bool valid=line.parse(raw,false);
+    if(module && module->isConfigurationString(line.name)) valid=line.parse(raw,true);
+    if(overflow||!valid) {
+      Log.errorln("[DEM] Invalid configuration at line %u",lineNumber);
+      if(module) module->configurationError();
+      return;
+    }
+    if(line.empty) return;
+    if(line.section) {
+      inSection=true;
+      unsigned id=0;
+      if(!telemetry::decimal(line.value,254,id)) {
+        Log.errorln("[DEM] Invalid module address at line %u",lineNumber);module=nullptr;return;
+      }
+      module=instanceModule(line.name,id);
+      return;
+    }
+    if(!module) {
+      if(!inSection&&!strcmp(line.name,"node")) {
+        unsigned id=0;
+        if(telemetry::decimal(line.value,254,id)) { _dmm->node(id);_dlm->node(id); }
+        else Log.errorln("[DEM] Invalid node address at line %u",lineNumber);
+      }
+      return;
+    }
+    // Legacy token scanners use uint8_t indexes; only dedicated string hooks accept long values.
+    if(!module->isConfigurationString(line.name) && strlen(line.value)>=DEM_PARSER_VALUE_BUFFER_SIZE) {
+      Log.errorln("[DEM] Legacy setting too long at line %u",lineNumber);module->configurationError();return;
+    }
+    if(!strcmp(line.name,"publish")) module->publishParamsFromList(line.value);
+    else if(line.name[0]=='$') addToAddressQueue(module,line.name+1,line.value);
+    else {
+      auto result=module->configure(line.name,line.value);
+      if(result==telemetry::Setting::Invalid) {
+        Log.errorln("[DEM] Invalid module configuration at line %u",lineNumber);module->configurationError();
+      } else if(result==telemetry::Setting::Unhandled) {
+        auto param=module->getParamEntryByName(line.name);
+        if(param) module->setParamFromList(param,line.value);
+        else Log.errorln("[DEM] Unknown setting at line %u",lineNumber);
       }
     }
-
-    file.close();
-  } else {
-    DroneConsole.print("[W.lW] No: ");
-    DroneConsole.println(filename);
+  };
+  while(file.available()) {
+    char c=file.read();
+    if(c=='\n') {applyLine();used=0;overflow=false;yield();}
+    else if(used<sizeof(raw)-1) raw[used++]=c;
+    else overflow=true;
   }
+  if(used||overflow) applyLine();
+  file.close();
 }
 
 
@@ -506,7 +397,9 @@ DroneModule* DroneExecutionManager::instanceModule(char* typeName, uint8_t id) {
   DroneModule *newMod = NULL;
 
   if (id > 0 && id < 255) {
-    if (strcmp_P(typeName, ADS1015_STR_ADS1015) == 0) {
+    if (!strcmp(typeName,"CloudTelemetry")) {
+      newMod = new CloudTelemetryModule(id, _ds);
+    } else if (strcmp_P(typeName, ADS1015_STR_ADS1015) == 0) {
       newMod = new ADS1015Module(id, _ds);
     } else if (strcmp_P(typeName, ANALOG_STR_ANALOG) == 0) {
       newMod = new AnalogModule(id, _ds);

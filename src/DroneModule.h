@@ -19,6 +19,7 @@ things that would be useful for all modules
 #define DRONE_MODULE_H
 
 #include "Arduino.h"
+#include "ConfigurationLine.h"
 #include "DroneLinkMsg.h"
 #include <ArduinoLog.h>
 #include "DroneExecutionManager.h"
@@ -154,7 +155,7 @@ public:
   long loopDuration;
 
   DroneModule(uint8_t id, DroneSystem* ds);
-  ~DroneModule();
+  virtual ~DroneModule();
 
   uint8_t id();
 
@@ -182,6 +183,12 @@ public:
   void saveParamValue(DRONE_PARAM_ENTRY* p, File *f);
   void saveParam(DRONE_PARAM_ENTRY* p, File *f);
   void saveConfiguration(File *f);
+  // File-only configuration: handled values never enter public packet parameters.
+  virtual bool isConfigurationString(const char* name) const { return false; }
+  virtual configuration::Setting configure(const char* name, const char* value) { return configuration::Setting::Unhandled; }
+  virtual void configurationError() { setError(1); }
+  virtual void saveExtraConfiguration(File* file) {}
+
 
   void reset();
   virtual void doReset();

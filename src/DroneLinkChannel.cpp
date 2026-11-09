@@ -112,7 +112,14 @@ void DroneLinkChannel::processQueue() {
       if (sub->module) {
         // internal sub
         //Log.noticeln("[DLC.pQ] to %s", sub->module->getName());
-        sub->module->handleLinkMessage(tmp);
+        // Overlapping wildcard/specific subscriptions select one publication,
+        // not multiple publications. Preserve distinct identical queue items.
+        bool delivered=false;
+        for(int j=0;j<i;++j) {
+          auto prior=_subs.get(j);
+          if(prior->module==sub->module && (prior->param==tmp->param() || prior->param==DRONE_LINK_PARAM_ALL)) { delivered=true;break; }
+        }
+        if(!delivered) sub->module->handleLinkMessage(tmp);
       } else {
         // external sub - pass to DLM
         _dlm->sendDroneLinkMessage(sub->extNode, tmp);

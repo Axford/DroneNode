@@ -35,7 +35,19 @@ class ReleaseTests(unittest.TestCase):
             if entry['name'] in ['mode', 'trim', 'limits', 'threshold']:
                 entry['address'] = {'mode': 10, 'trim': 11, 'limits': 13, 'threshold': 14}[entry['name']]
         expected['SerialTelemetry']['pub'][1]['description'] = 'Counters: sent, complete RX handoffs (before DLM CRC), framing rejects'
-        self.assertEqual(release.metadata(), expected)
+        # Exercise the new working-tree module before its first commit; exports
+        # still require a clean committed tree and retain their provenance gate.
+        sources = release.annotation_files()
+        cloud_source = ROOT / 'src/droneModules/CloudTelemetryModule.h'
+        if cloud_source not in sources:
+            sources.append(cloud_source)
+        with patch.object(release, 'annotation_files', return_value=sources):
+            actual = release.metadata()
+        cloud = actual.pop('CloudTelemetry')
+        self.assertEqual(cloud['type'], ['CloudTelemetry'])
+        self.assertEqual(cloud['inherits'], ['Drone'])
+        self.assertEqual([(p['address'],p['name']) for p in cloud['pub']], [(8,'reportInterval'),(9,'requests'),(10,'selection'),(11,'memory'),(12,'timing'),(13,'flow')])
+        self.assertEqual(actual, expected)
         self.assertEqual(len(expected), 51)
 
     def test_malformed_ambiguous_and_multiline_metadata(self):
@@ -135,7 +147,7 @@ else: print('Synthetic resolved tool versions')
 
     def test_build_hook_has_no_upload_or_build_publication_action(self):
         actions = []
-        namespace = {'Import': lambda _: None, 'env': type('Env', (), {'AddPostAction': lambda *args: actions.append(args)})()}
+        namespace = {'Import': lambda _: None, 'env': type('Env', (), {'AddPostAction': lambda *args: actions.append(args), 'ProcessUnFlags': lambda *args: None, 'GetLibBuilders': lambda *args: [], 'AppendUnique': lambda *args, **kwargs: None, 'Replace': lambda *args, **kwargs: None})()}
         exec((ROOT / 'post_build.py').read_text(), namespace)
         self.assertEqual(actions, [])
 
