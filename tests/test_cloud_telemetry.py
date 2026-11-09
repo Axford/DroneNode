@@ -20,7 +20,7 @@ class CloudTelemetryTests(unittest.TestCase):
             (tree/'droneModules').mkdir()
             for name in ('CloudTelemetryModule.cpp','CloudTelemetryModule.h'):
                 shutil.copyfile(ROOT/'src/droneModules'/name,tree/'droneModules'/name)
-            for name in ('TelemetryReport.h','CloudTelemetryHttp.h','CloudTelemetryConfig.h','ConfigurationLine.h'):
+            for name in ('TelemetryReport.h','CloudTelemetryHttp.h','CloudTelemetryConfig.h','ConfigurationLine.h','FirmwareMeasurements.h'):
                 shutil.copyfile(ROOT/'src'/name,tree/name)
             base=(ROOT/'src/DroneModule.cpp').read_text()
             start=base.index('void DroneModule::saveConfiguration(')

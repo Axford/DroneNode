@@ -1,5 +1,7 @@
 #include "DroneConsole.h"
 #include "DroneSystem.h"
+#include "FirmwareMeasurements.h"
+namespace telemetry {void mountMeasurements(AsyncWebServer &server);}
 #include "DroneLogger.h"
 #include "esp_pm.h"
 
@@ -298,6 +300,7 @@ void DroneSystem::setupWebServer() {
   Log.noticeln(F("[] Setup web _server..."));
 
   // node info debug
+  telemetry::mountMeasurements(_server);
   _server.on("/nodeInfo", HTTP_GET, [&](AsyncWebServerRequest *request){
     _doLoop = false;
     dlm->serveNodeInfo(request);

@@ -27,6 +27,7 @@ Steps to setup a new device:
 
 // drone core
 #include "DroneSystem.h"
+#include "FirmwareMeasurements.h"
 
 // networking
 #include <AsyncTCP.h>
@@ -83,6 +84,7 @@ unsigned long debugTimer = 0;
 
 void loop() {
   unsigned long loopTime = millis();
+  telemetry::measureMainLoop(loopTime);
   
   if (!OTAMgr.isUpdating) {
 

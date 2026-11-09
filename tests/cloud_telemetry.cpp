@@ -6,6 +6,9 @@
 #include <string>
 #include <vector>
 struct FakeHttp:telemetry::HttpIo {
+ struct Event {telemetry::Phase phase;bool end;uint32_t elapsed;};std::vector<Event> events;uint32_t micro=0;
+ uint32_t nowMicros() override {micro+=3;return micro;}
+ void observe(telemetry::Phase phase,bool end,uint32_t elapsed) override {events.push_back({phase,end,elapsed});}
  std::string sent,response;size_t position=0,limit=7;uint32_t time=0,connectDelay=0;bool open=true,active=true,connects=true,cancelOnWrite=false;
  uint32_t now()override{return time;}bool running()override{return active;}
  bool connect(const char*,uint16_t)override{time+=connectDelay;return connects;}
@@ -119,4 +122,12 @@ static void httpTests() {
  std::string output;uint8_t buffer[3];size_t n;while((n=escaped.read(buffer,sizeof buffer))) output.append(reinterpret_cast<char*>(buffer),n);
  assert(output.size()==escaped.size()&&output.find("a\\\"b\\\\c")!=std::string::npos);
 }
-int main(){configurationTests();policyTests();httpTests();}
+static void measurementTests(){
+ auto cfg=settings();auto cycle=literalCycle();FakeHttp io;io.connects=false;
+ telemetry::PackedHttp sender(io);sender.sendBatch(cfg,cycle,0,2,254);
+ assert(io.events.size()==4);
+ assert(io.events.front().phase==telemetry::Phase::Request&&!io.events.front().end);
+ assert(io.events[2].phase==telemetry::Phase::Connect&&io.events[2].end&&io.events[2].elapsed==3);
+ assert(io.events.back().phase==telemetry::Phase::Request&&io.events.back().end);
+}
+int main(){measurementTests();configurationTests();policyTests();httpTests();}

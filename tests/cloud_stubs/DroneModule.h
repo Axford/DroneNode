@@ -18,6 +18,7 @@ using __FlashStringHelper=char;using PGM_P=const char*;
 #define DRONE_LINK_MSG_TYPE_UINT8_T 0
 extern uint32_t hostTime;
 inline uint32_t millis(){return hostTime;}
+inline uint32_t micros(){return hostTime*1000;}
 struct File {
  std::string text;size_t position=0;bool valid=true;
  explicit operator bool()const{return valid;}int available(){return text.size()-position;}int read(){return available()?text[position++]:-1;}void close(){}

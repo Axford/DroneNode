@@ -28,6 +28,8 @@ public:
     client.setInsecure();client.setHandshakeTimeout(5);client.setTimeout(5);
   }
   uint32_t now() override {return millis();}
+  uint32_t nowMicros() override {return micros();}
+  void observe(telemetry::Phase phase,bool end,uint32_t elapsed) override {telemetry::measurePhase(phase,end,elapsed);}
   bool running() override {return !state.terminate.load()&&state.active.load()&&state.generation.load()==state.jobGeneration;}
   bool connect(const char* host,uint16_t port) override {
     if(!running()) return false;
@@ -47,6 +49,8 @@ void runWorker(void* pointer) {
     for(;;) {
       ulTaskNotifyTake(pdTRUE,portMAX_DELAY);
       if(state.terminate.load()) break;
+      telemetry::measurePhase(telemetry::Phase::Report,false,0);
+      const uint32_t reportStart=micros();
       const uint32_t start=millis();state.attempted=0;state.requests=state.admitted=state.failed=0;state.status=0;
       for(size_t i=0;i<state.cycle.count && io.running();) {
         const size_t count=std::min(telemetry::BatchLimit,state.cycle.count-i);
@@ -61,6 +65,7 @@ void runWorker(void* pointer) {
       io.close(); // No TLS connection remains idle between report cycles.
       state.duration=millis()-start;
       state.stack=uxTaskGetStackHighWaterMark(nullptr); // ESP-IDF reports bytes.
+      telemetry::measurePhase(telemetry::Phase::Report,true,micros()-reportStart);
       state.done.store(true,std::memory_order_release);
     }
     io.close();

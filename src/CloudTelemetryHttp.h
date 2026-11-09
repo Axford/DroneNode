@@ -1,6 +1,7 @@
 #ifndef CLOUD_TELEMETRY_HTTP_H
 #define CLOUD_TELEMETRY_HTTP_H
 #include "TelemetryReport.h"
+#include "FirmwareMeasurements.h"
 #include "CloudTelemetryConfig.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -58,6 +59,8 @@ class HttpIo {
 public:
   virtual ~HttpIo() {}
   virtual uint32_t now()=0;
+  virtual uint32_t nowMicros() {return now()*1000;}
+  virtual void observe(Phase,bool,uint32_t) {}
   virtual bool running()=0;
   virtual bool connect(const char* host,uint16_t port)=0;
   virtual size_t write(const uint8_t* bytes,size_t size)=0;
@@ -66,11 +69,18 @@ public:
   virtual void wait()=0;
   virtual void close()=0;
 };
+class PhaseScope {
+  HttpIo &io;Phase phase;uint32_t start;
+public:
+  PhaseScope(HttpIo &client,Phase value):io(client),phase(value),start(0) {io.observe(phase,false,0);start=io.nowMicros();}
+  ~PhaseScope() {io.observe(phase,true,uint32_t(io.nowMicros()-start));}
+};
 struct Admission { bool attempted=false,complete=false; int status=0,admitted=-1; };
 class PackedHttp {
   HttpIo &io;uint32_t started=0;size_t headerBytes=0;
   bool live() {return io.running() && uint32_t(io.now()-started)<45000;}
   bool send(const uint8_t* p,size_t n) {
+    PhaseScope measurement(io,Phase::Write);
     while(n&&live()) {size_t done=io.write(p,n);if(!done||done>n) return false;p+=done;n-=done;}
     return !n&&live();
   }
@@ -140,13 +150,24 @@ public:
   Admission sendBatch(const HttpSettings &cfg,const Cycle &cycle,size_t first,size_t count,uint8_t id) {
     Admission result;started=io.now();headerBytes=0;
     if(!count||count>32||first+count>cycle.count||!live()) return result;
+    PhaseScope requestMeasurement(io,Phase::Request);
     PackedBody body(cfg,cycle,first,count,id);
     result.attempted=true;
-    if(!io.connect(cfg.host,cfg.port)||!live()) {io.close();return result;}
+    bool connected;
+    {
+      PhaseScope connectMeasurement(io,Phase::Connect);
+      connected=io.connect(cfg.host,cfg.port);
+    }
+    if(!connected||!live()) {io.close();return result;}
     char header[512];int length=snprintf(header,sizeof header,"POST /addPackets HTTP/1.1\r\nHost: %s:%u\r\nContent-Type: application/json\r\nContent-Length: %u\r\nConnection: keep-alive\r\n\r\n",cfg.host,cfg.port,unsigned(body.size()));
     if(length<0||size_t(length)>=sizeof header||!send(reinterpret_cast<const uint8_t*>(header),length)) {io.close();return result;}
     uint8_t buffer[256];size_t bytes;
-    while((bytes=body.read(buffer,sizeof buffer))) if(!send(buffer,bytes)) {io.close();return result;}
+    while(true) {
+      {PhaseScope encodingMeasurement(io,Phase::Encode);bytes=body.read(buffer,sizeof buffer);}
+      if(!bytes) break;
+      if(!send(buffer,bytes)) {io.close();return result;}
+    }
+    PhaseScope responseMeasurement(io,Phase::Response);
     char input[1025];
     if(!line(input,sizeof input)) {io.close();return result;}
     if(strncmp(input,"HTTP/1.1 ",9)&&strncmp(input,"HTTP/1.0 ",9)) {io.close();return result;}
