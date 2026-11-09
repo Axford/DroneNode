@@ -954,7 +954,14 @@ void DroneLinkManager::receiveDroneLinkMsg(NetworkInterfaceModule *interface, ui
       // upwrap contained msg
       uint8_t payloadSize = getDroneMeshMsgPayloadSize(buffer);
 
-      memcpy((uint8_t*)&_receivedMsg._msg, &buffer[sizeof(DRONE_MESH_MSG_HEADER)], payloadSize);
+      if (!_receivedMsg.tryParse(&buffer[sizeof(DRONE_MESH_MSG_HEADER)], payloadSize)) {
+        ++_rejectedLinkMessages;
+        if (_rejectedLinkMessages == 1 || millis() - _lastRejectedLinkLog >= 1000) {
+          Log.warningln(F("[DLM.rDlM] Invalid link structure"));
+          _lastRejectedLinkLog = millis();
+        }
+        return;
+      }
 
       // publish contained message on local bus
       publish(_receivedMsg);

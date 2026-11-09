@@ -99,6 +99,8 @@ typedef void (*DroneLinkManagerCallback) (const DroneLinkManagerEvent event, con
 class DroneLinkManager
 {
 protected:
+  uint32_t _rejectedLinkMessages = 0;
+  unsigned long _lastRejectedLinkLog = 0;
   WiFiManager *_wifiManager;
   DroneFS* _fs;
   uint8_t _node;  // local node id

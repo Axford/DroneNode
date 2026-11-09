@@ -28,6 +28,17 @@ DroneLinkMsg::DroneLinkMsg(DRONE_LINK_MSG *msg)
 
 DroneLinkMsg::~DroneLinkMsg() {}
 
+bool DroneLinkMsg::tryParse(const uint8_t *bytes, size_t size) {
+  if (!bytes || size < 6 || size > sizeof(DRONE_LINK_MSG)) return false;
+  const uint8_t length = (bytes[4] & 15) + 1;
+  const uint8_t type = (bytes[4] >> 4) & 7;
+  if (size != static_cast<size_t>(5 + length) || length % DRONE_LINK_MSG_TYPE_SIZES[type]) return false;
+  DRONE_LINK_MSG next = {};
+  memcpy(&next, bytes, size);
+  _msg = next;
+  return true;
+}
+
 bool DroneLinkMsg::matchParam(uint8_t paramMask)
 {
   // Serial.print("Mask:");

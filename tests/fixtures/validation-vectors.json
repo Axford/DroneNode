@@ -1,0 +1,59 @@
+{
+  "schemaVersion": 1,
+  "valid": [
+    {
+      "name": "query-one",
+      "hex": "ff0704007001"
+    },
+    {
+      "name": "namequery-sixteen",
+      "hex": "ff0704006f01010101010101010101010101010101"
+    },
+    {
+      "name": "nan-payload",
+      "hex": "ff070400330100c07f"
+    },
+    {
+      "name": "empty-name",
+      "hex": "000704005000"
+    },
+    {
+      "name": "four-addresses",
+      "hex": "000704001f01020304010203040102030401020304"
+    }
+  ],
+  "invalid": [
+    {
+      "name": "empty",
+      "hex": ""
+    },
+    {
+      "name": "header-only",
+      "hex": "0007040000"
+    },
+    {
+      "name": "truncated",
+      "hex": "000704000f01"
+    },
+    {
+      "name": "trailing",
+      "hex": "00070400000102"
+    },
+    {
+      "name": "uint32-misaligned",
+      "hex": "00070400210102"
+    },
+    {
+      "name": "addr-misaligned",
+      "hex": "000704001001"
+    },
+    {
+      "name": "float-misaligned",
+      "hex": "0007040032010203"
+    },
+    {
+      "name": "mesh-sized-overrun",
+      "hex": "000704007f00000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+    }
+  ]
+}

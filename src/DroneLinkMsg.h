@@ -95,6 +95,9 @@ public:
 
     virtual ~DroneLinkMsg();
 
+    // Checked variable-length ingress; rejects without changing the prior message.
+    bool tryParse(const uint8_t *bytes, size_t size);
+
     virtual bool matchParam(uint8_t paramMask);
 
     // util
