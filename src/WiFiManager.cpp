@@ -3,6 +3,7 @@
 #include "WiFi.h"
 #include "esp_wifi.h"
 #include "lwip/dns.h"
+#include "lwip/tcpip.h"
 //#include "SPIFFS.h"
 
 //#include "esp_int_wdt.h"
@@ -35,6 +36,7 @@ WiFiManager::WiFiManager() {
 
 void WiFiManager::loadConfiguration(fs::FS &fs) {
   boolean addDefault = true;
+  _dnsOverride=DnsOverride();
 
   if (fs.exists(F("/wifi.json"))) {
     File file = fs.open(F("/wifi.json"), FILE_READ);
@@ -47,6 +49,10 @@ void WiFiManager::loadConfiguration(fs::FS &fs) {
     } else {
       JsonObject obj = doc.as<JsonObject>();
 
+      if(obj.containsKey("dnsServer") &&
+         (!obj["dnsServer"].is<const char*>() || !_dnsOverride.parse(obj["dnsServer"].as<const char*>())))
+        Log.errorln("[WIFI] Invalid dnsServer; retaining existing DNS behavior");
+
       // read networks
       WiFiNetworkCredentials cred;
       if (obj.containsKey(F("networks"))) {
@@ -56,7 +62,7 @@ void WiFiManager::loadConfiguration(fs::FS &fs) {
           cred.ssid = v[F("ssid")] | "";
           cred.password = v[F("password")] | "";
           if (cred.ssid != "") {
-            Log.noticeln("[WIFI] Adding %s, %s", cred.ssid.c_str(), cred.password.c_str());
+            Log.noticeln("[WIFI] Network configured");
             _networks.add(cred);
             addDefault = false;
           }
@@ -127,10 +133,28 @@ void WiFiManager::disable() {
 
 
 //const char * ssid, const char * pwd
+void WiFiManager::applyConfiguredDns() {
+  if(!_dnsOverride.configured)return;
+  // Apply in the lwIP thread after DHCP's DNS assignment. Every slot uses the
+  // chosen resolver, including ESP-IDF's third fallback slot.
+  if(tcpip_callback([](void* pointer) {
+      const auto &dns=static_cast<WiFiManager*>(pointer)->_dnsOverride;
+      ip_addr_t address;
+      IP_ADDR4(&address,dns.bytes[0],dns.bytes[1],dns.bytes[2],dns.bytes[3]);
+      for(unsigned i=0;i<DNS_MAX_SERVERS;++i)dns_setserver(i,&address);
+    },this)!=ERR_OK) Log.errorln("[WIFI] DNS override scheduling failed");
+}
+
 void WiFiManager::start() {
+  if(_dnsOverride.configured&&!_dnsEventRegistered) {
+    WiFi.onEvent([this](WiFiEvent_t,WiFiEventInfo_t) {applyConfiguredDns();},ARDUINO_EVENT_WIFI_STA_GOT_IP);
+    _dnsEventRegistered=true;
+  }
+
 
   // speculative attempt to join first network in network list
   WiFi.begin(_networks[0].ssid.c_str(), _networks[0].password.c_str());
+  if(WiFi.status()==WL_CONNECTED)applyConfiguredDns();
 
   //WiFi.disconnect();
 
@@ -171,6 +195,7 @@ void WiFiManager::keepWiFiAlive(void *pvParameters){
 
     if (l_pThis->_enabled) {
       if(WiFi.status() == WL_CONNECTED){
+        l_pThis->applyConfiguredDns();
         Log.noticeln("[WIFI] Connected: %p", WiFi.localIP());
         vTaskDelay(10000 / portTICK_PERIOD_MS);
         continue;
@@ -213,7 +238,7 @@ void WiFiManager::keepWiFiAlive(void *pvParameters){
                   WiFi.disconnect();
                   vTaskDelay(1);
                   Log.noticeln("[WIFI] Match: %s", WiFi.SSID(j));
-                  Log.noticeln("[WIFI] Connecting with password: %s", l_pThis->_networks[i].password.c_str());
+                  Log.noticeln("[WIFI] Connecting to configured network");
                   WiFi.begin(l_pThis->_networks[i].ssid.c_str(), l_pThis->_networks[i].password.c_str());
                   l_pThis->_attemptingConnection = true;
                   vTaskDelay(1);

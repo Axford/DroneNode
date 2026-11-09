@@ -257,3 +257,54 @@ python3 tools/collect_measurements.py --origin http://192.168.1.32 --seconds 900
 The collector accepts only an explicit local HTTP IP origin, uses only GET, rejects redirects/proxies, caps each response at64KiB, duration at1200seconds and event history at64. It creates a new0600 JSONL file without overwriting previous evidence, retains only whitelisted numeric/phase fields, and reports missing records, observed reboot/counter resets and unreachable samples. Reachability errors produce explicit gaps and collection resumes; malformed/schema-mismatched responses stop with partial evidence retained. It never supplies credentials, changes device parameters, creates a fault or starts itself automatically. First snapshot establishes a baseline and excludes pre-run phase events. Fresh restarts and sequential captures must be recorded; no samples during a disconnect may be invented. If required phase records are missing, rerun that fault/capture before acceptance. Endpoint requests themselves consume resources; use identical polling for disabled/enabled comparison and record its observed impact.
 
 Host checks cover rollover/100ms threshold, history overwrite/ordering, aggregate timings, actual local-endpoint serialization into the collector schema, unknown secret-field removal and outage/resumption with0600 output. Stock DNS/TLS fault setup, actual observations, physical identity, programming preservation and managed activation remain G.4 execution gates. A new clean-source release and updated preview must supersede the original G.3 candidate before programming this correction.
+
+## G.4 controlled DNS and transport faults
+
+`wifi.json` now accepts an optional configuration-only `dnsServer` containing one canonical dotted IPv4 address. Apply through explicit file Upload and separate Restart, like other network-file changes. With the field absent, the original resolver behavior remains: the existing enable-time8.8.8.8 workaround and ordinary DHCP behavior are unchanged. Invalid/null/non-string/unspecified/loopback/multicast DNS settings produce a fixed diagnostic without echoing the setting and retain the existing behavior; they do not prevent Wi-Fi recovery. Existing network/password fields remain compatible. Wi-Fi credentials are no longer printed by the loader or connection task.
+
+```json
+{"dnsServer":"192.168.1.50"}
+```
+
+The address above is an example, not a selected workstation address. Preserve every existing field/network entry if adding it to an existing file. If wifi.json was originally absent, preserve that fact; a DNS-only file retains the existing default-network selection and must be removed at cleanup. Record its addition and exact bytes privately. The override sets all three installed lwIP resolver slots, including the fallback slot, to the chosen server in a queued lwIP-thread callback after GOT_IP. It also handles an already-connected start and reapplies during the existing10second connected check, including retry after a logged callback scheduling failure. No static IP configuration is introduced. Effective resolver behavior after real DHCP/renewal/reconnect still requires the physical test.
+
+Changing resolver slots does not invalidate cached DNS answers. Use a **new unique `.test` hostname for each DNS case**, and confirm the fixture logs `matched:1` for that request before claiming a DNS result. TTL0 responses avoid fixture-created positive caching; they are not proof that an earlier cache was cleared. Record fixture query/response evidence, elapsed worker cleanup, local measurements and recovery. Never infer a blackhole from merely using a nonexistent hostname, a different TCP port or a lack of successful uploads.
+
+The fault helper supplies the following explicit, foreground-only controls. It never selects an interface automatically, alters DNS/router/firewall configuration, opens a serial port, programs a node or contacts staging. Real LAN binds and privileged port53 use remain part of the later approved execution. Tests bind ephemeral loopback ports only.
+
+```sh
+python3 tools/cloud_telemetry_acceptance.py certificates --name run001.cloud-fault.test --output-dir /private/acceptance/new-certificates
+python3 tools/cloud_telemetry_acceptance.py dns --bind WORKSTATION_IPV4 --port 53 --name run001.cloud-fault.test --mode answer --answer WORKSTATION_IPV4
+python3 tools/cloud_telemetry_acceptance.py serve --bind WORKSTATION_IPV4 --port 8443 --cert /private/acceptance/new-certificates/valid.pem --key /private/acceptance/new-certificates/key.pem --mode valid
+```
+
+Replace the placeholder with the independently confirmed LAN address. Configure the node's test endpoint as `https://run001.cloud-fault.test:8443`, temporary Domain text and API key **`G4-DUMMY-ONLY`**. HTTP fixture requests with other keys receive403 without echo/logging. Never point staging credentials at this fixture. The server accepts at most eight connections, bounds body reads at4096 bytes and socket inactivity at6seconds, and closes owned connections/interrupted waits on shutdown. TLS handshakes run in the bounded workers rather than blocking the listener. Certificate generation writes a new private directory/key and refuses existing output directories. The matching self-signed, wrong-host and genuinely expired certificates are test-only; generate fresh matching certificates before a later session because they have one-day validity. The insecure ESP32 should accept them for certificate-authentication purposes; host verified/unverified TLS tests verify fixture distinction only, not ESP32 acceptance.
+
+| Case | Fixture control and expected distinction |
+| --- | --- |
+| DNS success | `dns --mode answer --answer WORKSTATION_IPV4`; exact single-name IN A answer, TTL0 |
+| DNS negative reply | `dns --mode nxdomain`; matching query gets NXDOMAIN, not timeout |
+| DNS blackhole | `dns --mode silent`; matching query is counted with rcode-1 and gets no reply |
+| TLS handshake stall / rejection | `serve --mode tls-stall --delay 15` / `tls-reject`; TCP accepts, then no handshake progress / deliberately non-TLS response |
+| Certificate policy | Select valid.pem, wrong-host.pem or expired.pem; retain dummy credentials |
+| HTTP stalls / slow progress | `stall --delay 15` waits before headers; `slow-response --delay 60` spreads body delivery across that total delay |
+| Disconnect / redirect | `lost` / `redirect`; no report replay or redirect following |
+| Invalid framing / summary | `oversize`, `header-oversize`, `malformed`; bounded rejection |
+| Policy / unexpected success | `status-401`, `status-404`, `status-409`, `status-429`, `status-503`, `unexpected-200`; none counts as full202 admission |
+| Partial admission | `partial` returns503 with conservative prefix counts; never infer durable storage from this dummy endpoint |
+
+The DNS fixture is a bounded exact-name UDP test resolver, not a recursive/general DNS service. It refuses other names, ignores malformed/compressed/additional-record requests and logs only numeric query/match/rcode counters and whitelisted mode text. In particular it is not a general `dig` endpoint; use `+noedns` if inspecting manually. Restore the original wifi.json/DNS and staging endpoint/key through separate Upload/Restart before managed acceptance.
+
+### TCP connection timeout preparation
+
+A server which accepts TCP then stalls TLS is not a TCP connection timeout. For that separate case, the tool only writes a narrow macOS PF SYN-drop rule:
+
+```sh
+python3 tools/cloud_telemetry_acceptance.py tcp-drop-rule --node NODE_IPV4 --workstation WORKSTATION_IPV4 --interface en1 --port 8443 --output /private/acceptance/new-tcp-drop.conf
+```
+
+It creates a new0600 file and reports `applied:false`; it never invokes pfctl. The rule matches only incoming IPv4 SYNs from the named ESP32 to the named workstation/test port/interface. At physical execution, first verify actual interface/addresses, a fresh TCP connection (no reused connection), effective filtering and capture SYN/no-response evidence. Applying firewall state requires the explicit G.4 execution approval. Inspect the loaded PF root rules for the expected `com.apple/*` anchor and verify the reserved child `com.apple/dronelink-g4` is empty before using it. The current source workstation's `/etc/pf.conf` declares that wildcard, but that does not establish currently loaded rules. If unavailable/occupied, stop this scenario and revise its control rather than replacing the root ruleset.
+
+After those checks, the manual approved sequence is `sudo pfctl -a com.apple/dronelink-g4 -nf <rule-file>` (syntax preview), `sudo pfctl -a com.apple/dronelink-g4 -f <rule-file>`, and `sudo pfctl -E`, retaining the returned enable token. Cleanup clears only that owned child with `sudo pfctl -a com.apple/dronelink-g4 -F rules` and releases only that token with `sudo pfctl -X <token>`. Verify the child is empty and normal connection recovery works. Never flush root rules/states or globally disable PF. No firewall command was executed during software preparation; actual firewall availability/packet evidence remains an execution gate.
+
+Run the actual WiFiManager loader/event harness using the selected installed ArduinoJson6 include directory: `DRONELINK_ARDUINOJSON_DIR=<ArduinoJson/src> python3 -m unittest discover -s tests -v`. Without that variable the test uses the normal `.pio/libdeps/esp32doit-devkit-v1/ArduinoJson/src`. Tests exercise actual production loading with platform adapters, queued DNS application/default/invalid/reconnect handling and credential-safe logs, plus real loopback DNS/TLS/HTTP exchanges, certificate validation distinctions, worker bounds/shutdown and non-applying TCP rule generation. No new dependency archive or protocol/catalog change is required.
