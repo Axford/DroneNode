@@ -62,6 +62,8 @@ struct Esp{uint32_t getFreeHeap(){return 10000;}uint32_t getMinFreeHeap(){return
 #include <string>
 #include <cstdarg>
 #include <cstdio>
+#include <algorithm>
+#include <cassert>
 #define HTTP_GET 1
 struct AsyncResponseStream {
  std::string text;
@@ -69,8 +71,17 @@ struct AsyncResponseStream {
  void printf(const char* format,...){char out[4096];va_list args;va_start(args,format);vsnprintf(out,sizeof out,format,args);va_end(args);text+=out;}
  void print(const char* value){text+=value;}
 };
+struct CallbackResponse {
+ std::function<size_t(uint8_t*,size_t,size_t)> fill;
+ void addHeader(const char*,const char*){}
+};
 struct AsyncWebServerRequest {
  std::string text;
+ CallbackResponse* pending=nullptr;
+ CallbackResponse* beginChunkedResponse(const char*,std::function<size_t(uint8_t*,size_t,size_t)> fill){return new CallbackResponse{fill};}
+ void send(CallbackResponse* response){pending=response;}
+ void drain(){if(!pending)return;size_t index=0;for(size_t calls=0;calls<10000;++calls){uint8_t buffer[127];size_t n=pending->fill(buffer,sizeof buffer,index);assert(n<=sizeof buffer);if(!n)break;text.append(reinterpret_cast<char*>(buffer),n);index+=n;}delete pending;pending=nullptr;}
+ ~AsyncWebServerRequest(){delete pending;}
  AsyncResponseStream* beginResponseStream(const char*){return new AsyncResponseStream;}
  void send(int,const char*,const char*){}
  void send(AsyncResponseStream* response){text=response->text;delete response;}
@@ -84,11 +95,15 @@ struct AsyncWebServer {
 #include <ESPAsyncWebServer.h>
 #include <iostream>
 namespace telemetry {void mountMeasurements(AsyncWebServer&);}
-int main(){telemetry::measureMainLoop(1);telemetry::measureMainLoop(103);
+int main(int argc,char**){telemetry::measureMainLoop(1);telemetry::measureMainLoop(103);
  telemetry::measurePhase(telemetry::Phase::Connect,false,0);
  telemetry::measurePhase(telemetry::Phase::Connect,true,123);
  telemetry::measurePhase(telemetry::Phase::Encode,true,8);
- AsyncWebServer server;telemetry::mountMeasurements(server);AsyncWebServerRequest request;server.callback(&request);std::cout<<request.text;
+ if(argc>1)for(unsigned i=0;i<70;++i)telemetry::measurePhase(telemetry::Phase::Connect,true,i);
+ AsyncWebServer server;telemetry::mountMeasurements(server);AsyncWebServerRequest request;server.callback(&request);
+ telemetry::measurePhase(telemetry::Phase::Report,true,999);
+ if(argc>2)return 0; // disconnect before the first callback; ASan checks ownership.
+ request.drain();std::cout<<request.text;
 }''')
             exe=directory/'test'
             subprocess.run([os.environ.get('CXX','c++'),'-std=c++11','-Wall','-Wextra','-Werror','-fsanitize=address,undefined','-I',str(directory),'-I',str(ROOT/'src'),str(ROOT/'src/FirmwareMeasurements.cpp'),str(directory/'test.cpp'),'-o',str(exe)],check=True)
@@ -97,6 +112,10 @@ int main(){telemetry::measureMainLoop(1);telemetry::measureMainLoop(103);
             self.assertEqual([e['end'] for e in data['events']],[False,True])
             self.assertEqual(data['events'][-1]['stackBytes'],321)
             self.assertEqual(data['events'][-1]['phase'],'dnsTcpTlsOrReuse')
+            full=collector.sanitize(json.loads(subprocess.check_output([str(exe),'full'])))
+            self.assertEqual((full['sequence'],full['overwritten'],len(full['events'])),(72,8,64))
+            self.assertEqual((full['events'][0]['sequence'],full['events'][-1]['elapsedUs']),(9,69))
+            subprocess.run([str(exe),'full','disconnect'],check=True)
 
     def test_collector_resumes_after_unreachable_without_fabricating_samples(self):
         import importlib.util,io,json
