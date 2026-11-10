@@ -46,7 +46,7 @@ class ReleaseTests(unittest.TestCase):
         cloud = actual.pop('CloudTelemetry')
         self.assertEqual(cloud['type'], ['CloudTelemetry'])
         self.assertEqual(cloud['inherits'], ['Drone'])
-        self.assertEqual([(p['address'],p['name']) for p in cloud['pub']], [(8,'reportInterval'),(9,'requests'),(10,'selection'),(11,'memory'),(12,'timing'),(13,'flow')])
+        self.assertEqual([(p['address'],p['name']) for p in cloud['pub']], [(8,'reportInterval'),(9,'requests'),(10,'selection'),(11,'memory'),(12,'timing'),(13,'flow'),(14,'pollInterval')])
         self.assertEqual(actual, expected)
         self.assertEqual(len(expected), 51)
 

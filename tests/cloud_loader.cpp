@@ -24,8 +24,9 @@ public:
 #include "actual_loader.inc"
 #define DRONE_LINK_PARAM_ALL 0
 struct DroneLinkChannelSubscription {DroneModule* module;unsigned param,extNode;};
-template<class T>struct Queue {std::vector<T> values;size_t size(){return values.size();}T shift(){auto v=values.front();values.erase(values.begin());return v;}T get(unsigned i){return values[i];}};
-class DroneLinkChannel {public:Queue<DroneLinkMsg*> _queue;Queue<DroneLinkChannelSubscription*> _subs;DroneLinkManager* _dlm;void processQueue();};
+template<class T>struct Queue {std::vector<T> values;int size(){return values.size();}T shift(){auto v=values.front();values.erase(values.begin());return v;}T get(unsigned i){return values[i];}void remove(unsigned i){values.erase(values.begin()+i);}};
+struct DroneLinkQueueEntry {DroneLinkMsg message;bool cloudRequest;};
+class DroneLinkChannel {public:unsigned _cloudRequests=0,_cloudWaitTurns=0;Queue<DroneLinkQueueEntry*> _queue;Queue<DroneLinkChannelSubscription*> _subs;DroneLinkManager* _dlm;void processQueue();};
 #include "actual_channel.inc"
 struct Counter:DroneModule{unsigned count=0;Counter(DroneSystem* ds):DroneModule(1,ds){}void handleLinkMessage(DroneLinkMsg*)override{++count;}};
 int main(){
@@ -35,8 +36,22 @@ int main(){
   DroneSystem system{&dlm,&dmm};Counter counter(&system);DroneLinkChannel channel;channel._dlm=&dlm;
   DroneLinkChannelSubscription all{&counter,0,11},specific{&counter,8,11},external{nullptr,8,254};
   channel._subs.values={&all,&specific,&external};
-  for(unsigned i=0;i<2;++i){auto message=new DroneLinkMsg;message->_msg.param=8;channel._queue.values.push_back(message);channel.processQueue();}
+  for(unsigned i=0;i<2;++i){auto message=new DroneLinkQueueEntry{};message->message._msg.param=8;channel._queue.values.push_back(message);channel.processQueue();}
   assert(counter.count==2&&dlm.external.size()==2);
+  Counter observer(&system);observer._id=2;
+  DroneLinkChannelSubscription observed{&observer,0,11};
+  channel._subs.values.insert(channel._subs.values.begin(),&observed);
+  auto injected=new DroneLinkQueueEntry{};
+  injected->message._msg.channel=1;injected->message._msg.param=8;injected->cloudRequest=true;
+  channel._queue.values.push_back(injected);channel._cloudRequests=1;channel.processQueue();
+  assert(counter.count==3&&observer.count==0&&dlm.external.size()==2&&channel._cloudRequests==0);
+  for(unsigned i=0;i<5;++i) channel._queue.values.push_back(new DroneLinkQueueEntry{});
+  auto query=new DroneLinkQueueEntry{};
+  query->message._msg.channel=1;query->message._msg.param=8;query->cloudRequest=true;
+  channel._queue.values.push_back(query);channel._cloudRequests=1;
+  for(unsigned i=0;i<4;++i) channel.processQueue();
+  assert(channel._cloudRequests==0&&channel._queue.size()==2);
+  while(channel._queue.size())channel.processQueue();
  }
 
  {

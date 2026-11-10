@@ -9,16 +9,26 @@
 @pub 11;u32;4;r;memory;Free heap, minimum heap, worker stack high-water bytes, largest free block
 @pub 12;u32;3;r;timing;Maximum service gap ms, last report duration ms, last HTTP status
 @pub 13;u32;3;r;flow;Captured publications, coalesced publications, tracked addresses
+@pub 14;u32;1;w;pollInterval;Milliseconds between command polls (0 disables, 1000-86400000, default 10000)
 */
 #ifndef CLOUD_TELEMETRY_MODULE_H
 #define CLOUD_TELEMETRY_MODULE_H
 #include "../DroneModule.h"
 #include "../CloudTelemetryConfig.h"
-#include "../TelemetryReport.h"
+#include "../CloudCommandBatch.h"
 struct CloudTelemetryWorker;
 class CloudTelemetryModule:public DroneModule {
   telemetry::Config config;
   telemetry::Report report;
+  telemetry::CommandResponses responses;
+  uint32_t pollRate = 10000, nextPoll = 0;
+  size_t commandIndex = 0;
+  uint8_t nextJob = 0;
+  bool batchReady = false, readback = false, pollChanged = false;
+  void captureConfigured(const uint8_t* bytes,size_t length);
+  void serviceCommands(uint32_t now);
+  void scheduleJob(uint32_t now);
+  static void observePublication(void* context, const DroneLinkMsg& message);
   CloudTelemetryWorker* worker=nullptr;
   uint32_t rate=10000,lastResolve=0,lastService=0,maxGap=0,lastDiagnostics=0;
   bool started=false,intervalChanged=false;

@@ -591,7 +591,7 @@ boolean DroneModule::publishParamEntry(DRONE_PARAM_ENTRY *param) {
   _mgmtMsg._msg.paramPriority = param->paramPriority;
   _mgmtMsg._msg.paramTypeLength = param->paramTypeLength;
   memcpy(_mgmtMsg._msg.payload.c, param->data.c, 16);
-  return _dlm->publish(_mgmtMsg);
+  return _dlm->publishLocalObservation(_mgmtMsg);
 }
 
 boolean DroneModule::publishMgmtParamEntries() {
@@ -618,7 +618,7 @@ boolean DroneModule::publishSubAddress(DRONE_PARAM_SUB *sub) {
   _mgmtMsg._msg.paramPriority = sub->addrParam;
   _mgmtMsg._msg.paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_ADDR, sizeof(DRONE_LINK_ADDR));
   memcpy(_mgmtMsg._msg.payload.c, (uint8_t*)&sub->addr, sizeof(DRONE_LINK_ADDR));
-  return _dlm->publish(_mgmtMsg);
+  return _dlm->publishLocalObservation(_mgmtMsg);
 }
 
 boolean DroneModule::publishSubs() {
@@ -706,7 +706,7 @@ void DroneModule::handleParamMessage(DroneLinkMsg *msg, DRONE_PARAM_ENTRY *param
     _mgmtMsg.type(DRONE_LINK_MSG_TYPE_NAME);
     _mgmtMsg.length(param->nameLen);
     memcpy(_mgmtMsg._msg.payload.c, param->name, param->nameLen);
-    _dlm->publish(_mgmtMsg);
+    _dlm->publishLocalObservation(_mgmtMsg);
   } else {
     //Log.warningln("[DM.hPM] Attempt to write mismatching type %u > %u", msg->type(), ty );
   }
@@ -717,7 +717,8 @@ void DroneModule::handleSubAddrMessage(DroneLinkMsg *msg, DRONE_PARAM_SUB *sub) 
   if (msg->type() == DRONE_LINK_MSG_TYPE_ADDR &&
       !msg->writable()) {
     // write new address
-    uint8_t len = msg->length();  // should always be sizeof(DRONE_LINK_ADDR) //msg->length();
+    const size_t len = sizeof(sub->addr);
+    if (msg->length() != len) return;
     // compare to see if anything has changed... which may including receiving our own messages after a query!!
     if (memcmp((uint8_t*)&sub->addr, msg->_msg.payload.c, len) != 0) {
       Log.noticeln("[DM.hSAM] Write to address: ");
@@ -750,7 +751,7 @@ void DroneModule::handleSubAddrMessage(DroneLinkMsg *msg, DRONE_PARAM_SUB *sub) 
     _mgmtMsg.type(DRONE_LINK_MSG_TYPE_NAME);
     _mgmtMsg.length(sub->param.nameLen);
     memcpy(_mgmtMsg._msg.payload.c, sub->param.name, sub->param.nameLen);
-    _dlm->publish(_mgmtMsg);
+    _dlm->publishLocalObservation(_mgmtMsg);
   }
 }
 

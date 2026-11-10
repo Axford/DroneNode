@@ -122,6 +122,30 @@ void DroneLinkManager::subscribeExt(uint8_t extNode, uint8_t channel, uint8_t pa
 }
 
 
+CloudRequestResult DroneLinkManager::publishCloudRequest(DroneLinkMsg &msg) {
+  if (msg.node() != _node || !msg.channel()) return CloudRequestResult::Missing;
+  auto channel = findChannel(_node, msg.channel());
+  if (!channel || !channel->hasLocalTarget()) return CloudRequestResult::Missing;
+  if (channel->publish(msg, true)) return CloudRequestResult::Queued;
+  return CloudRequestResult::Busy;
+}
+
+void DroneLinkManager::discardCloudRequests() {
+  for (int i = 0; i < _channels.size(); ++i) _channels.get(i)->discardCloudRequests();
+}
+
+bool DroneLinkManager::cloudRequestPending() {
+  for (int i = 0; i < _channels.size(); ++i) {
+    if (_channels.get(i)->hasCloudRequest()) return true;
+  }
+  return false;
+}
+
+bool DroneLinkManager::publishLocalObservation(DroneLinkMsg &msg) {
+  if (_publicationObserver && msg.node() == _node) _publicationObserver(_publicationObserverContext, msg);
+  return publish(msg);
+}
+
 bool DroneLinkManager::publish(DroneLinkMsg &msg) {
   // see if there's a matching channel... or a catchall channel
   bool f = false;

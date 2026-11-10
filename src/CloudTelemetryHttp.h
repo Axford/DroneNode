@@ -1,6 +1,7 @@
 #ifndef CLOUD_TELEMETRY_HTTP_H
 #define CLOUD_TELEMETRY_HTTP_H
 #include "TelemetryReport.h"
+#include "CloudCommandBatch.h"
 #include "FirmwareMeasurements.h"
 #include "CloudTelemetryConfig.h"
 #include <stdio.h>
@@ -145,8 +146,73 @@ class PackedHttp {
     space(p);if(*p||!(seen&1)||!(seen&2)||!(seen&4)||received!=expected||count>received) return false;
     admitted=int(count);return complete&&count==expected&&!(seen&8);
   }
+  bool readResponse(char* response,size_t capacity,int& status,bool& closeConnection) {
+    char input[1025];
+    if(!line(input,sizeof input)) return false;
+    if(strncmp(input,"HTTP/1.1 ",9)&&strncmp(input,"HTTP/1.0 ",9)) return false;
+    if(strlen(input)<12||(input[12]&&input[12]!=' ')||input[9]<'1'||input[9]>'5'||input[10]<'0'||input[10]>'9'||input[11]<'0'||input[11]>'9') return false;
+    status=(input[9]-'0')*100+(input[10]-'0')*10+input[11]-'0';
+    closeConnection=input[7]=='0'; bool chunked=false,hasLength=false;size_t bodyLength=0;
+    while(true) {
+      if(!line(input,sizeof input)) return false;if(!input[0]) break;
+      char* colon=strchr(input,':');if(!colon) return false;*colon++=0;while(*colon==' '||*colon=='\t') ++colon;
+      char* end=colon+strlen(colon);while(end>colon&&(end[-1]==' '||end[-1]=='\t')) *--end=0;
+      if(equal(input,"Content-Length")) {if(hasLength||!number(colon,bodyLength)||bodyLength>=capacity) return false;hasLength=true;}
+      if(equal(input,"Transfer-Encoding")) {if(chunked||!equal(colon,"chunked")) return false;chunked=true;}
+      if(equal(input,"Connection")&&equal(colon,"close")) closeConnection=true;
+      if(equal(input,"Content-Encoding")&&!equal(colon,"identity")) return false;
+    }
+    if((hasLength&&chunked)||(!hasLength&&!chunked)) return false;
+    size_t used=0;
+    do {
+      size_t part=bodyLength;
+      if(chunked) {
+        if(!line(input,sizeof input)) return false;
+        if(!number(input,part,16)||part>=capacity-used) return false;
+        if(!part) { // bounded trailers
+          do {if(!line(input,sizeof input)) return false;} while(input[0]);
+          break;
+        }
+      }
+      if(part>=capacity-used) return false;
+      for(size_t n=0;n<part;++n) {int c=take();if(c<=0) return false;response[used++]=char(c);}
+      if(chunked&&(take()!='\r'||take()!='\n')) return false;
+    } while(chunked);
+    response[used]=0;
+    return true;
+  }
+  static void escape(const char* input,char* output) {
+    for(;*input;++input) {
+      if(*input=='"'||*input=='\\') *output++='\\';
+      *output++=*input;
+    }
+    *output=0;
+  }
 public:
   explicit PackedHttp(HttpIo &client):io(client) {}
+  Admission poll(const HttpSettings &cfg,uint8_t id,size_t limit,CommandBatch& batch) {
+    Admission result;
+    batch.count=0;started=io.now();headerBytes=0;
+    if(!id||id>=255||!limit||limit>BatchLimit||!live()) return result;
+    result.attempted=true;
+    PhaseScope request(io,Phase::Request);
+    {
+      PhaseScope connect(io,Phase::Connect);
+      if(!io.connect(cfg.host,cfg.port)||!live()) {io.close();return result;}
+    }
+    char domain[401],key[1025],body[1536],header[512];
+    escape(cfg.domain,domain);escape(cfg.apiKey,key);
+    int length=snprintf(body,sizeof body,"{\"domain\":\"%s\",\"id\":%u,\"apiKey\":\"%s\",\"limit\":%u}",domain,id,key,unsigned(limit));
+    if(length<0||size_t(length)>=sizeof body) {io.close();return result;}
+    int n=snprintf(header,sizeof header,"POST /commands/poll HTTP/1.1\r\nHost: %s:%u\r\nContent-Type: application/json\r\nContent-Length: %u\r\nConnection: close\r\n\r\n",cfg.host,cfg.port,unsigned(length));
+    if(n<0||size_t(n)>=sizeof header||!send(reinterpret_cast<const uint8_t*>(header),n)||
+       !send(reinterpret_cast<const uint8_t*>(body),length)) {io.close();return result;}
+    PhaseScope responsePhase(io,Phase::Response);
+    char response[2049];bool closeConnection=false;
+    result.complete=readResponse(response,sizeof response,result.status,closeConnection)&&result.status==200&&live()&&batch.parse(response,id,limit);
+    io.close();
+    return result;
+  }
   Admission sendBatch(const HttpSettings &cfg,const Cycle &cycle,size_t first,size_t count,uint8_t id) {
     Admission result;started=io.now();headerBytes=0;
     if(!count||count>32||first+count>cycle.count||!live()) return result;
@@ -168,38 +234,8 @@ public:
       if(!send(buffer,bytes)) {io.close();return result;}
     }
     PhaseScope responseMeasurement(io,Phase::Response);
-    char input[1025];
-    if(!line(input,sizeof input)) {io.close();return result;}
-    if(strncmp(input,"HTTP/1.1 ",9)&&strncmp(input,"HTTP/1.0 ",9)) {io.close();return result;}
-    if(strlen(input)<12||(input[12]&&input[12]!=' ')||input[9]<'1'||input[9]>'5'||input[10]<'0'||input[10]>'9'||input[11]<'0'||input[11]>'9') {io.close();return result;}
-    result.status=(input[9]-'0')*100+(input[10]-'0')*10+input[11]-'0';
-    bool closeConnection=input[7]=='0',chunked=false,hasLength=false;size_t bodyLength=0;
-    while(true) {
-      if(!line(input,sizeof input)) {io.close();return result;}if(!input[0]) break;
-      char* colon=strchr(input,':');if(!colon) {io.close();return result;}*colon++=0;while(*colon==' '||*colon=='\t') ++colon;
-      char* end=colon+strlen(colon);while(end>colon&&(end[-1]==' '||end[-1]=='\t')) *--end=0;
-      if(equal(input,"Content-Length")) {if(hasLength||!number(colon,bodyLength)||bodyLength>1024) {io.close();return result;}hasLength=true;}
-      if(equal(input,"Transfer-Encoding")) {if(chunked||!equal(colon,"chunked")) {io.close();return result;}chunked=true;}
-      if(equal(input,"Connection")&&equal(colon,"close")) closeConnection=true;
-      if(equal(input,"Content-Encoding")&&!equal(colon,"identity")) {io.close();return result;}
-    }
-    if((hasLength&&chunked)||(!hasLength&&!chunked)) {io.close();return result;}
-    char response[1025];size_t used=0;
-    do {
-      size_t part=bodyLength;
-      if(chunked) {
-        if(!line(input,sizeof input)) {io.close();return result;}
-        if(!number(input,part,16)||part>1024-used) {io.close();return result;}
-        if(!part) { // bounded trailers
-          do {if(!line(input,sizeof input)) {io.close();return result;}} while(input[0]);
-          break;
-        }
-      }
-      if(part>1024-used) {io.close();return result;}
-      for(size_t n=0;n<part;++n) {int c=take();if(c<=0) {io.close();return result;}response[used++]=char(c);}
-      if(chunked&&(take()!='\r'||take()!='\n')) {io.close();return result;}
-    } while(chunked);
-    response[used]=0;
+    char response[1025];bool closeConnection=false;
+    if(!readResponse(response,sizeof response,result.status,closeConnection)) {io.close();return result;}
     const bool full=summary(response,count,result.admitted);
     result.complete=result.status==202&&full&&live();
     if(!result.complete||closeConnection) io.close();

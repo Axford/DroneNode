@@ -46,18 +46,22 @@ class DroneModule {
 public:
  DroneSystem* _ds;DroneLinkManager* _dlm;DroneModuleManager* _dmm;
  uint8_t _id;bool _enabled=true,_setupDone=false;uint8_t _error=0;
- DRONE_PARAM_ENTRY _params[6],_mgmtParams[6];unsigned _numParamEntries=0,_numSubs=0;DRONE_PARAM_SUB _subs[1];char typeName[17]={};DroneLinkMsg _mgmtMsg;
+ DRONE_PARAM_ENTRY _params[7],_mgmtParams[6];unsigned _numParamEntries=0,_numSubs=0;DRONE_PARAM_SUB _subs[1];char typeName[17]={};DroneLinkMsg _mgmtMsg;
  DroneModule(uint8_t id,DroneSystem* ds);
  virtual ~DroneModule(){}
  void setTypeName(const char* name){strncpy(typeName,name,16);}void initParams(unsigned n){_numParamEntries=n;}void setParamName(const char* name,DRONE_PARAM_ENTRY* p){p->name=name;}
- char* getName(){return typeName;}DRONE_PARAM_ENTRY* getParamEntryById(unsigned id){return id>=8&&id<14?&_params[id-8]:nullptr;}
+ char* getName(){return typeName;}DRONE_PARAM_ENTRY* getParamEntryById(unsigned id){return id>=8&&id<15?&_params[id-8]:nullptr;}
  void saveParamValue(DRONE_PARAM_ENTRY*,File* f){f->print(typeName);}void saveParam(DRONE_PARAM_ENTRY*,File*){}
  virtual bool isConfigurationString(const char*)const{return false;}
  virtual telemetry::Setting configure(const char*,const char*){return telemetry::Setting::Unhandled;}
  virtual void configurationError(){}virtual void saveExtraConfiguration(File*){}
  virtual void setup(){_setupDone=true;}virtual void loop(){}virtual void onParamWrite(DRONE_PARAM_ENTRY*){}
  virtual void enable(){_enabled=true;}virtual void disable(){_enabled=false;}virtual void waiting(){}virtual void doShutdown(){}
- virtual void handleLinkMessage(DroneLinkMsg* m){if(m->channel()==_id&&m->param()==8&&!m->writable()&&m->type()==2&&m->length()==4){_params[0].data=m->_msg.payload;_params[0].paramTypeLength=m->_msg.typed|128;onParamWrite(&_params[0]);}}
+ virtual void handleLinkMessage(DroneLinkMsg* m){
+  if(m->channel()!=_id||(m->param()!=8&&m->param()!=14)||m->writable()||m->type()!=2||m->length()!=4)return;
+  auto& p=_params[m->param()-8];
+  p.data=m->_msg.payload;p.paramTypeLength=m->_msg.typed|128;onParamWrite(&p);
+ }
  size_t legacyLength=0;
  void publishParamsFromList(char* p){legacyLength=strlen(p);if(strstr(p,"reportInterval"))_params[0].publish=true;}
  DRONE_PARAM_ENTRY* getParamEntryByName(const char*){return &_params[0];}
@@ -66,7 +70,22 @@ public:
  void setError(unsigned value){_error=value;}void publishParamEntry(DRONE_PARAM_ENTRY*){}
  uint8_t id(){return _id;}uint8_t getParamIdByName(const char* name){return !strcmp(name,"location")?8:0;}
 };
+enum class CloudRequestResult { Missing, Busy, Queued };
 struct DroneLinkManager {
+ void* observerContext=nullptr;
+ void (*observer)(void*,const DroneLinkMsg&)=nullptr;
+ void observeLocalPublications(void* context,void (*callback)(void*,const DroneLinkMsg&)) {observerContext=context;observer=callback;}
+ void publishLocal(const DroneLinkMsg& message) {if(observer&&message.node()==address)observer(observerContext,message);}
+ std::vector<DroneLinkMsg> issued;
+ bool pendingCloud=false;
+ bool cloudRequestPending(){return pendingCloud;}
+ bool fullCloud=false;
+ void discardCloudRequests(){pendingCloud=false;}
+ CloudRequestResult publishCloudRequest(DroneLinkMsg& message){
+  if(message.node()!=address)return CloudRequestResult::Missing;
+  if(pendingCloud||fullCloud)return CloudRequestResult::Busy;
+  issued.push_back(message);pendingCloud=true;return CloudRequestResult::Queued;
+ }
  struct Sub{unsigned node,channel,param;};std::vector<Sub> subs;bool hull=false;
  std::vector<unsigned> external;void sendDroneLinkMessage(unsigned n,DroneLinkMsg*){external.push_back(n);}
  unsigned address=11;unsigned node(){return address;}void node(unsigned n){address=n;}unsigned getNodeByName(const char* name){return hull&&!strcmp(name,"Hull")?12:0;}
@@ -82,7 +101,7 @@ struct DroneSystem {DroneLinkManager* dlm;DroneModuleManager* dmm;};
 inline DroneModule::DroneModule(uint8_t id,DroneSystem* ds):_ds(ds),_dlm(ds->dlm),_dmm(ds->dmm),_id(id){}
 struct Task;
 using TaskHandle_t=Task*;
-struct Task {void(*run)(void*);void* state;unsigned waits;Task(void(*fn)(void*),void* p):run(fn),state(p),waits(0){}};
+struct Task {void(*run)(void*);void* state;unsigned waits;uint32_t signals=0;Task(void(*fn)(void*),void* p):run(fn),state(p),waits(0){}};
 extern thread_local Task* currentTask;
 struct Pause{};struct Finished{};
 #define pdTRUE 1
@@ -90,8 +109,9 @@ struct Pause{};struct Finished{};
 #define portMAX_DELAY 0xffffffff
 extern bool taskAllocationFails;
 inline int xTaskCreate(void(*run)(void*),const char*,unsigned,void* state,unsigned,TaskHandle_t* task){if(taskAllocationFails)return 0;*task=new Task(run,state);return 1;}
-inline void xTaskNotifyGive(Task* task){task->waits=0;currentTask=task;try{task->run(task->state);}catch(Pause&){}catch(Finished&){delete task;}currentTask=nullptr;}
-inline unsigned ulTaskNotifyTake(int,unsigned){if(currentTask->waits++)throw Pause();return 1;}
+constexpr int eSetBits=1;
+inline void xTaskNotify(Task* task,uint32_t flags,int){task->signals=flags;task->waits=0;currentTask=task;try{task->run(task->state);}catch(Pause&){}catch(Finished&){delete task;}currentTask=nullptr;}
+inline void xTaskNotifyWait(uint32_t,uint32_t,uint32_t* flags,unsigned){if(currentTask->waits++)throw Pause();*flags=currentTask->signals;}
 inline void vTaskDelete(void*){throw Finished();}
 inline void vTaskDelay(unsigned n){hostTime+=n;}
 inline unsigned uxTaskGetStackHighWaterMark(void*){return 8192;}

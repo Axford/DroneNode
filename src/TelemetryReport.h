@@ -48,7 +48,20 @@ public:
     memcpy(f.packet.bytes,p,size); f.packet.size=size; f.version=++version; f.pending=true; ++captured;
     return true;
   }
+  void discardOlder(const uint8_t* p) {
+    for (size_t i=0;i<used;++i) {
+      auto& a=addresses[i];
+      if (a.node==p[1] && a.channel==p[2] && a.param==(p[3]&63)) {
+        a.facets[((p[4]>>4)&7)==5 ? 1:0].pending=false;
+        return;
+      }
+    }
+  }
   bool begin(uint32_t now,bool connected,Cycle &cycle) {
+    return begin(now,connected,cycle,[](const Packet&) { return true; });
+  }
+  template<typename Selection>
+  bool begin(uint32_t now,bool connected,Cycle &cycle,Selection eligible) {
     if(!enabled || int32_t(now-next)<0) return false;
     skipTicks(now);
     if(!connected) return false;
@@ -56,7 +69,7 @@ public:
     for(size_t n=0;n<FacetLimit;++n) {
       const size_t slot=(cursor+n)%FacetLimit;
       const Facet &f=addresses[slot/2].facets[slot%2];
-      if(f.pending) { auto &e=cycle.entries[cycle.count++]; e.packet=f.packet; e.version=f.version; e.slot=slot; }
+      if(f.pending && eligible(f.packet)) { auto &e=cycle.entries[cycle.count++]; e.packet=f.packet; e.version=f.version; e.slot=slot; }
     }
     return cycle.count>0;
   }

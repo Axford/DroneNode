@@ -1,5 +1,6 @@
 #include "DroneLinkChannel.h"
 #include "DroneLinkManager.h"
+#include <new>
 
 
 DroneLinkChannel::DroneLinkChannel(DroneLinkManager* dlm, uint8_t node, uint8_t id):
@@ -7,7 +8,7 @@ DroneLinkChannel::DroneLinkChannel(DroneLinkManager* dlm, uint8_t node, uint8_t 
   _node(node),
   _id(id),
   _subs(IvanLinkedList::LinkedList<DroneLinkChannelSubscription*>()),
-  _queue(IvanLinkedList::LinkedList<DroneLinkMsg*>())
+  _queue(IvanLinkedList::LinkedList<DroneLinkQueueEntry*>())
 {
   Log.noticeln(F("Create channel: %d>%d"),node,id);
   _choked =0;
@@ -36,8 +37,11 @@ uint8_t DroneLinkChannel::peakSize() {
 }
 
 
-boolean DroneLinkChannel::publish(DroneLinkMsg &msg) {
-  if (_queue.size() < _maxSize) {
+boolean DroneLinkChannel::publish(DroneLinkMsg &msg, bool cloudRequest) {
+  // If a cloud request found a full channel, preserve the next freed slot.
+  if (cloudRequest) _reserveCloudSlot = true;
+  const auto limit = _maxSize - (!cloudRequest && _reserveCloudSlot ? 1 : 0);
+  if (_queue.size() < limit) {
     //Log.errorln(F("Queue %d = %d"), _id, _queue.size());
 
     // TODO: do we pre-filter and only queue if there's a matching subscriber?
@@ -46,9 +50,10 @@ boolean DroneLinkChannel::publish(DroneLinkMsg &msg) {
     // screen for matching sig already in queue
     DroneLinkMsg *scrub;
     boolean sameSig = false;
-    for (uint8_t i=0; i<_queue.size(); i++) {
-      scrub = _queue.get(i);
-      if (scrub->sameSignature(&msg)) {
+    for (uint8_t i=0; !cloudRequest && i<_queue.size(); i++) {
+      auto entry = _queue.get(i);
+      scrub = &entry->message;
+      if (!entry->cloudRequest && scrub->sameSignature(&msg)) {
         sameSig = true;
         // overwrite message payload
         memcpy(scrub->_msg.payload.c, msg._msg.payload.c, msg.length());
@@ -57,12 +62,17 @@ boolean DroneLinkChannel::publish(DroneLinkMsg &msg) {
     }
 
     if (!sameSig) {
-      DroneLinkMsg *tmp = new DroneLinkMsg(msg);
+      auto tmp = new(std::nothrow) DroneLinkQueueEntry{msg, cloudRequest};
+      if (!tmp) return false;
+      if (cloudRequest) {
+        ++_cloudRequests;
+        _reserveCloudSlot = false;
+      }
 
       // search for insertion point, by finding the point where the next item is a lower priority
       uint8_t insertionPoint = 0;
       for (uint8_t i=0; i<_queue.size(); i++) {
-        scrub = _queue.get(i);
+        scrub = &_queue.get(i)->message;
         insertionPoint++;
 
         if (scrub->priority() < msg.priority()) break;
@@ -93,11 +103,61 @@ boolean DroneLinkChannel::publish(DroneLinkMsg &msg) {
   }
 }
 
+bool DroneLinkChannel::hasLocalTarget() {
+  for (int i = 0; i < _subs.size(); ++i) {
+    auto sub = _subs.get(i);
+    if (sub->module && sub->module->id() == _id && sub->param == DRONE_LINK_PARAM_ALL) return true;
+  }
+  return false;
+}
+
+void DroneLinkChannel::discardCloudRequests() {
+  _reserveCloudSlot = false;
+  _cloudWaitTurns = 0;
+  if (!_cloudRequests) return;
+  for (int i = _queue.size() - 1; i >= 0; --i) {
+    auto entry = _queue.get(i);
+    if (!entry->cloudRequest) continue;
+    _queue.remove(i);
+    delete entry;
+    --_cloudRequests;
+  }
+}
+
 void DroneLinkChannel::processQueue() {
   // pop a waiting message
   if (_queue.size() == 0) return;
 
-  DroneLinkMsg *tmp = _queue.shift();
+  // Keep ordinary entries in their existing order while ensuring a queued
+  // request can progress under continuous higher-priority local traffic.
+  DroneLinkQueueEntry* entry = nullptr;
+  if (_cloudRequests && ++_cloudWaitTurns >= 4) {
+    for (int i = 0; i < _queue.size(); ++i) {
+      auto candidate = _queue.get(i);
+      if (candidate->cloudRequest) {
+        entry = candidate;
+        _queue.remove(i);
+        break;
+      }
+    }
+  }
+  if (!entry) entry = _queue.shift();
+  DroneLinkMsg *tmp = &entry->message;
+  if (entry->cloudRequest) {
+    // An injected request is addressed to one local module, never published
+    // to observers or forwarded through a publication subscription.
+    --_cloudRequests;
+    _cloudWaitTurns = 0;
+    for (int i = 0; i < _subs.size(); ++i) {
+      auto sub = _subs.get(i);
+      if (sub->module && sub->module->id() == tmp->channel() && sub->param == DRONE_LINK_PARAM_ALL) {
+        sub->module->handleLinkMessage(tmp);
+        break;
+      }
+    }
+    delete entry;
+    return;
+  }
 
   //Log.noticeln("[DLC.pQ] %u>%u", _node, _id);
 
@@ -129,7 +189,7 @@ void DroneLinkChannel::processQueue() {
   }
 
   // delete the tmp msg
-  delete tmp;
+  delete entry;
   //Log.noticeln("[DLC.pQ] end");
 }
 
@@ -289,7 +349,7 @@ void DroneLinkChannel::serveChannelInfo(AsyncResponseStream *response) {
 void DroneLinkChannel::serveQueueInfo(AsyncResponseStream *response) {
   DroneLinkMsg *msg;
   for(int i = 0; i < _queue.size(); i++) {
-    msg = _queue.get(i);
+    msg = &_queue.get(i)->message;
 
   response->print(msg->source());
   response->print(':');

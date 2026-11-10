@@ -130,4 +130,30 @@ static void measurementTests(){
  assert(io.events[2].phase==telemetry::Phase::Connect&&io.events[2].end&&io.events[2].elapsed==3);
  assert(io.events.back().phase==telemetry::Phase::Request&&io.events.back().end);
 }
-int main(){measurementTests();configurationTests();policyTests();httpTests();}
+int main(){
+ {
+  telemetry::CommandBatch batch;
+  assert(batch.parse(R"({"data":{"packets":"CwsEDGAA","count":1},"success":true})",11,32));
+  assert(batch.count==1&&batch.packets[0].size==6);
+  // A valid query followed by a malformed CHAR must expose no dispatchable prefix.
+  assert(!batch.parse(R"({"success":true,"data":{"count":2,"packets":"CwsEDGAACwsEwUJBAEI="}})",11,32));
+  assert(batch.count==0);
+  assert(!batch.parse(R"({"success":true,"data":{"count":1,"packets":"CwsEDGAB"}})",11,32));
+  assert(!batch.parse(R"({"success":true,"data":{"count":0,"packets":"CwsEDGAA"}})",11,32));
+  assert(!batch.parse(R"({"success":true,"data":{"count":1,"packets":"CwsEDGAA"}})",12,32));
+  telemetry::CommandResponses responses;
+  const telemetry::Packet query=batch.packets[0];
+  auto* first=responses.select(query,100);
+  assert(first);
+  first->node=11;first->channel=4;first->param=12;first->facet=1;first->deadline=30100;
+  auto* renewed=responses.select(query,30000);
+  assert(renewed==first);renewed->deadline=60000;
+  const uint8_t value[]={11,11,4,12,0,9};
+  const uint8_t name[]={11,11,4,12,80,'N'};
+  assert(!responses.capture(value,sizeof value,31000));
+  assert(responses.capture(name,sizeof name,31000));
+  assert(!responses.capture(name,sizeof name,31001));
+  telemetry::Cycle prompt;
+  assert(responses.take(prompt)&&prompt.count==1&&prompt.entries[0].packet.bytes[5]=='N');
+ }
+measurementTests();configurationTests();policyTests();httpTests();}

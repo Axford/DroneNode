@@ -141,6 +141,8 @@ protected:
   uint8_t _firmwareSrc;
 
   struct DRONE_LINK_PARAM_FILTER *_paramFilter = NULL;
+  void* _publicationObserverContext = nullptr;
+  void (*_publicationObserver)(void*, const DroneLinkMsg&) = nullptr;
 
 public:
     DroneLinkManagerCallback onEvent;
@@ -163,6 +165,14 @@ public:
     void subscribeExt(uint8_t extNode, uint8_t channel, uint8_t param);
 
     bool publish(DroneLinkMsg &msg);
+    bool publishLocalObservation(DroneLinkMsg &msg);
+    CloudRequestResult publishCloudRequest(DroneLinkMsg &msg);
+    void discardCloudRequests();
+    bool cloudRequestPending();
+    void observeLocalPublications(void* context, void (*observer)(void*, const DroneLinkMsg&)) {
+      _publicationObserverContext = context;
+      _publicationObserver = observer;
+    }
     //bool publishPeer(DroneLinkMsg &msg, int16_t RSSI, uint8_t interface);
 
     void processChannels();
