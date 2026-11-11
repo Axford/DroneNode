@@ -331,3 +331,9 @@ Parameter 14, `pollInterval`, uses milliseconds. The default is 10000. Zero stop
 The worker validates the entire bounded response before handing it to the main loop. The local channel admits one outstanding cloud request at a time. It reserves the next available slot for a waiting request and gives an admitted request a turn within four channel processing calls while preserving the order of ordinary entries. Shutdown clears outstanding cloud requests. A write schedules a best-effort value query. Actual value and NAME publications can satisfy their separate 30-second windows. A captured response uploads promptly, and ordinary reporting defers newer samples of that facet until the earlier prompt job has run.
 
 Run the host and firmware build checks above. The central M2 plan records the exact source and verified artifact identities. ESP32 heap and TLS stack behavior are physical acceptance checks.
+
+### M2-B CloudTelemetry peer polling
+
+After upgrading Server and the bridge and target firmware, add a configuration-only setting such as `relayPeers = 7,12` under the bridge's CloudTelemetry module. Use comma-separated addresses from 1 through 254 without spaces in the list. The optional list accepts at most 64 distinct addresses and is empty by default. Advertise only upgraded targets. The bridge offers up to 16 allowlisted peers with live mesh routes per poll and rotates its starting point when there are more.
+
+The bridge checks the route again before forwarding. A congested mesh queue can delay a request for up to five seconds. A lost route or an expired admission wait can drop a consumed command. The directed query reply uses the bridge's existing 30-second capture window and leaves saved subscriptions intact. Writes use critical priority. Explicit and post-write queries use low priority. The mesh retains its existing hop retry policy. Verify mixed-firmware intermediate hops and timing on the intended route before use.

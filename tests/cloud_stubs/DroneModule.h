@@ -73,18 +73,22 @@ public:
 enum class CloudRequestResult { Missing, Busy, Queued };
 struct DroneLinkManager {
  void* observerContext=nullptr;
- void (*observer)(void*,const DroneLinkMsg&)=nullptr;
- void observeLocalPublications(void* context,void (*callback)(void*,const DroneLinkMsg&)) {observerContext=context;observer=callback;}
- void publishLocal(const DroneLinkMsg& message) {if(observer&&message.node()==address)observer(observerContext,message);}
+ void (*observer)(void*,const DroneLinkMsg&,bool)=nullptr;
+ void observeLocalPublications(void* context,void (*callback)(void*,const DroneLinkMsg&,bool)) {observerContext=context;observer=callback;}
+ void publishLocal(const DroneLinkMsg& message) {if(observer&&message.node()==address)observer(observerContext,message,false);}
  std::vector<DroneLinkMsg> issued;
  bool pendingCloud=false;
  bool cloudRequestPending(){return pendingCloud;}
  bool fullCloud=false;
+ unsigned peerRoute=0;
+ bool hasCommandRoute(uint8_t peer) {return peer && peer==peerRoute;}
+ void receivePeerReply(const DroneLinkMsg& message,bool directed=true) {if(observer) observer(observerContext,message,directed);}
+ void dispatchCloudRequest(DroneModule* target,DroneLinkMsg& msg) {target->handleLinkMessage(&msg);}
  void discardCloudRequests(){pendingCloud=false;}
  CloudRequestResult publishCloudRequest(DroneLinkMsg& message){
-  if(message.node()!=address)return CloudRequestResult::Missing;
+  if(message.node()!=address&&!hasCommandRoute(message.node()))return CloudRequestResult::Missing;
   if(pendingCloud||fullCloud)return CloudRequestResult::Busy;
-  issued.push_back(message);pendingCloud=true;return CloudRequestResult::Queued;
+  issued.push_back(message);pendingCloud=message.node()==address;return CloudRequestResult::Queued;
  }
  struct Sub{unsigned node,channel,param;};std::vector<Sub> subs;bool hull=false;
  std::vector<unsigned> external;void sendDroneLinkMessage(unsigned n,DroneLinkMsg*){external.push_back(n);}

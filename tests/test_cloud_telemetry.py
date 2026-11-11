@@ -20,7 +20,7 @@ class CloudTelemetryTests(unittest.TestCase):
             (tree/'droneModules').mkdir()
             for name in ('CloudTelemetryModule.cpp','CloudTelemetryModule.h'):
                 shutil.copyfile(ROOT/'src/droneModules'/name,tree/'droneModules'/name)
-            for name in ('TelemetryReport.h','CloudCommandBatch.h','CloudTelemetryHttp.h','CloudTelemetryConfig.h','ConfigurationLine.h','FirmwareMeasurements.h'):
+            for name in ('TelemetryReport.h','CloudCommandBatch.h','CloudCommandWire.h','CloudTelemetryHttp.h','CloudTelemetryConfig.h','ConfigurationLine.h','FirmwareMeasurements.h'):
                 shutil.copyfile(ROOT/'src'/name,tree/name)
             base=(ROOT/'src/DroneModule.cpp').read_text()
             start=base.index('void DroneModule::saveConfiguration(')
@@ -40,3 +40,21 @@ class CloudTelemetryTests(unittest.TestCase):
             loader=str(Path(directory)/'loader-test')
             subprocess.run([os.environ.get('CXX','c++'),'-std=c++11','-Wall','-Wextra','-fsanitize=address,undefined','-I',str(tree),str(tree/'droneModules/CloudTelemetryModule.cpp'),str(ROOT/'tests/cloud_loader.cpp'),'-o',loader],check=True)
             subprocess.run([loader],check=True)
+
+    def test_directed_mesh_request_and_reply(self):
+        with tempfile.TemporaryDirectory() as directory:
+            tree = Path(directory)
+            source = (ROOT / 'src/DroneLinkManager.cpp').read_text()
+            bounds = [
+                ('bool DroneLinkManager::cloudTxAvailable(', 'bool DroneLinkManager::sendCloudLink('),
+                ('void DroneLinkManager::dispatchCloudRequest(', 'bool DroneLinkManager::cloudRequestPending('),
+                ('bool DroneLinkManager::publishLocalObservation(', 'bool DroneLinkManager::publish('),
+                ('void DroneLinkManager::receiveCloudLink(', 'void DroneLinkManager::receiveDroneLinkMsg(')
+            ]
+            (tree / 'actual_cloud_mesh.inc').write_text(''.join(
+                source[source.index(start):source.index(end, source.index(start))] for start, end in bounds
+            ))
+            executable = str(tree / 'cloud-mesh-test')
+            subprocess.run([os.environ.get('CXX', 'c++'), '-std=c++11', '-Wall', '-Wextra', '-Werror',
+                '-fsanitize=address,undefined', '-I', directory, '-I', str(ROOT/'src'), str(ROOT / 'tests/cloud_mesh.cpp'), '-o', executable], check=True)
+            subprocess.run([executable], check=True)

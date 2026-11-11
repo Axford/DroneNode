@@ -135,6 +135,13 @@ int main(){
   telemetry::CommandBatch batch;
   assert(batch.parse(R"({"data":{"packets":"CwsEDGAA","count":1},"success":true})",11,32));
   assert(batch.count==1&&batch.packets[0].size==6);
+  telemetry::PollPeers peers;
+  peers.nodes[0]=12;peers.count=1;
+  const auto peerReply=R"({"success":true,"data":{"count":1,"packets":"CwwEDGAA"}})";
+  assert(!batch.parse(peerReply,11,32));
+  assert(batch.parse(peerReply,11,32,peers));
+  assert(batch.packets[0].bytes[0]==11&&batch.packets[0].bytes[1]==12);
+  assert(batch.parse(R"({"data":{"packets":"CwsEDGAA","count":1},"success":true})",11,32));
   // A valid query followed by a malformed CHAR must expose no dispatchable prefix.
   assert(!batch.parse(R"({"success":true,"data":{"count":2,"packets":"CwsEDGAACwsEwUJBAEI="}})",11,32));
   assert(batch.count==0);

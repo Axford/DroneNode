@@ -72,7 +72,7 @@ public:
     boolean publish(DroneLinkMsg &msg, bool cloudRequest = false);
     bool hasLocalTarget();
     void discardCloudRequests();
-    bool hasCloudRequest() const { return _cloudRequests != 0; }
+    bool hasLocalCloudRequest();
 
     void processQueue();
 

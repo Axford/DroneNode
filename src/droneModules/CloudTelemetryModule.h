@@ -17,18 +17,24 @@
 #include "../CloudTelemetryConfig.h"
 #include "../CloudCommandBatch.h"
 struct CloudTelemetryWorker;
+enum class CloudRequestResult;
 class CloudTelemetryModule:public DroneModule {
   telemetry::Config config;
   telemetry::Report report;
   telemetry::CommandResponses responses;
   uint32_t pollRate = 10000, nextPoll = 0;
   size_t commandIndex = 0;
+  uint8_t peerCursor = 1;
+  uint8_t relayPeers[32] = {};
+  uint32_t peerWaitStart = 0;
+  bool peerWaiting = false;
+  bool waitForAdmission(CloudRequestResult result, bool peer, uint32_t now);
   uint8_t nextJob = 0;
   bool batchReady = false, readback = false, pollChanged = false;
   void captureConfigured(const uint8_t* bytes,size_t length);
   void serviceCommands(uint32_t now);
   void scheduleJob(uint32_t now);
-  static void observePublication(void* context, const DroneLinkMsg& message);
+  static void observePublication(void* context, const DroneLinkMsg& message, bool directed);
   CloudTelemetryWorker* worker=nullptr;
   uint32_t rate=10000,lastResolve=0,lastService=0,maxGap=0,lastDiagnostics=0;
   bool started=false,intervalChanged=false;

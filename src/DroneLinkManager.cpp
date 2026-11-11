@@ -1,3 +1,4 @@
+#include "CloudCommandWire.h"
 #include "DroneConsole.h"
 #include "Arduino.h"
 #include "DroneLinkManager.h"
@@ -122,27 +123,84 @@ void DroneLinkManager::subscribeExt(uint8_t extNode, uint8_t channel, uint8_t pa
 }
 
 
+bool DroneLinkManager::hasCommandRoute(uint8_t peer) {
+  if (!peer || peer == 255 || peer == _node) return false;
+  auto route = getNodeInfo(peer, false);
+  if (!route || !route->heard || !route->nextHop || route->nextHop == 255 || route->nextHop == _node ||
+      !route->interface || millis() - route->lastHeard > DRONE_LINK_MANAGER_MAX_ROUTE_AGE ||
+      !route->interface->isEnabled() || !route->interface->getInterfaceState()) return false;
+  auto next = getNodeInfo(route->nextHop, false);
+  return next && next->heard && millis() - next->lastHeard <= DRONE_LINK_MANAGER_MAX_ROUTE_AGE;
+}
+
+bool DroneLinkManager::cloudTxAvailable() {
+  unsigned active = 0, cloud = 0;
+  for (int i = 0; i < _txQueue.size(); ++i) {
+    auto item = _txQueue.get(i);
+    if (item->state <= DRONE_MESH_MSG_BUFFER_STATE_EMPTY) continue;
+    ++active;
+    if (isDroneMeshMsgAck(item->data)) continue;
+    auto type = getDroneMeshMsgPayloadType(item->data);
+    if (type == DRONE_MESH_MSG_TYPE_CLOUD_REQUEST || type == DRONE_MESH_MSG_TYPE_CLOUD_REPLY) ++cloud;
+  }
+  return cloud < 4 && active < DRONE_LINK_MANAGER_MAX_TX_QUEUE - 4;
+}
+
+bool DroneLinkManager::sendCloudLink(uint8_t peer, DroneLinkMsg &msg, uint8_t meshType) {
+  if (!hasCommandRoute(peer) || !cloudTxAvailable()) return false;
+  auto route = getNodeInfo(peer, false);
+  return sendDroneLinkMessage(route->interface, peer, route->nextHop, &msg, meshType);
+}
+
 CloudRequestResult DroneLinkManager::publishCloudRequest(DroneLinkMsg &msg) {
-  if (msg.node() != _node || !msg.channel()) return CloudRequestResult::Missing;
+  if (msg.node() != _node) {
+    if (!hasCommandRoute(msg.node())) return CloudRequestResult::Missing;
+    return sendCloudLink(msg.node(), msg, DRONE_MESH_MSG_TYPE_CLOUD_REQUEST)
+        ? CloudRequestResult::Queued : CloudRequestResult::Busy;
+  }
   auto channel = findChannel(_node, msg.channel());
   if (!channel || !channel->hasLocalTarget()) return CloudRequestResult::Missing;
   if (channel->publish(msg, true)) return CloudRequestResult::Queued;
   return CloudRequestResult::Busy;
 }
 
+void DroneLinkManager::dispatchCloudRequest(DroneModule* target, DroneLinkMsg &msg) {
+  auto previous = _peerQuery;
+  const bool query = msg.type() == DRONE_LINK_MSG_TYPE_QUERY || msg.type() == DRONE_LINK_MSG_TYPE_NAMEQUERY;
+  _peerQuery = query && msg.source() != _node ? &msg : nullptr;
+  target->handleLinkMessage(&msg);
+  _peerQuery = previous;
+}
+
 void DroneLinkManager::discardCloudRequests() {
   for (int i = 0; i < _channels.size(); ++i) _channels.get(i)->discardCloudRequests();
+  for (int i = 0; i < _txQueue.size(); ++i) {
+    auto item = _txQueue.get(i);
+    if (item->state > DRONE_MESH_MSG_BUFFER_STATE_EMPTY && !isDroneMeshMsgAck(item->data) &&
+        getDroneMeshMsgPayloadType(item->data) == DRONE_MESH_MSG_TYPE_CLOUD_REQUEST &&
+        getDroneMeshMsgSrcNode(item->data) == _node) item->state = DRONE_MESH_MSG_BUFFER_STATE_EMPTY;
+  }
 }
 
 bool DroneLinkManager::cloudRequestPending() {
   for (int i = 0; i < _channels.size(); ++i) {
-    if (_channels.get(i)->hasCloudRequest()) return true;
+    if (_channels.get(i)->hasLocalCloudRequest()) return true;
   }
   return false;
 }
 
 bool DroneLinkManager::publishLocalObservation(DroneLinkMsg &msg) {
-  if (_publicationObserver && msg.node() == _node) _publicationObserver(_publicationObserverContext, msg);
+  if (_peerQuery && msg.node() == _node && msg.channel() == _peerQuery->channel() && msg.param() == _peerQuery->param()) {
+    const bool name = _peerQuery->type() == DRONE_LINK_MSG_TYPE_NAMEQUERY;
+    if (name ? msg.type() == DRONE_LINK_MSG_TYPE_NAME : msg.type() <= DRONE_LINK_MSG_TYPE_CHAR) {
+      const auto peer = _peerQuery->source();
+      _peerQuery = nullptr;
+      auto reply = msg;
+      reply.source(_node);
+      return sendCloudLink(peer, reply, DRONE_MESH_MSG_TYPE_CLOUD_REPLY);
+    }
+  }
+  if (_publicationObserver && msg.node() == _node) _publicationObserver(_publicationObserverContext, msg, false);
   return publish(msg);
 }
 
@@ -736,6 +794,8 @@ void DroneLinkManager::receivePacket(NetworkInterfaceModule *interface, uint8_t 
       case DRONE_MESH_MSG_TYPE_ROUTEENTRY_RESPONSE: receiveRouteEntryResponse(interface, buffer, metric); break;
 
       case DRONE_MESH_MSG_TYPE_DRONELINKMSG: receiveDroneLinkMsg(interface, buffer, metric); break;
+      case DRONE_MESH_MSG_TYPE_CLOUD_REQUEST: receiveCloudLink(buffer, false); break;
+      case DRONE_MESH_MSG_TYPE_CLOUD_REPLY: receiveCloudLink(buffer, true); break;
 
       case DRONE_MESH_MSG_TYPE_ROUTER_REQUEST: receiveRouterRequest(interface, buffer, metric); break;
       case DRONE_MESH_MSG_TYPE_ROUTER_RESPONSE: receiveRouterResponse(interface, buffer, metric); break;
@@ -964,6 +1024,39 @@ void DroneLinkManager::receiveSubscriptionResponse(NetworkInterfaceModule *inter
 }
 
 
+void DroneLinkManager::receiveCloudLink(uint8_t *buffer, bool reply) {
+  auto header = reinterpret_cast<DRONE_MESH_MSG_HEADER*>(buffer);
+  if (header->nextNode != _node) return;
+  if (header->destNode != _node) {
+    if (hasCommandRoute(header->destNode) && cloudTxAvailable()) hopAlong(buffer);
+    return;
+  }
+
+  if (!isDroneMeshMsgGuaranteed(buffer) || !hasCommandRoute(header->srcNode)) return;
+  auto sourceRoute = getNodeInfo(header->srcNode, false);
+  if (!sourceRoute || !sourceRoute->gSequencer) return;
+  const auto* payload = buffer + sizeof(DRONE_MESH_MSG_HEADER);
+  const auto size = getDroneMeshMsgPayloadSize(buffer);
+  DroneLinkMsg msg;
+  if (!msg.tryParse(payload, size)) return;
+  if (!header->srcNode || header->srcNode == 255 || header->srcNode == _node || msg.source() != header->srcNode ||
+      !msg.channel() || msg.channel() == 255 || !msg.param()) return;
+  if (reply) {
+    if (msg.node() == header->srcNode && msg.type() <= DRONE_LINK_MSG_TYPE_NAME && _publicationObserver) {
+      _publicationObserver(_publicationObserverContext, msg, true);
+    }
+    return;
+  }
+
+  if (msg.node() != _node || !telemetry::validCommandPacket(payload, size)) return;
+
+  auto channel = findChannel(_node, msg.channel());
+  // A full channel drops a best-effort peer request without reserving a slot.
+  if (channel && channel->hasLocalTarget() && channel->size() < DRONE_LINK_CHANNEL_QUEUE_LIMIT) {
+    channel->publish(msg, true);
+  }
+}
+
 void DroneLinkManager::receiveDroneLinkMsg(NetworkInterfaceModule *interface, uint8_t *buffer, uint8_t metric) {
   DRONE_MESH_MSG_HEADER *header = (DRONE_MESH_MSG_HEADER*)buffer;
 
@@ -987,7 +1080,12 @@ void DroneLinkManager::receiveDroneLinkMsg(NetworkInterfaceModule *interface, ui
         return;
       }
 
-      // publish contained message on local bus
+      // Capture verified peer publications before channel queuing so an older
+      // queued publication cannot overtake a newer directed readback.
+      if (_publicationObserver && _receivedMsg.node() == header->srcNode &&
+          _receivedMsg.source() == header->srcNode && _receivedMsg.type() <= DRONE_LINK_MSG_TYPE_NAME) {
+        _publicationObserver(_publicationObserverContext, _receivedMsg, false);
+      }
       publish(_receivedMsg);
 
     } else {
@@ -2122,7 +2220,7 @@ boolean DroneLinkManager::generateLinkCheckRequest(NetworkInterfaceModule *inter
 }
 
 
-boolean DroneLinkManager::sendDroneLinkMessage(NetworkInterfaceModule *interface, uint8_t destNode, uint8_t nextNode, DroneLinkMsg *msg) {
+boolean DroneLinkManager::sendDroneLinkMessage(NetworkInterfaceModule *interface, uint8_t destNode, uint8_t nextNode, DroneLinkMsg *msg, uint8_t meshType) {
   uint8_t payloadSize = msg->totalSize();
   uint8_t totalSize = payloadSize + sizeof(DRONE_MESH_MSG_HEADER) + 1;
 
@@ -2143,7 +2241,7 @@ boolean DroneLinkManager::sendDroneLinkMessage(NetworkInterfaceModule *interface
 
   // param filter check only relevant to local address space
   // and can be ignored for name responses
-  if (msg->node() == _node && msg->type() < DRONE_LINK_MSG_TYPE_NAME) {
+  if (meshType == DRONE_MESH_MSG_TYPE_DRONELINKMSG && msg->node() == _node && msg->type() < DRONE_LINK_MSG_TYPE_NAME) {
     // calc hashmap index
     uint32_t index = (destNode << 16) | (msg->_msg.channel << 8) | getDroneLinkMsgParam(msg->_msg.paramPriority);
 
@@ -2172,7 +2270,7 @@ boolean DroneLinkManager::sendDroneLinkMessage(NetworkInterfaceModule *interface
   // i.e. matching signature (first 5 bytes)
   // same sig if memcmp(&_msg, &msg->_msg, 5) == 0;
   // scan txQueue and compare to msg signature
-  for (uint8_t i=0; i<_txQueue.size(); i++) {
+  for (uint8_t i=0; meshType == DRONE_MESH_MSG_TYPE_DRONELINKMSG && i<_txQueue.size(); i++) {
     DRONE_MESH_MSG_BUFFER *b = _txQueue.get(i);
     // check for packets ready to send
     if (b->state == DRONE_MESH_MSG_BUFFER_STATE_READY) {
@@ -2226,7 +2324,7 @@ boolean DroneLinkManager::sendDroneLinkMessage(NetworkInterfaceModule *interface
     header->seq = _gSeq++;
     //header->type = DRONE_MESH_MSG_TYPE_DRONELINKMSG;
 
-    setDroneMeshMsgPriorityAndPayloadType(buffer->data, p, DRONE_MESH_MSG_TYPE_DRONELINKMSG);
+    setDroneMeshMsgPriorityAndPayloadType(buffer->data, p, meshType);
 
     // copy msg data
     memcpy(&buffer->data[sizeof(DRONE_MESH_MSG_HEADER)], (uint8_t*)&msg->_msg, payloadSize);

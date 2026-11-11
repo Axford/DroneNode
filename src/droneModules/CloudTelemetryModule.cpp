@@ -16,6 +16,7 @@ struct CloudTelemetryWorker {
   telemetry::HttpSettings settings;
   telemetry::Cycle cycle;
   telemetry::CommandBatch batch;
+  telemetry::PollPeers peers;
   CloudJob job = CloudJob::Report;
   size_t pollLimit = 0;
   std::atomic<bool> active{false},done{false};
@@ -61,7 +62,7 @@ void runWorker(void* pointer) {
       const uint32_t start=millis();state.attempted=0;state.requests=state.admitted=state.failed=0;state.status=0;
       if (state.job == CloudJob::Poll) {
         telemetry::PackedHttp http(io);
-        auto outcome = http.poll(state.settings, state.uploader, state.pollLimit, state.batch);
+        auto outcome = http.poll(state.settings, state.uploader, state.pollLimit, state.batch, state.peers);
         state.requests = outcome.attempted;
         state.failed = !outcome.complete;
         state.status = outcome.status;
@@ -123,11 +124,37 @@ CloudTelemetryModule::~CloudTelemetryModule() {
   }
 }
 bool CloudTelemetryModule::isConfigurationString(const char* name) const {
-  return !strcmp(name,"endpoint")||!strcmp(name,"domain")||!strcmp(name,"apiKey")||!strcmp(name,"subscriptions");
+  return !strcmp(name,"endpoint")||!strcmp(name,"domain")||!strcmp(name,"apiKey")||!strcmp(name,"subscriptions")||!strcmp(name,"relayPeers");
 }
-telemetry::Setting CloudTelemetryModule::configure(const char* name,const char* value) {return config.apply(name,value);}
+telemetry::Setting CloudTelemetryModule::configure(const char* name,const char* value) {
+  if(strcmp(name,"relayPeers")) return config.apply(name,value);
+  uint8_t selected[sizeof relayPeers] = {};
+  unsigned count=0;
+  while(value && *value) {
+    unsigned peer=0;
+    const char* start=value;
+    while(*value>='0' && *value<='9' && peer<=254) peer=peer*10+(*value++-'0');
+    if(value==start || !peer || peer>=255 || (*value && *value!=',') ||
+       (selected[peer/8] & (1u<<(peer%8))) || ++count>64) break;
+    selected[peer/8]|=1u<<(peer%8);
+    if(!*value) {
+      memcpy(relayPeers,selected,sizeof relayPeers);
+      return telemetry::Setting::Handled;
+    }
+    ++value;
+  }
+  config.invalidate("invalid relayPeers");
+  return telemetry::Setting::Invalid;
+}
 void CloudTelemetryModule::configurationError() {config.invalidate("invalid config.ini setting");}
 void CloudTelemetryModule::saveExtraConfiguration(File* file) {
+  bool first=true;
+  for(unsigned peer=1;peer<255;++peer) if(relayPeers[peer/8] & (1u<<(peer%8))) {
+    file->print(first?"  relayPeers = ":",");
+    file->print(peer);
+    first=false;
+  }
+  if(!first) file->println("");
   const char* names[]={"endpoint","domain","apiKey"};const char* values[]={config.endpoint,config.domain,config.apiKey};
   for(size_t i=0;i<3;++i) {file->print("  ");file->print(names[i]);file->print(" = ");quoted(file,values[i]);}
   for(size_t i=0;i<config.count;++i) {
@@ -161,7 +188,7 @@ void CloudTelemetryModule::enable() {
 void CloudTelemetryModule::waiting() {enable();}
 void CloudTelemetryModule::disable() {
   started=false;report.stop();
-  batchReady=false;readback=false;responses.clear();
+  batchReady=false;readback=false;peerWaiting=false;responses.clear();
   if(instance==this) {
     _dlm->observeLocalPublications(nullptr,nullptr);
     _dlm->discardCloudRequests();
@@ -204,7 +231,7 @@ void CloudTelemetryModule::handleLinkMessage(DroneLinkMsg* message) {
   if(message->node()==_dlm->node()&&message->channel()==_id&&(message->param()==8||message->param()==14)&&!message->writable()&&message->type()<5
       &&(message->type()!=DRONE_LINK_MSG_TYPE_UINT32_T||message->length()!=4)) return;
   DroneModule::handleLinkMessage(message);
-  if(message->node()!=_dlm->node()) captureConfigured(reinterpret_cast<const uint8_t*>(&checked._msg),length);
+
 }
 void CloudTelemetryModule::captureConfigured(const uint8_t* bytes,size_t length) {
   if(!started||!_enabled||_error||(bytes[1]==_dlm->node()&&bytes[2]==_id)) return;
@@ -233,14 +260,22 @@ void CloudTelemetryModule::onParamWrite(DRONE_PARAM_ENTRY* param) {
     pollRate=value;pollChanged=true;
   } else DroneModule::onParamWrite(param);
 }
-void CloudTelemetryModule::observePublication(void* context,const DroneLinkMsg& message) {
+void CloudTelemetryModule::observePublication(void* context,const DroneLinkMsg& message,bool directed) {
   auto& module=*static_cast<CloudTelemetryModule*>(context);
   if (!module.started || module._error) return;
   auto& raw=message._msg;
   const auto* bytes=reinterpret_cast<const uint8_t*>(&raw);
   const size_t length=6+(bytes[4]&15);
   if (module.responses.capture(bytes,length,millis())) module.report.discardOlder(bytes);
-  else module.captureConfigured(bytes,length);
+  else if (!directed) module.captureConfigured(bytes,length);
+}
+bool CloudTelemetryModule::waitForAdmission(CloudRequestResult result,bool peer,uint32_t now) {
+  if (result!=CloudRequestResult::Busy) {peerWaiting=false;return false;}
+  if (!peer) return true;
+  if (!peerWaiting) {peerWaiting=true;peerWaitStart=now;}
+  if (uint32_t(now-peerWaitStart)<5000) return true;
+  peerWaiting=false;
+  return false;
 }
 void CloudTelemetryModule::serviceCommands(uint32_t now) {
   if (!batchReady || _dlm->cloudRequestPending()) return;
@@ -265,7 +300,7 @@ void CloudTelemetryModule::serviceCommands(uint32_t now) {
   }
   if (message.type()<5) {
     const auto result=_dlm->publishCloudRequest(message);
-    if (result==CloudRequestResult::Busy) return;
+    if (waitForAdmission(result,message.node()!=_dlm->node(),now)) return;
     ++commandIndex;
     readback=result==CloudRequestResult::Queued;
     return;
@@ -278,7 +313,7 @@ void CloudTelemetryModule::serviceCommands(uint32_t now) {
   window->deadline=now+30000;
   const auto result=_dlm->publishCloudRequest(message);
   if (result!=CloudRequestResult::Queued) *window=previous;
-  if (result==CloudRequestResult::Busy) return;
+  if (waitForAdmission(result,message.node()!=_dlm->node(),now)) return;
   if (readback) readback=false;
   else ++commandIndex;
 }
@@ -309,6 +344,16 @@ void CloudTelemetryModule::scheduleJob(uint32_t now) {
     }
     if(!work) continue;
     if(!_dlm->node()||_dlm->node()>=255) {Log.errorln("[CloudTelemetry] invalid uploader address");setError(1);disable();return;}
+    if(job==CloudJob::Poll) {
+      worker->peers.count=0;
+      {
+        for(unsigned n=0;n<254 && worker->peers.count<telemetry::PeerPollLimit;++n) {
+          const auto peer=peerCursor;
+          peerCursor=peerCursor==254?1:peerCursor+1;
+          if((relayPeers[peer/8] & (1u<<(peer%8))) && _dlm->hasCommandRoute(peer)) worker->peers.nodes[worker->peers.count++]=peer;
+        }
+      }
+    }
     worker->job=job;
     worker->uploader=_dlm->node();worker->jobGeneration=worker->generation.load();worker->done=false;worker->busy=true;
     nextJob=(index+1)%3;

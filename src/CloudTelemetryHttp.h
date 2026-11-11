@@ -190,26 +190,32 @@ class PackedHttp {
   }
 public:
   explicit PackedHttp(HttpIo &client):io(client) {}
-  Admission poll(const HttpSettings &cfg,uint8_t id,size_t limit,CommandBatch& batch) {
+  Admission poll(const HttpSettings &cfg,uint8_t id,size_t limit,CommandBatch& batch,const PollPeers& peers = PollPeers()) {
     Admission result;
     batch.count=0;started=io.now();headerBytes=0;
-    if(!id||id>=255||!limit||limit>BatchLimit||!live()) return result;
+    if(!id||id>=255||!limit||limit>BatchLimit||peers.count>PeerPollLimit||!live()) return result;
     result.attempted=true;
     PhaseScope request(io,Phase::Request);
     {
       PhaseScope connect(io,Phase::Connect);
       if(!io.connect(cfg.host,cfg.port)||!live()) {io.close();return result;}
     }
-    char domain[401],key[1025],body[1536],header[512];
+    char domain[401],key[1025],body[1664],header[512];
     escape(cfg.domain,domain);escape(cfg.apiKey,key);
-    int length=snprintf(body,sizeof body,"{\"domain\":\"%s\",\"id\":%u,\"apiKey\":\"%s\",\"limit\":%u}",domain,id,key,unsigned(limit));
-    if(length<0||size_t(length)>=sizeof body) {io.close();return result;}
+    int length=snprintf(body,sizeof body,"{\"domain\":\"%s\",\"id\":%u,\"apiKey\":\"%s\",\"limit\":%u",domain,id,key,unsigned(limit));
+    if(length<0||size_t(length)+12+4*peers.count>=sizeof body) {io.close();return result;}
+    if(peers.count) {
+      length+=snprintf(body+length,sizeof body-length,",\"peers\":[");
+      for(size_t i=0;i<peers.count;++i) length+=snprintf(body+length,sizeof body-length,"%s%u",i?",":"",peers.nodes[i]);
+      body[length++]=']';
+    }
+    body[length++]='}';
     int n=snprintf(header,sizeof header,"POST /commands/poll HTTP/1.1\r\nHost: %s:%u\r\nContent-Type: application/json\r\nContent-Length: %u\r\nConnection: close\r\n\r\n",cfg.host,cfg.port,unsigned(length));
     if(n<0||size_t(n)>=sizeof header||!send(reinterpret_cast<const uint8_t*>(header),n)||
        !send(reinterpret_cast<const uint8_t*>(body),length)) {io.close();return result;}
     PhaseScope responsePhase(io,Phase::Response);
     char response[2049];bool closeConnection=false;
-    result.complete=readResponse(response,sizeof response,result.status,closeConnection)&&result.status==200&&live()&&batch.parse(response,id,limit);
+    result.complete=readResponse(response,sizeof response,result.status,closeConnection)&&result.status==200&&live()&&batch.parse(response,id,limit,peers);
     io.close();
     return result;
   }

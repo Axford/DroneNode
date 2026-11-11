@@ -1,14 +1,24 @@
 #ifndef CLOUD_COMMAND_BATCH_H
 #define CLOUD_COMMAND_BATCH_H
 #include "TelemetryReport.h"
+#include "CloudCommandWire.h"
 
 namespace telemetry {
+constexpr size_t PeerPollLimit = 16;
+struct PollPeers {
+  uint8_t nodes[PeerPollLimit] = {};
+  size_t count = 0;
+  bool contains(uint8_t node) const {
+    for (size_t i = 0; i < count; ++i) if (nodes[i] == node) return true;
+    return false;
+  }
+};
 struct CommandBatch {
   Packet packets[BatchLimit];
   size_t count = 0;
 
   // The response is small and its only string value is canonical ASCII base64.
-  bool parse(const char* response, uint8_t node, size_t limit) {
+  bool parse(const char* response, uint8_t node, size_t limit, const PollPeers& peers = PollPeers()) {
     count = 0;
     const char* encoded = nullptr;
     size_t length = 0, expected = 0;
@@ -33,24 +43,8 @@ struct CommandBatch {
       if (size - offset < 6) return false;
       const uint8_t* p = raw + offset;
       const size_t payload = (p[4] & 15) + 1;
-      const unsigned type = (p[4] >> 4) & 7, priority = p[3] >> 6;
-      if (payload + 5 > size - offset || p[0] != node || p[1] != node ||
-          p[2] == 0 || p[2] == 255 || !(p[3] & 63) || (p[4] & 128)) return false;
-      if (type <= 4) {
-        if (priority != 3 || (type >= 1 && type <= 3 && payload % 4)) return false;
-        if (type == 3) for (size_t j = 0; j < payload; j += 4) {
-          const uint8_t* f = p + 5 + j;
-          if ((f[3] & 127) == 127 && (f[2] & 128)) return false;
-          if (f[3] == 128 && !(f[0] | f[1] | f[2])) return false;
-        }
-        if (type == 4) {
-          bool padding = false;
-          for (size_t j = 0; j < payload; ++j) {
-            if (!p[5 + j]) padding = true;
-            else if (padding) return false;
-          }
-        }
-      } else if (type == 5 || priority != 0 || payload != 1 || p[5] != 0) return false;
+      if (payload + 5 > size - offset || p[0] != node || (p[1] != node && !peers.contains(p[1])) ||
+          !validCommandPacket(p, payload + 5)) return false;
       packets[i].size = payload + 5;
       memcpy(packets[i].bytes, p, packets[i].size);
       offset += packets[i].size;

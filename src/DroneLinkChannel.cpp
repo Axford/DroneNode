@@ -39,8 +39,9 @@ uint8_t DroneLinkChannel::peakSize() {
 
 boolean DroneLinkChannel::publish(DroneLinkMsg &msg, bool cloudRequest) {
   // If a cloud request found a full channel, preserve the next freed slot.
-  if (cloudRequest) _reserveCloudSlot = true;
-  const auto limit = _maxSize - (!cloudRequest && _reserveCloudSlot ? 1 : 0);
+  const bool localCloud = cloudRequest && msg.source() == _node;
+  if (localCloud) _reserveCloudSlot = true;
+  const auto limit = _maxSize - (!localCloud && _reserveCloudSlot ? 1 : 0);
   if (_queue.size() < limit) {
     //Log.errorln(F("Queue %d = %d"), _id, _queue.size());
 
@@ -66,7 +67,7 @@ boolean DroneLinkChannel::publish(DroneLinkMsg &msg, bool cloudRequest) {
       if (!tmp) return false;
       if (cloudRequest) {
         ++_cloudRequests;
-        _reserveCloudSlot = false;
+        if (localCloud) _reserveCloudSlot = false;
       }
 
       // search for insertion point, by finding the point where the next item is a lower priority
@@ -111,13 +112,22 @@ bool DroneLinkChannel::hasLocalTarget() {
   return false;
 }
 
+bool DroneLinkChannel::hasLocalCloudRequest() {
+  if (!_cloudRequests) return false;
+  for (int i = 0; i < _queue.size(); ++i) {
+    auto entry = _queue.get(i);
+    if (entry->cloudRequest && entry->message.source() == _node) return true;
+  }
+  return false;
+}
+
 void DroneLinkChannel::discardCloudRequests() {
   _reserveCloudSlot = false;
   _cloudWaitTurns = 0;
   if (!_cloudRequests) return;
   for (int i = _queue.size() - 1; i >= 0; --i) {
     auto entry = _queue.get(i);
-    if (!entry->cloudRequest) continue;
+    if (!entry->cloudRequest || entry->message.source() != _node) continue;
     _queue.remove(i);
     delete entry;
     --_cloudRequests;
@@ -151,7 +161,7 @@ void DroneLinkChannel::processQueue() {
     for (int i = 0; i < _subs.size(); ++i) {
       auto sub = _subs.get(i);
       if (sub->module && sub->module->id() == tmp->channel() && sub->param == DRONE_LINK_PARAM_ALL) {
-        sub->module->handleLinkMessage(tmp);
+        _dlm->dispatchCloudRequest(sub->module, *tmp);
         break;
       }
     }
