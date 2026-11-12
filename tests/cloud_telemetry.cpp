@@ -162,5 +162,17 @@ int main(){
   assert(!responses.capture(name,sizeof name,31001));
   telemetry::Cycle prompt;
   assert(responses.take(prompt)&&prompt.count==1&&prompt.entries[0].packet.bytes[5]=='N');
+  auto* unanswered=responses.select(query,31002);
+  assert(unanswered);
+  *unanswered={};
+  unanswered->node=11;
+  unanswered->channel=4;
+  unanswered->param=12;
+  unanswered->facet=1;
+  unanswered->deadline=61002;
+  assert(responses.capacity(61001)==telemetry::ResponseLimit-1);
+  assert(!responses.capture(name,sizeof name,61002));
+  assert(responses.capacity(61002)==telemetry::ResponseLimit);
+  assert(!responses.take(prompt));
  }
 measurementTests();configurationTests();policyTests();httpTests();}
