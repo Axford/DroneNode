@@ -1,0 +1,4 @@
+#define PIN_SERIAL1_RX 1
+#define PIN_SERIAL1_TX 2
+#define PIN_SERIAL2_RX 3
+#define PIN_SERIAL2_TX 4

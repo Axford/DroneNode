@@ -22,6 +22,7 @@ Manages the local set of pub/sub channels
 #include <uthash.h>
 #include "FS.h"
 
+#include "DroneLinkManagerStructs.h"
 #include "droneModules/NetworkInterfaceModule.h"
 
 // forward decl
@@ -35,11 +36,11 @@ class WiFiManager;
 
 #define DRONE_LINK_MANAGER_MAX_RETRY_INTERVAL   3000
 #define DRONE_LINK_MANAGER_MAX_ACK_INTERVAL     250
+#define DRONE_LINK_MANAGER_MIN_ACK_INTERVAL     50
 
 #define DRONE_LINK_MANAGER_LINK_CHECK_INTERVAL     2000
 
 #define DRONE_LINK_MANAGER_AVG_SAMPLES             16  // averaging window for avgAttempts, avgTxTime, etc
-
 
 // -----------------------------------------------------------------------------
 // aka routing entry
@@ -62,6 +63,7 @@ struct DRONE_LINK_NODE_INFO {
   uint32_t lastAck;  // time of last ack from this node
   float avgTxTime;  // avg ms to transmit a packet
   float avgAckTime; // avg time from packet creation to confirmed Ack
+  DRONE_LINK_TRANSPORT_ADDRESS transportAddress;
   DroneLinkMeshMsgSequencer *gSequencer;
 };
 
@@ -97,6 +99,8 @@ typedef void (*DroneLinkManagerCallback) (const DroneLinkManagerEvent event, con
 class DroneLinkManager
 {
 protected:
+  uint32_t _rejectedLinkMessages = 0;
+  unsigned long _lastRejectedLinkLog = 0;
   WiFiManager *_wifiManager;
   DroneFS* _fs;
   uint8_t _node;  // local node id
@@ -137,6 +141,9 @@ protected:
   uint8_t _firmwareSrc;
 
   struct DRONE_LINK_PARAM_FILTER *_paramFilter = NULL;
+  DroneLinkMsg* _peerQuery = nullptr; // Scoped to synchronous target dispatch.
+  void* _publicationObserverContext = nullptr;
+  void (*_publicationObserver)(void*, const DroneLinkMsg&, bool) = nullptr;
 
 public:
     DroneLinkManagerCallback onEvent;
@@ -159,10 +166,24 @@ public:
     void subscribeExt(uint8_t extNode, uint8_t channel, uint8_t param);
 
     bool publish(DroneLinkMsg &msg);
+    bool publishLocalObservation(DroneLinkMsg &msg);
+    CloudRequestResult publishCloudRequest(DroneLinkMsg &msg);
+    void dispatchCloudRequest(DroneModule* target, DroneLinkMsg &msg);
+    bool hasCommandRoute(uint8_t peer);
+    bool cloudTxAvailable();
+    void receiveCloudLink(uint8_t *buffer, bool reply);
+    bool sendCloudLink(uint8_t peer, DroneLinkMsg &msg, uint8_t meshType);
+    void discardCloudRequests();
+    bool cloudRequestPending();
+    void observeLocalPublications(void* context, void (*observer)(void*, const DroneLinkMsg&, bool)) {
+      _publicationObserverContext = context;
+      _publicationObserver = observer;
+    }
     //bool publishPeer(DroneLinkMsg &msg, int16_t RSSI, uint8_t interface);
 
     void processChannels();
     void processExternalSubscriptions();
+    void resetExternalSubscriptions(uint8_t extNode);
 
     void removeRoute(uint8_t node);
 
@@ -191,7 +212,7 @@ public:
 
     // mesh methods
     void registerInterface(NetworkInterfaceModule *interface);
-    void receivePacket(NetworkInterfaceModule *interface, uint8_t *buffer, uint8_t metric);
+    void receivePacket(NetworkInterfaceModule *interface, uint8_t *buffer, uint8_t metric, DRONE_LINK_TRANSPORT_ADDRESS transportAddress);
 
     void receiveAck(uint8_t *buffer);
 
@@ -219,7 +240,7 @@ public:
     void receiveFSFileRequest(NetworkInterfaceModule *interface, uint8_t *buffer, uint8_t metric);
     void receiveFSReadRequest(NetworkInterfaceModule *interface, uint8_t *buffer, uint8_t metric);
     void receiveFSWriteRequest(NetworkInterfaceModule *interface, uint8_t *buffer, uint8_t metric);
-    void receiveFSResizeRequest(NetworkInterfaceModule *interface, uint8_t *buffer, uint8_t metric);
+    void receiveFSManageRequest(NetworkInterfaceModule *interface, uint8_t *buffer, uint8_t metric);
 
 
     // standard forwarding mechanic for unicast packets
@@ -262,12 +283,12 @@ public:
 
     boolean generateLinkCheckRequest(NetworkInterfaceModule *interface, uint8_t dest, uint8_t nextHop);
 
-    boolean sendDroneLinkMessage(NetworkInterfaceModule *interface, uint8_t destNode, uint8_t nextNode, DroneLinkMsg *msg);
+    boolean sendDroneLinkMessage(NetworkInterfaceModule *interface, uint8_t destNode, uint8_t nextNode, DroneLinkMsg *msg, uint8_t meshType = DRONE_MESH_MSG_TYPE_DRONELINKMSG);
 
     boolean generateFSFileResponse(NetworkInterfaceModule *interface, uint8_t dest, uint8_t nextHop, DroneFSEntry* entry);
     boolean generateFSReadResponse(NetworkInterfaceModule *interface, uint8_t dest, uint8_t nextHop, DroneFSEntry* entry, uint32_t offset);
-    boolean generateFSResizeResponse(NetworkInterfaceModule *interface, uint8_t dest, uint8_t nextHop, DroneFSEntry* entry, uint32_t newSize);
-    boolean generateFSWriteResponse(NetworkInterfaceModule *interface, uint8_t dest, uint8_t nextHop, DroneFSEntry* entry, uint32_t offset, uint8_t sizeWritten);
+    boolean generateFSManageResponse(NetworkInterfaceModule *interface, uint8_t dest, uint8_t nextHop, uint8_t flags, uint8_t status);
+    boolean generateFSWriteResponse(NetworkInterfaceModule *interface, uint8_t dest, uint8_t nextHop, uint8_t flags, uint32_t offset);
 
     boolean generateFirmwareStartResponse(NetworkInterfaceModule *interface, uint8_t dest, uint8_t status);
     boolean generateFirmwareRewind(NetworkInterfaceModule *interface, uint8_t dest, uint32_t offset);

@@ -19,8 +19,8 @@
 #define DRONE_LINK_MSG_TYPE_FLOAT     3
 #define DRONE_LINK_MSG_TYPE_CHAR      4
 #define DRONE_LINK_MSG_TYPE_NAME      5   // reply with param name in char format
-#define DRONE_LINK_MSG_TYPE_NAMEQUERY 6  // query for the param name
-#define DRONE_LINK_MSG_TYPE_QUERY     7  // to query the value of a param, payload should be empty
+#define DRONE_LINK_MSG_TYPE_NAMEQUERY 6  // query for the param name; include at least one payload byte, ignored by the receiver
+#define DRONE_LINK_MSG_TYPE_QUERY     7  // query for the param value; include at least one payload byte, ignored by the receiver
 
 #define DRONE_LINK_MSG_WRITABLE       0b10000000  // top bit indicates if param is writable
 
@@ -78,6 +78,7 @@ Strings of up to 16 characters can be sent as char
 uint8_t setDroneLinkMsgPriorityParam(uint8_t pri, uint8_t param);
 
 uint8_t getDroneLinkMsgParam(uint8_t paramPriority);
+uint8_t getDroneLinkMsgPriority(uint8_t paramPriority);
 
 class DroneLinkMsg
 {
@@ -93,6 +94,9 @@ public:
     DroneLinkMsg(DRONE_LINK_MSG *msg);
 
     virtual ~DroneLinkMsg();
+
+    // Checked variable-length ingress; rejects without changing the prior message.
+    bool tryParse(const uint8_t *bytes, size_t size);
 
     virtual bool matchParam(uint8_t paramMask);
 
@@ -135,6 +139,10 @@ public:
     static void printPayload(DRONE_LINK_PAYLOAD *payload, uint8_t paramTypeLength);
 
     static void printPayload(DRONE_LINK_PAYLOAD *payload, uint8_t paramTypeLength, AsyncResponseStream *response);
+
+    static void printFloatAsJson(float f, AsyncResponseStream *response);
+
+    static void printPayloadAsJson(DRONE_LINK_PAYLOAD *payload, uint8_t paramTypeLength, AsyncResponseStream *response);
 
     boolean sameAddress(DRONE_LINK_ADDR *addr);
 

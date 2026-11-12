@@ -2,6 +2,7 @@
 
 @type          Depth
 @inherits      Drone
+@category      Input
 @description   Manages a simple Depth sensor (sonar transducer) controlled via Trigger and Echo pins
 
 @guide >>>
@@ -42,27 +43,27 @@ Depth.new 30
 
 // pubs
 
-// @pub 10;u8;2;pins;Pin connections for the depth module (Trigger, Echo)
+// @pub 10;u8;2;w;pins;Pin connections for the depth module (Trigger, Echo)
 #define DEPTH_PARAM_PINS         10
 #define DEPTH_PARAM_PINS_E       0
 
-// @pub 11;f;1;speed;Set the speed of sound in water (default 1480 for fresh water)
+// @pub 11;f;1;w;speed;Set the speed of sound in water (default 1480 for fresh water)
 #define DEPTH_PARAM_SPEED        11
 #define DEPTH_PARAM_SPEED_E      1
 
-// @pub 12;f;2;limits;Min and max depth limits in meters (Default 0.25 10)
+// @pub 12;f;2;w;limits;Min and max depth limits in meters (Default 0.25 10)
 #define DEPTH_PARAM_LIMITS       12
 #define DEPTH_PARAM_LIMITS_E     2
 
-// @pub 13;f;1;depth;Measured depth (or zero if unable to measure)
+// @pub 13;f;1;r;depth;Measured depth (or zero if unable to measure)
 #define DEPTH_PARAM_DEPTH        13
 #define DEPTH_PARAM_DEPTH_E      3
 
-// @pub 14;f;3;log;Composite log entry combining current GPS location and depth reading into a single param
+// @pub 14;f;3;r;log;Composite log entry combining current GPS location and depth reading into a single param
 #define DEPTH_PARAM_LOG          14
 #define DEPTH_PARAM_LOG_E        4
 
-// @pub 15;f;1;distance;Minimum distance between log entires.  Will only publish a fresh log entry if more than distance from last sample location.  Default 0m.
+// @pub 15;f;1;w;distance;Minimum distance between log entires.  Will only publish a fresh log entry if more than distance from last sample location.  Default 0m.
 #define DEPTH_PARAM_DISTANCE     15
 #define DEPTH_PARAM_DISTANCE_E   5
 
@@ -89,11 +90,7 @@ protected:
 public:
 
   DepthModule(uint8_t id, DroneSystem* ds);
-
-  static DEM_NAMESPACE* registerNamespace(DroneExecutionManager *dem);
-  static void registerParams(DEM_NAMESPACE* ns, DroneExecutionManager *dem);
-
-
+  
   virtual void setup();
 
   void loop();

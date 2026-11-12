@@ -1,8 +1,9 @@
 /*
 
-Neopixel Modules
-
-Manage a strip of NEOPixels (WS2812B)
+@type         Neopixel
+@inherits     Drone
+@category     Output.LED
+@description  Manage a strip of NEOPixels (WS2812B)
 
 TODO - rework alongside DroneLED to use the v4 LED header
 
@@ -63,7 +64,9 @@ struct NEOPIXEL_SCENE {
 } __packed;
 
 //pubs
+// @pub 12;u8;1;w;pins;Output pin for Neopixel strip
 #define NEOPIXEL_PARAM_PINS          12
+// @pub 13;u8;1;w;numPixels;Number of pixels in strip
 #define NEOPIXEL_PARAM_NUMPIXELS     13
 
 #define NEOPIXEL_PARAM_PINS_E          0
@@ -72,6 +75,7 @@ struct NEOPIXEL_SCENE {
 #define NEOPIXEL_PARAM_ENTRIES       2
 
 // subs
+// @sub 8;9;u8;16;scene;Pixel components and effects for the scene
 #define NEOPIXEL_SUB_SCENE         8
 #define NEOPIXEL_SUB_SCENE_ADDR    9
 #define NEOPIXEL_SUB_SCENE_E       0
@@ -92,9 +96,6 @@ protected:
 public:
 
   NeopixelModule(uint8_t id, DroneSystem* ds);
-
-  static DEM_NAMESPACE* registerNamespace(DroneExecutionManager *dem);
-  static void registerParams(DEM_NAMESPACE* ns, DroneExecutionManager *dem);
 
   void initScene(NEOPIXEL_SCENE *scene);
 

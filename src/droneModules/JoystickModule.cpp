@@ -8,6 +8,9 @@ JoystickModule::JoystickModule(uint8_t id, DroneSystem* ds):
  {
    setTypeName(FPSTR(JOYSTICK_STR_JOYSTICK));
 
+   // @default interval=100
+  _mgmtParams[DRONE_MODULE_PARAM_INTERVAL_E].data.uint32[0] = 100;
+
    // pubs
    initParams(JOYSTICK_PARAM_ENTRIES);
 
@@ -17,22 +20,22 @@ JoystickModule::JoystickModule(uint8_t id, DroneSystem* ds):
    DRONE_PARAM_ENTRY *param;
 
    param = &_params[JOYSTICK_PARAM_X_E];
-   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_HIGH, JOYSTICK_PARAM_X);
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_CRITICAL, JOYSTICK_PARAM_X);
    setParamName(FPSTR(STRING_XAXIS), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 4);
 
    param = &_params[JOYSTICK_PARAM_Y_E];
-   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_HIGH, JOYSTICK_PARAM_Y);
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_CRITICAL, JOYSTICK_PARAM_Y);
    setParamName(FPSTR(STRING_YAXIS), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 4);
 
    param = &_params[JOYSTICK_PARAM_Z_E];
-   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_HIGH, JOYSTICK_PARAM_Z);
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_CRITICAL, JOYSTICK_PARAM_Z);
    setParamName(FPSTR(STRING_ZAXIS), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 4);
 
    param = &_params[JOYSTICK_PARAM_BUTTON_E];
-   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_HIGH, JOYSTICK_PARAM_BUTTON);
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_CRITICAL, JOYSTICK_PARAM_BUTTON);
    setParamName(FPSTR(STRING_BUTTON), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 4);
 
@@ -45,31 +48,6 @@ JoystickModule::JoystickModule(uint8_t id, DroneSystem* ds):
    _params[JOYSTICK_PARAM_INVERT_E].data.uint8[2] = 0;
    _params[JOYSTICK_PARAM_INVERT_E].data.uint8[3] = 0;
 
-}
-
-
-DEM_NAMESPACE* JoystickModule::registerNamespace(DroneExecutionManager *dem) {
-  // namespace for module type
-  return dem->createNamespace(JOYSTICK_STR_JOYSTICK,0,true);
-}
-
-void JoystickModule::registerParams(DEM_NAMESPACE* ns, DroneExecutionManager *dem) {
-
-  I2CBaseModule::registerParams(ns, dem);
-
-  using std::placeholders::_1;
-  using std::placeholders::_2;
-  using std::placeholders::_3;
-  using std::placeholders::_4;
-
-  // writable mgmt params
-  DEMCommandHandler ph = std::bind(&DroneExecutionManager::mod_param, dem, _1, _2, _3, _4);
-
-  dem->registerCommand(ns, STRING_XAXIS, DRONE_LINK_MSG_TYPE_FLOAT, ph);
-  dem->registerCommand(ns, STRING_YAXIS, DRONE_LINK_MSG_TYPE_FLOAT, ph);
-  dem->registerCommand(ns, STRING_ZAXIS, DRONE_LINK_MSG_TYPE_FLOAT, ph);
-  dem->registerCommand(ns, STRING_BUTTON, DRONE_LINK_MSG_TYPE_FLOAT, ph);
-  dem->registerCommand(ns, STRING_INVERT, DRONE_LINK_MSG_TYPE_UINT8_T, ph);
 }
 
 

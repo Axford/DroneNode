@@ -6,6 +6,7 @@
 I2CBaseModule::I2CBaseModule(uint8_t id, DroneSystem* ds):
   DroneModule ( id, ds )
  {
+   // @default interval = 1000
    _mgmtParams[DRONE_MODULE_PARAM_INTERVAL_E].data.uint32[0] = 1000;
 }
 
@@ -23,20 +24,6 @@ void I2CBaseModule::initBaseParams() {
   setParamName(FPSTR(STRING_ADDR), param);
   param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_UINT8_T, 1);
   _params[I2CBASE_PARAM_ADDR_E].data.uint8[0] = 0;
-}
-
-
-void I2CBaseModule::registerParams(DEM_NAMESPACE* ns, DroneExecutionManager *dem) {
-  using std::placeholders::_1;
-  using std::placeholders::_2;
-  using std::placeholders::_3;
-  using std::placeholders::_4;
-
-  // writable mgmt params
-  DEMCommandHandler ph = std::bind(&DroneExecutionManager::mod_param, dem, _1, _2, _3, _4);
-
-  dem->registerCommand(ns, STRING_BUS, DRONE_LINK_MSG_TYPE_UINT8_T, ph);
-  dem->registerCommand(ns, STRING_ADDR, DRONE_LINK_MSG_TYPE_UINT8_T, ph);
 }
 
 

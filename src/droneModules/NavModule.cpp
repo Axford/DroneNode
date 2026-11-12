@@ -9,25 +9,25 @@ using std::placeholders::_2;
 using std::placeholders::_3;
 using std::placeholders::_4;
 
+// @type Nav
+
 NavModule::NavModule(uint8_t id, DroneSystem* ds):
   DroneModule ( id, ds )
  {
    setTypeName(FPSTR(NAV_STR_NAV));
 
+   // @default interval = 1000
    _mgmtParams[DRONE_MODULE_PARAM_INTERVAL_E].data.uint32[0] = 1000;
 
    _atTarget = false;
 
+   _progress = 10; // outside target radius by default
+   _lastTarget[0] = 0;
+   _lastTarget[1] = 0;
+   _lastTarget[2] = 0;
+
    // subs
    initSubs(NAV_SUBS);
-
-   // defaults
-   for (uint8_t i=0; i<NAV_SUBS; i++) {
-     _subs[i].param.data.f[0] = 0;
-     _subs[i].param.data.f[1] = 0;
-     _subs[i].param.data.f[2] = 0;
-     _subs[i].param.data.f[3] = 0;
-   }
 
    _subs[NAV_SUB_LOCATION_E].addrParam = NAV_SUB_LOCATION_ADDR;
    _subs[NAV_SUB_LOCATION_E].param.paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, NAV_SUB_LOCATION);
@@ -47,6 +47,12 @@ NavModule::NavModule(uint8_t id, DroneSystem* ds):
    _subs[NAV_SUB_WIND_E].param.name = FPSTR(STRING_WIND);
    _subs[NAV_SUB_WIND_E].param.nameLen = sizeof(STRING_WIND);
    _subs[NAV_SUB_WIND_E].param.paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_FLOAT, 4);
+
+   _subs[NAV_SUB_SATELLITES_E].addrParam = NAV_SUB_SATELLITES_ADDR;
+   _subs[NAV_SUB_SATELLITES_E].param.paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, NAV_SUB_SATELLITES);
+   _subs[NAV_SUB_SATELLITES_E].param.name = FPSTR(STRING_SATELLITES);
+   _subs[NAV_SUB_SATELLITES_E].param.nameLen = sizeof(STRING_SATELLITES);
+   _subs[NAV_SUB_SATELLITES_E].param.paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 4);
 
    // pubs
    initParams(NAV_PARAM_ENTRIES);
@@ -92,6 +98,7 @@ NavModule::NavModule(uint8_t id, DroneSystem* ds):
    _params[NAV_PARAM_CORRECTION_E].name = FPSTR(STRING_CORRECTION);
    _params[NAV_PARAM_CORRECTION_E].nameLen = sizeof(STRING_CORRECTION);
    _params[NAV_PARAM_CORRECTION_E].paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 4);
+   // @default correction=20
    _params[NAV_PARAM_CORRECTION_E].data.f[0] = 20;
 
    DRONE_PARAM_ENTRY *param;
@@ -99,46 +106,26 @@ NavModule::NavModule(uint8_t id, DroneSystem* ds):
    param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, NAV_PARAM_CROSSWIND);
    setParamName(FPSTR(STRING_CROSSWIND), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_FLOAT, 4);
+   // @default crosswind=0.5
    _params[NAV_PARAM_CROSSWIND_E].data.f[0] = 0.5;
 
    param = &_params[NAV_PARAM_ADJ_HEADING_E];
    param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_MEDIUM, NAV_PARAM_ADJ_HEADING);
    setParamName(FPSTR(STRING_ADJ_HEADING), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 4);
-}
 
-NavModule::~NavModule() {
+   param = &_params[NAV_PARAM_PITCH_E];
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_HIGH, NAV_PARAM_PITCH);
+   setParamName(FPSTR(STRING_PITCH), param);
+   param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 4);
 
-}
-
-DEM_NAMESPACE* NavModule::registerNamespace(DroneExecutionManager *dem) {
-  // namespace for module type
-  return dem->createNamespace(NAV_STR_NAV,0,true);
-}
-
-void NavModule::registerParams(DEM_NAMESPACE* ns, DroneExecutionManager *dem) {
-
-  // writable mgmt params
-  DEMCommandHandler ph = std::bind(&DroneExecutionManager::mod_param, dem, _1, _2, _3, _4);
-  DEMCommandHandler pha = std::bind(&DroneExecutionManager::mod_subAddr, dem, _1, _2, _3, _4);
-
-  dem->registerCommand(ns, STRING_LOCATION, DRONE_LINK_MSG_TYPE_FLOAT, ph);
-  dem->registerCommand(ns, PSTR("$location"), DRONE_LINK_MSG_TYPE_ADDR, pha);
-
-  dem->registerCommand(ns, STRING_TARGET, DRONE_LINK_MSG_TYPE_FLOAT, ph);
-  dem->registerCommand(ns, PSTR("$target"), DRONE_LINK_MSG_TYPE_ADDR, pha);
-
-  dem->registerCommand(ns, STRING_WIND, DRONE_LINK_MSG_TYPE_FLOAT, ph);
-  dem->registerCommand(ns, PSTR("$wind"), DRONE_LINK_MSG_TYPE_ADDR, pha);
-
-  dem->registerCommand(ns, STRING_HEADING, DRONE_LINK_MSG_TYPE_FLOAT, ph);
-  dem->registerCommand(ns, STRING_DISTANCE, DRONE_LINK_MSG_TYPE_FLOAT, ph);
-  dem->registerCommand(ns, STRING_LAST, DRONE_LINK_MSG_TYPE_FLOAT, ph);
-  dem->registerCommand(ns, STRING_HOME, DRONE_LINK_MSG_TYPE_FLOAT, ph);
-  dem->registerCommand(ns, STRING_CROSSTRACK, DRONE_LINK_MSG_TYPE_FLOAT, ph);
-  dem->registerCommand(ns, STRING_CORRECTION, DRONE_LINK_MSG_TYPE_FLOAT, ph);
-  dem->registerCommand(ns, STRING_CROSSWIND, DRONE_LINK_MSG_TYPE_FLOAT, ph);
-  dem->registerCommand(ns, STRING_MODE, DRONE_LINK_MSG_TYPE_UINT8_T, ph);
+   param = &_params[NAV_PARAM_LIMITS_E];
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, NAV_PARAM_LIMITS);
+   setParamName(FPSTR(STRING_LIMITS), param);
+   param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_FLOAT, 8);
+   // @default limits=-25,10
+   param->data.f[0] = -25;
+   param->data.f[1] = 10;
 }
 
 
@@ -148,25 +135,42 @@ void NavModule::onParamWrite(DRONE_PARAM_ENTRY *param) {
   if (getDroneLinkMsgParam(param->paramPriority) == NAV_SUB_TARGET) {
     // update last location if target changes
     updateLast(false);
+
+    // update _lastTarget
+    _lastTarget[0] = _subs[NAV_SUB_TARGET_E].param.data.f[0];
+    _lastTarget[1] = _subs[NAV_SUB_TARGET_E].param.data.f[1];
+    _lastTarget[2] = _subs[NAV_SUB_TARGET_E].param.data.f[2];
+  }
+}
+
+
+void NavModule::onSubReceived(DRONE_PARAM_SUB *sub) {
+  DroneModule::onSubReceived(sub);
+
+  if (sub->addrParam == NAV_SUB_TARGET_ADDR) {
+    // check how close we were to the previous target... if virtually there, assume we had made and it a separate WayPoint module has updated the target
+    // within 10% of target
+    if (_progress < 1.1) {
+      // target changed, so update last using _lastTarget
+      _params[NAV_PARAM_LAST_E].data.f[0] = _lastTarget[0];
+      _params[NAV_PARAM_LAST_E].data.f[1] = _lastTarget[1];
+      _params[NAV_PARAM_LAST_E].data.f[2] = _lastTarget[2];
+      publishParamEntry(&_params[NAV_PARAM_LAST_E]);
+    } else {
+      // target changed, so update last
+      updateLast(false);
+    }
+    
+    // update _lastTarget
+    _lastTarget[0] = _subs[NAV_SUB_TARGET_E].param.data.f[0];
+    _lastTarget[1] = _subs[NAV_SUB_TARGET_E].param.data.f[1];
+    _lastTarget[2] = _subs[NAV_SUB_TARGET_E].param.data.f[2];
   }
 }
 
 
 void NavModule::setup() {
   DroneModule::setup();
-
-  // register private commands
-  String nsName = "_" + String(getName());
-  DEM_NAMESPACE* ns = _dem->createNamespace(nsName.c_str(),0,true);
-
-  DEMCommandHandler gotoH = std::bind(&NavModule::nav_goto, this, _1, _2, _3, _4);
-  _dem->registerCommand(ns, PSTR("goto"), DRONE_LINK_MSG_TYPE_FLOAT, gotoH);
-
-  DEMCommandHandler inRadiusH = std::bind(&NavModule::nav_inRadius, this, _1, _2, _3, _4);
-  _dem->registerCommand(ns, PSTR("inRadius"), DRONE_LINK_MSG_TYPE_FLOAT, inRadiusH);
-
-  DEMCommandHandler goHomeH = std::bind(&NavModule::nav_goHome, this, _1, _2, _3, _4);
-  _dem->registerCommand(ns, PSTR("goHome"), DEM_DATATYPE_NONE, goHomeH);
 }
 
 void NavModule::loop() {
@@ -209,7 +213,34 @@ void NavModule::updateLast(boolean fromTarget) {
 }
 
 void NavModule::update() {
+  DroneModule::update();
   if (!_setupDone) return;
+
+  // check for sufficient satellites, assuming we have a valid sub
+  if (_subs[NAV_SUB_SATELLITES_E].received) {
+    if (_subs[NAV_SUB_SATELLITES_E].param.data.f[0] < 9) {
+      if (_mgmtParams[DRONE_MODULE_PARAM_STATUS_E].data.uint8[0] != DRONE_MODULE_STATUS_WAITING) {
+        uint8_t temp = DRONE_MODULE_STATUS_WAITING;
+        updateAndPublishParam(&_mgmtParams[DRONE_MODULE_PARAM_STATUS_E], (uint8_t*)&temp, sizeof(temp));
+
+        float tempF = 0;
+        // make sure distance is set to zero
+        updateAndPublishParam(&_params[NAV_PARAM_DISTANCE_E], (uint8_t*)&tempF, sizeof(tempF));
+
+        waiting();
+      }
+    } else {
+      if (_mgmtParams[DRONE_MODULE_PARAM_STATUS_E].data.uint8[0] == DRONE_MODULE_STATUS_WAITING) {
+        uint8_t temp = DRONE_MODULE_STATUS_ENABLED;
+        updateAndPublishParam(&_mgmtParams[DRONE_MODULE_PARAM_STATUS_E], (uint8_t*)&temp, sizeof(temp));
+        enable();
+      }
+    }
+  }
+
+  // abandon if Waiting
+  if (_mgmtParams[DRONE_MODULE_PARAM_STATUS_E].data.uint8[0] == DRONE_MODULE_STATUS_WAITING) return;
+
 
   if (_params[NAV_PARAM_MODE_E].data.uint8[0] == NAV_IDLE) {
 
@@ -278,8 +309,8 @@ void NavModule::update() {
   //_params[NAV_PARAM_HEADING_E].data.f[0] = h;
   // modify heading based on cross-track distance
   float crossTrackAdj = _params[NAV_PARAM_CROSSTRACK_E].data.f[0] * _params[NAV_PARAM_CORRECTION_E].data.f[0];
-  if (crossTrackAdj > 90) crossTrackAdj = 90;
-  if (crossTrackAdj < -90) crossTrackAdj = -90;
+  if (crossTrackAdj > 45) crossTrackAdj = 45;
+  if (crossTrackAdj < -45) crossTrackAdj = -45;
   float adjH = h + crossTrackAdj;
 
   // now calculate crosswind adjustment
@@ -319,14 +350,34 @@ void NavModule::update() {
   //_params[NAV_PARAM_DISTANCE_E].data.f[0] = d;
   updateAndPublishParam(&_params[NAV_PARAM_DISTANCE_E], (uint8_t*)&d, sizeof(d));
 
+  // calc pitch to target - negative pitches are down (target below location), positive are up
+  if (d != 0) {
+    // negative distances mean target is below location
+    float elevationDifference = _subs[NAV_SUB_TARGET_E].param.data.f[2] - _subs[NAV_SUB_LOCATION_E].param.data.f[2];
+    
+    float pitch = atan2(elevationDifference, d) * 180 / PI;
+
+    // constrain pitch
+    pitch = constrain(pitch, _params[NAV_PARAM_LIMITS_E].data.f[0], _params[NAV_PARAM_LIMITS_E].data.f[1]);
+
+    updateAndPublishParam(&_params[NAV_PARAM_PITCH_E], (uint8_t*)&pitch, sizeof(pitch));
+  }
+
   // check to see if we've reached the waypoint
   // by comparing d (distance to go) to the target radius [2]
-  if (d < _subs[NAV_SUB_TARGET_E].param.data.f[2]) {
-    // TODO - we made it... now what?
-    // just keep going?
-    // or switch to some sort of loiter?
-    _atTarget = true;
-    updateLast( true );
+  if (_subs[NAV_SUB_TARGET_E].param.data.f[2] > 0) {
+    _progress = d / _subs[NAV_SUB_TARGET_E].param.data.f[2];
+  } else {
+    _progress = 0;
+  }
+
+  if (_progress <= 1) {
+    if (!_atTarget) {
+      // We've made it...  update last and wait for a new target to be set
+      _atTarget = true;
+      updateLast( true );
+    }
+    
   } else {
     _atTarget = false;
   }
@@ -359,6 +410,55 @@ float NavModule::getDistanceTo(float lon2, float lat2) {
 
 
 float NavModule::getCrossTrackDistance() {
+  // calculate approximate cross-track distance from current location to line between last waypoint and target waypoint
+  // in meters
+
+  /*
+  this is a hacky alternative to the "proper" formula, but is more robust to calculation errors
+  with limited floating point precision.  It produces a generous estimate of crosstrack
+  distance (approximation causes crosstrack to be over-stated) that improves in accuracy as the current location approaches the target.  This generally causes tacks that are a little narrower than the target corridor when close to the starting point, but expand to fill the tacking corridor
+  closer to the target.
+  */
+
+  if (_subs[NAV_SUB_TARGET_E].param.data.f[0] == 0 ||
+      _params[NAV_PARAM_LAST_E].data.f[0] == 0 ||
+    _subs[NAV_SUB_LOCATION_E].param.data.f[0] == 0) return 0;
+
+  // local shortcuts
+  double lon1 = _params[NAV_PARAM_LAST_E].data.f[0];
+  double lat1 = _params[NAV_PARAM_LAST_E].data.f[1];
+  double lon2 = _subs[NAV_SUB_TARGET_E].param.data.f[0];
+  double lat2 = _subs[NAV_SUB_TARGET_E].param.data.f[1];
+  double lon3 = _subs[NAV_SUB_LOCATION_E].param.data.f[0];
+  double lat3 = _subs[NAV_SUB_LOCATION_E].param.data.f[1];
+
+  GeographicPoint lp;
+  lp.lon = _params[NAV_PARAM_LAST_E].data.f[0];
+  lp.lat = _params[NAV_PARAM_LAST_E].data.f[1];
+
+
+  // calc distance d1 from last to current
+  double d1 = getDistanceTo(lon1, lat1);
+  
+  // calc initial bearing b1 from last to target
+  double b1 = calculateInitialBearingBetweenCoordinates(lon1, lat1, lon2, lat2);
+
+  // calc position p1 using b1 and d1
+  GeographicPoint p1 = calculateDestinationFromDistanceAndBearing(lp, d1, b1);
+
+  // calc bearing from b2 from last to current
+  double b2 = calculateInitialBearingBetweenCoordinates(lon1, lat1, lon3, lat3);
+
+  // get sign of crosstrack from shortest path between bearings
+  float delta = shortestSignedDistanceBetweenCircularValues(b1, b2);
+
+
+  // calc distance between current and p1
+  return getDistanceTo(p1.lon, p1.lat) * (delta > 0 ? -1 : 1);
+}
+
+/*
+float NavModule::getCrossTrackDistance() {
   // calculate cross-track distance from current location to line between last waypoint and target waypoint
   // in meters
 
@@ -376,21 +476,22 @@ float NavModule::getCrossTrackDistance() {
 
   double y = sin(lon3 - lon1) * cos(lat3);
   double x = cos(lat1) * sin(lat3) - sin(lat1) * cos(lat3) * cos(lat3 - lat1);
-  double bearing13 = radiansToDegrees(atan2(y, x));
-  bearing13 = fmod((bearing13 + 360), 360);
+  double bearing13 = (atan2(y, x));
+  //bearing13 = fmod((bearing13 + 360), 360);
 
   double y2 = sin(lon2 - lon1) * cos(lat2);
   double x2 = cos(lat1) * sin(lat2) - sin(lat1) * cos(lat2) * cos(lat2 - lat1);
-  double bearing12 = radiansToDegrees(atan2(y2, x2));
-  bearing12 = fmod((bearing12 + 360), 360);
+  double bearing12 = (atan2(y2, x2));
+  //bearing12 = fmod((bearing12 + 360), 360);
 
   // get distance from last to current location
   double distanceACbyE = getDistanceTo(lon1, lat1) / RADIUS_OF_EARTH;
 
-  double d = -(asin(sin(distanceACbyE)*sin(degreesToRadians(bearing13)-degreesToRadians(bearing12))) * RADIUS_OF_EARTH);
+  double d = -(asin(sin(distanceACbyE)*sin((bearing13)-(bearing12))) * RADIUS_OF_EARTH);
 
   return d;
 }
+*/
 
 
 boolean NavModule::_goto(DRONE_LINK_PAYLOAD *payload, boolean continuation) {
@@ -423,7 +524,7 @@ boolean NavModule::_goto(DRONE_LINK_PAYLOAD *payload, boolean continuation) {
 }
 
 
-
+/*
 boolean NavModule::nav_inRadius(DEM_INSTRUCTION_COMPILED* instr, DEM_CALLSTACK* cs, DEM_DATASTACK* ds, boolean continuation) {
   Log.noticeln("[Nav.inRadius]");
 
@@ -447,3 +548,4 @@ boolean NavModule::nav_goto(DEM_INSTRUCTION_COMPILED* instr, DEM_CALLSTACK* cs, 
 boolean NavModule::nav_goHome(DEM_INSTRUCTION_COMPILED* instr, DEM_CALLSTACK* cs, DEM_DATASTACK* ds, boolean continuation) {
   return _goto(&_params[NAV_PARAM_HOME_E].data, continuation);
 }
+*/

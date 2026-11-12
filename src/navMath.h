@@ -12,6 +12,11 @@ typedef struct {
   float lat;
 } GeographicPoint;
 
+typedef struct {
+  float across;
+  float along;
+} CrosstrackInfo;
+
 double radiansToDegrees(double r);
 
 double degreesToRadians(double r);
@@ -25,5 +30,12 @@ float calculateDistanceBetweenCoordinates(float lon1, float lat1, float lon2, fl
 float calculateInitialBearingBetweenCoordinates(float lon1, float lat1, float lon2, float lat2);
 
 GeographicPoint calculateDestinationFromDistanceAndBearing(GeographicPoint start, float d, float bearing);
+GeographicPoint calculateDestinationFromDistanceAndBearing2(float lon1, float lat1, float d, float bearing);
+
+CrosstrackInfo calculateCrosstrackInfo(
+   double lon1, double lat1, 
+   double lon2, double lat2, 
+   double lon3, double lat3
+);
 
 #endif

@@ -13,6 +13,7 @@
 
 #define DRONE_LINK_CHANNEL_SUB_PENDING_RETRY_INTERVAL  1000
 #define DRONE_LINK_CHANNEL_SUB_REQUESTED_RETRY_INTERVAL  5000
+#define DRONE_LINK_CHANNEL_SUB_REDO_INTERVAL 60000
 
 
 // subs are either internal modules or external (via the mesh)
@@ -33,6 +34,13 @@ struct DroneLinkChannelSubscription {
 class DroneLinkManager;
 
 
+enum class CloudRequestResult { Missing, Busy, Queued };
+
+struct DroneLinkQueueEntry {
+  DroneLinkMsg message;
+  bool cloudRequest;
+};
+
 class DroneLinkChannel
 {
 protected:
@@ -40,8 +48,12 @@ protected:
   uint8_t _node; // which node is associated with this channel
   uint8_t _id;  // channel id
   uint32_t _choked;
+  uint8_t _maxSize;
   IvanLinkedList::LinkedList<DroneLinkChannelSubscription*> _subs;
-  IvanLinkedList::LinkedList<DroneLinkMsg*> _queue;
+  IvanLinkedList::LinkedList<DroneLinkQueueEntry*> _queue;
+  uint8_t _cloudRequests = 0;
+  uint8_t _cloudWaitTurns = 0;
+  bool _reserveCloudSlot = false;
   uint8_t _peakSize;
 
 public:
@@ -57,17 +69,22 @@ public:
 
     uint8_t peakSize();
 
-    boolean publish(DroneLinkMsg &msg);
+    boolean publish(DroneLinkMsg &msg, bool cloudRequest = false);
+    bool hasLocalTarget();
+    void discardCloudRequests();
+    bool hasLocalCloudRequest();
 
     void processQueue();
 
     void subscribe(uint8_t extNode, DroneModule* subscriber, uint8_t param);
 
+    void resetExternalSubscriptions(uint8_t extNode);
     void processExternalSubscriptions();
     void confirmExternalSubscription(uint8_t param);
     void removeExternalSubscriptions(uint8_t node);
 
     void serveChannelInfo(AsyncResponseStream *response);
+    void serveQueueInfo(AsyncResponseStream *response);
 };
 
 #endif

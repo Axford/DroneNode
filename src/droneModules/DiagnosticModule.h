@@ -1,15 +1,15 @@
 /*
 
 @type          Diagnostic
-@inherits      I2CBaseModule
+@inherits      I2CBase
+@category      Output.Display
 @description   Manages a Diagnostic 128x64 I2C display (1306 driver)
 
 @config >>>
-Diagnostic.new 6
-  name "Diagnostic"
-  interval 200
-  bus 0
-.done
+[Diagnostic = 6]
+  name= "Diagnostic"
+  interval= 200
+  bus= 0
 <<<
 
 */
@@ -24,6 +24,10 @@ Diagnostic.new 6
 #include "I2Cdev.h"
 #include "SSD1306Wire.h"
 
+/*
+@I2CAddress        0x3C
+@default addr = 60
+*/ 
 #define DIAGNOSTIC_I2C_ADDRESS  0x3C
 
 // pubs
@@ -51,9 +55,6 @@ public:
 
   DiagnosticModule(uint8_t id, DroneSystem* ds);
   ~DiagnosticModule();
-
-  static DEM_NAMESPACE* registerNamespace(DroneExecutionManager *dem);
-  static void registerParams(DEM_NAMESPACE* ns, DroneExecutionManager *dem);
 
   void doReset();
   

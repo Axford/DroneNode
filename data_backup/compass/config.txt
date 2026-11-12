@@ -1,0 +1,161 @@
+node 82
+
+// Init modules
+Management.new 1
+  name "Management"
+  status true
+  interval 1000
+  discovery true
+  hostname "Compass"
+
+  // publish
+  .publish "hostname"
+  .publish "build"
+  .publish "uptime"
+  .publish "IP"
+.done
+
+RFM69Telemetry.new 2
+  name "RFM69"
+  status 1
+  .publish "RSSI"
+.done
+
+UDPTelemetry.new 3
+  name "UDPT"
+  status 1
+  port 8007
+  broadcast 255 255 255 255
+.done
+
+INA3221.new 4
+  name "Power"
+  bus 2
+  addr 64
+  interval 1000
+  cells 2
+  threshold 6.4
+  status 1
+  .publish "current"
+  //.publish "power"
+  .publish "loadV"
+  //.publish "alarm"
+  //.publish "shuntV"
+  //.publish "busV"
+  .publish "cellV"
+.done
+
+QMC5883L.new 5
+  name "Compass"
+  interval 100
+  bus 0
+  status 1
+  calibX -10 0 4
+  calibY -4 0 11
+  trim 0
+  // default location
+  location -1.8 52 100
+  $location [@>7.8]
+  .publish "heading"
+  .publish "vector"
+  .publish "calibX"
+  .publish "calibY"
+  .publish "samples"
+  .publish "trim"
+.done
+
+NMEA.new 6
+  name "GPS"
+  interval 500
+  port 1
+  baud 9600
+  .publish "location"
+  .publish "satellites"
+  .publish "HDOP"
+.done
+
+Nav.new 9
+  name "Nav"
+  status 1
+  interval 50
+  $location [@>7.8]
+  target -1.7458734889 51.541622044 5
+  crosswind 0.2
+  correction 20
+  wind 0
+  .publish "target"
+  .publish "location"
+  .publish "heading"
+  .publish "distance"
+  .publish "mode"
+  .publish "last"
+  .publish "home"
+  .publish "crosstrack"
+  .publish "correction"
+  .publish "wind"
+  .publish "crosswind"
+  .publish "adjHeading"
+.done
+
+Sailor.new 10
+  name "Sailor"
+  interval 100
+  polar 0 0 0 200   255 255 255 250  240 230 220 210  200 150 0 0
+  $target [@>9.8]
+  $heading [@>8.11]
+  $crosstrack [@>9.17]
+  .publish "target"
+  .publish "heading"
+  .publish "wind"
+  .publish "crosstrack"
+  .publish "course"
+  .publish "sheet"
+  .publish "polar"
+.done
+
+TurnRate.new 11
+  name "TurnRate"
+  PID (f) -0.01 0.0 0.0
+  interval 50
+  $target [@>10.16]
+  $heading [@>8.11]
+  .publish "target"
+  .publish "heading"
+  .publish "PID"
+  .publish "turnRate"
+  .publish "threshold"
+  .publish "timeout"
+.done
+
+Servo.new 12
+  position 0
+  pins OUT0_0
+  status 1
+  name "Sheet"
+  interval 100
+  map 0 27 125 149
+  centre 0
+  $position [@>10.17]
+  .publish "map"
+  .publish "centre"
+  .publish "position"
+  .publish "output"
+.done
+
+Servo.new 13
+  position 0
+  pins OUT1_0
+  status 1
+  name "Rudder"
+  map 30 70 110 150
+  centre 8
+  $position [@>11.16]
+  interval 100
+  .publish "map"
+  .publish "centre"
+  .publish "position"
+  .publish "output"
+.done
+
+// finish setup
+.setup

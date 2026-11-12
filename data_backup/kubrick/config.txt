@@ -1,0 +1,192 @@
+// D-Code Config Script
+
+// Setup the node
+node 71
+
+// Init modules
+Management.new 1
+  name "Management"
+  status true
+  interval 1000
+  discovery true
+  hostname "Kubrick"
+
+  // publish
+  .publish "hostname"
+  .publish "build"
+  .publish "uptime"
+  .publish "IP"
+.done
+
+RFM69Telemetry.new 2
+  name "RFM69"
+  status 1
+  .publish "RSSI"
+.done
+
+UDPTelemetry.new 3
+  name "UDPT"
+  status 1
+  port 8007
+  broadcast 255 255 255 255
+.done
+
+INA3221.new 4
+  name "Power"
+  bus 0
+  addr 64
+  interval 1000
+  cells 2
+  threshold 6.4
+  status 1
+  //.publish "current"
+  //.publish "power"
+  .publish "loadV"
+  //.publish "alarm"
+  //.publish "shuntV"
+  //.publish "busV"
+  .publish "cellV"
+.done
+
+HMC5883L.new 5
+  name "Compass"
+  interval 100
+  bus 1
+  status 1
+  calibX -1 0 1
+  calibY -1 0 1
+  trim 0
+  // default location
+  location -1.8 52 100
+  $location [@>7.8]
+  .publish "heading"
+  .publish "vector"
+  .publish "calibX"
+  .publish "calibY"
+  .publish "samples"
+.done
+
+NMEA.new 6
+  name "GPS"
+  interval 500
+  port 1
+  baud 9600
+  .publish "location"
+  .publish "satellites"
+  .publish "HDOP"
+.done
+
+
+Nav.new 7
+  name "Nav"
+  status 1
+  interval 50
+  $location [@>6.8]
+  target -1.834 51.576 100
+  //$target [10>5.8]
+  .publish "target"
+  .publish "location"
+  .publish "heading"
+  .publish "distance"
+  .publish "mode"
+.done
+
+TurnRate.new 8
+  name "TurnRate"
+  status 1
+  PID (f) 0.01 0 0
+  interval 50
+  $target [@>7.8]
+  $heading [@>5.11]
+  //.publish "target"
+  //.publish "heading"
+  //.publish "PID"
+  .publish "turnRate"
+.done
+
+SpeedControl.new 9
+  name "Speed"
+  status 1
+  interval 50
+  limits 0.2 0.7
+  threshold 5
+  $distance [@>7.9]
+  //.publish "distance"
+  .publish "limits"
+  .publish "threshold"
+  .publish "speed"
+.done
+
+TankSteer.new 10
+  name "TankSteer"
+  interval 50
+  trim 0
+  $speed [@>9.14]
+  $turnRate [@>8.16]
+  .publish "left"
+  .publish "right"
+  .publish "turnRate"
+  .publish "speed"
+  .publish "trim"
+  .publish "mode"
+.done
+
+
+Motor.new 21
+  name "LeftMotor"
+  interval 50
+  pins 255 32 33
+  PWMChannel 14
+  limits -0.7 0.7
+  deadband 0.1
+  $speed [@>10.8]
+
+  // publish
+  .publish "speed"
+.done
+
+
+Motor.new 22
+  name "RightMotor"
+  interval 50
+  pins 255 14 15
+  PWMChannel 13
+  limits -0.7 0.7
+  deadband 0.1
+  $speed [@>10.9]
+
+  // publish
+  .publish "speed"
+.done
+
+
+PanSerial.new 23
+  name "PanSerial"
+  PID (f) 0.005 0.0 0.0001
+  interval 50
+  $target [@>24.8]
+  $heading [@>5.11]
+  .publish "target"
+  .publish "heading"
+  .publish "PID"
+  .publish "pan"
+.done
+
+
+Nav.new 24
+  name "PanNav"
+  status 1
+  interval 50
+  $location [@>6.8]
+  target -1.833565 51.575482 5
+  //$target [10>5.8]
+  .publish "target"
+  .publish "location"
+  .publish "heading"
+  .publish "distance"
+  .publish "mode"
+.done
+
+
+// finish setup
+.setup

@@ -46,15 +46,28 @@ DroneSystem is the root of all Drone objects, keeping the main script as simple 
 #include "FS.h"
 #include <LittleFS.h>
 #define LITTLEFS LittleFS
+#include <SPI.h>
+#include <SD.h>
 
 // web services
 #include "WiFiManager.h"
 #include <ESPAsyncWebServer.h>
+#include "WebFSEditor.h"
 
 // other
 #include <ESP32Servo.h>
 #include <ArduinoLog.h>
 
+// vpn support
+//#include <Husarnet.h>
+
+
+// ----------------------------------------------------------------------------
+// VPN Credentials
+// ----------------------------------------------------------------------------
+
+//const char* husarnetJoinCode = "fc94:b01d:1803:8dd8:b293:5c7d:7639:932a/fgUY4RJhfxPzmnRVUZQtcN";
+//const char* husarnetDashboardURL = "default";
 
 // ----------------------------------------------------------------------------
 // Serial port mgmt
@@ -92,6 +105,8 @@ struct DRONE_SYSTEM_PIN {
   uint8_t state;
   uint8_t capabilities;
   DroneModule* module;
+  NeoPixelBrightnessBus<NeoGrbFeature, Neo800KbpsMethod> * strip; // if a strip is associated with this pin
+  uint8_t stripIndex;  // index of first pixel
 };
 
 #define DRONE_SYSTEM_PINS   36    // 0..35
@@ -104,6 +119,8 @@ class DroneSystem {
 protected:
   // motherboard version
   uint8_t _motherboardVersion;
+
+  boolean _SDAvailable;  // true if SD card available
 
   // serial port mgmt
   DRONE_SYSTEM_SERIAL_PORT _serialPorts[DRONE_SYSTEM_SERIAL_PORTS];
@@ -126,6 +143,7 @@ protected:
 
   // web server
   AsyncWebServer _server;
+  WebFSEditor _fsEditor;
 
   void configurePin(uint8_t pin, uint8_t capabilities);
 
@@ -141,6 +159,10 @@ public:
 
   boolean requestSerialPort(uint8_t port, DroneModule* module);
   boolean requestPin(uint8_t pin, uint8_t capabilities, DroneModule* module);
+  NeoPixelBrightnessBus<NeoGrbFeature, Neo800KbpsMethod>* requestStrip(uint8_t pin, uint8_t pixels, DroneModule* module);
+  void setStripFirstPixel(uint8_t pin, uint8_t index);
+  // get index of first pixel for strip on pin
+  uint8_t getStripFirstPixel(uint8_t pin);
 
   void detectMotherboardVersion();
 
@@ -151,6 +173,8 @@ public:
   // see if safeMode.txt exists, if not create it
   void createSafeModeScript();
 
+  void servePinInfo(AsyncWebServerRequest *request);
+  
   void setupWebServer();
 
   // startup using safeMode.txt
