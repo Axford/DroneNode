@@ -77,31 +77,47 @@ void DroneLinkManager::subscribe(DRONE_LINK_ADDR *addr, DroneModule *subscriber)
 }
 
 
-void DroneLinkManager::subscribe(uint8_t channel, DroneModule *subscriber, uint8_t param) {
-  subscribe(_node, channel, subscriber, param);
+bool DroneLinkManager::subscribe(uint8_t channel, DroneModule *subscriber, uint8_t param) {
+  return subscribe(_node, channel, subscriber, param);
 }
 
 
-void DroneLinkManager::subscribe(uint8_t node, uint8_t channel, DroneModule *subscriber, uint8_t param) {
+bool DroneLinkManager::subscribe(uint8_t node, uint8_t channel, DroneModule *subscriber, uint8_t param) {
+  if (node == 255 || channel == 255 || param == 255) return false;
+  const auto parameter = getDroneLinkMsgParam(param);
+  auto* existing = findChannel(node, channel);
+  if (existing) return existing->subscribe(_node, subscriber, parameter);
 
-  if (node == 255 || channel == 255 || param == 255) return;  // invalid address
+  auto* created = new (std::nothrow) DroneLinkChannel(this, node, channel);
+  if (!created) return false;
+  if (created->subscribe(_node, subscriber, parameter) && _channels.add(created)) return true;
+  created->unsubscribe(subscriber);
+  delete created;
+  return false;
+}
 
-  // locate a matching channel (or create it if it doesn't exist)
-  DroneLinkChannel* c = findChannel(node, channel);
-  if (!c) {
-    Log.noticeln(F("[DLM.s] Creating channel: %u > %u"), node, channel);
-    c = new DroneLinkChannel(this, node, channel);
-    _channels.add(c);
+void DroneLinkManager::detachModule(DroneModule* module) {
+  for (int i = _channels.size() - 1; i >= 0; --i) {
+    auto* channel = _channels.get(i);
+    channel->unsubscribe(module);
+    if (channel->empty()) delete _channels.remove(i);
   }
-
-  // wire up the subscriber to the channel
-  Log.noticeln("[DLM.s] Wiring subscriber...");
-  c->subscribe(_node, subscriber, getDroneLinkMsgParam(param));
-
-  // print new set of subscribers
-  //c->printSubscribers();
 }
 
+bool DroneLinkManager::hasLocalConsumer(uint8_t channel, DroneModule* owner) {
+  auto* local = findChannel(_node, channel);
+  return local && local->hasConsumerOtherThan(owner);
+}
+
+void DroneLinkManager::discardLocalChannelMessages(uint8_t channel) {
+  for (int i = 0; i < _channels.size(); ++i) {
+    auto* current = _channels.get(i);
+    if (current->node() == _node &&
+        (current->id() == channel || current->id() == DRONE_LINK_CHANNEL_ALL)) {
+      current->discardChannelMessages(channel);
+    }
+  }
+}
 
 void DroneLinkManager::subscribeExt(uint8_t extNode, uint8_t channel, uint8_t param) {
   if (extNode == 255 || channel == 255 || param == 255) return;  // invalid address
@@ -168,7 +184,10 @@ void DroneLinkManager::dispatchCloudRequest(DroneModule* target, DroneLinkMsg &m
   auto previous = _peerQuery;
   const bool query = msg.type() == DRONE_LINK_MSG_TYPE_QUERY || msg.type() == DRONE_LINK_MSG_TYPE_NAMEQUERY;
   _peerQuery = query && msg.source() != _node ? &msg : nullptr;
+  const bool wasDispatching = _dispatchingCloudRequest;
+  _dispatchingCloudRequest = true;
   target->handleLinkMessage(&msg);
+  _dispatchingCloudRequest = wasDispatching;
   _peerQuery = previous;
 }
 

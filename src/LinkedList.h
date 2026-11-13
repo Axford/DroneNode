@@ -16,6 +16,8 @@
 #define LinkedList_h
 
 #include <stddef.h>
+#include <new>
+#include <utility>
 
 namespace IvanLinkedList {
 	template<class T>
@@ -45,6 +47,13 @@ namespace IvanLinkedList {
 		ListNode<T>* findEndOfSortedString(ListNode<T> *p, int (*cmp)(T &, T &));
 
 	public:
+		void swap(LinkedList &other) {
+			std::swap(_size, other._size);
+			std::swap(root, other.root);
+			std::swap(last, other.last);
+			isCached = other.isCached = false;
+		}
+
 		LinkedList();
 		LinkedList(int sizeIndex, T _t); //initiate list size and default value
 		~LinkedList();
@@ -211,7 +220,8 @@ namespace IvanLinkedList {
 	template<typename T>
 	bool LinkedList<T>::add(T _t){
 
-		ListNode<T> *tmp = new ListNode<T>();
+		ListNode<T> *tmp = new (std::nothrow) ListNode<T>();
+		if (!tmp) return false;
 		tmp->data = _t;
 		tmp->next = NULL;
 

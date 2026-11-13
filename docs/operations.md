@@ -357,3 +357,32 @@ Use the USB console at 115200 baud when the built-in console owns UART0. Select 
 | `trial off` | Discards the trial and releases its pin. |
 
 A rejected command prints `trial error=invalid-command`, `trial error=pin-unavailable` or `trial error=out-of-memory` followed by the current state. Restart discards the trial and loads the stored configuration. GPIO ownership is independently visible in the existing `/pins` diagnostic. Check free heap through the Management module after traffic settles and compare all startup file bytes before and after the run.
+
+## Apply a complete INI to the running node
+
+Upload and verify an INI on the node, then send its root filename as a CHAR write
+to Management parameter **21** (`hotLoad`) on the local mesh. Use a 1–12 character
+basename containing letters, digits, underscores or hyphens followed by
+`.ini`, with no leading slash or trailing NUL. For example, send `trial.ini`.
+The file may be the normal `config.ini` or a separate INI. Include the current
+`node` declaration and the entire desired module set. An omitted supported module
+is removed. The firmware reads the file when it services the request. Keep the
+file stable between verified upload and apply. The first implementation accepts
+files up to 8 KiB.
+
+Query Management parameter **22** (`hotLoadResult`) or inspect it in `/modules`.
+The node keeps one request pending at a time. Send another after observing a
+terminal result. A second write received while one is pending does not replace
+it. Result codes are 0 idle, 1 pending, 2 applied (including a no-op), 3 invalid
+filename, 4 file missing/unreadable or outside size bounds, 5 invalid
+configuration or unresolved/local consumer dependency, 6 restart required,
+7 pin conflict, 8 start failed with the previous pin owners restored,
+9 recovery failed, and 10 insufficient memory.
+
+The first supported lifecycle is channel-addressed Digital on GPIO 32 or 33.
+Startup-only module sections must match the applied configuration. A changed
+section is detected from parsed settings in their file order, ignoring
+whitespace and comments. Unchanged instances retain their current runtime
+settings. Apply does not write the startup file. Restart still loads
+`config.ini`. Cloud command dispatch does not accept this action. Workbench
+integration and revision-bound confirmation are separate work.

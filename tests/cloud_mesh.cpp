@@ -47,6 +47,7 @@ struct DroneModule;
 struct DroneLinkManager {
   uint8_t _node=7;
   DroneLinkMsg* _peerQuery=nullptr;
+  bool _dispatchingCloudRequest = false;
   void* _publicationObserverContext=nullptr;
   void (*_publicationObserver)(void*,const DroneLinkMsg&,bool)=nullptr;
   struct Route {void* gSequencer;} route{this};

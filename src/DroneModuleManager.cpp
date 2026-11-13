@@ -27,8 +27,18 @@ DroneModuleManager::DroneModuleManager(DroneLinkManager* dlm, fs::FS &fs):
 };
 
 // called by DroneModule constructor to self register on instantiation
-void DroneModuleManager::registerModule(DroneModule *m) {
-  _modules.add(m);
+bool DroneModuleManager::registerModule(DroneModule *m) {
+  return _modules.add(m);
+}
+
+void DroneModuleManager::unregisterModule(DroneModule* module) {
+  for (int i = 0; i < _modules.size(); ++i) {
+    if (_modules.get(i) == module) {
+      _modules.remove(i);
+      _lastDiscoveryIndex = 0;
+      return;
+    }
+  }
 }
 
 DroneModule* DroneModuleManager::getModuleByIndex(uint8_t index) {

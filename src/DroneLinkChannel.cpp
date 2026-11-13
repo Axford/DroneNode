@@ -203,7 +203,7 @@ void DroneLinkChannel::processQueue() {
   //Log.noticeln("[DLC.pQ] end");
 }
 
-void DroneLinkChannel::subscribe(uint8_t extNode, DroneModule* subscriber, uint8_t param) {
+bool DroneLinkChannel::subscribe(uint8_t extNode, DroneModule* subscriber, uint8_t param) {
   // check we don't already have this subscriber registered
   DroneLinkChannelSubscription *sub;
   for(int i = 0; i < _subs.size(); i++) {
@@ -211,16 +211,46 @@ void DroneLinkChannel::subscribe(uint8_t extNode, DroneModule* subscriber, uint8
     if (sub->extNode == extNode &&
         sub->module == subscriber &&
         sub->param == param)
-        return;
+        return true;
   }
 
   sub = (DroneLinkChannelSubscription*)malloc(sizeof(DroneLinkChannelSubscription));
+  if (!sub) return false;
   sub->extNode = extNode;
   sub->module = subscriber; // will be NULL for an external sub (i.e. a diff node or a server)
   sub->param = param;
   sub->state = DRONE_LINK_CHANNEL_SUBSCRIPTION_PENDING;
   sub->timer = millis();
-  _subs.add(sub);
+  if (_subs.add(sub)) return true;
+  free(sub);
+  return false;
+}
+
+void DroneLinkChannel::unsubscribe(DroneModule* subscriber) {
+  for (int i = _subs.size() - 1; i >= 0; --i) {
+    if (_subs.get(i)->module == subscriber) free(_subs.remove(i));
+  }
+}
+
+bool DroneLinkChannel::hasConsumerOtherThan(DroneModule* owner) {
+  for (int i = 0; i < _subs.size(); ++i) {
+    auto* module = _subs.get(i)->module;
+    if (module && module != owner) return true;
+  }
+  return false;
+}
+
+void DroneLinkChannel::discardChannelMessages(uint8_t channel) {
+  for (int i = _queue.size() - 1; i >= 0; --i) {
+    auto* entry = _queue.get(i);
+    if (entry->message.channel() != channel) continue;
+    if (entry->cloudRequest) --_cloudRequests;
+    delete _queue.remove(i);
+  }
+  if (_id == channel) {
+    _cloudWaitTurns = 0;
+    _reserveCloudSlot = false;
+  }
 }
 
 

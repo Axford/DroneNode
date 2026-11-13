@@ -76,7 +76,11 @@ public:
 
     void processQueue();
 
-    void subscribe(uint8_t extNode, DroneModule* subscriber, uint8_t param);
+    bool subscribe(uint8_t extNode, DroneModule* subscriber, uint8_t param);
+    void unsubscribe(DroneModule* subscriber);
+    bool hasConsumerOtherThan(DroneModule* owner);
+    void discardChannelMessages(uint8_t channel);
+    bool empty() { return !_subs.size() && !_queue.size(); }
 
     void resetExternalSubscriptions(uint8_t extNode);
     void processExternalSubscriptions();

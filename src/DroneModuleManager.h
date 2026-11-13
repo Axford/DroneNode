@@ -42,7 +42,8 @@ protected:
 
 public:
   DroneModuleManager(DroneLinkManager* dlm, fs::FS &fs);
-  void registerModule(DroneModule *m);
+  bool registerModule(DroneModule *m);
+  void unregisterModule(DroneModule* module);
   void runDigitalTrialCommand(const char* command, Print &output, DroneSystem* system);
 
   DroneModule* getModuleByIndex(uint8_t index);

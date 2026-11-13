@@ -47,6 +47,14 @@ static const char DIGITAL_STR_DIGITAL[] PROGMEM = "Digital";
 
 class DigitalModule:  public DroneModule {
   friend class DroneModuleManager;
+  friend class DroneExecutionManager;
+
+  bool hotLoadReady() const { return _mgmtParams && _params; }
+  bool startHotLoad();
+  void releaseHotLoadPin();
+  bool restoreHotLoadPin(uint8_t pin);
+  uint8_t ownedPin() const { return _ownedPin; }
+  uint8_t _ownedPin = 255;
 
   enum class TrialStart { Started, PinUnavailable, OutOfMemory };
   DigitalModule(uint8_t id, DroneSystem* ds, Registration registration);

@@ -50,6 +50,8 @@ DigitalModule::DigitalModule(uint8_t id, DroneSystem* ds, Registration registrat
 DigitalModule::~DigitalModule() {
   // Only a successfully started detached input owns a trial pin.
   if (_id == 0 && _setupDone) _ds->releaseTrialPin(trialPin());
+  releaseHotLoadPin();
+  releaseHotLoadPin();
 }
 
 DigitalModule::TrialStart DigitalModule::startTrial(uint8_t pin) {
@@ -70,6 +72,25 @@ bool DigitalModule::trialHigh() const {
   return _params[DIGITAL_PARAM_INPUT_E].data.f[0] != 0;
 }
 
+bool DigitalModule::startHotLoad() {
+  if (_setupDone) return false;
+  setup();
+  return _ownedPin != 255;
+}
+
+void DigitalModule::releaseHotLoadPin() {
+  if (_ownedPin == 255) return;
+  _ds->releaseDigitalPin(this);
+  _ownedPin = 255;
+}
+
+bool DigitalModule::restoreHotLoadPin(uint8_t pin) {
+  if (!_ds->requestPin(pin, DRONE_SYSTEM_PIN_CAP_INPUT, this)) return false;
+  _ownedPin = pin;
+  pinMode(pin, INPUT_PULLUP);
+  return true;
+}
+
 void DigitalModule::setup() {
   DroneModule::setup();
   if (!_params) {
@@ -78,11 +99,7 @@ void DigitalModule::setup() {
     return;
   }
 
-  if (_ds->requestPin(_params[DIGITAL_PARAM_PINS_E].data.uint8[0], DRONE_SYSTEM_PIN_CAP_INPUT, this)) {
-    // set as input and enable pullup
-    pinMode(_params[DIGITAL_PARAM_PINS_E].data.uint8[0], INPUT_PULLUP);
-
-  } else {
+  if (!restoreHotLoadPin(_params[DIGITAL_PARAM_PINS_E].data.uint8[0])) {
     Log.errorln(F("[AM.s] Digital pin unavailable %u"), _id);
     setError(1);
     disable();
@@ -93,7 +110,9 @@ void DigitalModule::setup() {
 void DigitalModule::loop() {
   DroneModule::loop();
 
-  boolean raw = digitalRead(_params[DIGITAL_PARAM_PINS_E].data.uint8[0]);
+  const uint8_t pin = _id == 0 ? trialPin() : _ownedPin;
+  if (pin == 255) return;
+  boolean raw = digitalRead(pin);
 
   // map using limits
   float f = raw ? _params[DIGITAL_PARAM_LIMITS_E].data.f[1] : _params[DIGITAL_PARAM_LIMITS_E].data.f[0];

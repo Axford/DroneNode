@@ -141,6 +141,7 @@ protected:
   uint8_t _firmwareSrc;
 
   struct DRONE_LINK_PARAM_FILTER *_paramFilter = NULL;
+  bool _dispatchingCloudRequest = false;
   DroneLinkMsg* _peerQuery = nullptr; // Scoped to synchronous target dispatch.
   void* _publicationObserverContext = nullptr;
   void (*_publicationObserver)(void*, const DroneLinkMsg&, bool) = nullptr;
@@ -160,14 +161,18 @@ public:
     uint32_t getChokes();
 
     void subscribe(DRONE_LINK_ADDR *addr, DroneModule *subscriber);
-    void subscribe(uint8_t channel, DroneModule *subscriber, uint8_t param);
-    void subscribe(uint8_t node, uint8_t channel, DroneModule *subscriber, uint8_t param);
+    bool subscribe(uint8_t channel, DroneModule *subscriber, uint8_t param);
+    void detachModule(DroneModule* module);
+    bool hasLocalConsumer(uint8_t channel, DroneModule* owner);
+    void discardLocalChannelMessages(uint8_t channel);
+    bool subscribe(uint8_t node, uint8_t channel, DroneModule *subscriber, uint8_t param);
 
     void subscribeExt(uint8_t extNode, uint8_t channel, uint8_t param);
 
     bool publish(DroneLinkMsg &msg);
     bool publishLocalObservation(DroneLinkMsg &msg);
     CloudRequestResult publishCloudRequest(DroneLinkMsg &msg);
+    bool dispatchingCloudRequest() const { return _dispatchingCloudRequest; }
     void dispatchCloudRequest(DroneModule* target, DroneLinkMsg &msg);
     bool hasCommandRoute(uint8_t peer);
     bool cloudTxAvailable();

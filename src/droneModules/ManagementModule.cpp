@@ -114,8 +114,34 @@ ManagementModule::ManagementModule(uint8_t id, DroneSystem* ds):
    _params[MANAGEMENT_PARAM_CPU_E].paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_UINT8_T, 1);
    // @default CPU=240
    _params[MANAGEMENT_PARAM_CPU_E].data.uint8[0] = 240; // default high speed
+
+   auto &hotLoad = _params[MANAGEMENT_PARAM_HOT_LOAD_E];
+   hotLoad.paramPriority = MANAGEMENT_PARAM_HOT_LOAD;
+   hotLoad.paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_CHAR, 1);
+   setParamName(F("hotLoad"), &hotLoad);
+   hotLoad.data.c[0] = '-';
+   auto &result = _params[MANAGEMENT_PARAM_HOT_RESULT_E];
+   result.paramPriority = MANAGEMENT_PARAM_HOT_RESULT;
+   result.paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_UINT8_T, 1);
+   setParamName(F("hotLoadResult"), &result);
 }
 
+
+boolean ManagementModule::handleManagementMessage(DroneLinkMsg* msg) {
+  if (msg->param() == MANAGEMENT_PARAM_HOT_LOAD && msg->type() == DRONE_LINK_MSG_TYPE_CHAR) {
+    if (!msg->writable() && _enabled && _setupDone && !_dlm->dispatchingCloudRequest()) {
+      _dem->requestHotLoad(this, msg->_msg.payload.c, msg->length());
+    }
+    return true;
+  }
+  return DroneModule::handleManagementMessage(msg);
+}
+
+void ManagementModule::reportHotLoad(configuration::HotLoadResult result) {
+  auto &entry = _params[MANAGEMENT_PARAM_HOT_RESULT_E];
+  entry.data.uint8[0] = static_cast<uint8_t>(result);
+  publishParamEntry(&entry);
+}
 
 void ManagementModule::onParamWrite(DRONE_PARAM_ENTRY *param) {
   DroneModule::onParamWrite(param);

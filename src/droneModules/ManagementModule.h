@@ -18,6 +18,7 @@
 #define MANAGEMENT_MODULE_H
 
 #include "../DroneModule.h"
+#include "../HotLoadConfiguration.h"
 
 
 // published params
@@ -74,7 +75,13 @@
 #define MANAGEMENT_PARAM_SLEEP_E        11
 #define MANAGEMENT_PARAM_CPU_E          12
 
-#define MANAGEMENT_PARAM_ENTRIES        13
+// @pub 21;c;16;w;hotLoad;Root INI basename to apply to the running module set
+#define MANAGEMENT_PARAM_HOT_LOAD       21
+// @pub 22;u8;1;r;hotLoadResult;Result of the latest hot load request
+#define MANAGEMENT_PARAM_HOT_RESULT     22
+#define MANAGEMENT_PARAM_HOT_LOAD_E     13
+#define MANAGEMENT_PARAM_HOT_RESULT_E   14
+#define MANAGEMENT_PARAM_ENTRIES        15
 
 
 // strings
@@ -89,6 +96,8 @@ public:
   ManagementModule(uint8_t id, DroneSystem* ds);
 
   void onParamWrite(DRONE_PARAM_ENTRY *param);
+  boolean handleManagementMessage(DroneLinkMsg* msg) override;
+  void reportHotLoad(configuration::HotLoadResult result);
 
   virtual void setup();
   virtual void loop();

@@ -35,7 +35,7 @@ class CloudTelemetryTests(unittest.TestCase):
             (tree/'actual_loader.inc').write_text(source[start:end])
             channel=(ROOT/'src/DroneLinkChannel.cpp').read_text()
             start=channel.index('void DroneLinkChannel::processQueue()')
-            end=channel.index('void DroneLinkChannel::subscribe(',start)
+            end=channel.index('bool DroneLinkChannel::subscribe(',start)
             (tree/'actual_channel.inc').write_text(channel[start:end])
             loader=str(Path(directory)/'loader-test')
             subprocess.run([os.environ.get('CXX','c++'),'-std=c++11','-Wall','-Wextra','-fsanitize=address,undefined','-I',str(tree),str(tree/'droneModules/CloudTelemetryModule.cpp'),str(ROOT/'tests/cloud_loader.cpp'),'-o',loader],check=True)

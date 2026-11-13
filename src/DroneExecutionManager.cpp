@@ -392,6 +392,11 @@ void DroneExecutionManager::completeSetup() {
   Instance a module by type name
 */
 
+DigitalModule* DroneExecutionManager::createDigital(uint8_t id, bool detached) {
+  if (detached) return new (std::nothrow) DigitalModule(id, _ds, DroneModule::Registration::Detached);
+  return new DigitalModule(id, _ds);
+}
+
 DroneModule* DroneExecutionManager::instanceModule(char* typeName, uint8_t id) {
   Log.noticeln(F("[.c] Instantiating %s as %u"), typeName, id);
   DroneModule *newMod = NULL;
@@ -420,7 +425,7 @@ DroneModule* DroneExecutionManager::instanceModule(char* typeName, uint8_t id) {
     } else if (strcmp_P(typeName, DIAGNOSTIC_STR_DIAGNOSTIC) == 0) {
       newMod = new DiagnosticModule(id, _ds);
     } else if (strcmp_P(typeName, DIGITAL_STR_DIGITAL) == 0) {
-      newMod = new DigitalModule(id, _ds);
+      newMod = createDigital(id, false);
     } else if (strcmp_P(typeName, HMC5883L_STR_HMC5883L) == 0) {
       newMod = new HMC5883LModule(id, _ds);
     } else if (strcmp_P(typeName, HT16K33_STR_HT16K33) == 0) {

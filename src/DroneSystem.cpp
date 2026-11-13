@@ -27,6 +27,7 @@ void DroneSystem::configurePin(uint8_t pin, uint8_t capabilities) {
 DroneSystem::DroneSystem() : _server(80), dfs(this), _fsEditor(LITTLEFS, _doLoop) {
   _motherboardVersion = 0;
   _SDAvailable = false;
+  _moduleChangeMutex = xSemaphoreCreateMutexStatic(&_moduleChangeMutexStorage);
 
   // create and give SPI Sempahore
   _xSPISemaphore = xSemaphoreCreateBinary();
@@ -172,6 +173,22 @@ boolean DroneSystem::requestPin(uint8_t pin, uint8_t capabilities, DroneModule* 
   }
 }
 
+
+bool DroneSystem::canClaimDigitalPin(uint8_t pin, DroneModule* owner) {
+  if (pin != PIN_OUT0_0 && pin != PIN_OUT0_1) return false;
+  return _pins[pin].state == DRONE_SYSTEM_PIN_STATE_AVAILABLE ||
+         (owner && _pins[pin].module == owner && !_pins[pin].strip);
+}
+
+void DroneSystem::releaseDigitalPin(DroneModule* owner) {
+  for (uint8_t pin = 0; pin < DRONE_SYSTEM_PINS; ++pin) {
+    auto &entry = _pins[pin];
+    if (entry.module != owner) continue;
+    pinMode(pin, INPUT);
+    entry.module = nullptr;
+    entry.state = DRONE_SYSTEM_PIN_STATE_AVAILABLE;
+  }
+}
 
 bool DroneSystem::claimTrialPin(uint8_t pin) {
   if (pin != PIN_OUT0_0 && pin != PIN_OUT0_1) return false;
@@ -328,21 +345,27 @@ void DroneSystem::setupWebServer() {
   // channel info debug
   _server.on("/channelInfo", HTTP_GET, [&](AsyncWebServerRequest *request){
     _doLoop = false;
+    xSemaphoreTake(_moduleChangeMutex, portMAX_DELAY);
     dlm->serveChannelInfo(request);
+    xSemaphoreGive(_moduleChangeMutex);
     _doLoop = true;
   });
 
   // modules
   _server.on("/modules", HTTP_GET, [&](AsyncWebServerRequest *request){
     _doLoop = false;
+    xSemaphoreTake(_moduleChangeMutex, portMAX_DELAY);
     dmm->serveModuleInfo(request);
+    xSemaphoreGive(_moduleChangeMutex);
     _doLoop = true;
   });
 
   // pins
   _server.on("/pins", HTTP_GET, [&](AsyncWebServerRequest *request){
     _doLoop = false;
+    xSemaphoreTake(_moduleChangeMutex, portMAX_DELAY);
     servePinInfo(request);
+    xSemaphoreGive(_moduleChangeMutex);
     _doLoop = true;
   });
 
@@ -407,6 +430,7 @@ void DroneSystem::startInSafeMode() {
 void DroneSystem::start() {
   Log.warningln(F("[] Prep NORMAL start..."));
   dem->loadConfiguration("/config.ini");
+  dem->rememberBootConfiguration("/config.ini");
 }
 
 
@@ -548,9 +572,6 @@ void DroneSystem::setup() {
   _wifiManager.enable();
   _wifiManager.start();
 
-  Log.noticeln(F("[] Init web server..."));
-  setupWebServer();
-
   // create core objects
   Log.noticeln(F("[] Init DroneLink core..."));
   dlm = new DroneLinkManager(&_wifiManager, &dfs);
@@ -584,6 +605,9 @@ void DroneSystem::setup() {
   }
 
   dem->completeSetup();
+
+  Log.noticeln(F("[] Init web server..."));
+  setupWebServer();
 
   // attempt VPN
   //Husarnet.selfHostedSetup(husarnetDashboardURL);
@@ -693,6 +717,7 @@ void DroneSystem::loop() {
     yield();
 
     dem->processAddressQueue();
+    dem->processHotLoad();
 
 
     //if (logFile) logFile.flush();

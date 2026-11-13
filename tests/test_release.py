@@ -38,6 +38,12 @@ class ReleaseTests(unittest.TestCase):
             name='routeDigest', description='SHA-256 prefix of the loaded waypoint CSV, zero when unavailable'))
         expected['Nav']['pub'].append(dict(address=27, type='u32', numValues=3, writeable=True,
             name='moveTarget', description='Guarded active target drag. See the shared packet contract.'))
+        expected['Management']['pub'].extend([
+            dict(address=21, type='c', numValues=16, writeable=True,
+                name='hotLoad', description='Root INI basename to apply to the running module set'),
+            dict(address=22, type='u8', numValues=1, writeable=False,
+                name='hotLoadResult', description='Result of the latest hot load request'),
+        ])
         expected['SerialTelemetry']['pub'][1]['description'] = 'Counters: sent, complete RX handoffs (before DLM CRC), framing rejects'
         # Exercise the new working-tree module before its first commit; exports
         # still require a clean committed tree and retain their provenance gate.

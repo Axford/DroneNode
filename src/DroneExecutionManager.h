@@ -8,12 +8,15 @@
 #include <ESPAsyncWebServer.h>
 #include <functional>
 #include "FS.h"
+#include "HotLoadConfiguration.h"
 
 // forward declarations
 class DroneSystem;
 class DroneModule;
 class DroneLinkManager;
 class DroneModuleManager;
+class DigitalModule;
+class ManagementModule;
 
 
 #define DEM_EEPROM_SIZE              1
@@ -45,6 +48,21 @@ static const char DEM_BOOT_FILENAME[] PROGMEM = "/boot.dat";
 
 class DroneExecutionManager
 {
+  struct AppliedSection {
+    uint8_t id;
+    bool digital;
+    uint8_t digest[32];
+  };
+  IvanLinkedList::LinkedList<AppliedSection> _appliedSections;
+  bool _hotLoadBaselineValid = false;
+  char _hotLoadPath[18] = {};
+  ManagementModule* _hotLoadRequester = nullptr;
+
+  configuration::HotLoadResult applyHotLoad(const char* path);
+  DigitalModule* createDigital(uint8_t id, bool detached);
+  bool readHotLoadConfiguration(const char* path, IvanLinkedList::LinkedList<AppliedSection>& sections,
+                                DigitalModule** candidates, configuration::HotLoadResult& result);
+
 protected:
   // queue of addresses that need to be resolved
   IvanLinkedList::LinkedList<DEM_ADDRESS> _addressQueue;
@@ -77,6 +95,9 @@ public:
 
     void loadConfiguration(const char* filename);
     void saveConfiguration();
+    void rememberBootConfiguration(const char* filename);
+    void requestHotLoad(ManagementModule* requester, const char* name, size_t length);
+    void processHotLoad();
 
     void completeSetup();
 
