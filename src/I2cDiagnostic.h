@@ -7,7 +7,7 @@ constexpr uint8_t firstAddress = 8;
 constexpr uint8_t lastAddress = 0x77;
 
 inline bool addressAllowed(unsigned address) {
-  return address >= firstAddress && address <= lastAddress && address != 0x70 && address != 0x77;
+  return address >= firstAddress && address <= lastAddress;
 }
 
 inline bool registerAllowed(unsigned address, unsigned reg, unsigned length) {
@@ -18,7 +18,7 @@ inline bool registerAllowed(unsigned address, unsigned reg, unsigned length) {
 
 struct Job {
   uint32_t id = 0;
-  uint8_t node = 0;
+  uint8_t node = 0, mux = 0;
   bool read = false;
   bool done = false;
   uint8_t channel = 0, address = firstAddress, reg = 0, length = 0, received = 0;
@@ -29,7 +29,7 @@ struct Job {
   // Select again on every batch: modules may use a different channel between calls.
   template<class Bus> void step(Bus& bus) {
     if (done) return;
-    if (!bus.hasMux()) {
+    if (!mux) {
       for (auto& result : status) result = Status::NoMultiplexer;
       done = true;
       return;
@@ -45,7 +45,7 @@ struct Job {
       return;
     }
     for (uint8_t count = 0; count < 4 && address <= lastAddress; ++count, ++address) {
-      if (!addressAllowed(address)) continue;
+      if (!addressAllowed(address) || address == mux) continue;
       const auto result = bus.ping(address);
       if (result == Status::Complete) acknowledgements[channel][address / 8] |= 1 << (address % 8);
       else if (result != Status::Nack) {

@@ -37,7 +37,6 @@ Status transferStatus(esp_err_t error) {
 
 struct Bus {
   uint8_t mux;
-  bool hasMux() const { return mux != 0; }
 
   bool select(uint8_t channel) {
     const uint8_t mask = 1 << channel;
@@ -91,7 +90,7 @@ void send(AsyncWebServerRequest* request, const Job& result) {
     for (uint8_t i = 0; i < result.received; ++i) response->printf("%s%u", i ? "," : "", result.bytes[i]);
     response->print("]");
   } else if (result.done) {
-    response->print(",\"channels\":[");
+    response->printf(",\"multiplexer\":%u,\"channels\":[", result.mux);
     for (uint8_t channel = 0; channel < 8; ++channel) {
       response->printf("%s{\"channel\":%u,\"status\":\"%s\",\"addresses\":[", channel ? "," : "", channel, label(result.status[channel]));
       bool first = true;
@@ -112,6 +111,11 @@ void send(AsyncWebServerRequest* request, const Job& result) {
 void mountDiagnostic(AsyncWebServer& server, uint8_t node) {
   jobMutex = xSemaphoreCreateMutexStatic(&jobMutexStorage);
   server.on("/i2cDiagnostic", HTTP_POST, [node](AsyncWebServerRequest* request) {
+    if (!request->hasHeader("X-DroneLink-Diagnostic") ||
+        request->getHeader("X-DroneLink-Diagnostic")->value() != "1" || request->hasHeader("Origin")) {
+      request->send(403);
+      return;
+    }
     uint32_t target, channel, address, reg, length;
     if (!number(request, "node", 254, target) || target != node || !request->hasParam("op")) {
       request->send(400);
@@ -120,6 +124,8 @@ void mountDiagnostic(AsyncWebServer& server, uint8_t node) {
     const auto& op = request->getParam("op")->value();
     Job next;
     next.node = node;
+    const uint8_t version = getMultiplexerVersion();
+    next.mux = version == 1 ? TCAADDR_V1 : version == 2 ? TCAADDR_V2 : 0;
     if (op == "register") {
       if (!number(request, "channel", 7, channel) || !number(request, "address", 127, address) ||
           !number(request, "register", 255, reg) || !number(request, "length", 4, length) ||
@@ -161,8 +167,7 @@ void mountDiagnostic(AsyncWebServer& server, uint8_t node) {
 void serviceDiagnostic() {
   if (!jobMutex || xSemaphoreTake(jobMutex, 0) != pdTRUE) return;
   if (job.id && !job.done) {
-    const uint8_t version = getMultiplexerVersion();
-    Bus bus{static_cast<uint8_t>(version == 1 ? TCAADDR_V1 : version == 2 ? TCAADDR_V2 : 0)};
+    Bus bus{job.mux};
     job.step(bus);
     if (job.done) completedAt = millis();
   }
