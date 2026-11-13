@@ -5,6 +5,7 @@
 #include "strings.h"
 #include "../navMath.h"
 #include "Preferences.h"
+#include <mbedtls/sha256.h>
 
 WaypointModule::WaypointModule(uint8_t id, DroneSystem* ds):
   DroneModule ( id, ds )
@@ -81,6 +82,11 @@ WaypointModule::WaypointModule(uint8_t id, DroneSystem* ds):
    _params[WAYPOINT_PARAM_SPEED_E].name = FPSTR(STRING_SPEED);
    _params[WAYPOINT_PARAM_SPEED_E].nameLen = sizeof(STRING_SPEED);
    _params[WAYPOINT_PARAM_SPEED_E].paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 4);
+   auto &digest = _params[WAYPOINT_PARAM_ROUTE_DIGEST_E];
+   digest.paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, WAYPOINT_PARAM_ROUTE_DIGEST);
+   setParamName(F("routeDigest"), &digest);
+   digest.paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_UINT8_T, 16);
+   memset(digest.data.c, 0, 16);
 }
 
 
@@ -90,6 +96,7 @@ void WaypointModule::loadWaypoints() {
   _waypoints.clear();
 
   uint8_t waypoints = 0;
+  uint8_t digest[32] = {};
 
   WAYPOINT_MODULE_WAYPOINT lastW;
   lastW.lat = 0;
@@ -111,7 +118,7 @@ void WaypointModule::loadWaypoints() {
       */
       
       uint32_t line = 0;
-      char buffer[32];  // parsing buffer
+      char buffer[32] = {};  // parsing buffer
       uint8_t bufLen = 0;  // how many valid chars are in the buffer
       uint8_t col = 0;
 
@@ -128,76 +135,98 @@ void WaypointModule::loadWaypoints() {
       float f;
       uint8_t colsFound = 0;
 
-      while (file.available()) {
-        char c = file.read();
+      mbedtls_sha256_context sha;
+      mbedtls_sha256_init(&sha);
+      bool complete = mbedtls_sha256_starts_ret(&sha, 0) == 0;
+      const auto size = file.size();
+      size_t read = 0;
+      uint8_t bytes[256];
+      while (read < size) {
+        const auto length = file.read(bytes, size - read < sizeof(bytes) ? size - read : sizeof(bytes));
+        if (length == 0) break;
+        complete = mbedtls_sha256_update_ret(&sha, bytes, length) == 0 && complete;
+        read += length;
+        for (size_t index = 0; index < length; ++index) {
+          char c = bytes[index];
+          const bool last = read == size && index + 1 == length;
+          if (last && c != ',' && c != '\n' && c != '\r' && c != '\t' && c != ' ') {
+            if (bufLen < 31) buffer[bufLen++] = c;
+            c = '\n';
+          }
 
-        // skip whitespace
-        if (c == '\t' || c==' ' || c=='\r') {
-          continue;
-        }
+          // skip whitespace
+          if (c == '\t' || c==' ' || c=='\r') {
+            if (!last) continue;
+            c = '\n';
+          }
 
-        if (c == ',' || c == '\n' || !file.available()) {
-          if (line == 0) {
-            // header
-            if (strcmp(buffer, "lon") == 0) {
-              lonCol = col;
-            } else if (strcmp(buffer, "lat") == 0) {
-              latCol = col;
-            } else if (strcmp(buffer, "radius") == 0) {
-              radiusCol = col;
-            };
+          if (c == ',' || c == '\n' || last) {
+            buffer[bufLen] = 0;
+            if (line == 0) {
+              // header
+              if (strcmp(buffer, "lon") == 0) {
+                lonCol = col;
+              } else if (strcmp(buffer, "lat") == 0) {
+                latCol = col;
+              } else if (strcmp(buffer, "radius") == 0) {
+                radiusCol = col;
+              };
+
+            } else {
+              // data row
+              // attempt to convert buffer into a float
+              f = (float)atof(buffer);
+
+              // see which column this relates to
+              if (col == lonCol) {
+                t.lon = f;
+                colsFound++;
+              } else if (col == latCol) {
+                t.lat = f;
+                colsFound++;
+              } else if (col == radiusCol) {
+                t.radius = f;
+                colsFound++;
+              };
+
+              // have we found a complete row?
+              if (( c == '\n' || last ) && colsFound == 3) {
+                // calculate distances
+                if (lastW.lon != 0) t.distanceFromLast = calculateDistanceBetweenCoordinates(lastW.lon, lastW.lat, t.lon, t.lat);
+                t.cumulativeDistance += t.distanceFromLast;
+
+                // store waypoint
+                _waypoints.add(t);
+
+                memcpy(&lastW, &t, sizeof(lastW));
+              }
+            }
+
+            if (c == '\n') {
+              line++;
+              col = 0;
+              colsFound = 0;
+            } else {
+              col++;
+            }
+            bufLen = 0;  // reset ready for next col
 
           } else {
-            // data row
-            // attempt to convert buffer into a float
-            f = (float)atof(buffer);
-
-            // see which column this relates to
-            if (col == lonCol) {
-              t.lon = f;
-              colsFound++;
-            } else if (col == latCol) {
-              t.lat = f;
-              colsFound++;
-            } else if (col == radiusCol) {
-              t.radius = f;
-              colsFound++;
-            };
-
-            // have we found a complete row?
-            if (( c == '\n' || !file.available() ) && colsFound == 3) {
-              // calculate distances
-              if (lastW.lon != 0) t.distanceFromLast = calculateDistanceBetweenCoordinates(lastW.lon, lastW.lat, t.lon, t.lat);
-              t.cumulativeDistance += t.distanceFromLast;
-
-              // store waypoint
-              _waypoints.add(t);
-              
-              memcpy(&lastW, &t, sizeof(lastW));
+            // append to buffer
+            if (bufLen < 31) {
+              buffer[bufLen] = c;
+              bufLen++;
+              buffer[bufLen] = 0; // null terminate as we go
             }
           }
 
-          if (c == '\n') {
-            line++;
-            col = 0;
-            colsFound = 0;
-          } else {
-            col++;
-          }
-          bufLen = 0;  // reset ready for next col
 
-        } else {
-          // append to buffer
-          if (bufLen < 31) {
-            buffer[bufLen] = c;
-            bufLen++;
-            buffer[bufLen] = 0; // null terminate as we go
-          }
         }
-        
-
       }
-
+      if (!complete || read != size) _waypoints.clear();
+      if (_waypoints.size() > 0 && _waypoints.size() <= UINT8_MAX &&
+          mbedtls_sha256_finish_ret(&sha, digest) != 0) memset(digest, 0, sizeof(digest));
+      mbedtls_sha256_free(&sha);
       waypoints = _waypoints.size();
 
     }
@@ -219,6 +248,8 @@ void WaypointModule::loadWaypoints() {
   }
 
   _totalDistance = lastW.cumulativeDistance;
+
+  updateAndPublishParam(&_params[WAYPOINT_PARAM_ROUTE_DIGEST_E], digest, 16);
 
   // update number of waypoints
   updateAndPublishParam(&_params[WAYPOINT_PARAM_WAYPOINTS_E], (uint8_t*)&waypoints, sizeof(waypoints));

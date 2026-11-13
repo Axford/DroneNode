@@ -70,7 +70,11 @@ lon,lat,radius
 #define WAYPOINT_PARAM_SPEED          16
 #define WAYPOINT_PARAM_SPEED_E        6
 
-#define WAYPOINT_PARAM_ENTRIES        7
+// @pub 17;u8;16;r;routeDigest;SHA-256 prefix of the loaded waypoint CSV, zero when unavailable
+#define WAYPOINT_PARAM_ROUTE_DIGEST   17
+#define WAYPOINT_PARAM_ROUTE_DIGEST_E 7
+
+#define WAYPOINT_PARAM_ENTRIES        8
 
 #define WAYPOINT_MODE_NORMAL          0
 #define WAYPOINT_MODE_RELOAD          1

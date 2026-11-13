@@ -34,6 +34,8 @@ class ReleaseTests(unittest.TestCase):
         for entry in expected['TankSteer']['pub']:
             if entry['name'] in ['mode', 'trim', 'limits', 'threshold']:
                 entry['address'] = {'mode': 10, 'trim': 11, 'limits': 13, 'threshold': 14}[entry['name']]
+        expected['Waypoint']['pub'].append(dict(address=17, type='u8', numValues=16, writeable=False,
+            name='routeDigest', description='SHA-256 prefix of the loaded waypoint CSV, zero when unavailable'))
         expected['Nav']['pub'].append(dict(address=27, type='u32', numValues=3, writeable=True,
             name='moveTarget', description='Guarded active target drag. See the shared packet contract.'))
         expected['SerialTelemetry']['pub'][1]['description'] = 'Counters: sent, complete RX handoffs (before DLM CRC), framing rejects'
