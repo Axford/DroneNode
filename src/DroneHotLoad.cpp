@@ -3,6 +3,7 @@
 #include "droneModules/ManagementModule.h"
 #include "droneModules/ProbeModule.h"
 #include "droneModules/NMEAModule.h"
+#include "droneModules/ServoModule.h"
 #include "CloudTelemetryConfig.h"
 #include <mbedtls/sha256.h>
 #include <math.h>
@@ -15,7 +16,7 @@ namespace {
 constexpr size_t MaxFileSize = 8192;
 constexpr uint8_t MaxChannel = 254;
 
-bool applySetting(DroneModule &module, configuration::Line &line, bool digital, bool nmea) {
+bool applySetting(DroneModule &module, configuration::Line &line, bool digital, bool nmea, bool servo) {
   const auto configured = module.configure(line.name, line.value);
   if (configured != configuration::Setting::Unhandled)
     return configured == configuration::Setting::Handled;
@@ -60,7 +61,7 @@ bool applySetting(DroneModule &module, configuration::Line &line, bool digital, 
     param->data.uint32[0] = baud;
     return true;
   }
-  if (!digital && !(nmea && id == DRONE_MODULE_PARAM_INTERVAL) && id != DRONE_MODULE_PARAM_NAME && id != DRONE_MODULE_PARAM_STATUS) return false;
+  if (!digital && !((nmea || servo) && id == DRONE_MODULE_PARAM_INTERVAL) && id != DRONE_MODULE_PARAM_NAME && id != DRONE_MODULE_PARAM_STATUS) return false;
   unsigned number = 0;
   switch (id) {
     case DIGITAL_PARAM_PINS:
@@ -166,7 +167,8 @@ bool DroneExecutionManager::readHotLoadConfiguration(
       current.id = id;
       current.type = !strcmp(line.name, DIGITAL_STR_DIGITAL) ? HotType::Digital :
                      !strcmp(line.name, "Probe") ? HotType::Probe :
-                     !strcmp(line.name, NMEA_STR_NMEA) ? HotType::NMEA : HotType::StartupOnly;
+                     !strcmp(line.name, NMEA_STR_NMEA) ? HotType::NMEA :
+                     !strcmp(line.name, SERVO_STR_SERVO) ? HotType::Servo : HotType::StartupOnly;
       current.valid = true;
       mbedtls_sha256_starts_ret(&hash, 0);
       add(line.name);
@@ -178,6 +180,10 @@ bool DroneExecutionManager::readHotLoadConfiguration(
           ready = module && module->hotLoadReady();
         } else if (current.type == HotType::NMEA) {
           auto* module = createNMEA(id, true);
+          candidates[id] = module;
+          ready = module && module->hotLoadReady();
+        } else if (current.type == HotType::Servo) {
+          auto* module = createServo(id, true);
           candidates[id] = module;
           ready = module && module->hotLoadReady();
         } else {
@@ -198,11 +204,11 @@ bool DroneExecutionManager::readHotLoadConfiguration(
     } else {
       add(line.name);
       add(line.value);
-      if (current.type == HotType::NMEA && line.name[0] == '$') current.valid = false;
+      if ((current.type == HotType::NMEA || current.type == HotType::Servo) && line.name[0] == '$') current.valid = false;
       if (candidates && candidates[current.id] && current.valid) {
         current.valid = applySetting(*candidates[current.id], line, current.type == HotType::Digital,
-                                     current.type == HotType::NMEA);
-        if (!current.valid && current.type != HotType::NMEA) valid = false;
+                                     current.type == HotType::NMEA, current.type == HotType::Servo);
+        if (!current.valid && current.type != HotType::NMEA && current.type != HotType::Servo) valid = false;
       }
     }
   }
@@ -263,6 +269,7 @@ HotLoadResult DroneExecutionManager::applyHotLoad(const char* path) {
       } else if (active.type == section.type && active.type != HotType::StartupOnly) {
         // Preserve consumer binding and publication semantics for this first lifecycle.
         if (_dlm->hasLocalConsumer(section.id, previous)) return HotLoadResult::InvalidConfiguration;
+        if (active.type == HotType::Servo && !active.valid) return HotLoadResult::RestartRequired;
         if (active.type == HotType::NMEA &&
             (!active.valid || !static_cast<NMEAModule*>(previous)->hotLoadEligible()))
           return HotLoadResult::RestartRequired;
@@ -280,6 +287,7 @@ HotLoadResult DroneExecutionManager::applyHotLoad(const char* path) {
     if (section.type == HotType::StartupOnly) return HotLoadResult::RestartRequired;
     auto* module = _dmm->getModuleById(section.id);
     if (_dlm->hasLocalConsumer(section.id, module)) return HotLoadResult::InvalidConfiguration;
+    if (section.type == HotType::Servo && !section.valid) return HotLoadResult::RestartRequired;
     if (section.type == HotType::NMEA &&
         (!section.valid || !static_cast<NMEAModule*>(module)->hotLoadEligible()))
       return HotLoadResult::RestartRequired;
@@ -300,7 +308,7 @@ HotLoadResult DroneExecutionManager::applyHotLoad(const char* path) {
     if (retired[id]) {
       for (uint8_t pin = 0; pin < DRONE_SYSTEM_PINS; ++pin)
         if (_ds->_pins[pin].module == retired[id]) previousPins[id] |= uint64_t{1} << pin;
-      if (types[id] == HotType::Digital && (previousPins[id] & ~(uint64_t{3} << 32)))
+      if ((types[id] == HotType::Digital || types[id] == HotType::Servo) && (previousPins[id] & ~(uint64_t{3} << 32)))
         return HotLoadResult::RestartRequired;
     }
     if (!candidates[id]) continue;
@@ -317,8 +325,10 @@ HotLoadResult DroneExecutionManager::applyHotLoad(const char* path) {
     for (uint8_t pin = 0; pin < DRONE_SYSTEM_PINS; ++pin) {
       if (!(requested & (uint64_t{1} << pin))) continue;
       const auto &entry = _ds->_pins[pin];
-      if (entry.state == DRONE_SYSTEM_PIN_STATE_AVAILABLE &&
-          (entry.capabilities & DRONE_SYSTEM_PIN_CAP_INPUT)) continue;
+      const auto capability = types[id] == HotType::Servo ?
+          DRONE_SYSTEM_PIN_CAP_OUTPUT : DRONE_SYSTEM_PIN_CAP_INPUT;
+      if (!(entry.capabilities & capability)) return HotLoadResult::ResourceConflict;
+      if (entry.state == DRONE_SYSTEM_PIN_STATE_AVAILABLE) continue;
       if (!entry.module || entry.strip || entry.module->id() > MaxChannel || retired[entry.module->id()] != entry.module)
         return HotLoadResult::ResourceConflict;
     }
@@ -404,14 +414,20 @@ uint64_t DroneExecutionManager::hotLoadPins(DroneModule* module, HotType type) {
     if (port == 2) return (uint64_t{1} << PIN_SERIAL2_RX) | (uint64_t{1} << PIN_SERIAL2_TX);
     return 0;
   }
-  const auto pin = static_cast<DigitalModule*>(module)->trialPin();
+  const auto pin = type == HotType::Servo ?
+      module->getParamEntryById(SERVO_PARAM_PINS)->data.uint8[0] :
+      static_cast<DigitalModule*>(module)->trialPin();
   return pin == 32 || pin == 33 ? uint64_t{1} << pin : 0;
 }
 
 void DroneExecutionManager::releaseHotLoadPins(DroneModule* module, HotType type) {
   if (type == HotType::Probe) static_cast<ProbeModule*>(module)->releaseInputs();
   else if (type == HotType::NMEA) static_cast<NMEAModule*>(module)->releasePrimary();
-  else static_cast<DigitalModule*>(module)->releaseHotLoadPin();
+  else if (type == HotType::Servo) {
+    auto* servo = static_cast<ServoModule*>(module);
+    servo->_localControl = true;
+    servo->doShutdown();
+  } else static_cast<DigitalModule*>(module)->releaseHotLoadPin();
 }
 
 bool DroneExecutionManager::restoreHotLoadPins(DroneModule* module, HotType type, uint64_t pins) {
@@ -422,5 +438,27 @@ bool DroneExecutionManager::restoreHotLoadPins(DroneModule* module, HotType type
     const uint8_t port = pins & (uint64_t{1} << PIN_SERIAL1_RX) ? 1 : 2;
     return nmea->startPrimary(port, nmea->_activeBaud);
   }
+  if (type == HotType::Servo)
+    return static_cast<ServoModule*>(module)->reserveOutput(pins & (uint64_t{1} << 32) ? 32 : 33);
   return static_cast<DigitalModule*>(module)->restoreHotLoadPin(pins & (uint64_t{1} << 32) ? 32 : 33);
+}
+
+
+void DroneExecutionManager::runServoConsole(const char* command, Print &output) {
+  char* end;
+  const auto id = strtoul(command, &end, 10);
+  if (end == command || *end != ' ' || !id || id > MaxChannel) {
+    output.println("servo error=invalid-command");
+    return;
+  }
+  for (int i = 0; i < _appliedSections.size(); ++i) {
+    const auto section = _appliedSections.get(i);
+    if (section.id != id || section.type != HotType::Servo) continue;
+    auto* module = _dmm->getModuleById(id);
+    if (module) {
+      static_cast<ServoModule*>(module)->consoleControl(end + 1, output);
+      return;
+    }
+  }
+  output.println("servo error=unavailable");
 }

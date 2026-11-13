@@ -408,6 +408,11 @@ NMEAModule* DroneExecutionManager::createNMEA(uint8_t id, bool detached) {
   return new NMEAModule(id, _ds);
 }
 
+ServoModule* DroneExecutionManager::createServo(uint8_t id, bool detached) {
+  if (detached) return new (std::nothrow) ServoModule(id, _ds, DroneModule::Registration::Detached);
+  return new ServoModule(id, _ds);
+}
+
 DroneModule* DroneExecutionManager::instanceModule(char* typeName, uint8_t id) {
   Log.noticeln(F("[.c] Instantiating %s as %u"), typeName, id);
   DroneModule *newMod = NULL;
@@ -488,7 +493,7 @@ DroneModule* DroneExecutionManager::instanceModule(char* typeName, uint8_t id) {
     } else if (strcmp_P(typeName, SERIAL_TELEMETRY_STR_SERIAL_TELEMETRY) == 0) {
       newMod = new SerialTelemetryModule(id, _ds);
     } else if (strcmp_P(typeName, SERVO_STR_SERVO) == 0) {
-      newMod = new ServoModule(id, _ds);
+      newMod = createServo(id, false);
     } else if (strcmp_P(typeName, SPEED_CONTROL_STR_SPEED_CONTROL) == 0) {
       newMod = new SpeedControlModule(id, _ds);
     } else if (strcmp_P(typeName, STATUS_STR_STATUS) == 0) {

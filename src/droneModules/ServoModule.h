@@ -63,6 +63,17 @@
 static const char SERVO_STR_SERVO[] PROGMEM = "Servo";
 
 class ServoModule:  public DroneModule {
+  friend class DroneExecutionManager;
+  ServoModule(uint8_t id, DroneSystem* ds, Registration registration);
+  bool hotLoadReady() const { return _mgmtParams && _params && _subs; }
+  bool reserveOutput(uint8_t pin);
+  void releaseOutput();
+  void stopPwm();
+  bool attachOutput();
+  uint8_t _ownedPin = 255;
+  bool _localControl = false;
+  bool _armed = false;
+
 protected:
   //uint8_t _pins[1];
   float _targetPos;
@@ -75,7 +86,13 @@ public:
 
   ServoModule(uint8_t id, DroneSystem* ds);
   
-  void setup();
+  ~ServoModule() override;
+  configuration::Setting configure(const char* name, const char* value) override;
+  void setup() override;
+  void disable() override;
+  void doShutdown() override;
+  void handleLinkMessage(DroneLinkMsg* msg) override;
+  void consoleControl(const char* action, Print &output);
   void loop();
 
   void update();

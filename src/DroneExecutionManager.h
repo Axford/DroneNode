@@ -18,6 +18,7 @@ class DroneModuleManager;
 class DigitalModule;
 class ProbeModule;
 class NMEAModule;
+class ServoModule;
 class ManagementModule;
 
 
@@ -50,7 +51,7 @@ static const char DEM_BOOT_FILENAME[] PROGMEM = "/boot.dat";
 
 class DroneExecutionManager
 {
-  enum class HotType : uint8_t { StartupOnly, Digital, Probe, NMEA };
+  enum class HotType : uint8_t { StartupOnly, Digital, Probe, NMEA, Servo };
   struct AppliedSection {
     uint8_t id;
     HotType type;
@@ -64,6 +65,7 @@ class DroneExecutionManager
 
   configuration::HotLoadResult applyHotLoad(const char* path);
   DigitalModule* createDigital(uint8_t id, bool detached);
+  ServoModule* createServo(uint8_t id, bool detached);
   NMEAModule* createNMEA(uint8_t id, bool detached);
   ProbeModule* createProbe(uint8_t id, bool detached);
   uint64_t hotLoadPins(DroneModule* module, HotType type);
@@ -107,6 +109,7 @@ public:
     void rememberBootConfiguration(const char* filename);
     void requestHotLoad(ManagementModule* requester, const char* name, size_t length);
     void processHotLoad();
+    void runServoConsole(const char* command, Print &output);
 
     void completeSetup();
 

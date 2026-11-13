@@ -695,6 +695,12 @@ void DroneSystem::loop() {
           dmm->runDigitalTrialCommand(_serialCommand, DroneConsole, this);
         }
 
+        if (strncmp(_serialCommand, "servo ", 6) == 0) {
+          if (_serialCommandLen < sizeof(_serialCommand) - 1)
+            dem->runServoConsole(_serialCommand + 6, DroneConsole);
+          else DroneConsole.println("servo error=invalid-command");
+        }
+
         // traceroute
         if (strncmp(_serialCommand, "trace", 5)==0) {
           // read node address

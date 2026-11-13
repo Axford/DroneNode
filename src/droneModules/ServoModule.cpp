@@ -1,14 +1,21 @@
 #include "ServoModule.h"
 #include "../DroneLinkMsg.h"
 #include "../DroneLinkManager.h"
+#include "../DroneModuleManager.h"
 #include "strings.h"
 #include "DroneSystem.h"
+#include "../CloudTelemetryConfig.h"
+#include <math.h>
 
 // @type           Servo
 
 ServoModule::ServoModule(uint8_t id, DroneSystem* ds):
-  DroneModule ( id, ds )
+  ServoModule(id, ds, Registration::Managed) {}
+
+ServoModule::ServoModule(uint8_t id, DroneSystem* ds, Registration registration):
+  DroneModule(id, ds, registration), _localControl(registration == Registration::Detached)
  {
+   if (!_mgmtParams) return;
    setTypeName(FPSTR(SERVO_STR_SERVO));
    //_pins[0] = 0;
    //_limits[0] = -1;
@@ -16,6 +23,7 @@ ServoModule::ServoModule(uint8_t id, DroneSystem* ds):
 
    // subs
    initSubs(SERVO_SUBS);
+   if (!_subs) return;
    _targetPos = 90;
    _startPos = 90;
    _currentPos = 90;
@@ -31,6 +39,7 @@ ServoModule::ServoModule(uint8_t id, DroneSystem* ds):
 
    // pubs
    initParams(SERVO_PARAM_ENTRIES);
+   if (!_params) return;
 
    DRONE_PARAM_ENTRY *param;
 
@@ -74,24 +83,157 @@ ServoModule::ServoModule(uint8_t id, DroneSystem* ds):
 }
 
 
-void ServoModule::setup() {
-  DroneModule::setup();
+ServoModule::~ServoModule() {
+  releaseOutput();
+}
 
-  if (_ds->requestPin(_params[SERVO_PARAM_PINS_E].data.uint8[0], DRONE_SYSTEM_PIN_CAP_OUTPUT, this)) {
-    _servo.setPeriodHertz(50);// Standard 50hz servo
-    _servo.attach(_params[SERVO_PARAM_PINS_E].data.uint8[0], 500, 2400);
+configuration::Setting ServoModule::configure(const char* name, const char* value) {
+  using configuration::Setting;
+  if (!_localControl) return Setting::Unhandled;
+  auto* param = getParamEntryByName(name);
+  if (!param) return Setting::Unhandled;
+  const auto id = getDroneLinkMsgParam(param->paramPriority);
+  if (id == SERVO_PARAM_PINS) {
+    if (strcmp(value, "32") && strcmp(value, "33")) return Setting::Invalid;
+    param->data.uint8[0] = atoi(value);
+    return Setting::Handled;
+  }
+  if (id != SERVO_PARAM_MAP && id != SERVO_PARAM_CENTRE && id != SERVO_PARAM_LIMITS)
+    return Setting::Unhandled;
+  const unsigned count = id == SERVO_PARAM_MAP ? 4 : 1;
+  for (unsigned i = 0; i < count; ++i) {
+    char* end;
+    const float number = strtof(value, &end);
+    const float low = id == SERVO_PARAM_CENTRE ? -180 : 0;
+    const float high = id == SERVO_PARAM_LIMITS ? 3600 : 180;
+    if (end == value || !isfinite(number) || number < low || number > high ||
+        *end != (i + 1 == count ? '\0' : ',')) return Setting::Invalid;
+    param->data.f[i] = number;
+    value = end + 1;
+  }
+  return Setting::Handled;
+}
 
-    // init servo
+bool ServoModule::reserveOutput(uint8_t pin) {
+  if (!_ds->requestPin(pin, DRONE_SYSTEM_PIN_CAP_OUTPUT, this)) return false;
+  _ownedPin = pin;
+  return true;
+}
+
+bool ServoModule::attachOutput() {
+  if (_ownedPin == 255) return false;
+  _servo.setPeriodHertz(50);
+  _servo.attach(_ownedPin, 500, 2400);
+  return _servo.attached();
+}
+
+void ServoModule::stopPwm() {
+  if (!_servo.attached()) return;
+  if (auto* pwm = pwmFactory(_ownedPin)) pwm->write(0);
+  _servo.detach();
+  pinMode(_ownedPin, INPUT);
+}
+
+void ServoModule::releaseOutput() {
+  stopPwm();
+  if (_ownedPin != 255) _ds->releasePin(_ownedPin, this);
+  _ownedPin = 255;
+}
+
+void ServoModule::disable() {
+  _armed = false;
+  if (_localControl) stopPwm();
+  DroneModule::disable();
+}
+
+void ServoModule::doShutdown() {
+  _armed = false;
+  releaseOutput();
+  DroneModule::doShutdown();
+}
+
+void ServoModule::handleLinkMessage(DroneLinkMsg* msg) {
+  // Live actuator commands use the physical console. Retained and delayed mesh
+  // writes carry no apply generation and cannot prove operator intent.
+  if (!_localControl) {
+    DroneModule::handleLinkMessage(msg);
+    return;
+  }
+  if (msg->node() != _dlm->node() || msg->channel() != _id) return;
+  if (msg->type() != DRONE_LINK_MSG_TYPE_QUERY && msg->type() != DRONE_LINK_MSG_TYPE_NAMEQUERY) return;
+  auto* param = getParamEntryById(msg->param());
+  if (param) handleParamMessage(msg, param);
+}
+
+void ServoModule::consoleControl(const char* action, Print &output) {
+  if (!_localControl || _ownedPin == 255) {
+    output.println("servo error=unavailable");
+    return;
+  }
+  if (!strcmp(action, "off")) {
+    disable();
+  } else if (!strcmp(action, "arm")) {
+    if (!_servo.attached()) _armed = true;
+  } else if (strcmp(action, "status")) {
+    char* end;
+    const float position = strtof(action, &end);
+    if (!_armed || end == action || *end || !isfinite(position) || position < -1 || position > 1) {
+      output.println("servo error=invalid-position-or-inhibited");
+      return;
+    }
+    if (!_servo.attached()) {
+      // Motor uses the same hardware timers outside ESP32Servo's allocator.
+      bool timerAvailable = false;
+      for (int i = 2; i < 4; ++i) {
+        if (ESP32PWM::timerCount[i] < 4 &&
+            (ESP32PWM::timerFreqSet[i] == -1 || ESP32PWM::timerFreqSet[i] == 50))
+          timerAvailable = true;
+      }
+      for (uint8_t i = 0; i < _dmm->moduleCount(); ++i) {
+        auto* type = _dmm->getModuleByIndex(i)->getParamEntryById(DRONE_MODULE_PARAM_TYPE);
+        if (type && (type->paramTypeLength & 15) == 4 && !memcmp(type->data.c, "Motor", 5))
+          timerAvailable = false;
+      }
+      if (!timerAvailable || !attachOutput()) {
+        disable();
+        output.println("servo error=pwm-unavailable");
+        return;
+      }
+      // Start the rate limiter at centre rather than reading a detached channel.
+      _servo.write(90);
+      _targetPos = _currentPos = _startPos = 90;
+      DroneModule::enable();
+    }
+    _subs[SERVO_SUB_POSITION_E].param.data.f[0] = position;
     update();
+  }
+  const auto* state = _servo.attached() ? "active" : _armed ? "armed" : "inhibited";
+  auto* pwm = _servo.attached() ? pwmFactory(_ownedPin) : nullptr;
+  output.printf("servo state=%s pin=%u duty=%lu\n", state, _ownedPin,
+                static_cast<unsigned long>(pwm ? pwm->read() : 0));
+}
 
-  } else {
-    Log.errorln(F("Unable to register pin %d"), _params[SERVO_PARAM_PINS_E].data.uint8[0]);
+void ServoModule::setup() {
+  if (!hotLoadReady()) return;
+  DroneModule::setup();
+  if (!reserveOutput(_params[SERVO_PARAM_PINS_E].data.uint8[0])) {
+    disable();
+    return;
+  }
+  if (_localControl) {
+    disable();
+    return;
+  }
+  if (attachOutput()) update();
+  else {
+    releaseOutput();
     disable();
   }
 }
 
 void ServoModule::loop() {
   DroneModule::loop();
+  if (!_servo.attached()) return;
 
   long loopTime = millis();
 
@@ -125,7 +267,7 @@ void ServoModule::loop() {
 
 
 void ServoModule::update() {
-  if (_error > 0 || !_setupDone) return;
+  if (_error > 0 || !_setupDone || !_servo.attached()) return;
 
   float v = _subs[SERVO_SUB_POSITION_E].param.data.f[0];
   // limit range

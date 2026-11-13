@@ -428,3 +428,22 @@ subscriptions require startup configuration. A retained local consumer of NMEA
 also prevents replacement or removal. Reload opens a fresh parser and UART,
 so a valid location requires fresh sentences. A pin or UART conflict rejects
 the apply before the previous receiver is released.
+
+### Servo live apply on the bench
+
+A complete INI can add, replace or remove an unbound Servo on GPIO 32 or 33.
+The live instance reserves its GPIO with PWM detached. On a bench with the
+actuator disconnected, use the built-in UART0 console at 115200 baud. Replace
+`12` with the configured channel.
+
+- `servo 12 status` reports inhibited, armed or active, and the PWM duty.
+- `servo 12 arm` authorizes a subsequent position command on the console.
+- `servo 12 0.25` activates PWM if armed and supplies a fresh normalized position
+  from −1 to +1. PWM begins at 90 degrees and follows the configured rate limit.
+- `servo 12 off` zeros and detaches PWM while keeping the GPIO reservation.
+
+A live apply or rollback leaves the affected Servo inhibited. Live Servo
+instances accept mesh queries. Activation and position writes use the console
+because mesh writes have no apply-generation marker. Bound Servo configurations,
+Motor coexistence for live PWM activation, and powered actuator validation are
+outside this bench slice.
