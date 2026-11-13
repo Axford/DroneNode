@@ -403,6 +403,11 @@ ProbeModule* DroneExecutionManager::createProbe(uint8_t id, bool detached) {
   return new ProbeModule(id, _ds);
 }
 
+NMEAModule* DroneExecutionManager::createNMEA(uint8_t id, bool detached) {
+  if (detached) return new (std::nothrow) NMEAModule(id, _ds, DroneModule::Registration::Detached);
+  return new NMEAModule(id, _ds);
+}
+
 DroneModule* DroneExecutionManager::instanceModule(char* typeName, uint8_t id) {
   Log.noticeln(F("[.c] Instantiating %s as %u"), typeName, id);
   DroneModule *newMod = NULL;
@@ -457,7 +462,7 @@ DroneModule* DroneExecutionManager::instanceModule(char* typeName, uint8_t id) {
     } else if (strcmp_P(typeName, MPU6050_STR_MPU6050) == 0) {
       newMod = new MPU6050Module(id, _ds);
     } else if (strcmp_P(typeName, NMEA_STR_NMEA) == 0) {
-      newMod = new NMEAModule(id, _ds);
+      newMod = createNMEA(id, false);
     } else if (strcmp_P(typeName, NEOPIXEL_STR_NEOPIXEL) == 0) {
       newMod = new NeopixelModule(id, _ds);
     } else if (strcmp_P(typeName, ODRIVE_STR_ODRIVE) == 0) {

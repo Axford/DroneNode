@@ -138,6 +138,7 @@ char* DroneModule::getName() {
 void DroneModule::initSubs(uint8_t numSubs) {
   _numSubs = numSubs;
   _subs = (DRONE_PARAM_SUB*)malloc( sizeof(DRONE_PARAM_SUB) * _numSubs);
+  if (!_subs) _numSubs = 0;
 
   for (uint8_t i=0; i<_numSubs; i++) {
     _subs[i].received = false;

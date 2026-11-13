@@ -89,6 +89,16 @@ static const char NMEA_STR_NMEA[] PROGMEM = "NMEA";
 
 // class
 class NMEAModule:  public DroneModule {
+  friend class DroneExecutionManager;
+  NMEAModule(uint8_t id, DroneSystem* ds, Registration registration);
+  bool hotLoadReady() const { return _mgmtParams && _params && _subs && _nmea && _nmea2; }
+  bool hotLoadEligible() const;
+  bool startPrimary(uint8_t port, uint32_t baud);
+  void releasePrimary();
+  uint8_t _activePort = 255;
+  uint32_t _activeBaud = 0;
+  bool _bootSingleSecondary = false;
+
 protected:
   //uint8_t _portNum;
   boolean _dualGPS; // set to true if using dual GPS
@@ -105,6 +115,7 @@ public:
 
   NMEAModule(uint8_t id, DroneSystem* ds);
 
+  ~NMEAModule() override;
   void setup();
   void loop();
 

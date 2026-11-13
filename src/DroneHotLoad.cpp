@@ -2,6 +2,7 @@
 #include "droneModules/DigitalModule.h"
 #include "droneModules/ManagementModule.h"
 #include "droneModules/ProbeModule.h"
+#include "droneModules/NMEAModule.h"
 #include "CloudTelemetryConfig.h"
 #include <mbedtls/sha256.h>
 #include <math.h>
@@ -14,7 +15,7 @@ namespace {
 constexpr size_t MaxFileSize = 8192;
 constexpr uint8_t MaxChannel = 254;
 
-bool applySetting(DroneModule &module, configuration::Line &line, bool digital) {
+bool applySetting(DroneModule &module, configuration::Line &line, bool digital, bool nmea) {
   const auto configured = module.configure(line.name, line.value);
   if (configured != configuration::Setting::Unhandled)
     return configured == configuration::Setting::Handled;
@@ -34,7 +35,32 @@ bool applySetting(DroneModule &module, configuration::Line &line, bool digital) 
   auto* param = module.getParamEntryByName(line.name);
   if (!param) return false;
   const auto id = getDroneLinkMsgParam(param->paramPriority);
-  if (!digital && id != DRONE_MODULE_PARAM_NAME && id != DRONE_MODULE_PARAM_STATUS) return false;
+  if (nmea && id == NMEA_PARAM_PORT) {
+    const char* value = line.value;
+    if ((*value != '1' && *value != '2') ||
+        (value[1] && strcmp(value + 1, ",255"))) return false;
+    param->data.uint8[0] = *value - '0';
+    param->data.uint8[1] = 255;
+    return true;
+  }
+  if (nmea && (id == NMEA_PARAM_FIX || id == NMEA_PARAM_FOLLOWME)) {
+    const char* remaining = line.value;
+    for (unsigned i = 0; i < 3; ++i) {
+      char* end;
+      const float value = strtof(remaining, &end);
+      if (end == remaining || !isfinite(value) || *end != (i == 2 ? '\0' : ',')) return false;
+      param->data.f[i] = value;
+      remaining = end + 1;
+    }
+    return true;
+  }
+  if (nmea && id == NMEA_PARAM_BAUD) {
+    unsigned baud;
+    if (!telemetry::decimal(line.value, 115200, baud) || baud < 1200) return false;
+    param->data.uint32[0] = baud;
+    return true;
+  }
+  if (!digital && !(nmea && id == DRONE_MODULE_PARAM_INTERVAL) && id != DRONE_MODULE_PARAM_NAME && id != DRONE_MODULE_PARAM_STATUS) return false;
   unsigned number = 0;
   switch (id) {
     case DIGITAL_PARAM_PINS:
@@ -139,13 +165,19 @@ bool DroneExecutionManager::readHotLoadConfiguration(
       seen[id] = true;
       current.id = id;
       current.type = !strcmp(line.name, DIGITAL_STR_DIGITAL) ? HotType::Digital :
-                     !strcmp(line.name, "Probe") ? HotType::Probe : HotType::StartupOnly;
+                     !strcmp(line.name, "Probe") ? HotType::Probe :
+                     !strcmp(line.name, NMEA_STR_NMEA) ? HotType::NMEA : HotType::StartupOnly;
+      current.valid = true;
       mbedtls_sha256_starts_ret(&hash, 0);
       add(line.name);
       if (candidates && current.type != HotType::StartupOnly) {
         bool ready = false;
         if (current.type == HotType::Digital) {
           auto* module = createDigital(id, true);
+          candidates[id] = module;
+          ready = module && module->hotLoadReady();
+        } else if (current.type == HotType::NMEA) {
+          auto* module = createNMEA(id, true);
           candidates[id] = module;
           ready = module && module->hotLoadReady();
         } else {
@@ -166,8 +198,12 @@ bool DroneExecutionManager::readHotLoadConfiguration(
     } else {
       add(line.name);
       add(line.value);
-      if (candidates && candidates[current.id])
-        valid = applySetting(*candidates[current.id], line, current.type == HotType::Digital);
+      if (current.type == HotType::NMEA && line.name[0] == '$') current.valid = false;
+      if (candidates && candidates[current.id] && current.valid) {
+        current.valid = applySetting(*candidates[current.id], line, current.type == HotType::Digital,
+                                     current.type == HotType::NMEA);
+        if (!current.valid && current.type != HotType::NMEA) valid = false;
+      }
     }
   }
   valid = valid && seenNode && current.id && finishSection();
@@ -215,6 +251,7 @@ HotLoadResult DroneExecutionManager::applyHotLoad(const char* path) {
     auto* previous = _dmm->getModuleById(section.id);
     if (!previous) {
       if (section.type == HotType::StartupOnly) return HotLoadResult::RestartRequired;
+      if (!section.valid) return HotLoadResult::InvalidConfiguration;
       continue;
     }
     for (int j = 0; j < _appliedSections.size(); ++j) {
@@ -226,6 +263,10 @@ HotLoadResult DroneExecutionManager::applyHotLoad(const char* path) {
       } else if (active.type == section.type && active.type != HotType::StartupOnly) {
         // Preserve consumer binding and publication semantics for this first lifecycle.
         if (_dlm->hasLocalConsumer(section.id, previous)) return HotLoadResult::InvalidConfiguration;
+        if (active.type == HotType::NMEA &&
+            (!active.valid || !static_cast<NMEAModule*>(previous)->hotLoadEligible()))
+          return HotLoadResult::RestartRequired;
+        if (!section.valid) return HotLoadResult::InvalidConfiguration;
         retired[section.id] = previous;
       } else {
         return HotLoadResult::RestartRequired;
@@ -239,6 +280,9 @@ HotLoadResult DroneExecutionManager::applyHotLoad(const char* path) {
     if (section.type == HotType::StartupOnly) return HotLoadResult::RestartRequired;
     auto* module = _dmm->getModuleById(section.id);
     if (_dlm->hasLocalConsumer(section.id, module)) return HotLoadResult::InvalidConfiguration;
+    if (section.type == HotType::NMEA &&
+        (!section.valid || !static_cast<NMEAModule*>(module)->hotLoadEligible()))
+      return HotLoadResult::RestartRequired;
     retired[section.id] = module;
   }
 
@@ -260,6 +304,12 @@ HotLoadResult DroneExecutionManager::applyHotLoad(const char* path) {
         return HotLoadResult::RestartRequired;
     }
     if (!candidates[id]) continue;
+    if (types[id] == HotType::NMEA) {
+      const auto port = candidates[id]->getParamEntryById(NMEA_PARAM_PORT)->data.uint8[0];
+      auto* owner = port < DRONE_SYSTEM_SERIAL_PORTS ? _ds->_serialPorts[port].module : nullptr;
+      auto* retiring = owner && owner->id() <= MaxChannel ? retired[owner->id()] : nullptr;
+      if (!_ds->secondarySerialAvailable(port, retiring)) return HotLoadResult::ResourceConflict;
+    }
     const uint64_t requested = hotLoadPins(candidates[id], types[id]);
     if (!requested) return HotLoadResult::InvalidConfiguration;
     if (claimed & requested) return HotLoadResult::ResourceConflict;
@@ -300,6 +350,8 @@ HotLoadResult DroneExecutionManager::applyHotLoad(const char* path) {
       auto* module = candidates[id];
       if (!module) continue;
       module->setup();
+      if (types[id] == HotType::NMEA && static_cast<NMEAModule*>(module)->_activePort == 255)
+        started = false;
       const auto requested = hotLoadPins(module, types[id]);
       for (uint8_t pin = 0; pin < DRONE_SYSTEM_PINS; ++pin) {
         if ((requested & (uint64_t{1} << pin)) && _ds->_pins[pin].module != module)
@@ -346,17 +398,29 @@ HotLoadResult DroneExecutionManager::applyHotLoad(const char* path) {
 
 uint64_t DroneExecutionManager::hotLoadPins(DroneModule* module, HotType type) {
   if (type == HotType::Probe) return static_cast<ProbeModule*>(module)->requestedInputs();
+  if (type == HotType::NMEA) {
+    const auto port = module->getParamEntryById(NMEA_PARAM_PORT)->data.uint8[0];
+    if (port == 1) return (uint64_t{1} << PIN_SERIAL1_RX) | (uint64_t{1} << PIN_SERIAL1_TX);
+    if (port == 2) return (uint64_t{1} << PIN_SERIAL2_RX) | (uint64_t{1} << PIN_SERIAL2_TX);
+    return 0;
+  }
   const auto pin = static_cast<DigitalModule*>(module)->trialPin();
   return pin == 32 || pin == 33 ? uint64_t{1} << pin : 0;
 }
 
 void DroneExecutionManager::releaseHotLoadPins(DroneModule* module, HotType type) {
   if (type == HotType::Probe) static_cast<ProbeModule*>(module)->releaseInputs();
+  else if (type == HotType::NMEA) static_cast<NMEAModule*>(module)->releasePrimary();
   else static_cast<DigitalModule*>(module)->releaseHotLoadPin();
 }
 
 bool DroneExecutionManager::restoreHotLoadPins(DroneModule* module, HotType type, uint64_t pins) {
   if (!pins) return true;
   if (type == HotType::Probe) return static_cast<ProbeModule*>(module)->restoreInputs(pins);
+  if (type == HotType::NMEA) {
+    auto* nmea = static_cast<NMEAModule*>(module);
+    const uint8_t port = pins & (uint64_t{1} << PIN_SERIAL1_RX) ? 1 : 2;
+    return nmea->startPrimary(port, nmea->_activeBaud);
+  }
   return static_cast<DigitalModule*>(module)->restoreHotLoadPin(pins & (uint64_t{1} << 32) ? 32 : 33);
 }

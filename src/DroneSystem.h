@@ -166,6 +166,8 @@ public:
   DroneSystem();
 
   boolean requestSerialPort(uint8_t port, DroneModule* module);
+  void releaseSecondarySerialPort(uint8_t port, DroneModule* module);
+  bool secondarySerialAvailable(uint8_t port, DroneModule* retiring) const;
   boolean requestPin(uint8_t pin, uint8_t capabilities, DroneModule* module);
   void releasePin(uint8_t pin, DroneModule* owner);
   uint8_t pinOwnerChannel(uint8_t pin) const;

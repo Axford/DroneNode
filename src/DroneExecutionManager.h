@@ -17,6 +17,7 @@ class DroneLinkManager;
 class DroneModuleManager;
 class DigitalModule;
 class ProbeModule;
+class NMEAModule;
 class ManagementModule;
 
 
@@ -49,10 +50,11 @@ static const char DEM_BOOT_FILENAME[] PROGMEM = "/boot.dat";
 
 class DroneExecutionManager
 {
-  enum class HotType : uint8_t { StartupOnly, Digital, Probe };
+  enum class HotType : uint8_t { StartupOnly, Digital, Probe, NMEA };
   struct AppliedSection {
     uint8_t id;
     HotType type;
+    bool valid;
     uint8_t digest[32];
   };
   IvanLinkedList::LinkedList<AppliedSection> _appliedSections;
@@ -62,6 +64,7 @@ class DroneExecutionManager
 
   configuration::HotLoadResult applyHotLoad(const char* path);
   DigitalModule* createDigital(uint8_t id, bool detached);
+  NMEAModule* createNMEA(uint8_t id, bool detached);
   ProbeModule* createProbe(uint8_t id, bool detached);
   uint64_t hotLoadPins(DroneModule* module, HotType type);
   void releaseHotLoadPins(DroneModule* module, HotType type);

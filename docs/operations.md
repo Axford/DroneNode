@@ -420,3 +420,11 @@ channel, or removed. Live apply validates and claims all selected Probe inputs
 together. A pin already owned by a retained module rejects the apply. Startup
 still supports reporting an unavailable input alongside other working inputs.
 Replacing a Probe discards its capture in progress and starts a new rotation.
+
+NMEA supports live add, same-type replacement and removal for one GPS on UART1
+or UART2. Use `port = 1` or `port = 2`, optionally followed by `,255`.
+Supported live baud values are 1200–115200. UART0, dual GPS and correction
+subscriptions require startup configuration. A retained local consumer of NMEA
+also prevents replacement or removal. Reload opens a fresh parser and UART,
+so a valid location requires fresh sentences. A pin or UART conflict rejects
+the apply before the previous receiver is released.

@@ -144,6 +144,21 @@ boolean DroneSystem::requestSerialPort(uint8_t port, DroneModule* module) {
 }
 
 
+bool DroneSystem::secondarySerialAvailable(uint8_t port, DroneModule* retiring) const {
+  if (port != 1 && port != 2) return false;
+  const auto &entry = _serialPorts[port];
+  return entry.state == DRONE_SYSTEM_SERIAL_PORT_STATE_INACTIVE ||
+         (retiring && entry.module == retiring);
+}
+
+void DroneSystem::releaseSecondarySerialPort(uint8_t port, DroneModule* module) {
+  if (!module || port < 1 || port > 2 || _serialPorts[port].module != module) return;
+  releasePin(port == 1 ? PIN_SERIAL1_TX : PIN_SERIAL2_TX, module);
+  releasePin(port == 1 ? PIN_SERIAL1_RX : PIN_SERIAL2_RX, module);
+  _serialPorts[port].module = nullptr;
+  _serialPorts[port].state = DRONE_SYSTEM_SERIAL_PORT_STATE_INACTIVE;
+}
+
 void DroneSystem::releasePin(uint8_t pin, DroneModule* owner) {
   if (!owner || pin >= DRONE_SYSTEM_PINS) return;
   auto& entry = _pins[pin];

@@ -10,8 +10,12 @@
 // @type NMEA
 
 NMEAModule::NMEAModule(uint8_t id, DroneSystem* ds):
-  DroneModule ( id, ds )
- {
+  NMEAModule(id, ds, Registration::Managed) {}
+
+NMEAModule::NMEAModule(uint8_t id, DroneSystem* ds, Registration registration)
+    : DroneModule(id, ds, registration), _port(nullptr), _port2(nullptr),
+      _nmea(nullptr), _nmea2(nullptr) {
+   if (!_mgmtParams) return;
    setTypeName(FPSTR(NMEA_STR_NMEA));
 
    _port = NULL;
@@ -19,8 +23,8 @@ NMEAModule::NMEAModule(uint8_t id, DroneSystem* ds):
    // @default interval = 1000
    _mgmtParams[DRONE_MODULE_PARAM_INTERVAL_E].data.uint32[0] = 1000;
 
-   _nmea = new MicroNMEA(_buffer, sizeof(_buffer));
-   _nmea2 = new MicroNMEA(_buffer2, sizeof(_buffer2));
+   _nmea = new (std::nothrow) MicroNMEA(_buffer, sizeof(_buffer));
+   _nmea2 = new (std::nothrow) MicroNMEA(_buffer2, sizeof(_buffer2));
    //nmea.setUnknownSentenceHandler(printUnknownSentence);
 
    _historyCount = 0;
@@ -28,6 +32,7 @@ NMEAModule::NMEAModule(uint8_t id, DroneSystem* ds):
 
    // subs
    initSubs(NMEA_SUBS);
+   if (!_subs) return;
 
    DRONE_PARAM_SUB *sub;
 
@@ -43,6 +48,7 @@ NMEAModule::NMEAModule(uint8_t id, DroneSystem* ds):
 
    // pubs
    initParams(NMEA_PARAM_ENTRIES);
+   if (!_params) return;
 
    DRONE_PARAM_ENTRY *param;
 
@@ -128,33 +134,56 @@ NMEAModule::NMEAModule(uint8_t id, DroneSystem* ds):
 }
 
 
+NMEAModule::~NMEAModule() {
+  releasePrimary();
+  delete _nmea;
+  delete _nmea2;
+}
+
+bool NMEAModule::hotLoadEligible() const {
+  return hotLoadReady() && _bootSingleSecondary &&
+         _subs[NMEA_SUB_CORRECTION_E].addr.node == 0;
+}
+
+bool NMEAModule::startPrimary(uint8_t port, uint32_t baud) {
+  if ((port != 1 && port != 2) || !_ds->requestSerialPort(port, this)) return false;
+  auto &serial = port == 1 ? Serial1 : Serial2;
+  serial.begin(baud, SERIAL_8N1, port == 1 ? PIN_SERIAL1_RX : PIN_SERIAL2_RX,
+               port == 1 ? PIN_SERIAL1_TX : PIN_SERIAL2_TX);
+  if (!serial) {
+    serial.end();
+    _ds->releaseSecondarySerialPort(port, this);
+    return false;
+  }
+  _port = &serial;
+  _activePort = port;
+  _activeBaud = baud;
+  return true;
+}
+
+void NMEAModule::releasePrimary() {
+  if (_activePort == 255) return;
+  auto &serial = _activePort == 1 ? Serial1 : Serial2;
+  serial.end();
+  _ds->releaseSecondarySerialPort(_activePort, this);
+  _activePort = 255;
+  _port = nullptr;
+}
+
 void NMEAModule::setup() {
   DroneModule::setup();
-
-  // request the serial port
-  if (!_ds->requestSerialPort(_params[NMEA_PARAM_PORT_E].data.uint8[0], this)) {
-    _port = NULL;
-    Log.errorln(F("[NMEA.s] Unable to access serial port: %u"), _params[NMEA_PARAM_PORT_E].data.uint8[0]);
+  if (!hotLoadReady()) {
     setError(1);
     return;
   }
 
-  switch(_params[NMEA_PARAM_PORT_E].data.uint8[0]) {
-    //case 0: Serial.begin(_baud, SERIAL_8N1, PIN_SERIAL2_RX, PIN_SERIAL2_TX); break;
-    case 1:
-      Log.noticeln(F("[NMEA.s] Serial 1 at %u"), _params[NMEA_PARAM_BAUD_E].data.uint32[0]);
-      Serial1.begin(_params[NMEA_PARAM_BAUD_E].data.uint32[0], SERIAL_8N1, PIN_SERIAL1_RX, PIN_SERIAL1_TX);
-      setPort(&Serial1);
-      break;
-    case 2:
-      Log.noticeln(F("[NMEA.s] Serial 2 at %u"), _params[NMEA_PARAM_BAUD_E].data.uint32[0]);
-      Serial2.begin(_params[NMEA_PARAM_BAUD_E].data.uint32[0], SERIAL_8N1, PIN_SERIAL2_RX, PIN_SERIAL2_TX);
-      setPort(&Serial2);
-      break;
-    default:
-      _port = NULL;
-      Log.errorln(F("[NMEA.s] invalid port: %u"), _params[NMEA_PARAM_PORT_E].data.uint8[0]);
-      setError(1);
+  const auto port = _params[NMEA_PARAM_PORT_E].data.uint8[0];
+  _bootSingleSecondary = (port == 1 || port == 2) &&
+                         _params[NMEA_PARAM_PORT_E].data.uint8[1] == 255;
+  if (!startPrimary(port, _params[NMEA_PARAM_BAUD_E].data.uint32[0])) {
+    Log.errorln(F("[NMEA.s] Unable to start serial port: %u"), port);
+    setError(1);
+    return;
   }
 
   // check for and request secondary serial port if specified
