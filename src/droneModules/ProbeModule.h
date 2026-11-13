@@ -74,7 +74,14 @@ private:
   void drainEdges();
   void stopCapture();
   void finishCapture();
-  void sampleAnalog(uint8_t index);
+  void startAnalog(uint8_t index);
+  void sampleAnalog();
+  void finishAnalog();
+  uint32_t _nextAnalogSample = 0;
+  uint32_t _analogSum = 0;
+  uint16_t _analogMin = 0;
+  uint16_t _analogMax = 0;
+  uint8_t _analogCount = 0;
   void setResult(uint8_t index, Status status, const uint8_t* data = nullptr, uint8_t size = 0,
                  bool publish = false);
 };

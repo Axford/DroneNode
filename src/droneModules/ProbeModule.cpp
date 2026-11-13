@@ -31,6 +31,8 @@ constexpr Pin pins[] = {
 constexpr uint8_t resultBase = 10;
 constexpr uint32_t serialBauds[] = {1200, 2400, 4800, 9600, 14400, 19200, 28800, 38400};
 constexpr uint32_t digitalWindow = 20000;
+constexpr uint32_t analogWindow = 20000;
+constexpr uint32_t analogSampleInterval = 1000;
 constexpr uint32_t serialWindow = 250000;
 constexpr uint32_t edgeLimit = 12000;
 constexpr uint32_t minimumInterval = 300;
@@ -197,8 +199,15 @@ bool ProbeModule::readyToLoop() {
 void ProbeModule::loop() {
   DroneModule::loop();
   if (_active >= 0) {
-    if (micros() - _started >= _window) finishCapture();
-    else drainEdges();
+    const bool finished = micros() - _started >= _window;
+    if (_inputs[_active].mode == Analog) {
+      if (finished) finishAnalog();
+      else if (reached(micros(), _nextAnalogSample)) sampleAnalog();
+    } else if (finished) {
+      finishCapture();
+    } else {
+      drainEdges();
+    }
     return;
   }
 
@@ -213,7 +222,7 @@ void ProbeModule::loop() {
     const auto& input = _inputs[index];
     if (!input.claimed) continue;
     if (input.mode == Analog) {
-      sampleAnalog(index);
+      startAnalog(index);
     } else {
       _active = index;
       _capturePin = pins[index].gpio;
@@ -284,9 +293,11 @@ void ProbeModule::drainEdges() {
 
 void ProbeModule::stopCapture() {
   if (_active < 0) return;
-  gpio_isr_handler_remove(static_cast<gpio_num_t>(_capturePin));
-  portENTER_CRITICAL(&_edgeLock);
-  portEXIT_CRITICAL(&_edgeLock);
+  if (_inputs[_active].mode != Analog) {
+    gpio_isr_handler_remove(static_cast<gpio_num_t>(_capturePin));
+    portENTER_CRITICAL(&_edgeLock);
+    portEXIT_CRITICAL(&_edgeLock);
+  }
   _active = -1;
 }
 
@@ -312,33 +323,68 @@ void ProbeModule::finishCapture() {
   }
 }
 
-void ProbeModule::sampleAnalog(uint8_t index) {
+void ProbeModule::startAnalog(uint8_t index) {
   const auto channel = pins[index].adc;
   if (adc1_config_width(ADC_WIDTH_BIT_12) != ESP_OK ||
       adc1_config_channel_atten(channel, ADC_ATTEN_DB_11) != ESP_OK) {
     setResult(index, ReadFailed, nullptr, 0, true);
     return;
   }
-  const int raw = adc1_get_raw(channel);
+  _active = index;
+  _started = micros();
+  _window = analogWindow;
+  _analogSum = 0;
+  _analogCount = 0;
+  _analogMin = 4095;
+  _analogMax = 0;
+  sampleAnalog();
+}
+
+void ProbeModule::sampleAnalog() {
+  const uint8_t index = _active;
+  const uint32_t now = micros();
+  if (now - _started >= _window) return;
+  // Skip missed samples instead of taking several readings in the same loop.
+  _nextAnalogSample = now + analogSampleInterval;
+  const int raw = adc1_get_raw(pins[index].adc);
   if (raw < 0 || raw > 4095) {
+    stopCapture();
     setResult(index, ReadFailed, nullptr, 0, true);
     return;
   }
-  uint8_t data[4] = {static_cast<uint8_t>(raw), static_cast<uint8_t>(raw >> 8)};
+  const auto sample = static_cast<uint16_t>(raw);
+  _analogMin = min(_analogMin, sample);
+  _analogMax = max(_analogMax, sample);
+  _analogSum += sample;
+  ++_analogCount;
+}
+
+void ProbeModule::finishAnalog() {
+  const uint8_t index = _active;
+  stopCapture();
+  if (_analogCount < 2) {
+    setResult(index, ReadFailed, nullptr, 0, true);
+    return;
+  }
+  auto& result = _params[index];
+  const float average = static_cast<float>(_analogSum) / _analogCount;
+  result.data.f[0] = _analogMin;
+  result.data.f[1] = _analogMax;
+  result.data.f[2] = average;
+  uint8_t length = 3 * sizeof(float);
   if (_inputs[index].estimateVoltage) {
     esp_adc_cal_characteristics_t calibration;
     if (esp_adc_cal_characterize(ADC_UNIT_1, ADC_ATTEN_DB_11, ADC_WIDTH_BIT_12, 0, &calibration)
         != ESP_ADC_CAL_VAL_DEFAULT_VREF) {
-      const uint32_t mv = esp_adc_cal_raw_to_voltage(raw, &calibration);
+      const uint32_t mv = esp_adc_cal_raw_to_voltage(static_cast<uint32_t>(average + 0.5f), &calibration);
       if (mv >= 150 && mv <= 2450) {
-        data[2] = mv;
-        data[3] = mv >> 8;
-        setResult(index, Complete, data, 4, true);
-        return;
+        result.data.f[3] = mv;
+        length += sizeof(float);
       }
     }
   }
-  setResult(index, Complete, data, 2, true);
+  result.paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, length);
+  publishParamEntry(&result);
 }
 
 void ProbeModule::setResult(uint8_t index, Status status, const uint8_t* data, uint8_t size, bool publish) {

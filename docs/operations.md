@@ -400,9 +400,10 @@ to the RX pin. This example uses UART1 RX at the GPS's configured baud.
 ```
 
 Use `pin13 = digital` for the transition test. An eligible ADC1 pin can use
-`pin34 = analog` to report raw counts. After validating the input against a
-meter, `pin34 = analog, voltage` also enables an estimate where chip calibration
-and range allow. Probe uses unpulled inputs. The first successful pin claim in
+`pin34 = analog` to report minimum, maximum and average raw ADC counts over
+20 ms. Readings are scheduled at least 1 ms apart. After validating the input
+against a meter, `pin34 = analog, voltage` also enables an estimate at the
+average count where chip calibration and range allow. Probe uses unpulled inputs. The first successful pin claim in
 module load order wins, and a conflict leaves the other selected pins usable.
 
 The interval is in milliseconds (300–60000). Probe visits one selected pin at
