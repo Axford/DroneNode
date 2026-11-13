@@ -31,9 +31,9 @@ constexpr Pin pins[] = {
 constexpr uint8_t resultBase = 10;
 constexpr uint32_t serialBauds[] = {1200, 2400, 4800, 9600, 14400, 19200, 28800, 38400};
 constexpr uint32_t digitalWindow = 20000;
-constexpr uint32_t serialWindow = 100000;
-constexpr uint32_t edgeLimit = 8192;
-constexpr uint32_t minimumInterval = 200;
+constexpr uint32_t serialWindow = 250000;
+constexpr uint32_t edgeLimit = 12000;
+constexpr uint32_t minimumInterval = 300;
 constexpr uint32_t maximumInterval = 60000;
 
 bool reached(uint32_t now, uint32_t deadline) {
