@@ -547,6 +547,45 @@ NetworkInterfaceModule* DroneLinkManager::getSourceInterface(uint8_t source) {
 }
 
 
+void DroneLinkManager::serveNetworkSnapshot(AsyncWebServerRequest *request) {
+  auto *response = request->beginResponseStream("application/json");
+  if (!response) { request->send(503); return; }
+  response->addHeader("Cache-Control", "no-store");
+  response->printf("{\"schemaVersion\":1,\"node\":%u,\"interfaces\":[", _node);
+  for (uint8_t i = 0; i < _interfaces.size(); ++i) {
+    auto *interface = _interfaces.get(i);
+    const char *type = "Unknown";
+    switch (interface->getInterfaceType()) {
+      case DRONE_MESH_INTERFACE_TYPE_UDP: type = "UDP"; break;
+      case DRONE_MESH_INTERFACE_TYPE_RFM69: type = "RFM69"; break;
+      case DRONE_MESH_INTERFACE_TYPE_SERIAL: type = "Serial"; break;
+      case DRONE_MESH_INTERFACE_TYPE_IRIDIUM: type = "Iridium"; break;
+    }
+    const bool broadcast = interface->isBroadcastCapable();
+    response->printf("%s{\"channel\":%u,\"type\":\"%s\",\"up\":%s,\"broadcast\":%s",
+      i ? "," : "", interface->id(), type, interface->getInterfaceState() ? "true" : "false", broadcast ? "true" : "false");
+    if (!broadcast) response->printf(",\"peer\":%u", interface->getPeerId());
+    response->print("}");
+  }
+  response->print("],\"routes\":[");
+  const uint32_t now = millis();
+  bool first = true;
+  for (uint16_t id = 1; id <= 254; ++id) {
+    const auto *page = _nodePages[id / DRONE_LINK_NODE_PAGE_SIZE];
+    if (!page) continue;
+    const auto &route = page->nodeInfo[id % DRONE_LINK_NODE_PAGE_SIZE];
+    if (!route.heard || !route.nextHop || route.nextHop == 255 || id == _node) continue;
+    response->printf("%s{\"destination\":%u,\"nextHop\":%u,\"cost\":%u,\"ageMs\":%lu",
+      first ? "" : ",", id, route.nextHop, route.metric, static_cast<unsigned long>(now - route.lastHeard));
+    if (route.interface) response->printf(",\"channel\":%u", route.interface->id());
+    response->print("}");
+    first = false;
+  }
+  response->printf("],\"queue\":{\"size\":%u,\"utilisation\":%.1f,\"kicked\":%u,\"choked\":%u}}",
+    getTxQueueSize(), 100 * _utilisation, _kicked, _choked);
+  request->send(response);
+}
+
 void DroneLinkManager::serveNodeInfo(AsyncWebServerRequest *request) {
   AsyncResponseStream *response = request->beginResponseStream("application/json");
   response->addHeader("Server","ESP Async Web Server");

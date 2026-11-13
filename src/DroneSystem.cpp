@@ -348,6 +348,14 @@ void DroneSystem::setupWebServer() {
 
   // node info debug
   telemetry::mountMeasurements(_server);
+  _server.on("/networkSnapshot", HTTP_GET, [&](AsyncWebServerRequest *request) {
+    if (xSemaphoreTake(_i2cLoopMutex, pdMS_TO_TICKS(50)) != pdTRUE) {
+      request->send(503);
+      return;
+    }
+    dlm->serveNetworkSnapshot(request);
+    xSemaphoreGive(_i2cLoopMutex);
+  });
   _server.on("/nodeInfo", HTTP_GET, [&](AsyncWebServerRequest *request){
     _doLoop = false;
     dlm->serveNodeInfo(request);

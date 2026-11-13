@@ -165,7 +165,20 @@ else: print('Synthetic resolved tool versions')
         actions = []
         namespace = {'Import': lambda _: None, 'env': type('Env', (), {'AddPostAction': lambda *args: actions.append(args), 'ProcessUnFlags': lambda *args: None, 'GetLibBuilders': lambda *args: [], 'AppendUnique': lambda *args, **kwargs: None, 'Replace': lambda *args, **kwargs: None})()}
         exec((ROOT / 'post_build.py').read_text(), namespace)
-        self.assertEqual(actions, [])
+        self.assertEqual(len(actions), 1)
+        env, path, guard = actions[0]
+        self.assertEqual(path, '$BUILD_DIR/${PROGNAME}.bin')
+        self.assertIs(guard, namespace['check_application_image'])
+        with tempfile.TemporaryDirectory() as directory:
+            image = Path(directory) / 'firmware.bin'
+            target = [type('Target', (), {'get_abspath': lambda _: str(image)})()]
+            env.BoardConfig = lambda: {'upload.maximum_size': 4}
+            image.write_bytes(b'1234')
+            self.assertIsNone(guard([], target, env))
+            self.assertEqual(image.read_bytes(), b'1234')
+            image.write_bytes(b'12345')
+            self.assertEqual(guard([], target, env), 1)
+            self.assertFalse(image.exists())
 
 
 if __name__ == '__main__': unittest.main()

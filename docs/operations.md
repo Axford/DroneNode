@@ -455,3 +455,7 @@ The PlatformIO post-build check verifies the serialized application image agains
 Workbench uses the versioned I²C job endpoint described in the [shared contract](../../DroneLinkDatastore/docs/contracts/workbench.md#workbench-i²c-discovery). Firmware verifies each multiplexer selection and services small batches on the main loop alongside module traffic. The job uses address-only probes and reviewed register reads.
 
 Run the host bus simulation with `c++ -std=c++11 -Isrc tests/i2c-diagnostic.cpp -o /tmp/dronelink-i2c-test && /tmp/dronelink-i2c-test`.
+
+### Network snapshot
+
+`GET /networkSnapshot` reports the node's own mesh interface state, route table and transmit queue counters. Workbench reads this endpoint through the selected direct Wi-Fi route. See the [shared contract](../../DroneLinkDatastore/docs/contracts/workbench.md#selected-node-network-snapshot).

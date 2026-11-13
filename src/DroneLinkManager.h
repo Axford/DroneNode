@@ -212,6 +212,7 @@ public:
     // get the interface associated with a source id
     NetworkInterfaceModule* getSourceInterface(uint8_t source);
 
+    void serveNetworkSnapshot(AsyncWebServerRequest *request);
     void serveNodeInfo(AsyncWebServerRequest *request);
     void serveChannelInfo(AsyncWebServerRequest *request);
 
