@@ -51,12 +51,18 @@ class ReleaseTests(unittest.TestCase):
         cloud_source = ROOT / 'src/droneModules/CloudTelemetryModule.h'
         if cloud_source not in sources:
             sources.append(cloud_source)
+        probe_source = ROOT / 'src/droneModules/ProbeModule.h'
+        if probe_source not in sources:
+            sources.append(probe_source)
         with patch.object(release, 'annotation_files', return_value=sources):
             actual = release.metadata()
         cloud = actual.pop('CloudTelemetry')
         self.assertEqual(cloud['type'], ['CloudTelemetry'])
         self.assertEqual(cloud['inherits'], ['Drone'])
         self.assertEqual([(p['address'],p['name']) for p in cloud['pub']], [(8,'reportInterval'),(9,'requests'),(10,'selection'),(11,'memory'),(12,'timing'),(13,'flow'),(14,'pollInterval')])
+        probe = actual.pop('Probe')
+        self.assertEqual(probe['inherits'], ['Drone'])
+        self.assertIn('pin13 = serial, 9600', probe['config'][0])
         self.assertEqual(actual, expected)
         self.assertEqual(len(expected), 51)
 

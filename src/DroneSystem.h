@@ -169,6 +169,8 @@ public:
 
   boolean requestSerialPort(uint8_t port, DroneModule* module);
   boolean requestPin(uint8_t pin, uint8_t capabilities, DroneModule* module);
+  void releasePin(uint8_t pin, DroneModule* owner);
+  uint8_t pinOwnerChannel(uint8_t pin) const;
   NeoPixelBrightnessBus<NeoGrbFeature, Neo800KbpsMethod>* requestStrip(uint8_t pin, uint8_t pixels, DroneModule* module);
   void setStripFirstPixel(uint8_t pin, uint8_t index);
   // get index of first pixel for strip on pin

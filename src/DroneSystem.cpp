@@ -110,25 +110,21 @@ boolean DroneSystem::requestSerialPort(uint8_t port, DroneModule* module) {
       // its prior log level only after binding the shared framed output.
       Log.setLevel(LOG_LEVEL_SILENT);
     } else {
-      // register pins
-      boolean registered = false;
-
-      switch(port) {
-        case 0:
-          registered = requestPin(PIN_SERIAL0_TX, DRONE_SYSTEM_PIN_CAP_SERIAL, module) && requestPin(PIN_SERIAL0_RX, DRONE_SYSTEM_PIN_CAP_SERIAL, module);
-          break;
-        case 1:
-          registered = requestPin(PIN_SERIAL1_TX, DRONE_SYSTEM_PIN_CAP_SERIAL, module) && requestPin(PIN_SERIAL1_RX, DRONE_SYSTEM_PIN_CAP_SERIAL, module);
-          break;
-        case 2:
-          registered = requestPin(PIN_SERIAL2_TX, DRONE_SYSTEM_PIN_CAP_SERIAL, module) && requestPin(PIN_SERIAL2_RX, DRONE_SYSTEM_PIN_CAP_SERIAL, module);
-          break;
-      }
-
-      if (!registered) {
+      static const uint8_t txPins[] = {PIN_SERIAL0_TX, PIN_SERIAL1_TX, PIN_SERIAL2_TX};
+      static const uint8_t rxPins[] = {PIN_SERIAL0_RX, PIN_SERIAL1_RX, PIN_SERIAL2_RX};
+      const uint8_t tx = txPins[port];
+      const uint8_t rx = rxPins[port];
+      const auto available = [&](uint8_t pin) {
+        return _pins[pin].state == DRONE_SYSTEM_PIN_STATE_AVAILABLE &&
+               (_pins[pin].capabilities & DRONE_SYSTEM_PIN_CAP_SERIAL);
+      };
+      // Check both pins before reserving either. An existing RX owner can be Probe.
+      if (!available(tx) || !available(rx)) {
         Log.errorln("[ds.rSP] Serial port pins unavailable %u", port);
         return false;
       }
+      requestPin(tx, DRONE_SYSTEM_PIN_CAP_SERIAL, module);
+      requestPin(rx, DRONE_SYSTEM_PIN_CAP_SERIAL, module);
     }
 
     if (module == NULL) {
@@ -145,6 +141,22 @@ boolean DroneSystem::requestSerialPort(uint8_t port, DroneModule* module) {
     Log.errorln("[ds.rSP] Port unavailable %u", port);
     return false;
   }
+}
+
+
+void DroneSystem::releasePin(uint8_t pin, DroneModule* owner) {
+  if (!owner || pin >= DRONE_SYSTEM_PINS) return;
+  auto& entry = _pins[pin];
+  if (entry.module != owner || entry.strip) return;
+  pinMode(pin, INPUT);
+  entry.module = nullptr;
+  entry.state = DRONE_SYSTEM_PIN_STATE_AVAILABLE;
+}
+
+
+uint8_t DroneSystem::pinOwnerChannel(uint8_t pin) const {
+  if (pin >= DRONE_SYSTEM_PINS || !_pins[pin].module) return 0;
+  return _pins[pin].module->id();
 }
 
 

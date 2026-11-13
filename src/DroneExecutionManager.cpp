@@ -39,6 +39,7 @@
 #include "droneModules/PanSerialModule.h"
 #include "droneModules/PanTiltModule.h"
 #include "droneModules/PolarModule.h"
+#include "droneModules/ProbeModule.h"
 #include "droneModules/ProaModule.h"
 #include "droneModules/QMC5883LModule.h"
 #include "droneModules/ReceiverModule.h"
@@ -422,6 +423,8 @@ DroneModule* DroneExecutionManager::instanceModule(char* typeName, uint8_t id) {
       newMod = new CylonModule(id, _ds);
     } else if (strcmp_P(typeName, DEPTH_STR_DEPTH) == 0) {
       newMod = new DepthModule(id, _ds);
+    } else if (strcmp(typeName, "Probe") == 0) {
+      newMod = new ProbeModule(id, _ds);
     } else if (strcmp_P(typeName, DIAGNOSTIC_STR_DIAGNOSTIC) == 0) {
       newMod = new DiagnosticModule(id, _ds);
     } else if (strcmp_P(typeName, DIGITAL_STR_DIGITAL) == 0) {

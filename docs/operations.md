@@ -386,3 +386,28 @@ whitespace and comments. Unchanged instances retain their current runtime
 settings. Apply does not write the startup file. Restart still loads
 `config.ini`. Cloud command dispatch does not accept this action. Workbench
 integration and revision-bound confirmation are separate work.
+
+## Probe input diagnostics
+
+Configure a standard Probe channel in startup configuration. For AntTester, keep
+Management and UDPTelemetry, omit NMEA, and leave the GPS physically connected
+to the RX pin. This example uses UART1 RX at the GPS's configured baud.
+
+```ini
+[Probe = 15]
+  interval = 500
+  pin13 = serial, 9600
+```
+
+Use `pin13 = digital` for the transition test. An eligible ADC1 pin can use
+`pin34 = analog` to report raw counts. After validating the input against a
+meter, `pin34 = analog, voltage` also enables an estimate where chip calibration
+and range allow. Probe uses unpulled inputs. The first successful pin claim in
+module load order wins, and a conflict leaves the other selected pins usable.
+
+The interval is in milliseconds (200–60000). Probe visits one selected pin at
+a time. The initial digital and serial windows are 20 ms and 100 ms. Serial
+receives 8N1 in software at 1200–38400 baud and retains the last 15 decoded
+bytes. Use the [shared result contract](../../DroneLinkDatastore/docs/contracts/workbench.md#probe-pin-results)
+for status and payload details. Compare GPS evidence and main-loop measurements
+with the baseline on AntTester before relying on these timing limits.
