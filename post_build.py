@@ -10,12 +10,11 @@ from pathlib import Path
 
 Import("env")
 env.ProcessUnFlags("-fno-lto")
-env.AppendUnique(LINKFLAGS=["-flto"], CXXFLAGS=["-fno-rtti"])
+env.AppendUnique(LINKFLAGS=["-flto"])
 # GCC's plugin-aware archiver preserves LTO symbol indexes in static libraries.
 env.Replace(AR="xtensa-esp32-elf-gcc-ar", RANLIB="xtensa-esp32-elf-gcc-ranlib")
 # Dependency builders cloned the platform environment before this post hook.
 for builder in env.GetLibBuilders():
-    builder.env.AppendUnique(CXXFLAGS=["-fno-rtti"])
     builder.env.Replace(AR="xtensa-esp32-elf-gcc-ar", RANLIB="xtensa-esp32-elf-gcc-ranlib")
 
 
