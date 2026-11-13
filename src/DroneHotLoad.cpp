@@ -1,6 +1,7 @@
 #include "DroneSystem.h"
 #include "droneModules/DigitalModule.h"
 #include "droneModules/ManagementModule.h"
+#include "droneModules/ProbeModule.h"
 #include "CloudTelemetryConfig.h"
 #include <mbedtls/sha256.h>
 #include <math.h>
@@ -13,7 +14,10 @@ namespace {
 constexpr size_t MaxFileSize = 8192;
 constexpr uint8_t MaxChannel = 254;
 
-bool applyDigitalSetting(DigitalModule &module, configuration::Line &line) {
+bool applySetting(DroneModule &module, configuration::Line &line, bool digital) {
+  const auto configured = module.configure(line.name, line.value);
+  if (configured != configuration::Setting::Unhandled)
+    return configured == configuration::Setting::Handled;
   if (!strcmp(line.name, "publish")) {
     char* remaining = line.value;
     while (remaining) {
@@ -30,6 +34,7 @@ bool applyDigitalSetting(DigitalModule &module, configuration::Line &line) {
   auto* param = module.getParamEntryByName(line.name);
   if (!param) return false;
   const auto id = getDroneLinkMsgParam(param->paramPriority);
+  if (!digital && id != DRONE_MODULE_PARAM_NAME && id != DRONE_MODULE_PARAM_STATUS) return false;
   unsigned number = 0;
   switch (id) {
     case DIGITAL_PARAM_PINS:
@@ -65,10 +70,10 @@ bool applyDigitalSetting(DigitalModule &module, configuration::Line &line) {
 }
 
 struct Candidates {
-  DigitalModule* modules[MaxChannel + 1] = {};
-  DigitalModule* retired[MaxChannel + 1] = {};
+  DroneModule* modules[MaxChannel + 1] = {};
+  DroneModule* retired[MaxChannel + 1] = {};
   bool proposedIds[MaxChannel + 1] = {};
-  uint8_t previousPins[MaxChannel + 1] = {};
+  uint64_t previousPins[MaxChannel + 1] = {};
   ~Candidates() {
     for (auto* module : modules) delete module;
   }
@@ -78,7 +83,7 @@ struct Candidates {
 
 bool DroneExecutionManager::readHotLoadConfiguration(
     const char* path, IvanLinkedList::LinkedList<AppliedSection>& sections,
-    DigitalModule** candidates, HotLoadResult& result) {
+    DroneModule** candidates, HotLoadResult& result) {
   result = HotLoadResult::ReadFailed;
   auto file = _fs.open(path, FILE_READ);
   if (!file || file.isDirectory()) return false;
@@ -133,13 +138,22 @@ bool DroneExecutionManager::readHotLoadConfiguration(
       }
       seen[id] = true;
       current.id = id;
-      current.digital = !strcmp(line.name, DIGITAL_STR_DIGITAL);
+      current.type = !strcmp(line.name, DIGITAL_STR_DIGITAL) ? HotType::Digital :
+                     !strcmp(line.name, "Probe") ? HotType::Probe : HotType::StartupOnly;
       mbedtls_sha256_starts_ret(&hash, 0);
       add(line.name);
-      if (candidates && current.digital) {
-        auto* module = createDigital(id, true);
-        candidates[id] = module;
-        if (!module || !module->hotLoadReady()) {
+      if (candidates && current.type != HotType::StartupOnly) {
+        bool ready = false;
+        if (current.type == HotType::Digital) {
+          auto* module = createDigital(id, true);
+          candidates[id] = module;
+          ready = module && module->hotLoadReady();
+        } else {
+          auto* module = createProbe(id, true);
+          candidates[id] = module;
+          ready = module && module->hotLoadReady();
+        }
+        if (!ready) {
           result = HotLoadResult::OutOfMemory;
           valid = false;
         }
@@ -152,7 +166,8 @@ bool DroneExecutionManager::readHotLoadConfiguration(
     } else {
       add(line.name);
       add(line.value);
-      if (candidates && current.digital) valid = applyDigitalSetting(*candidates[current.id], line);
+      if (candidates && candidates[current.id])
+        valid = applySetting(*candidates[current.id], line, current.type == HotType::Digital);
     }
   }
   valid = valid && seenNode && current.id && finishSection();
@@ -199,7 +214,7 @@ HotLoadResult DroneExecutionManager::applyHotLoad(const char* path) {
     proposedIds[section.id] = true;
     auto* previous = _dmm->getModuleById(section.id);
     if (!previous) {
-      if (!section.digital) return HotLoadResult::RestartRequired;
+      if (section.type == HotType::StartupOnly) return HotLoadResult::RestartRequired;
       continue;
     }
     for (int j = 0; j < _appliedSections.size(); ++j) {
@@ -208,10 +223,10 @@ HotLoadResult DroneExecutionManager::applyHotLoad(const char* path) {
       if (!memcmp(active.digest, section.digest, sizeof(active.digest))) {
         delete candidates[section.id];
         candidates[section.id] = nullptr;
-      } else if (active.digital && section.digital) {
+      } else if (active.type == section.type && active.type != HotType::StartupOnly) {
         // Preserve consumer binding and publication semantics for this first lifecycle.
         if (_dlm->hasLocalConsumer(section.id, previous)) return HotLoadResult::InvalidConfiguration;
-        retired[section.id] = static_cast<DigitalModule*>(previous);
+        retired[section.id] = previous;
       } else {
         return HotLoadResult::RestartRequired;
       }
@@ -221,29 +236,42 @@ HotLoadResult DroneExecutionManager::applyHotLoad(const char* path) {
   for (int i = 0; i < _appliedSections.size(); ++i) {
     auto section = _appliedSections.get(i);
     if (proposedIds[section.id]) continue;
-    if (!section.digital) return HotLoadResult::RestartRequired;
+    if (section.type == HotType::StartupOnly) return HotLoadResult::RestartRequired;
     auto* module = _dmm->getModuleById(section.id);
     if (_dlm->hasLocalConsumer(section.id, module)) return HotLoadResult::InvalidConfiguration;
-    retired[section.id] = static_cast<DigitalModule*>(module);
+    retired[section.id] = module;
   }
 
-  DigitalModule* previousOwner[2] = {};
-  for (unsigned id = 1; id <= MaxChannel; ++id) {
-    if (!retired[id]) continue;
-    const uint8_t pin = retired[id]->ownedPin();
-    previousPins[id] = pin;
-    if (pin == 255) continue;
-    if (pin != 32 && pin != 33) return HotLoadResult::RestartRequired;
-    previousOwner[pin - 32] = retired[id];
+  HotType types[MaxChannel + 1] = {};
+  for (int i = 0; i < _appliedSections.size(); ++i) {
+    const auto section = _appliedSections.get(i);
+    types[section.id] = section.type;
   }
-  bool claimed[2] = {};
-  for (auto* module : candidates) {
-    if (!module) continue;
-    const uint8_t pin = module->trialPin();
-    if (pin != 32 && pin != 33) return HotLoadResult::InvalidConfiguration;
-    if (claimed[pin - 32] || !_ds->canClaimDigitalPin(pin, previousOwner[pin - 32]))
-      return HotLoadResult::ResourceConflict;
-    claimed[pin - 32] = true;
+  for (int i = 0; i < proposed.size(); ++i) {
+    const auto section = proposed.get(i);
+    types[section.id] = section.type;
+  }
+  uint64_t claimed = 0;
+  for (unsigned id = 1; id <= MaxChannel; ++id) {
+    if (retired[id]) {
+      for (uint8_t pin = 0; pin < DRONE_SYSTEM_PINS; ++pin)
+        if (_ds->_pins[pin].module == retired[id]) previousPins[id] |= uint64_t{1} << pin;
+      if (types[id] == HotType::Digital && (previousPins[id] & ~(uint64_t{3} << 32)))
+        return HotLoadResult::RestartRequired;
+    }
+    if (!candidates[id]) continue;
+    const uint64_t requested = hotLoadPins(candidates[id], types[id]);
+    if (!requested) return HotLoadResult::InvalidConfiguration;
+    if (claimed & requested) return HotLoadResult::ResourceConflict;
+    claimed |= requested;
+    for (uint8_t pin = 0; pin < DRONE_SYSTEM_PINS; ++pin) {
+      if (!(requested & (uint64_t{1} << pin))) continue;
+      const auto &entry = _ds->_pins[pin];
+      if (entry.state == DRONE_SYSTEM_PIN_STATE_AVAILABLE &&
+          (entry.capabilities & DRONE_SYSTEM_PIN_CAP_INPUT)) continue;
+      if (!entry.module || entry.strip || entry.module->id() > MaxChannel || retired[entry.module->id()] != entry.module)
+        return HotLoadResult::ResourceConflict;
+    }
   }
 
   // Unresolved inputs can still bind to a channel that is about to change.
@@ -266,25 +294,32 @@ HotLoadResult DroneExecutionManager::applyHotLoad(const char* path) {
   }
   bool started = prepared;
   if (prepared) {
-    for (auto* module : retired) if (module) module->releaseHotLoadPin();
-    for (auto* module : candidates) {
-      if (module && !module->startHotLoad()) {
-        started = false;
-        break;
+    for (unsigned id = 1; id <= MaxChannel; ++id)
+      if (retired[id]) releaseHotLoadPins(retired[id], types[id]);
+    for (unsigned id = 1; id <= MaxChannel; ++id) {
+      auto* module = candidates[id];
+      if (!module) continue;
+      module->setup();
+      const auto requested = hotLoadPins(module, types[id]);
+      for (uint8_t pin = 0; pin < DRONE_SYSTEM_PINS; ++pin) {
+        if ((requested & (uint64_t{1} << pin)) && _ds->_pins[pin].module != module)
+          started = false;
       }
+      if (!started) break;
     }
   }
   if (!started) {
-    for (auto* module : candidates) {
+    for (unsigned id = 1; id <= MaxChannel; ++id) {
+      auto* module = candidates[id];
       if (!module) continue;
       _dmm->unregisterModule(module);
       _dlm->detachModule(module);
-      module->releaseHotLoadPin();
+      releaseHotLoadPins(module, types[id]);
     }
     result = prepared ? HotLoadResult::StartFailed : HotLoadResult::OutOfMemory;
     if (prepared) {
       for (unsigned id = 1; id <= MaxChannel; ++id) {
-        if (retired[id] && previousPins[id] != 255 && !retired[id]->restoreHotLoadPin(previousPins[id])) {
+        if (retired[id] && !restoreHotLoadPins(retired[id], types[id], previousPins[id])) {
           retired[id]->disable();
           _hotLoadBaselineValid = false;
           result = HotLoadResult::RecoveryFailed;
@@ -306,4 +341,22 @@ HotLoadResult DroneExecutionManager::applyHotLoad(const char* path) {
   }
   xSemaphoreGive(_ds->_moduleChangeMutex);
   return result;
+}
+
+
+uint64_t DroneExecutionManager::hotLoadPins(DroneModule* module, HotType type) {
+  if (type == HotType::Probe) return static_cast<ProbeModule*>(module)->requestedInputs();
+  const auto pin = static_cast<DigitalModule*>(module)->trialPin();
+  return pin == 32 || pin == 33 ? uint64_t{1} << pin : 0;
+}
+
+void DroneExecutionManager::releaseHotLoadPins(DroneModule* module, HotType type) {
+  if (type == HotType::Probe) static_cast<ProbeModule*>(module)->releaseInputs();
+  else static_cast<DigitalModule*>(module)->releaseHotLoadPin();
+}
+
+bool DroneExecutionManager::restoreHotLoadPins(DroneModule* module, HotType type, uint64_t pins) {
+  if (!pins) return true;
+  if (type == HotType::Probe) return static_cast<ProbeModule*>(module)->restoreInputs(pins);
+  return static_cast<DigitalModule*>(module)->restoreHotLoadPin(pins & (uint64_t{1} << 32) ? 32 : 33);
 }

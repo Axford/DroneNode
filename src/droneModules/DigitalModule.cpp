@@ -72,15 +72,9 @@ bool DigitalModule::trialHigh() const {
   return _params[DIGITAL_PARAM_INPUT_E].data.f[0] != 0;
 }
 
-bool DigitalModule::startHotLoad() {
-  if (_setupDone) return false;
-  setup();
-  return _ownedPin != 255;
-}
-
 void DigitalModule::releaseHotLoadPin() {
   if (_ownedPin == 255) return;
-  _ds->releaseDigitalPin(this);
+  _ds->releasePin(_ownedPin, this);
   _ownedPin = 255;
 }
 

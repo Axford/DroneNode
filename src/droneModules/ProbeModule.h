@@ -32,6 +32,12 @@ public:
   void loop() override;
 
 private:
+  friend class DroneExecutionManager;
+  ProbeModule(uint8_t id, DroneSystem* system, Registration registration);
+  void releaseInputs();
+  bool restoreInputs(uint64_t mask);
+  uint64_t requestedInputs() const;
+  bool hotLoadReady() const { return _mgmtParams && _params; }
   enum Mode : uint8_t { Unselected, Digital, Analog, Serial };
   enum Status : uint8_t { Waiting, Complete, Quiet, Undecoded, Incomplete, Unavailable, ReadFailed };
   static constexpr uint8_t pinCount = 11;

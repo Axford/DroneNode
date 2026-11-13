@@ -186,22 +186,6 @@ boolean DroneSystem::requestPin(uint8_t pin, uint8_t capabilities, DroneModule* 
 }
 
 
-bool DroneSystem::canClaimDigitalPin(uint8_t pin, DroneModule* owner) {
-  if (pin != PIN_OUT0_0 && pin != PIN_OUT0_1) return false;
-  return _pins[pin].state == DRONE_SYSTEM_PIN_STATE_AVAILABLE ||
-         (owner && _pins[pin].module == owner && !_pins[pin].strip);
-}
-
-void DroneSystem::releaseDigitalPin(DroneModule* owner) {
-  for (uint8_t pin = 0; pin < DRONE_SYSTEM_PINS; ++pin) {
-    auto &entry = _pins[pin];
-    if (entry.module != owner) continue;
-    pinMode(pin, INPUT);
-    entry.module = nullptr;
-    entry.state = DRONE_SYSTEM_PIN_STATE_AVAILABLE;
-  }
-}
-
 bool DroneSystem::claimTrialPin(uint8_t pin) {
   if (pin != PIN_OUT0_0 && pin != PIN_OUT0_1) return false;
   // Use the same registry as boot modules. A trial has no public module owner.

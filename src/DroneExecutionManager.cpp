@@ -398,6 +398,11 @@ DigitalModule* DroneExecutionManager::createDigital(uint8_t id, bool detached) {
   return new DigitalModule(id, _ds);
 }
 
+ProbeModule* DroneExecutionManager::createProbe(uint8_t id, bool detached) {
+  if (detached) return new (std::nothrow) ProbeModule(id, _ds, DroneModule::Registration::Detached);
+  return new ProbeModule(id, _ds);
+}
+
 DroneModule* DroneExecutionManager::instanceModule(char* typeName, uint8_t id) {
   Log.noticeln(F("[.c] Instantiating %s as %u"), typeName, id);
   DroneModule *newMod = NULL;
@@ -424,7 +429,7 @@ DroneModule* DroneExecutionManager::instanceModule(char* typeName, uint8_t id) {
     } else if (strcmp_P(typeName, DEPTH_STR_DEPTH) == 0) {
       newMod = new DepthModule(id, _ds);
     } else if (strcmp(typeName, "Probe") == 0) {
-      newMod = new ProbeModule(id, _ds);
+      newMod = createProbe(id, false);
     } else if (strcmp_P(typeName, DIAGNOSTIC_STR_DIAGNOSTIC) == 0) {
       newMod = new DiagnosticModule(id, _ds);
     } else if (strcmp_P(typeName, DIGITAL_STR_DIGITAL) == 0) {

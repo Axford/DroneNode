@@ -16,6 +16,7 @@ class DroneModule;
 class DroneLinkManager;
 class DroneModuleManager;
 class DigitalModule;
+class ProbeModule;
 class ManagementModule;
 
 
@@ -48,9 +49,10 @@ static const char DEM_BOOT_FILENAME[] PROGMEM = "/boot.dat";
 
 class DroneExecutionManager
 {
+  enum class HotType : uint8_t { StartupOnly, Digital, Probe };
   struct AppliedSection {
     uint8_t id;
-    bool digital;
+    HotType type;
     uint8_t digest[32];
   };
   IvanLinkedList::LinkedList<AppliedSection> _appliedSections;
@@ -60,8 +62,12 @@ class DroneExecutionManager
 
   configuration::HotLoadResult applyHotLoad(const char* path);
   DigitalModule* createDigital(uint8_t id, bool detached);
+  ProbeModule* createProbe(uint8_t id, bool detached);
+  uint64_t hotLoadPins(DroneModule* module, HotType type);
+  void releaseHotLoadPins(DroneModule* module, HotType type);
+  bool restoreHotLoadPins(DroneModule* module, HotType type, uint64_t pins);
   bool readHotLoadConfiguration(const char* path, IvanLinkedList::LinkedList<AppliedSection>& sections,
-                                DigitalModule** candidates, configuration::HotLoadResult& result);
+                                DroneModule** candidates, configuration::HotLoadResult& result);
 
 protected:
   // queue of addresses that need to be resolved

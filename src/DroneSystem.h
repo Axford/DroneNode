@@ -121,8 +121,6 @@ class DroneSystem {
   friend class DroneExecutionManager;
   StaticSemaphore_t _moduleChangeMutexStorage;
   SemaphoreHandle_t _moduleChangeMutex;
-  bool canClaimDigitalPin(uint8_t pin, DroneModule* owner);
-  void releaseDigitalPin(DroneModule* owner);
   bool claimTrialPin(uint8_t pin);
   void releaseTrialPin(uint8_t pin);
 

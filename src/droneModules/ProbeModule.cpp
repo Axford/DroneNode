@@ -41,7 +41,12 @@ bool reached(uint32_t now, uint32_t deadline) {
 }
 }
 
-ProbeModule::ProbeModule(uint8_t id, DroneSystem* system) : DroneModule(id, system) {
+ProbeModule::ProbeModule(uint8_t id, DroneSystem* system)
+    : ProbeModule(id, system, Registration::Managed) {}
+
+ProbeModule::ProbeModule(uint8_t id, DroneSystem* system, Registration registration)
+    : DroneModule(id, system, registration) {
+  if (!_mgmtParams) return;
   static_assert(pinCount == sizeof(pins) / sizeof(pins[0]), "Probe pin table size");
   setTypeName(F("Probe"));
   _mgmtParams[DRONE_MODULE_PARAM_INTERVAL_E].data.uint32[0] = 500;
@@ -57,7 +62,7 @@ ProbeModule::ProbeModule(uint8_t id, DroneSystem* system) : DroneModule(id, syst
 }
 
 ProbeModule::~ProbeModule() {
-  doShutdown();
+  releaseInputs();
 }
 
 configuration::Setting ProbeModule::configure(const char* name, const char* value) {
@@ -151,13 +156,36 @@ void ProbeModule::onParamWrite(DRONE_PARAM_ENTRY* param) {
   DroneModule::onParamWrite(param);
 }
 
-void ProbeModule::doShutdown() {
+uint64_t ProbeModule::requestedInputs() const {
+  uint64_t mask = 0;
+  for (uint8_t i = 0; i < pinCount; ++i)
+    if (_inputs[i].mode != Unselected) mask |= uint64_t{1} << pins[i].gpio;
+  return mask;
+}
+
+bool ProbeModule::restoreInputs(uint64_t mask) {
+  bool restored = true;
+  for (uint8_t i = 0; i < pinCount; ++i) {
+    const auto pin = pins[i].gpio;
+    if (!(mask & (uint64_t{1} << pin))) continue;
+    _inputs[i].claimed = _ds->requestPin(pin, DRONE_SYSTEM_PIN_CAP_INPUT, this);
+    if (_inputs[i].claimed) pinMode(pin, INPUT);
+    else restored = false;
+  }
+  return restored;
+}
+
+void ProbeModule::releaseInputs() {
   stopCapture();
   for (uint8_t i = 0; i < pinCount; ++i) {
     if (!_inputs[i].claimed) continue;
     _ds->releasePin(pins[i].gpio, this);
     _inputs[i].claimed = false;
   }
+}
+
+void ProbeModule::doShutdown() {
+  releaseInputs();
   DroneModule::doShutdown();
 }
 

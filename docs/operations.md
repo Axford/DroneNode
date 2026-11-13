@@ -413,3 +413,9 @@ so a capture that opens in the middle of a burst can report activity without
 bytes. Use the [shared result contract](../../DroneLinkDatastore/docs/contracts/workbench.md#probe-pin-results)
 for status and payload details. Compare GPS evidence and main-loop measurements
 with the baseline on AntTester before relying on these timing limits.
+
+Probe can also be added, replaced by another Probe configuration on the same
+channel, or removed. Live apply validates and claims all selected Probe inputs
+together. A pin already owned by a retained module rejects the apply. Startup
+still supports reporting an unavailable input alongside other working inputs.
+Replacing a Probe discards its capture in progress and starts a new rotation.
