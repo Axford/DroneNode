@@ -61,6 +61,7 @@ private:
   uint32_t _count = 0;
   bool _incomplete = false;
   bool _level = false;
+  bool _interruptServiceReady = false;
   probe::SerialDecoder _decoder;
 
   static void IRAM_ATTR onEdge(void* context);

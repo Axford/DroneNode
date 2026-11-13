@@ -8,16 +8,20 @@ namespace probe {
 // Decode a non-inverted 8N1 signal from timestamped GPIO changes.
 class SerialDecoder {
 public:
-  void reset(uint32_t baud) {
+  void reset(uint32_t baud, uint32_t time, bool high) {
     _baud = baud;
     _size = _next = _bit = 0;
-    _receiving = false;
+    _receiving = _synchronized = false;
+    _high = high;
+    _highSince = time;
   }
 
   void edge(uint32_t time, bool high) {
     advance(time);
+    if (high && !_high) _highSince = time;
+    if (!high && _high && time - _highSince >= 9000000UL / _baud) _synchronized = true;
     _high = high;
-    if (!_receiving && !high) {
+    if (_synchronized && !_receiving && !high) {
       _receiving = true;
       _start = time;
       _bit = 0;
@@ -37,6 +41,8 @@ public:
           _bytes[_next] = _byte;
           _next = (_next + 1) % capacity;
           if (_size < capacity) ++_size;
+        } else {
+          _synchronized = false;
         }
         _receiving = false;
       } else if (_bit && _high) {
@@ -57,6 +63,8 @@ private:
   static constexpr uint8_t capacity = 15;
   uint32_t _baud = 0;
   uint32_t _start = 0;
+  uint32_t _highSince = 0;
+  bool _synchronized = false;
   bool _receiving = false;
   bool _high = true;
   uint8_t _bit = 0;

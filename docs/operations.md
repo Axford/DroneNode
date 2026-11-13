@@ -407,7 +407,9 @@ module load order wins, and a conflict leaves the other selected pins usable.
 
 The interval is in milliseconds (200–60000). Probe visits one selected pin at
 a time. The initial digital and serial windows are 20 ms and 100 ms. Serial
-receives 8N1 in software at 1200–38400 baud and retains the last 15 decoded
+receives 8N1 in software at a supported baud from 1200 to 38400 and retains
+the last 15 decoded bytes. It waits for an idle-high interval before decoding,
+so a capture that opens in the middle of a burst can report activity without
 bytes. Use the [shared result contract](../../DroneLinkDatastore/docs/contracts/workbench.md#probe-pin-results)
 for status and payload details. Compare GPS evidence and main-loop measurements
 with the baseline on AntTester before relying on these timing limits.

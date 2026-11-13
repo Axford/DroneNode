@@ -11,26 +11,25 @@ namespace {
 struct Pin {
   uint8_t gpio;
   const char* result;
-  const char* baud;
   adc1_channel_t adc;
 };
 
 constexpr Pin pins[] = {
-  {4, "gpio4", "baud4", ADC1_CHANNEL_MAX},
-  {13, "gpio13", "baud13", ADC1_CHANNEL_MAX},
-  {14, "gpio14", "baud14", ADC1_CHANNEL_MAX},
-  {15, "gpio15", "baud15", ADC1_CHANNEL_MAX},
-  {16, "gpio16", "baud16", ADC1_CHANNEL_MAX},
-  {25, "gpio25", "baud25", ADC1_CHANNEL_MAX},
-  {26, "gpio26", "baud26", ADC1_CHANNEL_MAX},
-  {32, "gpio32", "baud32", ADC1_CHANNEL_4},
-  {33, "gpio33", "baud33", ADC1_CHANNEL_5},
-  {34, "gpio34", "baud34", ADC1_CHANNEL_6},
-  {35, "gpio35", "baud35", ADC1_CHANNEL_7},
+  {4, "gpio4", ADC1_CHANNEL_MAX},
+  {13, "gpio13", ADC1_CHANNEL_MAX},
+  {14, "gpio14", ADC1_CHANNEL_MAX},
+  {15, "gpio15", ADC1_CHANNEL_MAX},
+  {16, "gpio16", ADC1_CHANNEL_MAX},
+  {25, "gpio25", ADC1_CHANNEL_MAX},
+  {26, "gpio26", ADC1_CHANNEL_MAX},
+  {32, "gpio32", ADC1_CHANNEL_4},
+  {33, "gpio33", ADC1_CHANNEL_5},
+  {34, "gpio34", ADC1_CHANNEL_6},
+  {35, "gpio35", ADC1_CHANNEL_7},
 };
 
 constexpr uint8_t resultBase = 10;
-constexpr uint8_t baudBase = 46;
+constexpr uint32_t serialBauds[] = {1200, 2400, 4800, 9600, 14400, 19200, 28800, 38400};
 constexpr uint32_t digitalWindow = 20000;
 constexpr uint32_t serialWindow = 100000;
 constexpr uint32_t edgeLimit = 8192;
@@ -46,7 +45,7 @@ ProbeModule::ProbeModule(uint8_t id, DroneSystem* system) : DroneModule(id, syst
   static_assert(pinCount == sizeof(pins) / sizeof(pins[0]), "Probe pin table size");
   setTypeName(F("Probe"));
   _mgmtParams[DRONE_MODULE_PARAM_INTERVAL_E].data.uint32[0] = 500;
-  initParams(2 * pinCount);
+  initParams(pinCount);
   if (!_params) return;
 
   for (uint8_t i = 0; i < pinCount; ++i) {
@@ -54,10 +53,6 @@ ProbeModule::ProbeModule(uint8_t id, DroneSystem* system) : DroneModule(id, syst
     result.paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, resultBase + pins[i].gpio);
     setParamName(FPSTR(pins[i].result), &result);
     result.paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_UINT8_T, 1);
-    auto& baud = _params[pinCount + i];
-    baud.paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, baudBase + i);
-    setParamName(FPSTR(pins[i].baud), &baud);
-    baud.paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_UINT32_T, 4);
   }
 }
 
@@ -75,8 +70,8 @@ configuration::Setting ProbeModule::configure(const char* name, const char* valu
     setting.changed = true;
     return Setting::Handled;
   }
-  // Result and baud parameters are observations, including in saved configuration.
-  if (strncmp(name, "gpio", 4) == 0 || strncmp(name, "baud", 4) == 0) return Setting::Invalid;
+  // Result parameters are observations, including in saved configuration.
+  if (strncmp(name, "gpio", 4) == 0) return Setting::Invalid;
   if (strncmp(name, "pin", 3) != 0) return Setting::Unhandled;
   unsigned gpio = 0;
   if (!telemetry::decimal(name + 3, 35, gpio)) return Setting::Invalid;
@@ -96,9 +91,13 @@ configuration::Setting ProbeModule::configure(const char* name, const char* valu
     }
     unsigned baud = 0;
     if (strncmp(value, "serial,", 7) == 0 && telemetry::decimal(value + 7, 38400, baud) && baud >= 1200) {
-      input.mode = Serial;
-      input.baud = baud;
-      return Setting::Handled;
+      for (auto supported : serialBauds) {
+        if (supported == baud) {
+          input.mode = Serial;
+          input.baud = baud;
+          return Setting::Handled;
+        }
+      }
     }
     return Setting::Invalid;
   }
@@ -125,14 +124,11 @@ void ProbeModule::setup() {
     auto& input = _inputs[i];
     // Discovery replaces retained values even for pins removed from a later configuration.
     _params[i].publish = true;
-    auto& baud = _params[pinCount + i];
-    baud.publish = true;
-    baud.data.uint32[0] = input.baud;
     if (input.mode == Unselected) continue;
     const auto& pin = pins[i];
     uint8_t capabilities = DRONE_SYSTEM_PIN_CAP_INPUT;
     if (input.mode == Analog) capabilities |= DRONE_SYSTEM_PIN_CAP_ANALOG;
-    input.claimed = isEnabled() && !_error && _ds->requestPin(pin.gpio, capabilities, this);
+    input.claimed = !_error && _ds->requestPin(pin.gpio, capabilities, this);
     if (input.claimed) pinMode(pin.gpio, INPUT);
     const uint8_t owner = input.claimed ? 0 : _ds->pinOwnerChannel(pin.gpio);
     setResult(i, input.claimed ? Waiting : Unavailable, &owner, owner ? 1 : 0);
@@ -199,11 +195,14 @@ void ProbeModule::loop() {
       _count = 0;
       _incomplete = false;
       _level = digitalRead(_capturePin) != 0;
-      if (_serialCapture) _decoder.reset(input.baud);
-      _started = micros();
       const auto gpio = static_cast<gpio_num_t>(_capturePin);
-      const auto service = gpio_install_isr_service(0);
-      if ((service != ESP_OK && service != ESP_ERR_INVALID_STATE) ||
+      if (!_interruptServiceReady) {
+        const auto service = gpio_install_isr_service(ARDUINO_ISR_FLAG);
+        _interruptServiceReady = service == ESP_OK || service == ESP_ERR_INVALID_STATE;
+      }
+      _started = micros();
+      if (_serialCapture) _decoder.reset(input.baud, _started, _level);
+      if (!_interruptServiceReady ||
           gpio_set_intr_type(gpio, GPIO_INTR_ANYEDGE) != ESP_OK ||
           gpio_isr_handler_add(gpio, onEdge, this) != ESP_OK) {
         _active = -1;
@@ -274,7 +273,7 @@ void ProbeModule::finishCapture() {
     const Status status = _incomplete ? Incomplete : size ? Complete : _count ? Undecoded : Quiet;
     setResult(index, status, data, size, true);
   } else {
-    data[0] = _incomplete ? digitalRead(_capturePin) != 0 : _level;
+    data[0] = _level;
     const uint16_t count = min(_count, edgeLimit);
     const uint16_t durationMs = _window / 1000;
     data[1] = count;
@@ -316,7 +315,16 @@ void ProbeModule::sampleAnalog(uint8_t index) {
 
 void ProbeModule::setResult(uint8_t index, Status status, const uint8_t* data, uint8_t size, bool publish) {
   auto& result = _params[index];
-  result.data.uint8[0] = (_inputs[index].mode << 4) | status;
+  uint8_t mode = _inputs[index].mode;
+  if (mode == Serial) {
+    for (uint8_t i = 0; i < sizeof(serialBauds) / sizeof(serialBauds[0]); ++i) {
+      if (_inputs[index].baud == serialBauds[i]) {
+        mode += i;
+        break;
+      }
+    }
+  }
+  result.data.uint8[0] = (mode << 4) | status;
   if (size) memcpy(result.data.uint8 + 1, data, size);
   result.paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_UINT8_T, size + 1);
   if (publish) publishParamEntry(&result);

@@ -9,10 +9,10 @@ constexpr uint32_t baud = 9600;
 struct Signal {
   probe::SerialDecoder decoder;
   uint32_t origin = 0xfffff000;
-  uint32_t bit = 0;
+  uint32_t bit = 10;
   bool level = true;
 
-  Signal() { decoder.reset(baud); }
+  Signal() { decoder.reset(baud, origin, true); }
 
   void put(bool next) {
     if (next != level) decoder.edge(time(), next);
@@ -42,6 +42,16 @@ int main() {
   badStop.send(0, false);
   badStop.decoder.advance(badStop.time());
   assert(badStop.decoder.copyTail(bytes) == 0);
+
+  Signal midFrame;
+  midFrame.bit = 0;
+  for (int i = 0; i < 4; ++i) midFrame.send(0x33);
+  midFrame.decoder.advance(midFrame.time());
+  assert(midFrame.decoder.copyTail(bytes) == 0);
+  midFrame.bit += 10;
+  midFrame.send(0xa5);
+  midFrame.decoder.advance(midFrame.time());
+  assert(midFrame.decoder.copyTail(bytes) == 1 && bytes[0] == 0xa5);
 
   Signal incomplete;
   incomplete.send(0xff);
