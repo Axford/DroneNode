@@ -64,10 +64,10 @@ class DroneExecutionManager
   ManagementModule* _hotLoadRequester = nullptr;
 
   configuration::HotLoadResult applyHotLoad(const char* path);
-  DigitalModule* createDigital(uint8_t id, bool detached);
-  ServoModule* createServo(uint8_t id, bool detached);
-  NMEAModule* createNMEA(uint8_t id, bool detached);
-  ProbeModule* createProbe(uint8_t id, bool detached);
+  DigitalModule* prepareDigital(uint8_t id);
+  ServoModule* prepareServo(uint8_t id);
+  NMEAModule* prepareNMEA(uint8_t id);
+  ProbeModule* prepareProbe(uint8_t id);
   uint64_t hotLoadPins(DroneModule* module, HotType type);
   void releaseHotLoadPins(DroneModule* module, HotType type);
   bool restoreHotLoadPins(DroneModule* module, HotType type, uint64_t pins);
@@ -114,6 +114,7 @@ public:
     void completeSetup();
 
     DroneModule* instanceModule(char* typeName, uint8_t id);
+    void serveSupportedModules(AsyncWebServerRequest* request) const;
 };
 
 

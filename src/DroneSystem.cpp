@@ -362,6 +362,10 @@ void DroneSystem::setupWebServer() {
     _doLoop = true;
   });
 
+  _server.on("/supportedModules", HTTP_GET, [&](AsyncWebServerRequest* request) {
+    dem->serveSupportedModules(request);
+  });
+
   // modules
   _server.on("/modules", HTTP_GET, [&](AsyncWebServerRequest *request){
     _doLoop = false;

@@ -393,136 +393,116 @@ void DroneExecutionManager::completeSetup() {
   Instance a module by type name
 */
 
-DigitalModule* DroneExecutionManager::createDigital(uint8_t id, bool detached) {
-  if (detached) return new (std::nothrow) DigitalModule(id, _ds, DroneModule::Registration::Detached);
-  return new DigitalModule(id, _ds);
+DigitalModule* DroneExecutionManager::prepareDigital(uint8_t id) {
+  return new (std::nothrow) DigitalModule(id, _ds, DroneModule::Registration::Detached);
 }
 
-ProbeModule* DroneExecutionManager::createProbe(uint8_t id, bool detached) {
-  if (detached) return new (std::nothrow) ProbeModule(id, _ds, DroneModule::Registration::Detached);
-  return new ProbeModule(id, _ds);
+ProbeModule* DroneExecutionManager::prepareProbe(uint8_t id) {
+  return new (std::nothrow) ProbeModule(id, _ds, DroneModule::Registration::Detached);
 }
 
-NMEAModule* DroneExecutionManager::createNMEA(uint8_t id, bool detached) {
-  if (detached) return new (std::nothrow) NMEAModule(id, _ds, DroneModule::Registration::Detached);
-  return new NMEAModule(id, _ds);
+NMEAModule* DroneExecutionManager::prepareNMEA(uint8_t id) {
+  return new (std::nothrow) NMEAModule(id, _ds, DroneModule::Registration::Detached);
 }
 
-ServoModule* DroneExecutionManager::createServo(uint8_t id, bool detached) {
-  if (detached) return new (std::nothrow) ServoModule(id, _ds, DroneModule::Registration::Detached);
-  return new ServoModule(id, _ds);
+ServoModule* DroneExecutionManager::prepareServo(uint8_t id) {
+  return new (std::nothrow) ServoModule(id, _ds, DroneModule::Registration::Detached);
 }
+
+namespace {
+
+template <typename Module>
+DroneModule* createModule(uint8_t id, DroneSystem* system) {
+  return new Module(id, system);
+}
+
+struct ModuleType {
+  const char* name;
+  DroneModule* (*create)(uint8_t, DroneSystem*);
+};
+
+// The startup factory and capability endpoint share this immutable registry.
+const ModuleType moduleTypes[] = {
+  {"CloudTelemetry", createModule<CloudTelemetryModule>},
+  {ADS1015_STR_ADS1015, createModule<ADS1015Module>},
+  {ANALOG_STR_ANALOG, createModule<AnalogModule>},
+  {ANEMOMETER_STR_ANEMOMETER, createModule<AnemometerModule>},
+  {AVOID_STR_AVOID, createModule<AvoidModule>},
+  {BME280_STR_BME280, createModule<BME280Module>},
+  {CMPS12_STR_CMPS12, createModule<CMPS12Module>},
+  {CONTROLLER_STR_CONTROLLER, createModule<ControllerModule>},
+  {CYLON_STR_CYLON, createModule<CylonModule>},
+  {DEPTH_STR_DEPTH, createModule<DepthModule>},
+  {"Probe", createModule<ProbeModule>},
+  {DIAGNOSTIC_STR_DIAGNOSTIC, createModule<DiagnosticModule>},
+  {DIGITAL_STR_DIGITAL, createModule<DigitalModule>},
+  {HMC5883L_STR_HMC5883L, createModule<HMC5883LModule>},
+  {HT16K33_STR_HT16K33, createModule<HT16K33Module>},
+  {INA219_STR_INA219, createModule<INA219Module>},
+  {INA3221_STR_INA3221, createModule<INA3221Module>},
+  {INJECT_STR_INJECT, createModule<InjectModule>},
+  {JOYSTICK_STR_JOYSTICK, createModule<JoystickModule>},
+  {KITE_CONTROLLER_STR_KITE_CONTROLLER, createModule<KiteControllerModule>},
+  {LSM9DS1_STR_LSM9DS1, createModule<LSM9DS1Module>},
+  {MANAGEMENT_STR_MANAGEMENT, createModule<ManagementModule>},
+  {MOTOR_STR_MOTOR, createModule<MotorModule>},
+  {MPU6050_STR_MPU6050, createModule<MPU6050Module>},
+  {NMEA_STR_NMEA, createModule<NMEAModule>},
+  {NEOPIXEL_STR_NEOPIXEL, createModule<NeopixelModule>},
+  {ODRIVE_STR_ODRIVE, createModule<ODriveModule>},
+  {PAN_SERIAL_STR_PAN_SERIAL, createModule<PanSerialModule>},
+  {PAN_TILT_STR_PAN_TILT, createModule<PanTiltModule>},
+  {POLAR_STR_POLAR, createModule<PolarModule>},
+  {PROA_STR_PROA, createModule<ProaModule>},
+  {QMC5883L_STR_QMC5883L, createModule<QMC5883LModule>},
+  {RECEIVER_STR_RECEIVER, createModule<ReceiverModule>},
+  {RFM69_TELEMETRY_STR_RFM69_TELEMETRY, createModule<RFM69TelemetryModule>},
+  {ROTARY_STR_ROTARY, createModule<RotaryModule>},
+  {SAILOR_STR_SAILOR, createModule<SailorModule>},
+  {SERIAL_TELEMETRY_STR_SERIAL_TELEMETRY, createModule<SerialTelemetryModule>},
+  {SERVO_STR_SERVO, createModule<ServoModule>},
+  {SPEED_CONTROL_STR_SPEED_CONTROL, createModule<SpeedControlModule>},
+  {STATUS_STR_STATUS, createModule<StatusModule>},
+  {TANK_STEER_STR_TANK_STEER, createModule<TankSteerModule>},
+  {TURN_RATE_STR_TURN_RATE, createModule<TurnRateModule>},
+  {UDP_TELEMETRY_STR_UDP_TELEMETRY, createModule<UDPTelemetryModule>},
+  {VL53L0X_STR_VL53L0X, createModule<VL53L0XModule>},
+  {NAV_STR_NAV, createModule<NavModule>},
+  {WATER_SENSOR_STR_WATER_SENSOR, createModule<WaterSensorModule>},
+  {WAYPOINT_STR_WAYPOINT, createModule<WaypointModule>},
+  {WIND_STR_WIND, createModule<WindModule>},
+  {WIND_FROM_WING_STR_WIND_FROM_WING, createModule<WindFromWingModule>},
+};
+
+}  // namespace
 
 DroneModule* DroneExecutionManager::instanceModule(char* typeName, uint8_t id) {
   Log.noticeln(F("[.c] Instantiating %s as %u"), typeName, id);
-  DroneModule *newMod = NULL;
-
-  if (id > 0 && id < 255) {
-    if (!strcmp(typeName,"CloudTelemetry")) {
-      newMod = new CloudTelemetryModule(id, _ds);
-    } else if (strcmp_P(typeName, ADS1015_STR_ADS1015) == 0) {
-      newMod = new ADS1015Module(id, _ds);
-    } else if (strcmp_P(typeName, ANALOG_STR_ANALOG) == 0) {
-      newMod = new AnalogModule(id, _ds);
-    } else if (strcmp_P(typeName, ANEMOMETER_STR_ANEMOMETER) == 0) {
-      newMod = new AnemometerModule(id, _ds);
-    } else if (strcmp_P(typeName, AVOID_STR_AVOID) == 0) {
-      newMod = new AvoidModule(id, _ds);
-    } else if (strcmp_P(typeName, BME280_STR_BME280) == 0) {
-      newMod = new BME280Module(id, _ds);
-    } else if (strcmp_P(typeName, CMPS12_STR_CMPS12) == 0) {
-      newMod = new CMPS12Module(id, _ds);
-    } else if (strcmp_P(typeName, CONTROLLER_STR_CONTROLLER) == 0) {
-      newMod = new ControllerModule(id, _ds);
-    } else if (strcmp_P(typeName, CYLON_STR_CYLON) == 0) {
-      newMod = new CylonModule(id, _ds);
-    } else if (strcmp_P(typeName, DEPTH_STR_DEPTH) == 0) {
-      newMod = new DepthModule(id, _ds);
-    } else if (strcmp(typeName, "Probe") == 0) {
-      newMod = createProbe(id, false);
-    } else if (strcmp_P(typeName, DIAGNOSTIC_STR_DIAGNOSTIC) == 0) {
-      newMod = new DiagnosticModule(id, _ds);
-    } else if (strcmp_P(typeName, DIGITAL_STR_DIGITAL) == 0) {
-      newMod = createDigital(id, false);
-    } else if (strcmp_P(typeName, HMC5883L_STR_HMC5883L) == 0) {
-      newMod = new HMC5883LModule(id, _ds);
-    } else if (strcmp_P(typeName, HT16K33_STR_HT16K33) == 0) {
-      newMod = new HT16K33Module(id, _ds);
-    } else if (strcmp_P(typeName, INA219_STR_INA219) == 0) {
-      newMod = new INA219Module(id, _ds);
-    } else if (strcmp_P(typeName, INA3221_STR_INA3221) == 0) {
-      newMod = new INA3221Module(id, _ds);
-    } else if (strcmp_P(typeName, INJECT_STR_INJECT) == 0) {
-      newMod = new InjectModule(id, _ds);
-    } else if (strcmp_P(typeName, JOYSTICK_STR_JOYSTICK) == 0) {
-      newMod = new JoystickModule(id, _ds);
-    } else if (strcmp_P(typeName, KITE_CONTROLLER_STR_KITE_CONTROLLER) == 0) {
-      newMod = new KiteControllerModule(id, _ds);
-    } else if (strcmp_P(typeName, LSM9DS1_STR_LSM9DS1) == 0) {
-      newMod = new LSM9DS1Module(id, _ds);
-    } else if (strcmp_P(typeName, MANAGEMENT_STR_MANAGEMENT) == 0) {
-      newMod = new ManagementModule(id, _ds);
-    } else if (strcmp_P(typeName, MOTOR_STR_MOTOR) == 0) {
-      newMod = new MotorModule(id, _ds);
-    } else if (strcmp_P(typeName, MPU6050_STR_MPU6050) == 0) {
-      newMod = new MPU6050Module(id, _ds);
-    } else if (strcmp_P(typeName, NMEA_STR_NMEA) == 0) {
-      newMod = createNMEA(id, false);
-    } else if (strcmp_P(typeName, NEOPIXEL_STR_NEOPIXEL) == 0) {
-      newMod = new NeopixelModule(id, _ds);
-    } else if (strcmp_P(typeName, ODRIVE_STR_ODRIVE) == 0) {
-      newMod = new ODriveModule(id, _ds);
-    } else if (strcmp_P(typeName, PAN_SERIAL_STR_PAN_SERIAL) == 0) {
-      newMod = new PanSerialModule(id, _ds);
-    } else if (strcmp_P(typeName, PAN_TILT_STR_PAN_TILT) == 0) {
-      newMod = new PanTiltModule(id, _ds);
-    } else if (strcmp_P(typeName, POLAR_STR_POLAR) == 0) {
-      newMod = new PolarModule(id, _ds);
-    } else if (strcmp_P(typeName, PROA_STR_PROA) == 0) {
-      newMod = new ProaModule(id, _ds);
-    } else if (strcmp_P(typeName, QMC5883L_STR_QMC5883L) == 0) {
-      newMod = new QMC5883LModule(id, _ds);
-    } else if (strcmp_P(typeName, RECEIVER_STR_RECEIVER) == 0) {
-      newMod = new ReceiverModule(id, _ds);
-    } else if (strcmp_P(typeName, RFM69_TELEMETRY_STR_RFM69_TELEMETRY) == 0) {
-      newMod = new RFM69TelemetryModule(id, _ds);
-    } else if (strcmp_P(typeName, ROTARY_STR_ROTARY) == 0) {
-      newMod = new RotaryModule(id, _ds);
-    } else if (strcmp_P(typeName, SAILOR_STR_SAILOR) == 0) {
-      newMod = new SailorModule(id, _ds);
-    } else if (strcmp_P(typeName, SERIAL_TELEMETRY_STR_SERIAL_TELEMETRY) == 0) {
-      newMod = new SerialTelemetryModule(id, _ds);
-    } else if (strcmp_P(typeName, SERVO_STR_SERVO) == 0) {
-      newMod = createServo(id, false);
-    } else if (strcmp_P(typeName, SPEED_CONTROL_STR_SPEED_CONTROL) == 0) {
-      newMod = new SpeedControlModule(id, _ds);
-    } else if (strcmp_P(typeName, STATUS_STR_STATUS) == 0) {
-      newMod = new StatusModule(id, _ds);
-    } else if (strcmp_P(typeName, TANK_STEER_STR_TANK_STEER) == 0) {
-      newMod = new TankSteerModule(id, _ds);
-    } else if (strcmp_P(typeName, TURN_RATE_STR_TURN_RATE) == 0) {
-      newMod = new TurnRateModule(id, _ds);
-    } else if (strcmp_P(typeName, UDP_TELEMETRY_STR_UDP_TELEMETRY) == 0) {
-      newMod = new UDPTelemetryModule(id, _ds);
-    } else if (strcmp_P(typeName, VL53L0X_STR_VL53L0X) == 0) {
-      newMod = new VL53L0XModule(id, _ds);
-    } else if (strcmp_P(typeName, NAV_STR_NAV) == 0) {
-      newMod = new NavModule(id, _ds);
-    } else if (strcmp_P(typeName, WATER_SENSOR_STR_WATER_SENSOR) == 0) {
-      newMod = new WaterSensorModule(id, _ds);
-    } else if (strcmp_P(typeName, WAYPOINT_STR_WAYPOINT) == 0) {
-      newMod = new WaypointModule(id, _ds);
-    } else if (strcmp_P(typeName, WIND_STR_WIND) == 0) {
-      newMod = new WindModule(id, _ds);
-    } else if (strcmp_P(typeName, WIND_FROM_WING_STR_WIND_FROM_WING) == 0) {
-      newMod = new WindFromWingModule(id, _ds);
-    } else {
-      Log.errorln(F("[.c] Unknown type"));
-    }
-
-  } else {
+  if (id == 0 || id == 255) {
     Log.errorln(F("[.c] Invalid id"));
+    return nullptr;
   }
-  return newMod;
+
+  for (const auto& type : moduleTypes) {
+    if (strcmp_P(typeName, type.name) == 0) return type.create(id, _ds);
+  }
+  Log.errorln(F("[.c] Unknown type"));
+  return nullptr;
 }
 
+void DroneExecutionManager::serveSupportedModules(AsyncWebServerRequest* request) const {
+  auto* response = request->beginResponseStream("application/json", 1024);
+  if (!response) {
+    request->send(503, "text/plain", "Module capability response unavailable");
+    return;
+  }
+  response->addHeader("Cache-Control", "no-store");
+  response->printf("{\"schemaVersion\":1,\"node\":%u,\"build\":\"%s\",\"types\":[", _dlm->node(), GIT_COMMIT);
+  const char* separator = "";
+  for (const auto& type : moduleTypes) {
+    response->printf("%s\"%s\"", separator, type.name);
+    separator = ",";
+  }
+  response->print("]}");
+  request->send(response);
+}

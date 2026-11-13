@@ -175,19 +175,19 @@ bool DroneExecutionManager::readHotLoadConfiguration(
       if (candidates && current.type != HotType::StartupOnly) {
         bool ready = false;
         if (current.type == HotType::Digital) {
-          auto* module = createDigital(id, true);
+          auto* module = prepareDigital(id);
           candidates[id] = module;
           ready = module && module->hotLoadReady();
         } else if (current.type == HotType::NMEA) {
-          auto* module = createNMEA(id, true);
+          auto* module = prepareNMEA(id);
           candidates[id] = module;
           ready = module && module->hotLoadReady();
         } else if (current.type == HotType::Servo) {
-          auto* module = createServo(id, true);
+          auto* module = prepareServo(id);
           candidates[id] = module;
           ready = module && module->hotLoadReady();
         } else {
-          auto* module = createProbe(id, true);
+          auto* module = prepareProbe(id);
           candidates[id] = module;
           ready = module && module->hotLoadReady();
         }
