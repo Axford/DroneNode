@@ -17,7 +17,9 @@ bool applyDigitalSetting(DigitalModule &module, configuration::Line &line) {
   if (!strcmp(line.name, "publish")) {
     char* remaining = line.value;
     while (remaining) {
-      char* name = strsep(&remaining, ",");
+      char* name = remaining;
+      remaining = strchr(name, ',');
+      if (remaining) *remaining++ = 0;
       auto* param = module.getParamEntryByName(name);
       if (!param) return false;
       param->publish = true;
@@ -111,7 +113,9 @@ bool DroneExecutionManager::readHotLoadConfiguration(
   bool valid = true;
   char* remaining = text.get();
   while (valid && remaining) {
-    const char* raw = strsep(&remaining, "\n");
+    char* raw = remaining;
+    remaining = strchr(raw, '\n');
+    if (remaining) *remaining++ = 0;
     configuration::Line line;
     if (strlen(raw) > 2048 || !line.parse(raw, false)) {
       valid = false;
