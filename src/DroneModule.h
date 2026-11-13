@@ -113,6 +113,7 @@ enum DRONE_MODULE_DISCOVERY_STATE {
 class DroneSystem;
 class DroneLinkManager;
 class DroneModuleManager;
+class WaypointModule;
 class DroneExecutionManager;
 //class DroneLinkMsg;
 
@@ -158,6 +159,7 @@ public:
   virtual ~DroneModule();
 
   uint8_t id();
+  virtual WaypointModule *asWaypoint() { return nullptr; }
 
   void setTypeName( const __FlashStringHelper *name);
   void setParamName( const __FlashStringHelper *name, DRONE_PARAM_ENTRY *param);

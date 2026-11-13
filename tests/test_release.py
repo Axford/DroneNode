@@ -34,6 +34,8 @@ class ReleaseTests(unittest.TestCase):
         for entry in expected['TankSteer']['pub']:
             if entry['name'] in ['mode', 'trim', 'limits', 'threshold']:
                 entry['address'] = {'mode': 10, 'trim': 11, 'limits': 13, 'threshold': 14}[entry['name']]
+        expected['Nav']['pub'].append(dict(address=27, type='u32', numValues=3, writeable=True,
+            name='moveTarget', description='Guarded active target drag. See the shared packet contract.'))
         expected['SerialTelemetry']['pub'][1]['description'] = 'Counters: sent, complete RX handoffs (before DLM CRC), framing rejects'
         # Exercise the new working-tree module before its first commit; exports
         # still require a clean committed tree and retain their provenance gate.

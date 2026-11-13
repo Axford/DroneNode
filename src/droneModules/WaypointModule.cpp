@@ -243,6 +243,34 @@ void WaypointModule::setup() {
 }
 
 
+void WaypointModule::onParamWrite(DRONE_PARAM_ENTRY *param) {
+  DroneModule::onParamWrite(param);
+  const auto id = getDroneLinkMsgParam(param->paramPriority);
+  if (id == WAYPOINT_PARAM_MODE || id == WAYPOINT_PARAM_WAYPOINT) _activeWaypoint = -1;
+}
+
+uint32_t WaypointModule::activeVisit(const float *target) {
+  if (!_setupDone || !_enabled || _activeWaypoint < 0 ||
+      _params[WAYPOINT_PARAM_MODE_E].data.uint8[0] != WAYPOINT_MODE_NORMAL ||
+      _params[WAYPOINT_PARAM_WAYPOINT_E].data.uint8[0] != _activeWaypoint ||
+      memcmp(target, _params[WAYPOINT_PARAM_TARGET_E].data.f, 3 * sizeof(float)) != 0) return 0;
+  return _visit;
+}
+
+bool WaypointModule::moveActiveWaypoint(uint32_t visit, float longitude, float latitude) {
+  auto &target = _params[WAYPOINT_PARAM_TARGET_E];
+  if (!visit || activeVisit(target.data.f) != visit) return false;
+  float moved[] = {longitude, latitude, target.data.f[2]};
+  updateAndPublishParam(&target, reinterpret_cast<uint8_t *>(moved), sizeof(moved));
+  return true;
+}
+
+void WaypointModule::publishTarget(uint8_t waypoint) {
+  const auto saved = _waypoints.get(waypoint);
+  float target[] = {saved.lon, saved.lat, saved.radius};
+  updateAndPublishParam(&_params[WAYPOINT_PARAM_TARGET_E], reinterpret_cast<uint8_t *>(target), sizeof(target));
+}
+
 void WaypointModule::loop() {
   DroneModule::loop();
   if (!_setupDone) return;
@@ -251,6 +279,7 @@ void WaypointModule::loop() {
   uint8_t waypoint = _params[WAYPOINT_PARAM_WAYPOINT_E].data.uint8[0];
   uint8_t waypoints = _params[WAYPOINT_PARAM_WAYPOINTS_E].data.uint8[0];
 
+  bool beginVisit = _activeWaypoint != waypoint;
   float newSpeed = _params[WAYPOINT_PARAM_SPEED_E].data.f[0];
 
   if (m == WAYPOINT_MODE_RELOAD) {
@@ -262,8 +291,9 @@ void WaypointModule::loop() {
     // load first waypoint from file
     waypoint = 0;
     waypoints = _waypoints.size();
+    beginVisit = true;
 
-  } else if (waypoints > 0) {
+  } else if (waypoints > 0 && !beginVisit) {
 
     // ensure we have valid locations
     if (_subs[WAYPOINT_SUB_LOCATION_E].param.data.f[0] != 0 && 
@@ -297,8 +327,12 @@ void WaypointModule::loop() {
             if (_params[WAYPOINT_PARAM_LOOP_E].data.uint8[0] == 1) {
               waypoint = 0;
               _firstDistanceRemaining = 0;
+              beginVisit = true;
             }
-          } else waypoint++;
+          } else {
+            waypoint++;
+            beginVisit = true;
+          }
         }
       }
 
@@ -333,10 +367,11 @@ void WaypointModule::loop() {
   }
 
   if (waypoints > 0 && waypoint < waypoints) {
-    // update new target
-    WAYPOINT_MODULE_WAYPOINT t = _waypoints.get(waypoint);
-    float newTarget[3] = { t.lon, t.lat, t.radius};
-    updateAndPublishParam(&_params[WAYPOINT_PARAM_TARGET_E], (uint8_t*)&newTarget, sizeof(newTarget));
+    if (beginVisit) {
+      _activeWaypoint = waypoint;
+      if (++_visit == 0) ++_visit;
+      publishTarget(waypoint);
+    }
 
     // do we need to store the waypoint in flash?
     if (waypoint != _lastStoredWaypoint) {
@@ -346,6 +381,10 @@ void WaypointModule::loop() {
       pref.putUShort("waypoint", waypoint);
       pref.end();
     }
+  } else {
+    _activeWaypoint = -1;
+    float unset[3] = {};
+    updateAndPublishParam(&_params[WAYPOINT_PARAM_TARGET_E], reinterpret_cast<uint8_t *>(unset), sizeof(unset));
   }
 
   // update params

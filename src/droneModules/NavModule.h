@@ -98,7 +98,13 @@ Target waypoints are defined in terms of Lon Lat and target Radius in meters.
 #define NAV_PARAM_LIMITS         24
 #define NAV_PARAM_LIMITS_E       10
 
-#define NAV_PARAM_ENTRIES        11
+// @pub 27;u32;3;w;moveTarget;Guarded active target drag. See the shared packet contract.
+#define NAV_PARAM_MOVE_TARGET     27
+#define NAV_PARAM_MOVE_TARGET_E   11
+
+#define NAV_PARAM_ENTRIES        12
+
+class WaypointModule;
 
 static const char NAV_STR_NAV[] PROGMEM = "Nav";
 
@@ -114,6 +120,12 @@ enum NAV_MODE {
 
 class NavModule:  public DroneModule {
 protected:
+  DRONE_LINK_ADDR _moveSource = {};
+  uint32_t _moveVisit = 0;
+  uint32_t _moveGuard = 0;
+  WaypointModule *refreshMoveGuard();
+  void applyTargetMove(DroneLinkMsg *msg);
+
   boolean _atTarget;  // true if we've reached the current target
   float _progress;  // ratio of current distance to target divided by target radius
   float _lastTarget[3];  // internal tracker of the last target
@@ -122,6 +134,7 @@ public:
 
   NavModule(uint8_t id, DroneSystem* ds);
 
+  void handleLinkMessage(DroneLinkMsg *msg) override;
   void onParamWrite(DRONE_PARAM_ENTRY *param);
   void onSubReceived(DRONE_PARAM_SUB *sub);
 

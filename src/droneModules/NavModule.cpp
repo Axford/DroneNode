@@ -1,4 +1,7 @@
 #include "NavModule.h"
+#include "WaypointModule.h"
+#include "../DroneModuleManager.h"
+#include <esp_system.h>
 #include "../DroneLinkMsg.h"
 #include "../DroneLinkManager.h"
 #include "../strings.h"
@@ -126,8 +129,87 @@ NavModule::NavModule(uint8_t id, DroneSystem* ds):
    // @default limits=-25,10
    param->data.f[0] = -25;
    param->data.f[1] = 10;
+
+   param = &_params[NAV_PARAM_MOVE_TARGET_E];
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_HIGH, NAV_PARAM_MOVE_TARGET);
+   setParamName(F("moveTarget"), param);
+   param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_UINT32_T, 12);
+   memset(param->data.c, 0, 16);
 }
 
+
+WaypointModule *NavModule::refreshMoveGuard() {
+  const auto &sub = _subs[NAV_SUB_TARGET_E];
+  const auto mode = _params[NAV_PARAM_MODE_E].data.uint8[0];
+  const bool validTarget = isfinite(sub.param.data.f[0]) && sub.param.data.f[0] != 0 &&
+      fabsf(sub.param.data.f[0]) <= 180 && isfinite(sub.param.data.f[1]) && fabsf(sub.param.data.f[1]) <= 90;
+  WaypointModule *waypoint = nullptr;
+  uint32_t visit = 0;
+  bool movable = false;
+  if (_enabled && _setupDone && validTarget) {
+    if (sub.addr.node == 0 && sub.addr.channel == 0) {
+      movable = mode == NAV_IDLE || mode == NAV_GOTO;
+    } else if (sub.addr.node == _dlm->node() &&
+               getDroneLinkMsgParam(sub.addr.paramPriority) == WAYPOINT_PARAM_TARGET) {
+      auto *owner = _dmm->getModuleById(sub.addr.channel);
+      waypoint = owner ? owner->asWaypoint() : nullptr;
+      if (waypoint) {
+        visit = waypoint->activeVisit(sub.param.data.f);
+        movable = visit != 0;
+      }
+    }
+  }
+
+  auto &move = _params[NAV_PARAM_MOVE_TARGET_E];
+  const auto longitude = movable ? sub.param.data.uint32[0] : 0;
+  const auto latitude = movable ? sub.param.data.uint32[1] : 0;
+  if (!movable) {
+    _moveGuard = 0;
+  } else if (!_moveGuard || memcmp(&_moveSource, &sub.addr, sizeof(sub.addr)) != 0 || _moveVisit != visit ||
+             move.data.uint32[1] != longitude || move.data.uint32[2] != latitude) {
+    do { _moveGuard = esp_random(); } while (!_moveGuard || _moveGuard == move.data.uint32[0]);
+  }
+  _moveSource = sub.addr;
+  _moveVisit = visit;
+  uint32_t observed[] = {_moveGuard, longitude, latitude};
+  updateAndPublishParam(&move, reinterpret_cast<uint8_t *>(observed), sizeof(observed));
+  return waypoint;
+}
+
+void NavModule::applyTargetMove(DroneLinkMsg *msg) {
+  if (msg->type() != DRONE_LINK_MSG_TYPE_UINT32_T || msg->length() != 12) return;
+  const float longitude = msg->_msg.payload.f[1];
+  const float latitude = msg->_msg.payload.f[2];
+  if (!isfinite(longitude) || longitude == 0 || fabsf(longitude) > 180 ||
+      !isfinite(latitude) || fabsf(latitude) > 90) return;
+
+  auto *waypoint = refreshMoveGuard();
+  if (!_moveGuard || msg->_msg.payload.uint32[0] != _moveGuard) return;
+  _moveGuard = 0;
+  if (waypoint) {
+    waypoint->moveActiveWaypoint(_moveVisit, longitude, latitude);
+    return;
+  }
+  auto &target = _subs[NAV_SUB_TARGET_E].param;
+  target.data.f[0] = longitude;
+  target.data.f[1] = latitude;
+  onParamWrite(&target);
+  _updateNeeded = true;
+  if (target.publish) publishParamEntry(&target);
+  refreshMoveGuard();
+}
+
+void NavModule::handleLinkMessage(DroneLinkMsg *msg) {
+  const bool addressed = msg->node() == _dlm->node() && msg->channel() == _id;
+  if (addressed && msg->param() == NAV_PARAM_MOVE_TARGET &&
+      msg->type() <= DRONE_LINK_MSG_TYPE_CHAR && !msg->writable()) {
+    applyTargetMove(msg);
+    return;
+  }
+  if (addressed && msg->param() == NAV_PARAM_MOVE_TARGET) refreshMoveGuard();
+  DroneModule::handleLinkMessage(msg);
+  if (addressed && (msg->param() == NAV_SUB_TARGET_ADDR || msg->param() == NAV_PARAM_MODE)) refreshMoveGuard();
+}
 
 void NavModule::onParamWrite(DRONE_PARAM_ENTRY *param) {
   DroneModule::onParamWrite(param);
@@ -175,6 +257,8 @@ void NavModule::setup() {
 
 void NavModule::loop() {
   DroneModule::loop();
+
+  refreshMoveGuard();
 
   // see if we have a valid location to set home
   if (_params[NAV_PARAM_HOME_E].data.f[0] == 0 &&

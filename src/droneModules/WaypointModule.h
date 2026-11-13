@@ -94,6 +94,10 @@ protected:
     uint8_t _lastStoredWaypoint;
     IvanLinkedList::LinkedList<WAYPOINT_MODULE_WAYPOINT> _waypoints;
 
+    uint32_t _visit = 0;
+    int _activeWaypoint = -1;
+    void publishTarget(uint8_t waypoint);
+
     float _totalDistance;
     float _distanceRemaining;
     float _distanceToNext;
@@ -106,10 +110,16 @@ public:
 
   WaypointModule(uint8_t id, DroneSystem* ds);
 
+  WaypointModule *asWaypoint() override { return this; }
   void loadWaypoints();
   void setup();
 
   void loop();
+  void doReset() override { _activeWaypoint = -1; }
+  void onParamWrite(DRONE_PARAM_ENTRY *param) override;
+
+  uint32_t activeVisit(const float *target);
+  bool moveActiveWaypoint(uint32_t visit, float longitude, float latitude);
 };
 
 #endif
