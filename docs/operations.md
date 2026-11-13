@@ -341,3 +341,7 @@ The bridge checks the route again before forwarding. A congested mesh queue can 
 ### Guarded Nav target moves
 
 Add `moveTarget` to Nav's published parameters and include Nav parameter 27 in the CloudTelemetry selections for map dragging. Also publish and select Nav's `target` as usual. With a local Waypoint source, publish its target so Nav receives it. The move applies to the current Waypoint visit in memory. Waypoint retains its arrival radius and reads the original route coordinates on a new visit. See the [shared packet contract](../../DroneLinkDatastore/docs/contracts/packet.md#guarded-nav-target-move).
+
+### Verified Waypoint route preview
+
+Add `routeDigest` to Waypoint's published parameters and select parameter 17 on that Waypoint channel in CloudTelemetry. Publish its module type as well. The digest identifies the bytes parsed at load or reload. A temporary active target move retains the same digest. See the [route preview contract](../../DroneLinkDatastore/docs/contracts/workbench.md#verified-route-preview).
