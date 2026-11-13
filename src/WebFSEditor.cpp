@@ -168,13 +168,17 @@ void WebFSEditor::configureWebServer(AsyncWebServer &server) {
         const char *fileName = request->getParam("name")->value().c_str();
         const char *fileAction = request->getParam("action")->value().c_str();
 
-        char * path = new char[strlen(fileName)+1];
-        path[0] = '/';
-        strcpy(&path[1], fileName);
+        String path;
+        if (path.reserve(strlen(fileName) + 1)) {
+          path = '/';
+          path += fileName;
+        }
 
         logmessage = "Client:" + request->client()->remoteIP().toString() + " " + request->url() + "?name=" + String(fileName) + "&action=" + String(fileAction);
 
-        if (!_fs.exists(path)) {
+        if (path.isEmpty()) {
+          request->send(503, "text/plain", "ERROR: unable to allocate file path");
+        } else if (!_fs.exists(path)) {
           //Log.noticeln(logmessage + " ERROR: file does not exist");
           request->send(400, "text/plain", "ERROR: file does not exist");
         } else {
