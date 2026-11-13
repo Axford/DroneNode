@@ -6,22 +6,21 @@
 #include "DroneSystem.h"
 
 DigitalModule::DigitalModule(uint8_t id, DroneSystem* ds):
-  DroneModule ( id, ds )
+  DigitalModule(id, ds, Registration::Managed) {}
+
+DigitalModule::DigitalModule(uint8_t id, DroneSystem* ds, Registration registration):
+  DroneModule(id, ds, registration)
  {
+   if (!_mgmtParams) return;
    setTypeName(FPSTR(DIGITAL_STR_DIGITAL));
 
    // set default interval to 100
    // @default interval = 100
    _mgmtParams[DRONE_MODULE_PARAM_INTERVAL_E].data.uint32[0] = 100;
 
-   // subs
-   initSubs(DIGITAL_SUBS);
-
-   DRONE_PARAM_SUB *sub;
-
-
-   // pubs
+   // Digital has no input subscriptions.
    initParams(DIGITAL_PARAM_ENTRIES);
+   if (!_params) return;
 
    DRONE_PARAM_ENTRY *param;
 
@@ -48,8 +47,36 @@ DigitalModule::DigitalModule(uint8_t id, DroneSystem* ds):
 }
 
 
+DigitalModule::~DigitalModule() {
+  // Only a successfully started detached input owns a trial pin.
+  if (_id == 0 && _setupDone) _ds->releaseTrialPin(trialPin());
+}
+
+DigitalModule::TrialStart DigitalModule::startTrial(uint8_t pin) {
+  if (!_mgmtParams || !_params) return TrialStart::OutOfMemory;
+  if (!_ds->claimTrialPin(pin)) return TrialStart::PinUnavailable;
+
+  _params[DIGITAL_PARAM_PINS_E].data.uint8[0] = pin;
+  DroneModule::setup();
+  loop();
+  return TrialStart::Started;
+}
+
+uint8_t DigitalModule::trialPin() const {
+  return _params[DIGITAL_PARAM_PINS_E].data.uint8[0];
+}
+
+bool DigitalModule::trialHigh() const {
+  return _params[DIGITAL_PARAM_INPUT_E].data.f[0] != 0;
+}
+
 void DigitalModule::setup() {
   DroneModule::setup();
+  if (!_params) {
+    setError(1);
+    disable();
+    return;
+  }
 
   if (_ds->requestPin(_params[DIGITAL_PARAM_PINS_E].data.uint8[0], DRONE_SYSTEM_PIN_CAP_INPUT, this)) {
     // set as input and enable pullup

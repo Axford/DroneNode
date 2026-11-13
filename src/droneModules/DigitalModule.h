@@ -46,14 +46,20 @@ Reads a digital value on specified pin and maps into the values specified in lim
 static const char DIGITAL_STR_DIGITAL[] PROGMEM = "Digital";
 
 class DigitalModule:  public DroneModule {
-protected:
+  friend class DroneModuleManager;
+
+  enum class TrialStart { Started, PinUnavailable, OutOfMemory };
+  DigitalModule(uint8_t id, DroneSystem* ds, Registration registration);
+  TrialStart startTrial(uint8_t pin);
+  uint8_t trialPin() const;
+  bool trialHigh() const;
+
 public:
-
   DigitalModule(uint8_t id, DroneSystem* ds);
-  
-  virtual void setup();
+  ~DigitalModule() override;
 
-  void loop();
+  void setup() override;
+  void loop() override;
 
 };
 

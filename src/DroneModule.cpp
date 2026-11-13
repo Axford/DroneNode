@@ -13,19 +13,23 @@ using std::placeholders::_3;
 using std::placeholders::_4;
 
 
-DroneModule::DroneModule(uint8_t id, DroneSystem* ds):
+DroneModule::DroneModule(uint8_t id, DroneSystem* ds, Registration registration):
 _ds(ds),
 _id(id),
-_fs(LITTLEFS) // TODO - replace with dfs reference
+_fs(LITTLEFS), // TODO - replace with dfs reference
+_params(nullptr),
+_subs(nullptr)
  {
   _dmm = _ds->dmm;
   _dlm = _ds->dlm;
   _dem = _ds->dem;
 
-  _dmm->registerModule(this);
+  if (registration == Registration::Managed) {
+    _dmm->registerModule(this);
+    _dlm->subscribe(id, this, DRONE_LINK_PARAM_ALL); // subscribe to all params for self
+  }
   _enabled = true;
   _error = 0;
-  _dlm->subscribe(id, this, DRONE_LINK_PARAM_ALL); // subscribe to all params for self
   _mgmtMsg.source(_dlm->node()); // default to local node
   _mgmtMsg.node(_dlm->node()); // default to local node
   _mgmtMsg.channel(_id); // pre-set mgmtmsg with own id
@@ -45,6 +49,7 @@ _fs(LITTLEFS) // TODO - replace with dfs reference
 
   // alloc for mgmt params
   _mgmtParams = (DRONE_PARAM_ENTRY*)malloc( sizeof(DRONE_PARAM_ENTRY) * DRONE_MGMT_PARAM_ENTRIES);
+  if (!_mgmtParams && registration == Registration::Detached) return;
 
   for (uint8_t i=0; i<DRONE_MGMT_PARAM_ENTRIES; i++) {
     _mgmtParams[i].changed = false;
@@ -95,7 +100,11 @@ _fs(LITTLEFS) // TODO - replace with dfs reference
 }
 
 
-DroneModule::~DroneModule() { }
+DroneModule::~DroneModule() {
+  free(_subs);
+  free(_params);
+  free(_mgmtParams);
+}
 
 uint8_t DroneModule::id() {
   return _id;
@@ -153,6 +162,7 @@ void DroneModule::initSubs(uint8_t numSubs) {
 void DroneModule::initParams(uint8_t numParams) {
   _numParamEntries = numParams;
   _params = (DRONE_PARAM_ENTRY*)malloc( sizeof(DRONE_PARAM_ENTRY) * numParams);
+  if (!_params) _numParamEntries = 0;
 
   for (uint8_t i=0; i<_numParamEntries; i++) {
     _params[i].publish = false;

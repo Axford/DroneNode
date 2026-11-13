@@ -29,6 +29,7 @@ DroneSystem is the root of all Drone objects, keeping the main script as simple 
 
 // arduino core
 #include "Arduino.h"
+#include <atomic>
 
 // drone core
 #include "DroneLinkMsg.h"
@@ -102,7 +103,7 @@ struct DRONE_SYSTEM_SERIAL_PORT {
 #define DRONE_SYSTEM_PIN_CAP_LED        16
 
 struct DRONE_SYSTEM_PIN {
-  uint8_t state;
+  std::atomic<uint8_t> state;
   uint8_t capabilities;
   DroneModule* module;
   NeoPixelBrightnessBus<NeoGrbFeature, Neo800KbpsMethod> * strip; // if a strip is associated with this pin
@@ -116,6 +117,10 @@ struct DRONE_SYSTEM_PIN {
 // DroneSystem
 // ----------------------------------------------------------------------------
 class DroneSystem {
+  friend class DigitalModule;
+  bool claimTrialPin(uint8_t pin);
+  void releaseTrialPin(uint8_t pin);
+
 protected:
   // motherboard version
   uint8_t _motherboardVersion;

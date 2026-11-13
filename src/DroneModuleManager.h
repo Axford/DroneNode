@@ -15,12 +15,18 @@ Manages all active modules.  Deals with the management channel (e.g. dynamic sub
 #define DRONE_MODULE_MANAGER_DISCOVERY_INTERVAL 250
 
 // forward declarations
+class DigitalModule;
+class DroneSystem;
 class DroneModule;
 class DroneLinkManager;
 
 
 // DroneModuleManager
 class DroneModuleManager {
+  DigitalModule* _digitalTrial = nullptr;
+  void stopDigitalTrial();
+  void printDigitalTrial(Print &output);
+
 protected:
   uint8_t _node;
   String _hostname;
@@ -37,6 +43,7 @@ protected:
 public:
   DroneModuleManager(DroneLinkManager* dlm, fs::FS &fs);
   void registerModule(DroneModule *m);
+  void runDigitalTrialCommand(const char* command, Print &output, DroneSystem* system);
 
   DroneModule* getModuleByIndex(uint8_t index);
   DroneModule* getModuleById(uint8_t id);

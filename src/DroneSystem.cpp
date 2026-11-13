@@ -47,6 +47,7 @@ DroneSystem::DroneSystem() : _server(80), dfs(this), _fsEditor(LITTLEFS, _doLoop
   for (uint8_t i=0; i<DRONE_SYSTEM_PINS; i++) {
     _pins[i].state = DRONE_SYSTEM_PIN_STATE_UNAVAILABLE;
     _pins[i].capabilities = 0;
+    _pins[i].module = nullptr;
     _pins[i].strip = NULL;
     _pins[i].stripIndex = 0;
   }
@@ -157,8 +158,8 @@ boolean DroneSystem::requestPin(uint8_t pin, uint8_t capabilities, DroneModule* 
   if (_pins[pin].state == DRONE_SYSTEM_PIN_STATE_AVAILABLE) {
     // check pin has requested capabilities
     if ((_pins[pin].capabilities & capabilities) == capabilities) {
-      _pins[pin].state = DRONE_SYSTEM_PIN_STATE_ACTIVE;
       _pins[pin].module = module;
+      _pins[pin].state = DRONE_SYSTEM_PIN_STATE_ACTIVE;
       return true;
     } else {
       Log.errorln("[ds.rP] Pin does not have requested capabilities %u, %u != %u", pin, _pins[pin].capabilities, capabilities);
@@ -171,6 +172,22 @@ boolean DroneSystem::requestPin(uint8_t pin, uint8_t capabilities, DroneModule* 
   }
 }
 
+
+bool DroneSystem::claimTrialPin(uint8_t pin) {
+  if (pin != PIN_OUT0_0 && pin != PIN_OUT0_1) return false;
+  // Use the same registry as boot modules. A trial has no public module owner.
+  auto &entry = _pins[pin];
+  if (!(entry.capabilities & DRONE_SYSTEM_PIN_CAP_INPUT) ||
+      entry.state != DRONE_SYSTEM_PIN_STATE_AVAILABLE) return false;
+  entry.state = DRONE_SYSTEM_PIN_STATE_ACTIVE;
+  pinMode(pin, INPUT_PULLUP);
+  return true;
+}
+
+void DroneSystem::releaseTrialPin(uint8_t pin) {
+  pinMode(pin, INPUT);
+  _pins[pin].state = DRONE_SYSTEM_PIN_STATE_AVAILABLE;
+}
 
 NeoPixelBrightnessBus<NeoGrbFeature, Neo800KbpsMethod>* DroneSystem::requestStrip(uint8_t pin, uint8_t pixels, DroneModule* module) {
 
@@ -266,13 +283,14 @@ void DroneSystem::servePinInfo(AsyncWebServerRequest *request) {
 
   uint8_t total = 0;
   for (uint8_t i=0; i<DRONE_SYSTEM_PINS; i++) {
-    if (_pins[i].state > 0) {
+    const uint8_t state = _pins[i].state;
+    if (state > 0) {
       if (total > 0 ) response->print(",");
       total++;
 
       response->print("{");
       response->printf("\"id\":%u", i);
-      response->printf(",\"state\":%u", _pins[i].state );
+      response->printf(",\"state\":%u", state );
       
       response->printf(",\"output\":%u", ((_pins[i].capabilities & DRONE_SYSTEM_PIN_CAP_OUTPUT) > 0) ? 1 : 0);
       response->printf(",\"input\":%u", ((_pins[i].capabilities & DRONE_SYSTEM_PIN_CAP_INPUT) > 0) ? 1 : 0);
@@ -635,6 +653,11 @@ void DroneSystem::loop() {
         if (strcmp(_serialCommand, "wifi")==0) {
           DroneConsole.println("Enabling WiFi");
           dlm->enableWiFi();
+        }
+
+        if (strcmp(_serialCommand, "trial") == 0 ||
+            strncmp(_serialCommand, "trial ", 6) == 0) {
+          dmm->runDigitalTrialCommand(_serialCommand, DroneConsole, this);
         }
 
         // traceroute

@@ -1,6 +1,9 @@
 #include <Arduino.h>
 #include "SPIFFS.h"
 #include <functional>
+#include <new>
+#include "droneModules/DigitalModule.h"
+#include "pinConfig.h"
 
 #include "DroneModuleManager.h"
 #include "DroneLinkManager.h"
@@ -99,7 +102,63 @@ void DroneModuleManager::onOTAProgress(float progress) {
   }
 }
 
+void DroneModuleManager::stopDigitalTrial() {
+  auto* previous = _digitalTrial;
+  _digitalTrial = nullptr;
+  if (previous) previous->doShutdown();
+  delete previous;
+}
+
+void DroneModuleManager::printDigitalTrial(Print &output) {
+  if (!_digitalTrial) {
+    output.println("trial state=off");
+    return;
+  }
+
+  output.printf("trial state=running pin=%u level=%u\n",
+                _digitalTrial->trialPin(), _digitalTrial->trialHigh());
+}
+
+void DroneModuleManager::runDigitalTrialCommand(const char* command, Print &output, DroneSystem* system) {
+  if (strcmp(command, "trial") == 0) {
+    printDigitalTrial(output);
+    return;
+  }
+  if (strcmp(command, "trial off") == 0) {
+    stopDigitalTrial();
+    printDigitalTrial(output);
+    return;
+  }
+
+  uint8_t pin;
+  if (strcmp(command, "trial 32") == 0) {
+    pin = PIN_OUT0_0;
+  } else if (strcmp(command, "trial 33") == 0) {
+    pin = PIN_OUT0_1;
+  } else {
+    output.println("trial error=invalid-command");
+    printDigitalTrial(output);
+    return;
+  }
+
+  if (!_digitalTrial || _digitalTrial->trialPin() != pin) {
+    // Keep the previous input running until the candidate owns a pin and has sampled it.
+    auto* candidate = new (std::nothrow) DigitalModule(0, system, DroneModule::Registration::Detached);
+    const auto result = candidate ? candidate->startTrial(pin) : DigitalModule::TrialStart::OutOfMemory;
+    if (result == DigitalModule::TrialStart::Started) {
+      stopDigitalTrial();
+      _digitalTrial = candidate;
+    } else {
+      delete candidate;
+      output.println(result == DigitalModule::TrialStart::PinUnavailable ?
+                     "trial error=pin-unavailable" : "trial error=out-of-memory");
+    }
+  }
+  printDigitalTrial(output);
+}
+
 void DroneModuleManager::shutdown() {
+  stopDigitalTrial();
   DroneModule* m;
   for(int i = 0; i < _modules.size(); i++) {
     m = _modules.get(i);
@@ -113,6 +172,7 @@ void DroneModuleManager::restart() {
 }
 
 void DroneModuleManager::updateStarting() {
+  stopDigitalTrial();
   // disable discovery
   discovery(false);
 
@@ -142,6 +202,8 @@ void DroneModuleManager::setupModules() {
 }
 
 void DroneModuleManager::loopModules() {
+  if (_digitalTrial && _digitalTrial->readyToLoop()) _digitalTrial->loop();
+
   DroneModule* m;
   for(int i = 0; i < _modules.size(); i++) {
     m = _modules.get(i);

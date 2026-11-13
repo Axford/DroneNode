@@ -345,3 +345,15 @@ Add `moveTarget` to Nav's published parameters and include Nav parameter 27 in t
 ### Verified Waypoint route preview
 
 Add `routeDigest` to Waypoint's published parameters and select parameter 17 on that Waypoint channel in CloudTelemetry. Publish its module type as well. The digest identifies the bytes parsed at load or reload. A temporary active target move retains the same digest. See the [route preview contract](../../DroneLinkDatastore/docs/contracts/workbench.md#verified-route-preview).
+
+## Temporary Digital input trial
+
+Use the USB console at 115200 baud when the built-in console owns UART0. Select a free general-purpose GPIO 32 or 33 and use an input with a compatible signal and common ground. The Digital module enables the internal pull-up while it owns the pin and samples every 100 ms. An open input reads high.
+
+| Command | Result |
+| --- | --- |
+| `trial` | Reports `trial state=off` or `trial state=running pin=32 level=1` with the current sampled level. |
+| `trial 32` or `trial 33` | Starts an input or switches to the requested pin. Repeating the active pin returns its current state. |
+| `trial off` | Discards the trial and releases its pin. |
+
+A rejected command prints `trial error=invalid-command`, `trial error=pin-unavailable` or `trial error=out-of-memory` followed by the current state. Restart discards the trial and loads the stored configuration. GPIO ownership is independently visible in the existing `/pins` diagnostic. Check free heap through the Management module after traffic settles and compare all startup file bytes before and after the run.

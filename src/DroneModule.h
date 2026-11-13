@@ -155,7 +155,8 @@ public:
   long hLMDuration;
   long loopDuration;
 
-  DroneModule(uint8_t id, DroneSystem* ds);
+  enum class Registration { Managed, Detached };
+  DroneModule(uint8_t id, DroneSystem* ds, Registration registration = Registration::Managed);
   virtual ~DroneModule();
 
   uint8_t id();
