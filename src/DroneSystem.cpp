@@ -27,6 +27,7 @@ void DroneSystem::configurePin(uint8_t pin, uint8_t capabilities) {
 DroneSystem::DroneSystem() : _server(80), dfs(this), _fsEditor(LITTLEFS, _doLoop) {
   _motherboardVersion = 0;
   _SDAvailable = false;
+  _i2cLoopMutex = xSemaphoreCreateMutexStatic(&_i2cLoopMutexStorage);
   _moduleChangeMutex = xSemaphoreCreateMutexStatic(&_moduleChangeMutexStorage);
 
   // create and give SPI Sempahore
@@ -384,11 +385,13 @@ void DroneSystem::setupWebServer() {
     _doLoop = true;
   });
 
+  DroneWire::mountDiagnostic(_server, dlm->node());
+
   // I2C scan info
   _server.on("/i2c", HTTP_GET, [&](AsyncWebServerRequest *request) {
-    _doLoop = false;
+    if (xSemaphoreTake(_i2cLoopMutex, pdMS_TO_TICKS(50)) != pdTRUE) { request->send(503); return; }
     DroneWire::serveScanAllInfo(request);
-    _doLoop = true;
+    xSemaphoreGive(_i2cLoopMutex);
   });
 
   // DEM handlers
@@ -725,6 +728,7 @@ void DroneSystem::loop() {
 
   if (_doLoop) {
 
+    xSemaphoreTake(_i2cLoopMutex, portMAX_DELAY);
     dmm->watchdog();
 
     yield();
@@ -739,6 +743,8 @@ void DroneSystem::loop() {
 
     dem->processAddressQueue();
     dem->processHotLoad();
+    DroneWire::serviceDiagnostic();
+    xSemaphoreGive(_i2cLoopMutex);
 
 
     //if (logFile) logFile.flush();

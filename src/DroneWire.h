@@ -24,6 +24,10 @@ namespace DroneWire {
 
   void reset();
 
+  void invalidateChannel();
+  void mountDiagnostic(AsyncWebServer& server, uint8_t node);
+  void serviceDiagnostic();
+
   void selectChannel(uint8_t chan);
 
   boolean scanAddress(uint8_t addr);

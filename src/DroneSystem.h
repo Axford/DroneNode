@@ -119,6 +119,8 @@ struct DRONE_SYSTEM_PIN {
 class DroneSystem {
   friend class DigitalModule;
   friend class DroneExecutionManager;
+  StaticSemaphore_t _i2cLoopMutexStorage;
+  SemaphoreHandle_t _i2cLoopMutex;
   StaticSemaphore_t _moduleChangeMutexStorage;
   SemaphoreHandle_t _moduleChangeMutex;
   bool claimTrialPin(uint8_t pin);

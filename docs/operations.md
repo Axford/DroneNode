@@ -447,3 +447,9 @@ instances accept mesh queries. Activation and position writes use the console
 because mesh writes have no apply-generation marker. Bound Servo configurations,
 Motor coexistence for live PWM activation, and powered actuator validation are
 outside this bench slice.
+
+### I²C discovery diagnostics
+
+Workbench uses the versioned I²C job endpoint described in the [shared contract](../../DroneLinkDatastore/docs/contracts/workbench.md#workbench-i²c-discovery). Firmware verifies each multiplexer selection and services small batches on the main loop alongside module traffic. The job uses address-only probes and reviewed register reads.
+
+Run the host bus simulation with `c++ -std=c++11 -Isrc tests/i2c-diagnostic.cpp -o /tmp/dronelink-i2c-test && /tmp/dronelink-i2c-test`.

@@ -64,15 +64,15 @@ void DroneWire::reset() {
   */
 }
 
+void DroneWire::invalidateChannel() { _lastChan = 8; }
+
 void DroneWire::selectChannel(uint8_t chan) {
   if (chan> 7 || chan == _lastChan) return;
 
   //Log.noticeln("[DW.sC] %u", chan);
   Wire.beginTransmission(_TCAADDR);
   Wire.write(1 << chan);
-  Wire.endTransmission();
-
-  _lastChan = chan;
+  _lastChan = Wire.endTransmission() == 0 ? chan : 8;
 }
 
 
