@@ -26,7 +26,7 @@ public:
 struct DroneLinkChannelSubscription {DroneModule* module;unsigned param,extNode;uint64_t after;};
 template<class T>struct Queue {std::vector<T> values;int size(){return values.size();}T shift(){auto v=values.front();values.erase(values.begin());return v;}T get(unsigned i){return values[i];}void remove(unsigned i){values.erase(values.begin()+i);}};
 struct DroneLinkQueueEntry {DroneLinkMsg message;bool cloudRequest;uint64_t sequence;};
-class DroneLinkChannel {public:unsigned _cloudRequests=0,_cloudWaitTurns=0;Queue<DroneLinkQueueEntry*> _queue;Queue<DroneLinkChannelSubscription*> _subs;DroneLinkManager* _dlm;void processQueue();};
+class DroneLinkChannel {public:unsigned _cloudRequests=0,_cloudWaitTurns=0;Queue<DroneLinkQueueEntry*> _queue;Queue<DroneLinkChannelSubscription*> _subs;DroneLinkManager* _dlm;void processQueue();bool hasExternalConsumer();};
 #include "actual_channel.inc"
 struct Counter:DroneModule{unsigned count=0;Counter(DroneSystem* ds):DroneModule(1,ds){}void handleLinkMessage(DroneLinkMsg*)override{++count;}};
 int main(){
