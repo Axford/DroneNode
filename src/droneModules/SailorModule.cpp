@@ -17,9 +17,10 @@ boolean isAngleBetweenAngles(float a, float b, float c) {
   return (sameSign && (fabs(bToA) < fabs(bToC)));
 }
 
-SailorModule::SailorModule(uint8_t id, DroneSystem* ds):
-  DroneModule ( id, ds )
+SailorModule::SailorModule(uint8_t id, DroneSystem* ds, Registration registration):
+  DroneModule(id, ds, registration)
  {
+   if (!_mgmtParams) return;
    // set type
    setTypeName(FPSTR(SAILOR_STR_SAILOR));
 
@@ -40,6 +41,7 @@ SailorModule::SailorModule(uint8_t id, DroneSystem* ds):
 
    // subs
    initSubs(SAILOR_SUBS);
+   if (!_subs) return;
 
    DRONE_PARAM_SUB *sub;
 
@@ -65,6 +67,7 @@ SailorModule::SailorModule(uint8_t id, DroneSystem* ds):
 
    // pubs
    initParams(SAILOR_PARAM_ENTRIES);
+   if (!_params) return;
 
    DRONE_PARAM_ENTRY *param;
 
@@ -150,6 +153,11 @@ SailorModule::SailorModule(uint8_t id, DroneSystem* ds):
    update();  // set defaults
 }
 
+bool SailorModule::validateLiveConfiguration() const {
+  for (uint8_t i = 0; i < SAILOR_SUBS; ++i)
+    if (!_subs[i].addr.node && !_subs[i].received) return false;
+  return _params[SAILOR_PARAM_MODE_E].data.uint8[0] == SAILOR_MODE_NORMAL;
+}
 
 uint8_t SailorModule::polarIndexForAngle(float ang) {
   //float w = _subs[SAILOR_SUB_WIND_E].param.data.f[0];
@@ -374,6 +382,12 @@ void SailorModule::loop() {
  t = c;
 
   unsigned long updateTime = millis();
+  if (_liveLogic && !_lastUpdate) {
+    _lastUpdate = updateTime;
+    _lastHeading = t;
+    _lastError = constrain(shortestSignedDistanceBetweenCircularValues(h, t), -90.0f, 90.0f);
+    return;
+  }
   float dt = (updateTime - _lastUpdate) / 1000.0;
 
   // don't bother updating if dt too small

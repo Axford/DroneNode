@@ -121,11 +121,11 @@ class DroneExecutionManager;
 // DroneModule
 class DroneModule {
   friend class DroneExecutionManager;
-  bool _liveLogic = false;
 
   bool inputsReady() const;
 
 protected:
+  bool _liveLogic = false;
   DroneSystem* _ds;
   DroneLinkManager* _dlm;
   DroneModuleManager* _dmm;
@@ -165,6 +165,7 @@ public:
   virtual ~DroneModule();
 
   virtual bool validateLiveConfiguration() const { return true; }
+  virtual bool liveObservationOnly() const { return false; }
 
   uint8_t id();
   virtual WaypointModule *asWaypoint() { return nullptr; }

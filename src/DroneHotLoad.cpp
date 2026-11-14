@@ -72,7 +72,11 @@ bool applySetting(DroneModule &module, configuration::Line &line, bool digital, 
   if (!param) return false;
   const auto id = getDroneLinkMsgParam(param->paramPriority);
   if (logic && id != DRONE_MODULE_PARAM_NAME && id != DRONE_MODULE_PARAM_STATUS &&
-      id != DRONE_MODULE_PARAM_INTERVAL) return applyLogicValue(*param, line.value);
+      id != DRONE_MODULE_PARAM_INTERVAL) {
+    if (!applyLogicValue(*param, line.value)) return false;
+    if (auto* input = module.getSubByName(line.name)) input->received = true;
+    return true;
+  }
   if (nmea && id == NMEA_PARAM_PORT) {
     const char* value = line.value;
     if ((*value != '1' && *value != '2') ||
@@ -305,7 +309,7 @@ bool DroneExecutionManager::bindLiveInputs(IvanLinkedList::LinkedList<LiveBindin
     auto* module = candidates[binding.channel];
     if (!module) continue;
     auto* input = module->getSubByName(binding.input);
-    if (!input || input->addr.node || strncmp(binding.address, "@>", 2)) return false;
+    if (!input || input->received || input->addr.node || strncmp(binding.address, "@>", 2)) return false;
     char* sourceName = binding.address + 2;
     char* parameterName = strchr(sourceName, '.');
     if (!parameterName || parameterName == sourceName || !parameterName[1]) return false;
@@ -326,7 +330,7 @@ bool DroneExecutionManager::bindLiveInputs(IvanLinkedList::LinkedList<LiveBindin
       for (unsigned index = 1; index <= MaxChannel; ++index)
         if (candidates[index] && hasModuleName(*candidates[index], sourceName)) return false;
     }
-    if (!source) return false;
+    if (!source || (source->_liveLogic && source->liveObservationOnly())) return false;
     DRONE_PARAM_ENTRY* param;
     if (*parameterName >= '0' && *parameterName <= '9') {
       if (!telemetry::decimal(parameterName, 63, id)) return false;

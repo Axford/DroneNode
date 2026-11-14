@@ -474,7 +474,7 @@ const ModuleType moduleTypes[] = {
   {RECEIVER_STR_RECEIVER, createModule<ReceiverModule>},
   {RFM69_TELEMETRY_STR_RFM69_TELEMETRY, createModule<RFM69TelemetryModule>},
   {ROTARY_STR_ROTARY, createModule<RotaryModule>},
-  {SAILOR_STR_SAILOR, createModule<SailorModule>},
+  {SAILOR_STR_SAILOR, createModule<SailorModule>, prepareLogicModule<SailorModule>},
   {SERIAL_TELEMETRY_STR_SERIAL_TELEMETRY, createModule<SerialTelemetryModule>},
   {SERVO_STR_SERVO, createModule<ServoModule>},
   {SPEED_CONTROL_STR_SPEED_CONTROL, createModule<SpeedControlModule>},

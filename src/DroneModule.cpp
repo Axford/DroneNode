@@ -607,7 +607,7 @@ bool DroneModule::inputsReady() const {
 
 boolean DroneModule::publishParamEntry(DRONE_PARAM_ENTRY *param) {
   if (_liveLogic && getDroneLinkMsgParam(param->paramPriority) >= DRONE_CUSTOM_PARAM_START &&
-      !inputsReady()) return true;
+      (liveObservationOnly() || !inputsReady())) return true;
   _mgmtMsg._msg.paramPriority = param->paramPriority;
   _mgmtMsg._msg.paramTypeLength = param->paramTypeLength;
   memcpy(_mgmtMsg._msg.payload.c, param->data.c, 16);
@@ -805,6 +805,15 @@ void DroneModule::handleLinkMessage(DroneLinkMsg *msg) {
         if (msg->type() == ((_subs[i].param.paramTypeLength >> 4) & 0x7) &&
             (!_liveLogic || (msg->source() == _dlm->node() &&
                              msg->length() == (_subs[i].param.paramTypeLength & 15) + 1))) {
+          if (_liveLogic && msg->type() == DRONE_LINK_MSG_TYPE_FLOAT) {
+            bool finite = true;
+            for (size_t offset = 0; offset < msg->length(); offset += sizeof(float)) {
+              float value;
+              memcpy(&value, msg->_msg.payload.c + offset, sizeof(value));
+              finite &= isfinite(value);
+            }
+            if (!finite) continue;
+          }
           const bool firstReceipt = !_subs[i].received;
           _subs[i].received = true;
 
@@ -840,7 +849,8 @@ void DroneModule::handleLinkMessage(DroneLinkMsg *msg) {
       // handle output params
       for (uint8_t i=0; i<_numParamEntries; i++) {
         if (msg->param() == getDroneLinkMsgParam(_params[i].paramPriority)) {
-          handleParamMessage(msg, &_params[i]);
+          if (!_liveLogic || !liveObservationOnly() || msg->type() >= DRONE_LINK_MSG_TYPE_NAMEQUERY)
+            handleParamMessage(msg, &_params[i]);
         }
       }
 
@@ -848,7 +858,8 @@ void DroneModule::handleLinkMessage(DroneLinkMsg *msg) {
       for (uint8_t i=0; i<_numSubs; i++) {
         if (msg->param() == getDroneLinkMsgParam(_subs[i].param.paramPriority)) {
           // handles writes to the internal value
-          if (!_liveLogic || !_subs[i].addr.node || msg->type() >= DRONE_LINK_MSG_TYPE_NAMEQUERY)
+          if (!_liveLogic || (!_subs[i].addr.node && !liveObservationOnly()) ||
+              msg->type() >= DRONE_LINK_MSG_TYPE_NAMEQUERY)
             handleParamMessage(msg, &_subs[i].param);
           // trigger an update to ensure event driven behaviour continues to work as expected
           _updateNeeded = true;
