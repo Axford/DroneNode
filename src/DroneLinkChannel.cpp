@@ -56,6 +56,7 @@ boolean DroneLinkChannel::publish(DroneLinkMsg &msg, bool cloudRequest) {
       scrub = &entry->message;
       if (!entry->cloudRequest && scrub->sameSignature(&msg)) {
         sameSig = true;
+        entry->sequence = ++_sequence;
         // overwrite message payload
         memcpy(scrub->_msg.payload.c, msg._msg.payload.c, msg.length());
         break;
@@ -63,7 +64,7 @@ boolean DroneLinkChannel::publish(DroneLinkMsg &msg, bool cloudRequest) {
     }
 
     if (!sameSig) {
-      auto tmp = new(std::nothrow) DroneLinkQueueEntry{msg, cloudRequest};
+      auto tmp = new(std::nothrow) DroneLinkQueueEntry{msg, cloudRequest, ++_sequence};
       if (!tmp) return false;
       if (cloudRequest) {
         ++_cloudRequests;
@@ -177,7 +178,8 @@ void DroneLinkChannel::processQueue() {
     sub = _subs.get(i);
     // check paramMask
     //if (tmp->matchParam(sub.paramMask))
-    if (tmp->param() == sub->param || sub->param == DRONE_LINK_PARAM_ALL) {
+    if ((tmp->param() == sub->param || sub->param == DRONE_LINK_PARAM_ALL) &&
+        (!sub->after || entry->sequence >= sub->after)) {
       
       if (sub->module) {
         // internal sub
@@ -187,7 +189,8 @@ void DroneLinkChannel::processQueue() {
         bool delivered=false;
         for(int j=0;j<i;++j) {
           auto prior=_subs.get(j);
-          if(prior->module==sub->module && (prior->param==tmp->param() || prior->param==DRONE_LINK_PARAM_ALL)) { delivered=true;break; }
+          if(prior->module==sub->module && (prior->param==tmp->param() || prior->param==DRONE_LINK_PARAM_ALL) &&
+             (!prior->after || entry->sequence >= prior->after)) { delivered=true;break; }
         }
         if(!delivered) sub->module->handleLinkMessage(tmp);
       } else {
@@ -203,7 +206,7 @@ void DroneLinkChannel::processQueue() {
   //Log.noticeln("[DLC.pQ] end");
 }
 
-bool DroneLinkChannel::subscribe(uint8_t extNode, DroneModule* subscriber, uint8_t param) {
+bool DroneLinkChannel::subscribe(uint8_t extNode, DroneModule* subscriber, uint8_t param, bool fresh) {
   // check we don't already have this subscriber registered
   DroneLinkChannelSubscription *sub;
   for(int i = 0; i < _subs.size(); i++) {
@@ -221,6 +224,7 @@ bool DroneLinkChannel::subscribe(uint8_t extNode, DroneModule* subscriber, uint8
   sub->param = param;
   sub->state = DRONE_LINK_CHANNEL_SUBSCRIPTION_PENDING;
   sub->timer = millis();
+  sub->after = fresh ? _sequence + 1 : 0;
   if (_subs.add(sub)) return true;
   free(sub);
   return false;

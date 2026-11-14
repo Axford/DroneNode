@@ -598,7 +598,16 @@ uint8_t DroneModule::getInterfaceType() { return DRONE_MESH_INTERFACE_TYPE_UDP; 
 boolean DroneModule::getInterfaceState() { return false; }
 
 
+bool DroneModule::inputsReady() const {
+  if (!_liveLogic) return true;
+  for (uint8_t i = 0; i < _numSubs; ++i)
+    if (_subs[i].addr.node && !_subs[i].received) return false;
+  return true;
+}
+
 boolean DroneModule::publishParamEntry(DRONE_PARAM_ENTRY *param) {
+  if (_liveLogic && getDroneLinkMsgParam(param->paramPriority) >= DRONE_CUSTOM_PARAM_START &&
+      !inputsReady()) return true;
   _mgmtMsg._msg.paramPriority = param->paramPriority;
   _mgmtMsg._msg.paramTypeLength = param->paramTypeLength;
   memcpy(_mgmtMsg._msg.payload.c, param->data.c, 16);
@@ -793,11 +802,15 @@ void DroneModule::handleLinkMessage(DroneLinkMsg *msg) {
       if (_subs[i].enabled && msg->sameAddress(&_subs[i].addr)) {
 
         // check the type matches what's expected
-        if (msg->type() == ((_subs[i].param.paramTypeLength >> 4) & 0x7)) {
+        if (msg->type() == ((_subs[i].param.paramTypeLength >> 4) & 0x7) &&
+            (!_liveLogic || (msg->source() == _dlm->node() &&
+                             msg->length() == (_subs[i].param.paramTypeLength & 15) + 1))) {
+          const bool firstReceipt = !_subs[i].received;
           _subs[i].received = true;
 
           // see if the value has actually changed
-          if (memcmp(_subs[i].param.data.c, msg->_msg.payload.c, msg->length()) != 0) {
+          if ((_liveLogic && firstReceipt) ||
+              memcmp(_subs[i].param.data.c, msg->_msg.payload.c, msg->length()) != 0) {
             // handle the subscription updating
             memcpy(_subs[i].param.data.c, msg->_msg.payload.c, msg->length());
 
@@ -835,13 +848,15 @@ void DroneModule::handleLinkMessage(DroneLinkMsg *msg) {
       for (uint8_t i=0; i<_numSubs; i++) {
         if (msg->param() == getDroneLinkMsgParam(_subs[i].param.paramPriority)) {
           // handles writes to the internal value
-          handleParamMessage(msg, &_subs[i].param);
+          if (!_liveLogic || !_subs[i].addr.node || msg->type() >= DRONE_LINK_MSG_TYPE_NAMEQUERY)
+            handleParamMessage(msg, &_subs[i].param);
           // trigger an update to ensure event driven behaviour continues to work as expected
           _updateNeeded = true;
 
         } else if (msg->param() == _subs[i].addrParam) {
           // handle writes to the address
-          handleSubAddrMessage(msg, &_subs[i]);
+          if (!_liveLogic || msg->type() >= DRONE_LINK_MSG_TYPE_NAMEQUERY)
+            handleSubAddrMessage(msg, &_subs[i]);
         }
       }
     }
@@ -893,7 +908,7 @@ boolean DroneModule::isEnabled() {
 void DroneModule::setup() {
   if (_setupDone) return;
   // subscribe to subs
-  for (uint8_t i=0; i<_numSubs; i++) {
+  for (uint8_t i=0; !_liveLogic && i<_numSubs; i++) {
     _dlm->subscribe(&_subs[i].addr, this);
   }
   // read status param, disable if needed
@@ -904,7 +919,7 @@ void DroneModule::setup() {
 }
 
 boolean DroneModule::updateIfNeeded() {
-  if (_updateNeeded && _setupDone && _enabled && _error == 0) {
+  if (_updateNeeded && _setupDone && _enabled && _error == 0 && inputsReady()) {
     update();
     _updateNeeded = false;
     return true;
@@ -917,7 +932,7 @@ void DroneModule::update() {
 }
 
 boolean DroneModule::readyToLoop() {
-  if (!_setupDone || !_enabled || _error > 0) return false;
+  if (!_setupDone || !_enabled || _error > 0 || !inputsReady()) return false;
 
   return (millis() >= _lastLoop + _mgmtParams[DRONE_MODULE_PARAM_INTERVAL_E].data.uint32[0]);
 }

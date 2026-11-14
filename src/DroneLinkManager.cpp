@@ -82,15 +82,15 @@ bool DroneLinkManager::subscribe(uint8_t channel, DroneModule *subscriber, uint8
 }
 
 
-bool DroneLinkManager::subscribe(uint8_t node, uint8_t channel, DroneModule *subscriber, uint8_t param) {
+bool DroneLinkManager::subscribe(uint8_t node, uint8_t channel, DroneModule *subscriber, uint8_t param, bool fresh) {
   if (node == 255 || channel == 255 || param == 255) return false;
   const auto parameter = getDroneLinkMsgParam(param);
   auto* existing = findChannel(node, channel);
-  if (existing) return existing->subscribe(_node, subscriber, parameter);
+  if (existing) return existing->subscribe(_node, subscriber, parameter, fresh);
 
   auto* created = new (std::nothrow) DroneLinkChannel(this, node, channel);
   if (!created) return false;
-  if (created->subscribe(_node, subscriber, parameter) && _channels.add(created)) return true;
+  if (created->subscribe(_node, subscriber, parameter, fresh) && _channels.add(created)) return true;
   created->unsubscribe(subscriber);
   delete created;
   return false;

@@ -4,9 +4,10 @@
 #include "strings.h"
 #include "../navMath.h"
 
-StatusModule::StatusModule(uint8_t id, DroneSystem* ds):
-  DroneModule ( id, ds )
+StatusModule::StatusModule(uint8_t id, DroneSystem* ds, Registration registration):
+  DroneModule(id, ds, registration)
  {
+   if (!_mgmtParams) return;
    setTypeName(FPSTR(STATUS_STR_STATUS));
 
    // set default interval to 1000
@@ -15,6 +16,7 @@ StatusModule::StatusModule(uint8_t id, DroneSystem* ds):
 
    // subs
    initSubs(STATUS_SUBS);
+   if (!_subs) return;
 
    DRONE_PARAM_SUB *sub;
 
@@ -41,6 +43,7 @@ StatusModule::StatusModule(uint8_t id, DroneSystem* ds):
 
    // pubs
    initParams(STATUS_PARAM_ENTRIES);
+   if (!_params) return;
 
    DRONE_PARAM_ENTRY *param;
 
@@ -123,6 +126,10 @@ uint8_t StatusModule::checkThreshold(uint8_t index) {
 
 void StatusModule::loop() {
   DroneModule::loop();
+
+  for (uint8_t i = 0; i < STATUS_SUBS; ++i) {
+    if (_subs[i].addr.node && !_subs[i].received) return;
+  }
 
   uint8_t newScene[16];
   for (uint8_t i=0; i<16; i++) {

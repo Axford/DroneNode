@@ -120,6 +120,11 @@ class DroneExecutionManager;
 
 // DroneModule
 class DroneModule {
+  friend class DroneExecutionManager;
+  bool _liveLogic = false;
+
+  bool inputsReady() const;
+
 protected:
   DroneSystem* _ds;
   DroneLinkManager* _dlm;
@@ -173,6 +178,7 @@ public:
   uint8_t getSubIdByName(const char* name);
   DRONE_PARAM_ENTRY* getParamEntryById(uint8_t id);
   DRONE_PARAM_ENTRY* getParamEntryByName(const char* name);
+  DRONE_PARAM_SUB* subscription(uint8_t index) { return index < _numSubs ? &_subs[index] : nullptr; }
   DRONE_PARAM_SUB* getSubByName(const char* name);
 
   void publishParamsFromList(char * paramList);

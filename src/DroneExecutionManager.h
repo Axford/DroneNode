@@ -33,7 +33,7 @@ class ManagementModule;
 
 struct DEM_ADDRESS {
   uint8_t moduleId;  // what module is subscribing
-  void* ps;  // what sub is this address value for 
+  uint8_t inputId; // subscription address parameter
   char nodeAddress[20];
   char moduleAddress[20];
   char paramAddress[20];
@@ -51,7 +51,7 @@ static const char DEM_BOOT_FILENAME[] PROGMEM = "/boot.dat";
 
 class DroneExecutionManager
 {
-  enum class HotType : uint8_t { StartupOnly, Digital, Probe, NMEA, Servo };
+  enum class HotType : uint8_t { StartupOnly, Digital, Probe, NMEA, Servo, Logic };
   struct AppliedSection {
     uint8_t id;
     HotType type;
@@ -71,8 +71,18 @@ class DroneExecutionManager
   uint64_t hotLoadPins(DroneModule* module, HotType type);
   void releaseHotLoadPins(DroneModule* module, HotType type);
   bool restoreHotLoadPins(DroneModule* module, HotType type, uint64_t pins);
+  bool supportsLogicHotLoad(const char* type);
+  DroneModule* prepareLogic(const char* type, uint8_t id);
+  struct LiveBinding {
+    uint8_t channel;
+    char input[20];
+    char address[42];
+  };
+  bool bindLiveInputs(IvanLinkedList::LinkedList<LiveBinding>& bindings,
+                      DroneModule** candidates, DroneModule** retiring);
   bool readHotLoadConfiguration(const char* path, IvanLinkedList::LinkedList<AppliedSection>& sections,
-                                DroneModule** candidates, configuration::HotLoadResult& result);
+                                DroneModule** candidates, configuration::HotLoadResult& result,
+                                IvanLinkedList::LinkedList<LiveBinding>* bindings = nullptr);
 
 protected:
   // queue of addresses that need to be resolved

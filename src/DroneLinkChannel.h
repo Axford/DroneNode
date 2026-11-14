@@ -23,6 +23,7 @@ struct DroneLinkChannelSubscription {
   uint8_t param; // target param or ALL
   uint8_t state; // for external subscriptions
   uint32_t timer; // for external sub retries, etc
+  uint64_t after;
 };
 
 // external subscription states
@@ -39,6 +40,7 @@ enum class CloudRequestResult { Missing, Busy, Queued };
 struct DroneLinkQueueEntry {
   DroneLinkMsg message;
   bool cloudRequest;
+  uint64_t sequence;
 };
 
 class DroneLinkChannel
@@ -55,6 +57,7 @@ protected:
   uint8_t _cloudWaitTurns = 0;
   bool _reserveCloudSlot = false;
   uint8_t _peakSize;
+  uint64_t _sequence = 0;
 
 public:
     DroneLinkChannel(DroneLinkManager* dlm, uint8_t node, uint8_t id);
@@ -76,7 +79,7 @@ public:
 
     void processQueue();
 
-    bool subscribe(uint8_t extNode, DroneModule* subscriber, uint8_t param);
+    bool subscribe(uint8_t extNode, DroneModule* subscriber, uint8_t param, bool fresh = false);
     void unsubscribe(DroneModule* subscriber);
     bool hasConsumerOtherThan(DroneModule* owner);
     void discardChannelMessages(uint8_t channel);

@@ -68,7 +68,8 @@ protected:
 
 public:
 
-  StatusModule(uint8_t id, DroneSystem* ds);
+  StatusModule(uint8_t id, DroneSystem* ds, Registration registration = Registration::Managed);
+  bool hotLoadReady() const { return _mgmtParams && _params && _subs; }
 
   virtual void setup();
 

@@ -7,6 +7,7 @@
 #include "CloudTelemetryConfig.h"
 #include <mbedtls/sha256.h>
 #include <math.h>
+#include <errno.h>
 #include <new>
 
 using configuration::HotLoadResult;
@@ -16,7 +17,35 @@ namespace {
 constexpr size_t MaxFileSize = 8192;
 constexpr uint8_t MaxChannel = 254;
 
-bool applySetting(DroneModule &module, configuration::Line &line, bool digital, bool nmea, bool servo) {
+bool applyLogicValue(DRONE_PARAM_ENTRY &param, const char* value) {
+  const auto type = (param.paramTypeLength >> 4) & 7;
+  if (!(param.paramTypeLength & DRONE_LINK_MSG_WRITABLE)) return false;
+  const auto size = (param.paramTypeLength & 15) + 1;
+  char* end;
+  for (unsigned i = 0; i < size / DRONE_LINK_MSG_TYPE_SIZES[type]; ++i) {
+    if (type == DRONE_LINK_MSG_TYPE_FLOAT) {
+      const float parsed = strtof(value, &end);
+      if (!isfinite(parsed)) return false;
+      param.data.f[i] = parsed;
+    } else if (type == DRONE_LINK_MSG_TYPE_UINT8_T || type == DRONE_LINK_MSG_TYPE_UINT32_T) {
+      if (*value < '0' || *value > '9') return false;
+      errno = 0;
+      const auto parsed = strtoul(value, &end, 10);
+      if (errno || parsed > (type == DRONE_LINK_MSG_TYPE_UINT8_T ? 255u : UINT32_MAX)) return false;
+      if (type == DRONE_LINK_MSG_TYPE_UINT8_T) param.data.uint8[i] = parsed;
+      else param.data.uint32[i] = parsed;
+    } else {
+      return false;
+    }
+    if (end == value) return false;
+    if (!*end) return i + 1 == size / DRONE_LINK_MSG_TYPE_SIZES[type];
+    if (*end != ',') return false;
+    value = end + 1;
+  }
+  return false;
+}
+
+bool applySetting(DroneModule &module, configuration::Line &line, bool digital, bool nmea, bool servo, bool logic) {
   const auto configured = module.configure(line.name, line.value);
   if (configured != configuration::Setting::Unhandled)
     return configured == configuration::Setting::Handled;
@@ -36,6 +65,8 @@ bool applySetting(DroneModule &module, configuration::Line &line, bool digital, 
   auto* param = module.getParamEntryByName(line.name);
   if (!param) return false;
   const auto id = getDroneLinkMsgParam(param->paramPriority);
+  if (logic && id != DRONE_MODULE_PARAM_NAME && id != DRONE_MODULE_PARAM_STATUS &&
+      id != DRONE_MODULE_PARAM_INTERVAL) return applyLogicValue(*param, line.value);
   if (nmea && id == NMEA_PARAM_PORT) {
     const char* value = line.value;
     if ((*value != '1' && *value != '2') ||
@@ -61,7 +92,7 @@ bool applySetting(DroneModule &module, configuration::Line &line, bool digital, 
     param->data.uint32[0] = baud;
     return true;
   }
-  if (!digital && !((nmea || servo) && id == DRONE_MODULE_PARAM_INTERVAL) && id != DRONE_MODULE_PARAM_NAME && id != DRONE_MODULE_PARAM_STATUS) return false;
+  if (!digital && !((nmea || servo || logic) && id == DRONE_MODULE_PARAM_INTERVAL) && id != DRONE_MODULE_PARAM_NAME && id != DRONE_MODULE_PARAM_STATUS) return false;
   unsigned number = 0;
   switch (id) {
     case DIGITAL_PARAM_PINS:
@@ -110,7 +141,7 @@ struct Candidates {
 
 bool DroneExecutionManager::readHotLoadConfiguration(
     const char* path, IvanLinkedList::LinkedList<AppliedSection>& sections,
-    DroneModule** candidates, HotLoadResult& result) {
+    DroneModule** candidates, HotLoadResult& result, IvanLinkedList::LinkedList<LiveBinding>* bindings) {
   result = HotLoadResult::ReadFailed;
   auto file = _fs.open(path, FILE_READ);
   if (!file || file.isDirectory()) return false;
@@ -168,7 +199,8 @@ bool DroneExecutionManager::readHotLoadConfiguration(
       current.type = !strcmp(line.name, DIGITAL_STR_DIGITAL) ? HotType::Digital :
                      !strcmp(line.name, "Probe") ? HotType::Probe :
                      !strcmp(line.name, NMEA_STR_NMEA) ? HotType::NMEA :
-                     !strcmp(line.name, SERVO_STR_SERVO) ? HotType::Servo : HotType::StartupOnly;
+                     !strcmp(line.name, SERVO_STR_SERVO) ? HotType::Servo :
+                     supportsLogicHotLoad(line.name) ? HotType::Logic : HotType::StartupOnly;
       current.valid = true;
       mbedtls_sha256_starts_ret(&hash, 0);
       add(line.name);
@@ -186,6 +218,10 @@ bool DroneExecutionManager::readHotLoadConfiguration(
           auto* module = prepareServo(id);
           candidates[id] = module;
           ready = module && module->hotLoadReady();
+        } else if (current.type == HotType::Logic) {
+          candidates[id] = prepareLogic(line.name, id);
+          ready = candidates[id] != nullptr;
+          if (ready) candidates[id]->_liveLogic = true;
         } else {
           auto* module = prepareProbe(id);
           candidates[id] = module;
@@ -206,9 +242,25 @@ bool DroneExecutionManager::readHotLoadConfiguration(
       add(line.value);
       if ((current.type == HotType::NMEA || current.type == HotType::Servo) && line.name[0] == '$') current.valid = false;
       if (candidates && candidates[current.id] && current.valid) {
-        current.valid = applySetting(*candidates[current.id], line, current.type == HotType::Digital,
-                                     current.type == HotType::NMEA, current.type == HotType::Servo);
-        if (!current.valid && current.type != HotType::NMEA && current.type != HotType::Servo) valid = false;
+        if (current.type == HotType::Logic && line.name[0] == '$') {
+          LiveBinding binding{};
+          binding.channel = current.id;
+          current.valid = strlen(line.value) < sizeof(binding.address);
+          if (current.valid) {
+            strcpy(binding.input, line.name + 1);
+            strcpy(binding.address, line.value);
+            if (!bindings->add(binding)) {
+              result = HotLoadResult::OutOfMemory;
+              valid = false;
+            }
+          }
+        } else {
+          current.valid = applySetting(*candidates[current.id], line, current.type == HotType::Digital,
+                                       current.type == HotType::NMEA, current.type == HotType::Servo,
+                                       current.type == HotType::Logic);
+        }
+        if (!current.valid && (current.type == HotType::Digital || current.type == HotType::Probe))
+          valid = false;
       }
     }
   }
@@ -240,6 +292,49 @@ void DroneExecutionManager::processHotLoad() {
   requester->reportHotLoad(applyHotLoad(_hotLoadPath));
 }
 
+bool DroneExecutionManager::bindLiveInputs(IvanLinkedList::LinkedList<LiveBinding>& bindings,
+                                            DroneModule** candidates, DroneModule** retiring) {
+  for (int i = 0; i < bindings.size(); ++i) {
+    auto binding = bindings.get(i);
+    auto* module = candidates[binding.channel];
+    if (!module) continue;
+    auto* input = module->getSubByName(binding.input);
+    if (!input || input->addr.node || strncmp(binding.address, "@>", 2)) return false;
+    char* sourceName = binding.address + 2;
+    char* parameterName = strchr(sourceName, '.');
+    if (!parameterName || parameterName == sourceName || !parameterName[1]) return false;
+    *parameterName++ = 0;
+    DroneModule* source = nullptr;
+    unsigned id;
+    if (*sourceName >= '0' && *sourceName <= '9') {
+      if (!telemetry::decimal(sourceName, MaxChannel, id) || retiring[id] || candidates[id])
+        return false;
+      source = _dmm->getModuleById(id);
+    } else {
+      for (uint8_t index = 0; index < _dmm->moduleCount(); ++index) {
+        auto* current = _dmm->getModuleByIndex(index);
+        if (strcmp(current->getName(), sourceName)) continue;
+        if (source || retiring[current->id()] || candidates[current->id()]) return false;
+        source = current;
+      }
+      for (unsigned index = 1; index <= MaxChannel; ++index)
+        if (candidates[index] && !strcmp(candidates[index]->getName(), sourceName)) return false;
+    }
+    if (!source) return false;
+    DRONE_PARAM_ENTRY* param;
+    if (*parameterName >= '0' && *parameterName <= '9') {
+      if (!telemetry::decimal(parameterName, 63, id)) return false;
+      param = source->getParamEntryById(id);
+    } else {
+      param = source->getParamEntryByName(parameterName);
+    }
+    if (!param || !param->publish || (param->paramTypeLength & 127) !=
+                                   (input->param.paramTypeLength & 127)) return false;
+    module->setSubAddr(input, _dmm->node(), source->id(), getDroneLinkMsgParam(param->paramPriority));
+  }
+  return true;
+}
+
 HotLoadResult DroneExecutionManager::applyHotLoad(const char* path) {
   if (!_hotLoadBaselineValid) return HotLoadResult::RestartRequired;
   HotLoadResult result;
@@ -250,7 +345,8 @@ HotLoadResult DroneExecutionManager::applyHotLoad(const char* path) {
   auto &proposedIds = work->proposedIds;
   auto &previousPins = work->previousPins;
   IvanLinkedList::LinkedList<AppliedSection> proposed;
-  if (!readHotLoadConfiguration(path, proposed, candidates, result)) return result;
+  IvanLinkedList::LinkedList<LiveBinding> bindings;
+  if (!readHotLoadConfiguration(path, proposed, candidates, result, &bindings)) return result;
   for (int i = 0; i < proposed.size(); ++i) {
     auto section = proposed.get(i);
     proposedIds[section.id] = true;
@@ -269,6 +365,13 @@ HotLoadResult DroneExecutionManager::applyHotLoad(const char* path) {
       } else if (active.type == section.type && active.type != HotType::StartupOnly) {
         // Preserve consumer binding and publication semantics for this first lifecycle.
         if (_dlm->hasLocalConsumer(section.id, previous)) return HotLoadResult::InvalidConfiguration;
+        if (active.type == HotType::Logic) {
+          auto* oldType = previous->getParamEntryById(DRONE_MODULE_PARAM_TYPE);
+          auto* newType = candidates[section.id]->getParamEntryById(DRONE_MODULE_PARAM_TYPE);
+          if (oldType->paramTypeLength != newType->paramTypeLength ||
+              memcmp(oldType->data.c, newType->data.c, (oldType->paramTypeLength & 15) + 1))
+            return HotLoadResult::RestartRequired;
+        }
         if (active.type == HotType::Servo && !active.valid) return HotLoadResult::RestartRequired;
         if (active.type == HotType::NMEA &&
             (!active.valid || !static_cast<NMEAModule*>(previous)->hotLoadEligible()))
@@ -319,7 +422,7 @@ HotLoadResult DroneExecutionManager::applyHotLoad(const char* path) {
       if (!_ds->secondarySerialAvailable(port, retiring)) return HotLoadResult::ResourceConflict;
     }
     const uint64_t requested = hotLoadPins(candidates[id], types[id]);
-    if (!requested) return HotLoadResult::InvalidConfiguration;
+    if (!requested && types[id] != HotType::Logic) return HotLoadResult::InvalidConfiguration;
     if (claimed & requested) return HotLoadResult::ResourceConflict;
     claimed |= requested;
     for (uint8_t pin = 0; pin < DRONE_SYSTEM_PINS; ++pin) {
@@ -340,7 +443,8 @@ HotLoadResult DroneExecutionManager::applyHotLoad(const char* path) {
   for (unsigned id = 1; id <= MaxChannel; ++id)
     changed |= retired[id] || candidates[id];
   if (!changed) return HotLoadResult::Applied;
-  if (_addressQueue.size()) return HotLoadResult::InvalidConfiguration;
+  if (_addressQueue.size() || !bindLiveInputs(bindings, candidates, retired))
+    return HotLoadResult::InvalidConfiguration;
 
   xSemaphoreTake(_ds->_moduleChangeMutex, portMAX_DELAY);
   // Allocate registry entries while the previous modules still own their pins.
@@ -351,6 +455,15 @@ HotLoadResult DroneExecutionManager::applyHotLoad(const char* path) {
       prepared = false;
       break;
     }
+    if (!module->_liveLogic) continue;
+    for (uint8_t index = 0; auto* input = module->subscription(index); ++index) {
+      const auto& addr = input->addr;
+      if (addr.node && !_dlm->subscribe(addr.node, addr.channel, module, addr.paramPriority, true)) {
+        prepared = false;
+        break;
+      }
+    }
+    if (!prepared) break;
   }
   bool started = prepared;
   if (prepared) {
@@ -407,6 +520,7 @@ HotLoadResult DroneExecutionManager::applyHotLoad(const char* path) {
 
 
 uint64_t DroneExecutionManager::hotLoadPins(DroneModule* module, HotType type) {
+  if (type == HotType::Logic) return 0;
   if (type == HotType::Probe) return static_cast<ProbeModule*>(module)->requestedInputs();
   if (type == HotType::NMEA) {
     const auto port = module->getParamEntryById(NMEA_PARAM_PORT)->data.uint8[0];
@@ -421,6 +535,7 @@ uint64_t DroneExecutionManager::hotLoadPins(DroneModule* module, HotType type) {
 }
 
 void DroneExecutionManager::releaseHotLoadPins(DroneModule* module, HotType type) {
+  if (type == HotType::Logic) return;
   if (type == HotType::Probe) static_cast<ProbeModule*>(module)->releaseInputs();
   else if (type == HotType::NMEA) static_cast<NMEAModule*>(module)->releasePrimary();
   else if (type == HotType::Servo) {

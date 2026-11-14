@@ -128,7 +128,7 @@ boolean DroneExecutionManager::safeMode() {
 
 void DroneExecutionManager::addToAddressQueue(DroneModule* newMod, char* subName, char* address) {
   // add to address parsing queue
-  DEM_ADDRESS addr;
+  DEM_ADDRESS addr{};
   DRONE_PARAM_SUB* ps = newMod->getSubByName(subName);
   addr.moduleId = newMod->id();
 
@@ -137,7 +137,7 @@ void DroneExecutionManager::addToAddressQueue(DroneModule* newMod, char* subName
     return;
   }
     
-  addr.ps = ps;
+  addr.inputId = ps->addrParam;
 
   // parse elements of address
   char buffer[20];
@@ -268,10 +268,12 @@ void DroneExecutionManager::processAddressQueue() {
       // set sub address value
       DroneModule* mod = _dmm->getModuleById(addr.moduleId);
 
-      ps = (DRONE_PARAM_SUB*)addr.ps;
-
       if (mod) {
-        mod->setSubAddr(ps, nodeId, moduleId, paramId);
+        for (uint8_t index = 0; (ps = mod->subscription(index)); ++index) {
+          if (ps->addrParam != addr.inputId) continue;
+          mod->setSubAddr(ps, nodeId, moduleId, paramId);
+          break;
+        }
         Log.noticeln("[DEM.pAQ] Resolved: %s>%s.%s to %u>%d.%u", addr.nodeAddress, addr.moduleAddress, addr.paramAddress, nodeId, moduleId, paramId);
       } else {
         Log.errorln("[DEM.pAQ] Unable to resolve sub module %u", addr.moduleId);      }
@@ -416,10 +418,24 @@ DroneModule* createModule(uint8_t id, DroneSystem* system) {
   return new Module(id, system);
 }
 
+using ModuleCreator = DroneModule* (*)(uint8_t, DroneSystem*);
 struct ModuleType {
   const char* name;
-  DroneModule* (*create)(uint8_t, DroneSystem*);
+  ModuleCreator create;
+  ModuleCreator prepare;
+  constexpr ModuleType(const char* name, ModuleCreator create, ModuleCreator prepare = nullptr)
+      : name(name), create(create), prepare(prepare) {}
 };
+
+template <typename Module>
+DroneModule* prepareLogicModule(uint8_t id, DroneSystem* system) {
+  auto* module = new (std::nothrow) Module(id, system, DroneModule::Registration::Detached);
+  if (module && !module->hotLoadReady()) {
+    delete module;
+    return nullptr;
+  }
+  return module;
+}
 
 // The startup factory and capability endpoint share this immutable registry.
 const ModuleType moduleTypes[] = {
@@ -462,7 +478,7 @@ const ModuleType moduleTypes[] = {
   {SERIAL_TELEMETRY_STR_SERIAL_TELEMETRY, createModule<SerialTelemetryModule>},
   {SERVO_STR_SERVO, createModule<ServoModule>},
   {SPEED_CONTROL_STR_SPEED_CONTROL, createModule<SpeedControlModule>},
-  {STATUS_STR_STATUS, createModule<StatusModule>},
+  {STATUS_STR_STATUS, createModule<StatusModule>, prepareLogicModule<StatusModule>},
   {TANK_STEER_STR_TANK_STEER, createModule<TankSteerModule>},
   {TURN_RATE_STR_TURN_RATE, createModule<TurnRateModule>},
   {UDP_TELEMETRY_STR_UDP_TELEMETRY, createModule<UDPTelemetryModule>},
@@ -487,6 +503,20 @@ DroneModule* DroneExecutionManager::instanceModule(char* typeName, uint8_t id) {
     if (strcmp_P(typeName, type.name) == 0) return type.create(id, _ds);
   }
   Log.errorln(F("[.c] Unknown type"));
+  return nullptr;
+}
+
+bool DroneExecutionManager::supportsLogicHotLoad(const char* name) {
+  for (const auto& type : moduleTypes)
+    if (type.prepare && strcmp_P(name, type.name) == 0) return true;
+  return false;
+}
+
+DroneModule* DroneExecutionManager::prepareLogic(const char* name, uint8_t id) {
+  for (const auto& type : moduleTypes) {
+    if (type.prepare && strcmp_P(name, type.name) == 0)
+      return type.prepare(id, _ds);
+  }
   return nullptr;
 }
 
