@@ -82,6 +82,7 @@ public:
     bool subscribe(uint8_t extNode, DroneModule* subscriber, uint8_t param, bool fresh = false);
     void unsubscribe(DroneModule* subscriber);
     bool hasConsumerOtherThan(DroneModule* owner);
+    bool hasExternalConsumer();
     void discardChannelMessages(uint8_t channel);
     bool empty() { return !_subs.size() && !_queue.size(); }
 

@@ -164,6 +164,7 @@ public:
     bool subscribe(uint8_t channel, DroneModule *subscriber, uint8_t param);
     void detachModule(DroneModule* module);
     bool hasLocalConsumer(uint8_t channel, DroneModule* owner);
+    bool hasExternalConsumer(uint8_t channel);
     void discardLocalChannelMessages(uint8_t channel);
     bool subscribe(uint8_t node, uint8_t channel, DroneModule *subscriber, uint8_t param, bool fresh = false);
 

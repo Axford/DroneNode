@@ -106,7 +106,14 @@ void DroneLinkManager::detachModule(DroneModule* module) {
 
 bool DroneLinkManager::hasLocalConsumer(uint8_t channel, DroneModule* owner) {
   auto* local = findChannel(_node, channel);
-  return local && local->hasConsumerOtherThan(owner);
+  auto* all = findChannel(_node, DRONE_LINK_CHANNEL_ALL);
+  return (local && local->hasConsumerOtherThan(owner)) || (all && all->hasConsumerOtherThan(owner));
+}
+
+bool DroneLinkManager::hasExternalConsumer(uint8_t channel) {
+  auto* specific = findChannel(_node, channel);
+  auto* all = findChannel(_node, DRONE_LINK_CHANNEL_ALL);
+  return (specific && specific->hasExternalConsumer()) || (all && all->hasExternalConsumer());
 }
 
 void DroneLinkManager::discardLocalChannelMessages(uint8_t channel) {

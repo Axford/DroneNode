@@ -377,7 +377,8 @@ HotLoadResult DroneExecutionManager::applyHotLoad(const char* path) {
         // Preserve consumer binding and publication semantics for this first lifecycle.
         if (_dlm->hasLocalConsumer(section.id, previous)) return HotLoadResult::InvalidConfiguration;
         if (active.type == HotType::Logic) {
-          if (!previous->canRetireLive()) return HotLoadResult::InvalidConfiguration;
+          if (!previous->canRetireLive() || _dlm->hasExternalConsumer(section.id))
+            return HotLoadResult::InvalidConfiguration;
           auto* oldType = previous->getParamEntryById(DRONE_MODULE_PARAM_TYPE);
           auto* newType = candidates[section.id]->getParamEntryById(DRONE_MODULE_PARAM_TYPE);
           if (oldType->paramTypeLength != newType->paramTypeLength ||
@@ -401,7 +402,8 @@ HotLoadResult DroneExecutionManager::applyHotLoad(const char* path) {
     if (proposedIds[section.id]) continue;
     if (section.type == HotType::StartupOnly) return HotLoadResult::RestartRequired;
     auto* module = _dmm->getModuleById(section.id);
-    if (section.type == HotType::Logic && !module->canRetireLive())
+    if (section.type == HotType::Logic &&
+        (!module->canRetireLive() || _dlm->hasExternalConsumer(section.id)))
       return HotLoadResult::InvalidConfiguration;
     if (_dlm->hasLocalConsumer(section.id, module)) return HotLoadResult::InvalidConfiguration;
     if (section.type == HotType::Servo && !section.valid) return HotLoadResult::RestartRequired;

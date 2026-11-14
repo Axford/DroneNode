@@ -36,6 +36,7 @@ int main(){
   DroneSystem system{&dlm,&dmm};Counter counter(&system);DroneLinkChannel channel;channel._dlm=&dlm;
   DroneLinkChannelSubscription all{&counter,0,11,0},specific{&counter,8,11,0},external{nullptr,8,254,0};
   channel._subs.values={&all,&specific,&external};
+  assert(channel.hasExternalConsumer());
   for(unsigned i=0;i<2;++i){auto message=new DroneLinkQueueEntry{};message->message._msg.param=8;channel._queue.values.push_back(message);channel.processQueue();}
   assert(counter.count==2&&dlm.external.size()==2);
   Counter fresh(&system);fresh._id=3;
@@ -65,6 +66,8 @@ int main(){
   for(unsigned i=0;i<4;++i) channel.processQueue();
   assert(channel._cloudRequests==0&&channel._queue.size()==2);
   while(channel._queue.size())channel.processQueue();
+  channel._subs.values.pop_back();
+  assert(!channel.hasExternalConsumer());
  }
 
  {

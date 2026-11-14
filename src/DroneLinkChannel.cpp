@@ -244,6 +244,12 @@ bool DroneLinkChannel::hasConsumerOtherThan(DroneModule* owner) {
   return false;
 }
 
+bool DroneLinkChannel::hasExternalConsumer() {
+  for (int i = 0; i < _subs.size(); ++i)
+    if (!_subs.get(i)->module) return true;
+  return false;
+}
+
 void DroneLinkChannel::discardChannelMessages(uint8_t channel) {
   for (int i = _queue.size() - 1; i >= 0; --i) {
     auto* entry = _queue.get(i);
