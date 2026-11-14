@@ -4,13 +4,17 @@
 #include "../DroneLinkManager.h"
 #include "strings.h"
 #include "../navMath.h"
-#include "AsyncUDP.h"
 
 // @type Avoid
 
-AvoidModule::AvoidModule(uint8_t id, DroneSystem* ds):
-  DroneModule ( id, ds )
+WiFiUDP AvoidModule::_udp;
+uint8_t AvoidModule::_udpChannel = 0;
+uint8_t AvoidModule::_udpUsers = 0;
+
+AvoidModule::AvoidModule(uint8_t id, DroneSystem* ds, Registration registration):
+  DroneModule(id, ds, registration)
  {
+   if (!_mgmtParams) return;
    setTypeName(FPSTR(AVOID_STR_AVOID));
 
    // set default interval to 1000
@@ -22,6 +26,7 @@ AvoidModule::AvoidModule(uint8_t id, DroneSystem* ds):
 
    // subs
    initSubs(AVOID_SUBS);
+   if (!_subs) return;
 
    DRONE_PARAM_SUB *sub;
 
@@ -51,6 +56,7 @@ AvoidModule::AvoidModule(uint8_t id, DroneSystem* ds):
 
    // pubs
    initParams(AVOID_PARAM_ENTRIES);
+   if (!_params) return;
 
    DRONE_PARAM_ENTRY *param;
 
@@ -103,70 +109,86 @@ AvoidModule::AvoidModule(uint8_t id, DroneSystem* ds):
 AvoidModuleVessel* AvoidModule::getVesselByMMSI(uint32_t mmsi) {
   // get (or create) an entry for requested mmsi
   AvoidModuleVessel* v;
-  for (uint8_t i=0; i<_vessels.size(); i++) {
+  for (int i = 0; i < _vessels.size(); ++i) {
     v = _vessels.get(i);
     if (v->mmsi == mmsi) return v;
   }
 
   // create new entry
-  v = (AvoidModuleVessel*) malloc(sizeof(AvoidModuleVessel));
+  if (_vessels.size() >= 254) return nullptr;
+  v = static_cast<AvoidModuleVessel*>(malloc(sizeof(AvoidModuleVessel)));
+  if (!v || !_vessels.add(v)) {
+    free(v);
+    return nullptr;
+  }
   v->mmsi = mmsi;
-  _vessels.add(v);
   return v;
 }
 
 
+AvoidModule::~AvoidModule() {
+  if (_listening && --_udpUsers == 0) {
+    _udp.stop();
+    _udpChannel = 0;
+  }
+  while (_vessels.size()) free(_vessels.shift());
+}
+
+bool AvoidModule::claimListener() {
+  if (_listening) return true;
+  if (_udpUsers && _udpChannel != _id) return false;
+  if (!_udpUsers && !_udp.begin(8008)) {
+    _udp.stop();
+    return false;
+  }
+  _udpChannel = _id;
+  ++_udpUsers;
+  _listening = true;
+  return true;
+}
+
+bool AvoidModule::prepareLiveConfiguration() {
+  for (uint8_t i = 0; i < AVOID_SUBS; ++i)
+    if (!_subs[i].addr.node && !_subs[i].received) return false;
+  const auto& threshold = _params[AVOID_PARAM_THRESHOLD_E].data;
+  return threshold.f[1] > 0 && threshold.f[0] >= threshold.f[1] && claimListener();
+}
+
 void AvoidModule::setup() {
   DroneModule::setup();
+  _discardQueued = _liveLogic && _udpUsers > 1;
+  if (!claimListener()) {
+    setError(1);
+    disable();
+  }
+}
 
-  if (_udp.listen(8008)) {
-    
-    _udp.onPacket([this](AsyncUDPPacket packet) {
-      /*
-      Serial.print("UDP Packet Type: ");
-      Serial.print(packet.isBroadcast() ? "Broadcast" : packet.isMulticast() ? "Multicast" : "Unicast");
-      Serial.print(", From: ");
-      Serial.print(packet.remoteIP());
-      Serial.print(":");
-      Serial.print(packet.remotePort());
-      Serial.print(", To: ");
-      Serial.print(packet.localIP());
-      Serial.print(":");
-      Serial.print(packet.localPort());
-      Serial.print(", Length: ");
-      Serial.print(packet.length());
-      Serial.print(", Data: ");
-      Serial.write(packet.data(), packet.length());
-      Serial.println();
-      String myString = (const char*)packet.data();
-
-      packet.printf("Got %u bytes of data", packet.length());
-      */
-      _newPackets[0]++;
-
-      // attempt to parse NMEA sentence
-      if (_sentence.parse((char*)packet.data(), packet.length())) {
-        // if we recognise the type, then parse payload
-        if (_sentence.getAisType() == 18) {
-
-          // update _vessels
-          AvoidModuleVessel* v = getVesselByMMSI(_sentence._m18.mmsi);
-
-          if (v) {
-            v->courseOverGround = _sentence._m18.courseOverGround;
-            v->location[0] = _sentence._m18.lon;
-            v->location[1] = _sentence._m18.lat;
-            v->speedOverGround = _sentence._m18.speedOverGround;
-          }
-          //_params[AVOID_PARAM_VESSEL_E].data.uint32[3] = _sentence._m18.mmsi;
-
-          _newPackets[1]++;
-        }
-      }
-
-    });
-  } else {
-    DroneConsole.println("ERROR: unable to bind to port 8008");
+void AvoidModule::readPackets() {
+  if (!_listening) return;
+  for (unsigned i = 0; i < 4; ++i) {
+    const int size = _udp.parsePacket();
+    if (size <= 0) {
+      _discardQueued = false;
+      break;
+    }
+    if (_discardQueued) {
+      _udp.flush();
+      continue;
+    }
+    ++_newPackets[0];
+    char payload[128] = {};
+    if (size >= sizeof(payload) || _udp.read(reinterpret_cast<uint8_t*>(payload), size) != size) {
+      _udp.flush();
+      continue;
+    }
+    if (!_sentence.parse(payload, size) || _sentence.getAisType() != 18) continue;
+    auto* vessel = getVesselByMMSI(_sentence._m18.mmsi);
+    if (!vessel) continue;
+    vessel->courseOverGround = _sentence._m18.courseOverGround;
+    vessel->location[0] = _sentence._m18.lon;
+    vessel->location[1] = _sentence._m18.lat;
+    vessel->speedOverGround = _sentence._m18.speedOverGround;
+    ++_newPackets[1];
   }
 }
 
@@ -179,6 +201,7 @@ void AvoidModule::update() {
 
 void AvoidModule::loop() {
   DroneModule::loop();
+  readPackets();
 
   // copy course to adjHeading as default
   float adjHeading = _subs[AVOID_SUB_COURSE_E].param.data.f[0];
@@ -195,7 +218,7 @@ void AvoidModule::loop() {
   boolean calcAvoidHeading;
 
   AvoidModuleVessel* v;
-  for (uint8_t i=0; i<_vessels.size(); i++) {
+  for (int i = 0; i < _vessels.size(); ++i) {
     v = _vessels.get(i);
     calcCrosstrack = false;
     calcAvoidHeading = false;

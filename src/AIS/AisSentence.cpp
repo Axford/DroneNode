@@ -27,7 +27,7 @@ boolean AisSentence::parse(char * msg, uint8_t len) {
   uint8_t i=1;
   uint32_t checksum = 0;
   // calc checksum... no point parsing a junk message
-  while (msg[i] != 0 && msg[i] != '*') {
+  while (i < len && msg[i] != 0 && msg[i] != '*') {
     checksum = checksum ^ msg[i];
     i++;
   }
@@ -36,13 +36,13 @@ boolean AisSentence::parse(char * msg, uint8_t len) {
   if (checksumHex.length() == 1) checksumHex = '0' + checksumHex;
 
   // now compare checksums
-  if (msg[i] != '*') {
+  if (i >= len || len - i < 3 || msg[i] != '*') {
     DroneConsole.println("  Missing checksum");
     return false;
   }
   i++;
 
-  if (msg[i] != checksumHex[0] && msg[i+1] != checksumHex[1]) {
+  if (msg[i] != checksumHex[0] || msg[i+1] != checksumHex[1]) {
     DroneConsole.println("  Failed Checksum");
     return false;
   }
@@ -52,7 +52,7 @@ boolean AisSentence::parse(char * msg, uint8_t len) {
   uint8_t commas = 0;
   uint8_t bufLen = 0;
   char buf[AIS_SENTENCE_MAX_PART_LENGTH];
-  while (msg[i] != 0 && msg[i] != '*') {
+  while (i < len && msg[i] != 0 && msg[i] != '*') {
     switch (msg[i]) {
       case '!': break;
       case '$': break;

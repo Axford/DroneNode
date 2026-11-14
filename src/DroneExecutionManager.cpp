@@ -443,7 +443,7 @@ const ModuleType moduleTypes[] = {
   {ADS1015_STR_ADS1015, createModule<ADS1015Module>},
   {ANALOG_STR_ANALOG, createModule<AnalogModule>},
   {ANEMOMETER_STR_ANEMOMETER, createModule<AnemometerModule>},
-  {AVOID_STR_AVOID, createModule<AvoidModule>},
+  {AVOID_STR_AVOID, createModule<AvoidModule>, prepareLogicModule<AvoidModule>},
   {BME280_STR_BME280, createModule<BME280Module>},
   {CMPS12_STR_CMPS12, createModule<CMPS12Module>},
   {CONTROLLER_STR_CONTROLLER, createModule<ControllerModule>},

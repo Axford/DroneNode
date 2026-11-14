@@ -24,7 +24,7 @@
 #define AVOID_MODULE_H
 
 #include "../DroneModule.h"
-#include "AsyncUDP.h"
+#include <WiFiUdp.h>
 #include "../AIS/AisSentence.h"
 #include "LinkedList.h"
 
@@ -100,12 +100,22 @@ static const char AVOID_STR_AVOID[] PROGMEM = "Avoid";
 class AvoidModule:  public DroneModule {
 protected:
   AisSentence _sentence;
-  AsyncUDP _udp;
+  static WiFiUDP _udp;
+  static uint8_t _udpChannel;
+  static uint8_t _udpUsers;
+  bool _listening = false;
+  bool _discardQueued = false;
+  bool claimListener();
+  void readPackets();
   uint32_t _newPackets[2];
   IvanLinkedList::LinkedList<AvoidModuleVessel*> _vessels;
 public:
 
-  AvoidModule(uint8_t id, DroneSystem* ds);
+  AvoidModule(uint8_t id, DroneSystem* ds, Registration registration = Registration::Managed);
+  ~AvoidModule() override;
+  bool hotLoadReady() const { return _mgmtParams && _subs && _params; }
+  bool prepareLiveConfiguration() override;
+  bool liveObservationOnly() const override { return true; }
 
   AvoidModuleVessel* getVesselByMMSI(uint32_t mmsi);
 
