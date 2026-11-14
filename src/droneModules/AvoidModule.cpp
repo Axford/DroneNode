@@ -4,10 +4,11 @@
 #include "../DroneLinkManager.h"
 #include "strings.h"
 #include "../navMath.h"
+#include <lwip/sockets.h>
 
 // @type Avoid
 
-WiFiUDP AvoidModule::_udp;
+int AvoidModule::_udp = -1;
 uint8_t AvoidModule::_udpChannel = 0;
 uint8_t AvoidModule::_udpUsers = 0;
 
@@ -128,7 +129,8 @@ AvoidModuleVessel* AvoidModule::getVesselByMMSI(uint32_t mmsi) {
 
 AvoidModule::~AvoidModule() {
   if (_listening && --_udpUsers == 0) {
-    _udp.stop();
+    close(_udp);
+    _udp = -1;
     _udpChannel = 0;
   }
   while (_vessels.size()) free(_vessels.shift());
@@ -137,9 +139,18 @@ AvoidModule::~AvoidModule() {
 bool AvoidModule::claimListener() {
   if (_listening) return true;
   if (_udpUsers && _udpChannel != _id) return false;
-  if (!_udpUsers && !_udp.begin(8008)) {
-    _udp.stop();
-    return false;
+  if (!_udpUsers) {
+    _udp = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+    if (_udp < 0) return false;
+    sockaddr_in address{};
+    address.sin_family = AF_INET;
+    address.sin_port = htons(8008);
+    address.sin_addr.s_addr = INADDR_ANY;
+    if (bind(_udp, reinterpret_cast<sockaddr*>(&address), sizeof(address)) != 0) {
+      close(_udp);
+      _udp = -1;
+      return false;
+    }
   }
   _udpChannel = _id;
   ++_udpUsers;
@@ -166,21 +177,15 @@ void AvoidModule::setup() {
 void AvoidModule::readPackets() {
   if (!_listening) return;
   for (unsigned i = 0; i < 4; ++i) {
-    const int size = _udp.parsePacket();
-    if (size <= 0) {
-      _discardQueued = false;
+    char payload[128];
+    const int size = recv(_udp, payload, sizeof(payload), MSG_DONTWAIT);
+    if (size < 0) {
+      if (errno == EWOULDBLOCK || errno == EAGAIN) _discardQueued = false;
       break;
     }
-    if (_discardQueued) {
-      _udp.flush();
-      continue;
-    }
+    if (_discardQueued) continue;
     ++_newPackets[0];
-    char payload[128] = {};
-    if (size >= sizeof(payload) || _udp.read(reinterpret_cast<uint8_t*>(payload), size) != size) {
-      _udp.flush();
-      continue;
-    }
+    if (size >= sizeof(payload)) continue;
     if (!_sentence.parse(payload, size) || _sentence.getAisType() != 18) continue;
     auto* vessel = getVesselByMMSI(_sentence._m18.mmsi);
     if (!vessel) continue;

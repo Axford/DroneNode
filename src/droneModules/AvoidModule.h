@@ -24,7 +24,6 @@
 #define AVOID_MODULE_H
 
 #include "../DroneModule.h"
-#include <WiFiUdp.h>
 #include "../AIS/AisSentence.h"
 #include "LinkedList.h"
 
@@ -100,7 +99,7 @@ static const char AVOID_STR_AVOID[] PROGMEM = "Avoid";
 class AvoidModule:  public DroneModule {
 protected:
   AisSentence _sentence;
-  static WiFiUDP _udp;
+  static int _udp;
   static uint8_t _udpChannel;
   static uint8_t _udpUsers;
   bool _listening = false;
