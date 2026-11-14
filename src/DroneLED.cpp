@@ -36,7 +36,29 @@ boolean DroneLED::isNeopixel() {
 }
 
 
+bool DroneLED::setBenchCue(const char* phase) {
+  if (!_strip) return false;
+  if (!strcmp(phase, "off")) {
+    _cueActive = false;
+    return true;
+  }
+  if (!strcmp(phase, "hold")) _cueColor = RgbColor(255, 140, 0);
+  else if (!strcmp(phase, "move")) _cueColor = RgbColor(0, 255, 255);
+  else if (!strcmp(phase, "reload")) _cueColor = RgbColor(255, 0, 255);
+  else return false;
+  _cueStarted = millis();
+  _cueActive = true;
+  return true;
+}
+
 void DroneLED::setState(uint8_t newState) {
+  if (newState == DRONE_LED_STATE_RUNNING_NO_WIFI || newState == DRONE_LED_STATE_RUNNING_WIFI) {
+    if (_cueActive && millis() - _cueStarted < 60000) {
+      _strip->SetPixelColor(0, _cueColor);
+      return;
+    }
+  }
+  _cueActive = false;
   _state = newState;
   switch (newState) {
     case DRONE_LED_STATE_STARTUP:

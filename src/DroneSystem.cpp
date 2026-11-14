@@ -716,6 +716,10 @@ void DroneSystem::loop() {
           else DroneConsole.println("servo error=invalid-command");
         }
 
+        if (strncmp(_serialCommand, "cue ", 4) == 0) {
+          DroneConsole.println(dled->setBenchCue(_serialCommand + 4) ? "cue ok" : "cue unavailable");
+        }
+
         // traceroute
         if (strncmp(_serialCommand, "trace", 5)==0) {
           // read node address

@@ -448,6 +448,13 @@ because mesh writes have no apply-generation marker. Bound Servo configurations,
 Motor coexistence for live PWM activation, and powered actuator validation are
 outside this bench slice.
 
+For a watched test on the v4 motherboard, the USB console can mark each phase
+on the onboard status NeoPixel. Use `cue move` (cyan) before commanding a
+position, `cue hold` (amber) while the observer confirms the shaft has settled,
+and `cue reload` (magenta) before issuing the live apply. These are visual cues
+only. Each cue expires after 60 seconds. `cue off` clears it immediately.
+Error, update and restart indications take precedence.
+
 ### I²C discovery diagnostics
 
 The PlatformIO post-build check verifies the serialized application image against the declared partition size. Before a direct flash write, independently compare the image byte length and sector-aligned erase range with the selected device's actual partition table.

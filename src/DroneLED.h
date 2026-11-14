@@ -55,6 +55,9 @@ protected:
   DroneSystem* _ds;
   uint8_t _hw;
   uint8_t _state;
+  uint32_t _cueStarted = 0;
+  RgbColor _cueColor = RgbColor(0);
+  bool _cueActive = false;
 
 public:
   NeoPixelBrightnessBus<NeoGrbFeature, Neo800KbpsMethod> *_strip;
@@ -64,6 +67,7 @@ public:
   boolean isNeopixel();
 
   void setState(uint8_t newState);
+  bool setBenchCue(const char* phase);
 
   void update();
 
