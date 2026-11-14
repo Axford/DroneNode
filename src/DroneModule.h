@@ -168,6 +168,8 @@ public:
   virtual bool prepareLiveConfiguration() { return validateLiveConfiguration(); }
   virtual bool canRetireLive() const { return true; }
   virtual bool liveObservationOnly() const { return false; }
+  virtual bool acceptsLiveInjection(uint8_t) const { return false; }
+  virtual bool dependsOnLiveModule(uint8_t) const { return false; }
 
   uint8_t id();
   virtual WaypointModule *asWaypoint() { return nullptr; }

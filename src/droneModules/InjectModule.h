@@ -54,12 +54,17 @@ protected:
     DroneLinkMsg _targetMsg;
 public:
 
-  InjectModule(uint8_t id, DroneSystem* ds);
+  InjectModule(uint8_t id, DroneSystem* ds, Registration registration = Registration::Managed);
+  bool hotLoadReady() const { return _mgmtParams && _subs && _params; }
+  bool validateLiveConfiguration() const override;
+  bool dependsOnLiveModule(uint8_t channel) const override;
   
   virtual void setup();
 
   void update();
 
+private:
+  DroneModule* liveSink() const;
 };
 
 #endif

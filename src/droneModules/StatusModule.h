@@ -70,6 +70,7 @@ public:
 
   StatusModule(uint8_t id, DroneSystem* ds, Registration registration = Registration::Managed);
   bool hotLoadReady() const { return _mgmtParams && _params && _subs; }
+  bool acceptsLiveInjection(uint8_t parameter) const override;
 
   virtual void setup();
 

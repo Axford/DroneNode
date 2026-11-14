@@ -99,6 +99,13 @@ StatusModule::StatusModule(uint8_t id, DroneSystem* ds, Registration registratio
 
 
 
+bool StatusModule::acceptsLiveInjection(uint8_t parameter) const {
+  if (!_liveLogic || parameter != STATUS_PARAM_VALUE1 || _params[STATUS_PARAM_SCENE_E].publish) return false;
+  for (uint8_t index = 0; index < STATUS_SUBS; ++index)
+    if (_subs[index].addr.node) return false;
+  return true;
+}
+
 void StatusModule::setup() {
   DroneModule::setup();
 

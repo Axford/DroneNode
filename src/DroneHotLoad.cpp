@@ -462,6 +462,15 @@ HotLoadResult DroneExecutionManager::applyHotLoad(const char* path) {
   for (auto* module : candidates)
     if (module && module->_liveLogic && !module->prepareLiveConfiguration())
       return HotLoadResult::InvalidConfiguration;
+  for (unsigned id = 1; id <= MaxChannel; ++id) {
+    if (!retired[id] && !candidates[id]) continue;
+    for (uint8_t index = 0; index < _dmm->moduleCount(); ++index)
+      if (_dmm->getModuleByIndex(index)->dependsOnLiveModule(id))
+        return HotLoadResult::InvalidConfiguration;
+    for (auto* module : candidates)
+      if (module && module->dependsOnLiveModule(id))
+        return HotLoadResult::InvalidConfiguration;
+  }
 
   xSemaphoreTake(_ds->_moduleChangeMutex, portMAX_DELAY);
   // Allocate registry entries while the previous modules still own their pins.
