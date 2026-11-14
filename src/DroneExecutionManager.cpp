@@ -456,7 +456,7 @@ const ModuleType moduleTypes[] = {
   {HT16K33_STR_HT16K33, createModule<HT16K33Module>},
   {INA219_STR_INA219, createModule<INA219Module>},
   {INA3221_STR_INA3221, createModule<INA3221Module>},
-  {INJECT_STR_INJECT, createModule<InjectModule>},
+  {INJECT_STR_INJECT, createModule<InjectModule>, prepareLogicModule<InjectModule>},
   {JOYSTICK_STR_JOYSTICK, createModule<JoystickModule>},
   {KITE_CONTROLLER_STR_KITE_CONTROLLER, createModule<KiteControllerModule>, prepareLogicModule<KiteControllerModule>},
   {LSM9DS1_STR_LSM9DS1, createModule<LSM9DS1Module>},
