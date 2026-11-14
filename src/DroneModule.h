@@ -164,6 +164,8 @@ public:
   DroneModule(uint8_t id, DroneSystem* ds, Registration registration = Registration::Managed);
   virtual ~DroneModule();
 
+  virtual bool validateLiveConfiguration() const { return true; }
+
   uint8_t id();
   virtual WaypointModule *asWaypoint() { return nullptr; }
 

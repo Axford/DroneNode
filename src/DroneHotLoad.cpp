@@ -17,6 +17,12 @@ namespace {
 constexpr size_t MaxFileSize = 8192;
 constexpr uint8_t MaxChannel = 254;
 
+bool hasModuleName(DroneModule &module, const char* name) {
+  const auto* param = module.getParamEntryById(DRONE_MODULE_PARAM_NAME);
+  const size_t length = (param->paramTypeLength & 15) + 1;
+  return strlen(name) == length && !memcmp(param->data.c, name, length);
+}
+
 bool applyLogicValue(DRONE_PARAM_ENTRY &param, const char* value) {
   const auto type = (param.paramTypeLength >> 4) & 7;
   if (!(param.paramTypeLength & DRONE_LINK_MSG_WRITABLE)) return false;
@@ -313,12 +319,12 @@ bool DroneExecutionManager::bindLiveInputs(IvanLinkedList::LinkedList<LiveBindin
     } else {
       for (uint8_t index = 0; index < _dmm->moduleCount(); ++index) {
         auto* current = _dmm->getModuleByIndex(index);
-        if (strcmp(current->getName(), sourceName)) continue;
+        if (!hasModuleName(*current, sourceName)) continue;
         if (source || retiring[current->id()] || candidates[current->id()]) return false;
         source = current;
       }
       for (unsigned index = 1; index <= MaxChannel; ++index)
-        if (candidates[index] && !strcmp(candidates[index]->getName(), sourceName)) return false;
+        if (candidates[index] && hasModuleName(*candidates[index], sourceName)) return false;
     }
     if (!source) return false;
     DRONE_PARAM_ENTRY* param;
@@ -445,6 +451,9 @@ HotLoadResult DroneExecutionManager::applyHotLoad(const char* path) {
   if (!changed) return HotLoadResult::Applied;
   if (_addressQueue.size() || !bindLiveInputs(bindings, candidates, retired))
     return HotLoadResult::InvalidConfiguration;
+  for (auto* module : candidates)
+    if (module && module->_liveLogic && !module->validateLiveConfiguration())
+      return HotLoadResult::InvalidConfiguration;
 
   xSemaphoreTake(_ds->_moduleChangeMutex, portMAX_DELAY);
   // Allocate registry entries while the previous modules still own their pins.

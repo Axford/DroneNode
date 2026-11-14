@@ -487,7 +487,7 @@ const ModuleType moduleTypes[] = {
   {WATER_SENSOR_STR_WATER_SENSOR, createModule<WaterSensorModule>},
   {WAYPOINT_STR_WAYPOINT, createModule<WaypointModule>},
   {WIND_STR_WIND, createModule<WindModule>},
-  {WIND_FROM_WING_STR_WIND_FROM_WING, createModule<WindFromWingModule>},
+  {WIND_FROM_WING_STR_WIND_FROM_WING, createModule<WindFromWingModule>, prepareLogicModule<WindFromWingModule>},
 };
 
 }  // namespace

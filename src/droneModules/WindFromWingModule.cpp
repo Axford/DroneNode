@@ -6,15 +6,17 @@
 
 // @type WindFromWing
 
-WindFromWingModule::WindFromWingModule(uint8_t id, DroneSystem* ds):
-  DroneModule ( id, ds )
+WindFromWingModule::WindFromWingModule(uint8_t id, DroneSystem* ds, Registration registration):
+  DroneModule(id, ds, registration)
  {
+   if (!_mgmtParams) return;
    setTypeName(FPSTR(WIND_FROM_WING_STR_WIND_FROM_WING));
 
    _dirSample = 0;
 
    // subs
    initSubs(WIND_FROM_WING_SUBS);
+   if (!_subs) return;
 
    DRONE_PARAM_SUB *sub;
 
@@ -31,6 +33,7 @@ WindFromWingModule::WindFromWingModule(uint8_t id, DroneSystem* ds):
 
    // pubs
    initParams(WIND_FROM_WING_PARAM_ENTRIES);
+   if (!_params) return;
 
    DRONE_PARAM_ENTRY *param;
 
@@ -54,6 +57,11 @@ WindFromWingModule::WindFromWingModule(uint8_t id, DroneSystem* ds):
     _params[WIND_FROM_WING_PARAM_SAMPLES_E].data.uint8[0] = 10;
 }
 
+bool WindFromWingModule::validateLiveConfiguration() const {
+  return _subs[WIND_FROM_WING_SUB_WING_E].addr.node &&
+         _subs[WIND_FROM_WING_SUB_HEADING_E].addr.node &&
+         _params[WIND_FROM_WING_PARAM_SAMPLES_E].data.uint8[0];
+}
 
 void WindFromWingModule::loop() {
   DroneModule::loop();

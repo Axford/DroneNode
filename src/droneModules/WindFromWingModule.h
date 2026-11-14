@@ -64,7 +64,9 @@ protected:
 
 public:
 
-  WindFromWingModule(uint8_t id, DroneSystem* ds);
+  WindFromWingModule(uint8_t id, DroneSystem* ds, Registration registration = Registration::Managed);
+  bool hotLoadReady() const { return _mgmtParams && _subs && _params; }
+  bool validateLiveConfiguration() const override;
 
   void loop();
 };
