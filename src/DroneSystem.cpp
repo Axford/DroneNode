@@ -720,6 +720,10 @@ void DroneSystem::loop() {
           DroneConsole.println(dled->setBenchCue(_serialCommand + 4) ? "cue ok" : "cue unavailable");
         }
 
+        if (strncmp(_serialCommand, "route resume ", 13) == 0) {
+          DroneConsole.println(dem->resumeLiveRoute(_serialCommand + 13) ? "route resumed" : "route unavailable");
+        }
+
         // traceroute
         if (strncmp(_serialCommand, "trace", 5)==0) {
           // read node address

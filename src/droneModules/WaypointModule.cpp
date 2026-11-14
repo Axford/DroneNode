@@ -7,9 +7,10 @@
 #include "Preferences.h"
 #include <mbedtls/sha256.h>
 
-WaypointModule::WaypointModule(uint8_t id, DroneSystem* ds):
-  DroneModule ( id, ds )
+WaypointModule::WaypointModule(uint8_t id, DroneSystem* ds, Registration registration):
+  DroneModule(id, ds, registration)
  {
+   if (!_mgmtParams) return;
    setTypeName(FPSTR(WAYPOINT_STR_WAYPOINT));
 
     // @default interval = 1000
@@ -27,6 +28,7 @@ WaypointModule::WaypointModule(uint8_t id, DroneSystem* ds):
 
    // subs
    initSubs(WAYPOINT_SUBS);
+   if (!_subs) return;
 
    _subs[WAYPOINT_SUB_LOCATION_E].addrParam = WAYPOINT_SUB_LOCATION_ADDR;
    _subs[WAYPOINT_SUB_LOCATION_E].param.paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, WAYPOINT_SUB_LOCATION);
@@ -37,6 +39,7 @@ WaypointModule::WaypointModule(uint8_t id, DroneSystem* ds):
 
    // pubs
    initParams(WAYPOINT_PARAM_ENTRIES);
+   if (!_params) return;
 
    _params[WAYPOINT_PARAM_MODE_E].paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, WAYPOINT_PARAM_MODE);
    _params[WAYPOINT_PARAM_MODE_E].name = FPSTR(STRING_MODE);
@@ -91,7 +94,7 @@ WaypointModule::WaypointModule(uint8_t id, DroneSystem* ds):
 
 
 
-void WaypointModule::loadWaypoints() {
+bool WaypointModule::loadWaypoints(bool strict) {
   // empty current list of waypoints
   _waypoints.clear();
 
@@ -139,9 +142,10 @@ void WaypointModule::loadWaypoints() {
       mbedtls_sha256_init(&sha);
       bool complete = mbedtls_sha256_starts_ret(&sha, 0) == 0;
       const auto size = file.size();
+      if (strict && size > 16384) complete = false;
       size_t read = 0;
       uint8_t bytes[256];
-      while (read < size) {
+      while (read < size && (!strict || complete)) {
         const auto length = file.read(bytes, size - read < sizeof(bytes) ? size - read : sizeof(bytes));
         if (length == 0) break;
         complete = mbedtls_sha256_update_ret(&sha, bytes, length) == 0 && complete;
@@ -175,7 +179,12 @@ void WaypointModule::loadWaypoints() {
             } else {
               // data row
               // attempt to convert buffer into a float
-              f = (float)atof(buffer);
+              char* end;
+              f = strtof(buffer, &end);
+              if (strict && (col == lonCol || col == latCol || col == radiusCol) &&
+                  (end == buffer || *end || !isfinite(f) ||
+                   (col == lonCol && fabsf(f) > 180) || (col == latCol && fabsf(f) > 90) ||
+                   (col == radiusCol && f <= 0))) complete = false;
 
               // see which column this relates to
               if (col == lonCol) {
@@ -192,21 +201,26 @@ void WaypointModule::loadWaypoints() {
               // have we found a complete row?
               if (( c == '\n' || last ) && colsFound == 3) {
                 // calculate distances
-                if (lastW.lon != 0) t.distanceFromLast = calculateDistanceBetweenCoordinates(lastW.lon, lastW.lat, t.lon, t.lat);
+                if (strict ? _waypoints.size() > 0 : lastW.lon != 0)
+                  t.distanceFromLast = calculateDistanceBetweenCoordinates(lastW.lon, lastW.lat, t.lon, t.lat);
                 t.cumulativeDistance += t.distanceFromLast;
 
                 // store waypoint
-                _waypoints.add(t);
+                if ((strict && _waypoints.size() == UINT8_MAX) || !_waypoints.add(t)) complete = false;
 
                 memcpy(&lastW, &t, sizeof(lastW));
               }
             }
 
             if (c == '\n') {
+              if (strict && ((line == 0 && (lonCol == 255 || latCol == 255 || radiusCol == 255)) ||
+                             (line != 0 && colsFound != 3))) complete = false;
+              if (strict) t.distanceFromLast = 0;
               line++;
               col = 0;
               colsFound = 0;
             } else {
+              if (strict && col == 254) complete = false;
               col++;
             }
             bufLen = 0;  // reset ready for next col
@@ -217,13 +231,13 @@ void WaypointModule::loadWaypoints() {
               buffer[bufLen] = c;
               bufLen++;
               buffer[bufLen] = 0; // null terminate as we go
-            }
+            } else if (strict) complete = false;
           }
 
 
         }
       }
-      if (!complete || read != size) _waypoints.clear();
+      if (!complete || read != size || (strict && _waypoints.size() > UINT8_MAX)) _waypoints.clear();
       if (_waypoints.size() > 0 && _waypoints.size() <= UINT8_MAX &&
           mbedtls_sha256_finish_ret(&sha, digest) != 0) memset(digest, 0, sizeof(digest));
       mbedtls_sha256_free(&sha);
@@ -253,11 +267,14 @@ void WaypointModule::loadWaypoints() {
 
   // update number of waypoints
   updateAndPublishParam(&_params[WAYPOINT_PARAM_WAYPOINTS_E], (uint8_t*)&waypoints, sizeof(waypoints));
+  return waypoints != 0;
 }
 
 
 void WaypointModule::setup() {
   DroneModule::setup();
+
+  if (_liveLogic) return;
 
   loadWaypoints();
 
@@ -273,6 +290,26 @@ void WaypointModule::setup() {
   pref.end();
 }
 
+bool WaypointModule::validateLiveConfiguration() const {
+  return _params[WAYPOINT_PARAM_MODE_E].data.uint8[0] == WAYPOINT_MODE_NORMAL &&
+         _params[WAYPOINT_PARAM_WAYPOINT_E].data.uint8[0] == 0 &&
+         _params[WAYPOINT_PARAM_LOOP_E].data.uint8[0] <= 1;
+}
+
+bool WaypointModule::canRetireLive() const {
+  return _liveLogic || !_enabled || _activeWaypoint < 0;
+}
+
+bool WaypointModule::prepareLiveConfiguration() {
+  return validateLiveConfiguration() && loadWaypoints(true);
+}
+
+bool WaypointModule::resumeLiveRoute() {
+  if (!_liveLogic || !_setupDone || !_enabled || !_waypoints.size()) return false;
+  _liveRouteResumed = true;
+  return true;
+}
+
 
 void WaypointModule::onParamWrite(DRONE_PARAM_ENTRY *param) {
   DroneModule::onParamWrite(param);
@@ -281,7 +318,7 @@ void WaypointModule::onParamWrite(DRONE_PARAM_ENTRY *param) {
 }
 
 uint32_t WaypointModule::activeVisit(const float *target) {
-  if (!_setupDone || !_enabled || _activeWaypoint < 0 ||
+  if (_liveLogic || !_setupDone || !_enabled || _activeWaypoint < 0 ||
       _params[WAYPOINT_PARAM_MODE_E].data.uint8[0] != WAYPOINT_MODE_NORMAL ||
       _params[WAYPOINT_PARAM_WAYPOINT_E].data.uint8[0] != _activeWaypoint ||
       memcmp(target, _params[WAYPOINT_PARAM_TARGET_E].data.f, 3 * sizeof(float)) != 0) return 0;
@@ -304,7 +341,7 @@ void WaypointModule::publishTarget(uint8_t waypoint) {
 
 void WaypointModule::loop() {
   DroneModule::loop();
-  if (!_setupDone) return;
+  if (!_setupDone || (_liveLogic && !_liveRouteResumed)) return;
 
   uint8_t m = _params[WAYPOINT_PARAM_MODE_E].data.uint8[0];
   uint8_t waypoint = _params[WAYPOINT_PARAM_WAYPOINT_E].data.uint8[0];
@@ -405,7 +442,7 @@ void WaypointModule::loop() {
     }
 
     // do we need to store the waypoint in flash?
-    if (waypoint != _lastStoredWaypoint) {
+    if (!_liveLogic && waypoint != _lastStoredWaypoint) {
       _lastStoredWaypoint = waypoint;
       Preferences pref;
       pref.begin(_mgmtParams[DRONE_MODULE_PARAM_NAME_E].data.c, false);

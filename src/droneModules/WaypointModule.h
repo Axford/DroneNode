@@ -99,6 +99,7 @@ protected:
     IvanLinkedList::LinkedList<WAYPOINT_MODULE_WAYPOINT> _waypoints;
 
     uint32_t _visit = 0;
+    bool _liveRouteResumed = false;
     int _activeWaypoint = -1;
     void publishTarget(uint8_t waypoint);
 
@@ -112,10 +113,16 @@ protected:
    
 public:
 
-  WaypointModule(uint8_t id, DroneSystem* ds);
+  WaypointModule(uint8_t id, DroneSystem* ds, Registration registration = Registration::Managed);
+  bool hotLoadReady() const { return _mgmtParams && _subs && _params; }
+  bool validateLiveConfiguration() const override;
+  bool canRetireLive() const override;
+  bool liveObservationOnly() const override { return true; }
+  bool prepareLiveConfiguration() override;
+  bool resumeLiveRoute();
 
   WaypointModule *asWaypoint() override { return this; }
-  void loadWaypoints();
+  bool loadWaypoints(bool strict = false);
   void setup();
 
   void loop();

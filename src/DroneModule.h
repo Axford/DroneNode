@@ -165,6 +165,7 @@ public:
   virtual ~DroneModule();
 
   virtual bool validateLiveConfiguration() const { return true; }
+  virtual bool prepareLiveConfiguration() { return validateLiveConfiguration(); }
   virtual bool canRetireLive() const { return true; }
   virtual bool liveObservationOnly() const { return false; }
 

@@ -483,9 +483,9 @@ const ModuleType moduleTypes[] = {
   {TURN_RATE_STR_TURN_RATE, createModule<TurnRateModule>, prepareLogicModule<TurnRateModule>},
   {UDP_TELEMETRY_STR_UDP_TELEMETRY, createModule<UDPTelemetryModule>},
   {VL53L0X_STR_VL53L0X, createModule<VL53L0XModule>},
-  {NAV_STR_NAV, createModule<NavModule>},
+  {NAV_STR_NAV, createModule<NavModule>, prepareLogicModule<NavModule>},
   {WATER_SENSOR_STR_WATER_SENSOR, createModule<WaterSensorModule>},
-  {WAYPOINT_STR_WAYPOINT, createModule<WaypointModule>},
+  {WAYPOINT_STR_WAYPOINT, createModule<WaypointModule>, prepareLogicModule<WaypointModule>},
   {WIND_STR_WIND, createModule<WindModule>},
   {WIND_FROM_WING_STR_WIND_FROM_WING, createModule<WindFromWingModule>, prepareLogicModule<WindFromWingModule>},
 };

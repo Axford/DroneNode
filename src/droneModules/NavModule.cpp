@@ -14,9 +14,10 @@ using std::placeholders::_4;
 
 // @type Nav
 
-NavModule::NavModule(uint8_t id, DroneSystem* ds):
-  DroneModule ( id, ds )
+NavModule::NavModule(uint8_t id, DroneSystem* ds, Registration registration):
+  DroneModule(id, ds, registration)
  {
+   if (!_mgmtParams) return;
    setTypeName(FPSTR(NAV_STR_NAV));
 
    // @default interval = 1000
@@ -31,6 +32,7 @@ NavModule::NavModule(uint8_t id, DroneSystem* ds):
 
    // subs
    initSubs(NAV_SUBS);
+   if (!_subs) return;
 
    _subs[NAV_SUB_LOCATION_E].addrParam = NAV_SUB_LOCATION_ADDR;
    _subs[NAV_SUB_LOCATION_E].param.paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, NAV_SUB_LOCATION);
@@ -59,6 +61,7 @@ NavModule::NavModule(uint8_t id, DroneSystem* ds):
 
    // pubs
    initParams(NAV_PARAM_ENTRIES);
+   if (!_params) return;
 
    _params[NAV_PARAM_HEADING_E].paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_HIGH, NAV_PARAM_HEADING);
    _params[NAV_PARAM_HEADING_E].name = FPSTR(STRING_HEADING);
@@ -138,6 +141,14 @@ NavModule::NavModule(uint8_t id, DroneSystem* ds):
 }
 
 
+bool NavModule::validateLiveConfiguration() const {
+  return canRetireLive();
+}
+
+bool NavModule::canRetireLive() const {
+  return _params[NAV_PARAM_MODE_E].data.uint8[0] == NAV_IDLE;
+}
+
 WaypointModule *NavModule::refreshMoveGuard() {
   const auto &sub = _subs[NAV_SUB_TARGET_E];
   const auto mode = _params[NAV_PARAM_MODE_E].data.uint8[0];
@@ -203,7 +214,7 @@ void NavModule::handleLinkMessage(DroneLinkMsg *msg) {
   const bool addressed = msg->node() == _dlm->node() && msg->channel() == _id;
   if (addressed && msg->param() == NAV_PARAM_MOVE_TARGET &&
       msg->type() <= DRONE_LINK_MSG_TYPE_CHAR && !msg->writable()) {
-    applyTargetMove(msg);
+    if (!_liveLogic) applyTargetMove(msg);
     return;
   }
   if (addressed && msg->param() == NAV_PARAM_MOVE_TARGET) refreshMoveGuard();

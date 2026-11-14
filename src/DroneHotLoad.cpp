@@ -4,6 +4,7 @@
 #include "droneModules/ProbeModule.h"
 #include "droneModules/NMEAModule.h"
 #include "droneModules/ServoModule.h"
+#include "droneModules/WaypointModule.h"
 #include "CloudTelemetryConfig.h"
 #include <mbedtls/sha256.h>
 #include <math.h>
@@ -21,13 +22,6 @@ bool hasModuleName(DroneModule &module, const char* name) {
   const auto* param = module.getParamEntryById(DRONE_MODULE_PARAM_NAME);
   const size_t length = (param->paramTypeLength & 15) + 1;
   return strlen(name) == length && !memcmp(param->data.c, name, length);
-}
-
-bool sameModuleType(DroneModule &a, DroneModule &b) {
-  const auto* left = a.getParamEntryById(DRONE_MODULE_PARAM_TYPE);
-  const auto* right = b.getParamEntryById(DRONE_MODULE_PARAM_TYPE);
-  return left->paramTypeLength == right->paramTypeLength &&
-         !memcmp(left->data.c, right->data.c, (left->paramTypeLength & 15) + 1);
 }
 
 bool applyLogicValue(DRONE_PARAM_ENTRY &param, const char* value) {
@@ -384,7 +378,10 @@ HotLoadResult DroneExecutionManager::applyHotLoad(const char* path) {
         if (_dlm->hasLocalConsumer(section.id, previous)) return HotLoadResult::InvalidConfiguration;
         if (active.type == HotType::Logic) {
           if (!previous->canRetireLive()) return HotLoadResult::InvalidConfiguration;
-          if (!sameModuleType(*previous, *candidates[section.id]))
+          auto* oldType = previous->getParamEntryById(DRONE_MODULE_PARAM_TYPE);
+          auto* newType = candidates[section.id]->getParamEntryById(DRONE_MODULE_PARAM_TYPE);
+          if (oldType->paramTypeLength != newType->paramTypeLength ||
+              memcmp(oldType->data.c, newType->data.c, (oldType->paramTypeLength & 15) + 1))
             return HotLoadResult::RestartRequired;
         }
         if (active.type == HotType::Servo && !active.valid) return HotLoadResult::RestartRequired;
@@ -463,7 +460,7 @@ HotLoadResult DroneExecutionManager::applyHotLoad(const char* path) {
   if (_addressQueue.size() || !bindLiveInputs(bindings, candidates, retired))
     return HotLoadResult::InvalidConfiguration;
   for (auto* module : candidates)
-    if (module && module->_liveLogic && !module->validateLiveConfiguration())
+    if (module && module->_liveLogic && !module->prepareLiveConfiguration())
       return HotLoadResult::InvalidConfiguration;
 
   xSemaphoreTake(_ds->_moduleChangeMutex, portMAX_DELAY);
@@ -536,6 +533,14 @@ HotLoadResult DroneExecutionManager::applyHotLoad(const char* path) {
   }
   xSemaphoreGive(_ds->_moduleChangeMutex);
   return result;
+}
+
+bool DroneExecutionManager::resumeLiveRoute(const char* channel) {
+  unsigned id;
+  if (!telemetry::decimal(channel, MaxChannel, id)) return false;
+  auto* module = _dmm->getModuleById(id);
+  auto* route = module ? module->asWaypoint() : nullptr;
+  return route && route->resumeLiveRoute();
 }
 
 

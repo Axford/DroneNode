@@ -105,6 +105,7 @@ protected:
   String _slowestInstruction;
 
 public:
+    bool resumeLiveRoute(const char* channel);
     DroneExecutionManager(DroneSystem* ds, File &logFile);
 
     uint8_t getBootStatus();
