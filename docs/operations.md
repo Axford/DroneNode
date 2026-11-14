@@ -375,7 +375,7 @@ The node keeps one request pending at a time. Send another after observing a
 terminal result. A second write received while one is pending does not replace
 it. Result codes are 0 idle, 1 pending, 2 applied (including a no-op), 3 invalid
 filename, 4 file missing/unreadable or outside size bounds, 5 invalid
-configuration or unresolved/local consumer dependency, 6 restart required,
+configuration or an unresolved or guarded dependency, 6 restart required,
 7 pin conflict, 8 start failed with the previous pin owners restored,
 9 recovery failed, and 10 insufficient memory.
 
@@ -386,6 +386,31 @@ whitespace and comments. Unchanged instances retain their current runtime
 settings. Apply does not write the startup file. Restart still loads
 `config.ini`. Cloud command dispatch does not accept this action. Workbench
 integration and revision-bound confirmation are separate work.
+
+### Logic modules on an isolated node
+
+Use retained local publishers for bound inputs. For example, `$heading =
+@>14.12` selects parameter 12 on channel 14, and `$heading = @>Compass.heading`
+selects a unique local name. The type and payload size must match the input.
+Replace or remove a dependent module before changing its source. A changed
+instance waits for fresh bound input values. An identical apply preserves the
+instance and its runtime state.
+
+Status and WindFromWing publish their normal outputs. Hot-loaded Sailor,
+SpeedControl, TurnRate, TankSteer, PanTilt, Proa, KiteController, Polar, Nav,
+Waypoint and Avoid expose calculated values through `/modules` and suppress
+their custom DroneLink outputs. Proa accepts idle mode, KiteController accepts
+manual mode with zero payout, Polar accepts pass-through mode, and Nav accepts
+idle mode. Hot-loaded Inject accepts float input and writes directly to the
+unbound, unpublished Status test sink's `value1` on a retained local channel.
+
+A changed Waypoint prepares a validated `/waypoint.csv` snapshot, then holds
+until `route resume <channel>` is entered on the physical serial console. The
+resume selects the first waypoint for inspection, and a changed instance starts
+with a new hold even when the route digest matches. Startup route configuration
+continues to use its existing behavior. Known mesh subscribers and local
+consumers block logic replacement or removal. Connected control-chain resume
+and its actuator acceptance are separate work.
 
 ## Probe input diagnostics
 
