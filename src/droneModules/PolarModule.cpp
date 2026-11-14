@@ -7,9 +7,10 @@
 
 // @type Polar
 
-PolarModule::PolarModule(uint8_t id, DroneSystem* ds):
-  DroneModule ( id, ds )
+PolarModule::PolarModule(uint8_t id, DroneSystem* ds, Registration registration):
+  DroneModule(id, ds, registration)
  {
+  if (!_mgmtParams) return;
    setTypeName(FPSTR(POLAR_STR_POLAR));
 
    // init polarVals
@@ -26,6 +27,7 @@ PolarModule::PolarModule(uint8_t id, DroneSystem* ds):
 
    // subs
    initSubs(POLAR_SUBS);
+  if (!_subs) return;
 
    DRONE_PARAM_SUB *sub;
 
@@ -60,6 +62,7 @@ PolarModule::PolarModule(uint8_t id, DroneSystem* ds):
 
    // pubs
    initParams(POLAR_PARAM_ENTRIES);
+  if (!_params) return;
 
    DRONE_PARAM_ENTRY *param;
 
@@ -109,6 +112,21 @@ PolarModule::PolarModule(uint8_t id, DroneSystem* ds):
    setParamName(FPSTR(STRING_ADJ_HEADING), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_FLOAT, 4);
 
+}
+
+
+bool PolarModule::hotLoadReady() const {
+  return _mgmtParams && _subs && _params;
+}
+
+bool PolarModule::validateLiveConfiguration() const {
+  const auto& heading = _subs[POLAR_SUB_HEADING_E];
+  return _params[POLAR_PARAM_MODE_E].data.uint8[0] == POLAR_MODE_PASSTHROUGH &&
+         (heading.addr.node || heading.received);
+}
+
+bool PolarModule::canRetireLive() const {
+  return _params[POLAR_PARAM_MODE_E].data.uint8[0] == POLAR_MODE_PASSTHROUGH;
 }
 
 

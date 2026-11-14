@@ -4,9 +4,10 @@
 #include "../strings.h"
 #include "../navMath.h"
 
-ProaModule::ProaModule(uint8_t id, DroneSystem* ds):
-  DroneModule ( id, ds )
+ProaModule::ProaModule(uint8_t id, DroneSystem* ds, Registration registration):
+  DroneModule(id, ds, registration)
  {
+  if (!_mgmtParams) return;
    // set type
    setTypeName(FPSTR(PROA_STR_PROA));
 
@@ -18,6 +19,7 @@ ProaModule::ProaModule(uint8_t id, DroneSystem* ds):
 
    // subs
    initSubs(PROA_SUBS);
+  if (!_subs) return;
 
    DRONE_PARAM_SUB *sub;
 
@@ -48,6 +50,7 @@ ProaModule::ProaModule(uint8_t id, DroneSystem* ds):
 
    // pubs
    initParams(PROA_PARAM_ENTRIES);
+  if (!_params) return;
 
    DRONE_PARAM_ENTRY *param;
 
@@ -133,6 +136,19 @@ ProaModule::ProaModule(uint8_t id, DroneSystem* ds):
    _params[PROA_PARAM_DEBUG_E].data.f[3] = 0;
 
    update();  // set defaults
+}
+
+
+bool ProaModule::hotLoadReady() const {
+  return _mgmtParams && _subs && _params;
+}
+
+bool ProaModule::validateLiveConfiguration() const {
+  return _params[PROA_PARAM_MODE_E].data.uint8[0] == 0;
+}
+
+bool ProaModule::canRetireLive() const {
+  return _params[PROA_PARAM_MODE_E].data.uint8[0] == 0;
 }
 
 

@@ -23,6 +23,13 @@ bool hasModuleName(DroneModule &module, const char* name) {
   return strlen(name) == length && !memcmp(param->data.c, name, length);
 }
 
+bool sameModuleType(DroneModule &a, DroneModule &b) {
+  const auto* left = a.getParamEntryById(DRONE_MODULE_PARAM_TYPE);
+  const auto* right = b.getParamEntryById(DRONE_MODULE_PARAM_TYPE);
+  return left->paramTypeLength == right->paramTypeLength &&
+         !memcmp(left->data.c, right->data.c, (left->paramTypeLength & 15) + 1);
+}
+
 bool applyLogicValue(DRONE_PARAM_ENTRY &param, const char* value) {
   const auto type = (param.paramTypeLength >> 4) & 7;
   if (!(param.paramTypeLength & DRONE_LINK_MSG_WRITABLE)) return false;
@@ -376,10 +383,8 @@ HotLoadResult DroneExecutionManager::applyHotLoad(const char* path) {
         // Preserve consumer binding and publication semantics for this first lifecycle.
         if (_dlm->hasLocalConsumer(section.id, previous)) return HotLoadResult::InvalidConfiguration;
         if (active.type == HotType::Logic) {
-          auto* oldType = previous->getParamEntryById(DRONE_MODULE_PARAM_TYPE);
-          auto* newType = candidates[section.id]->getParamEntryById(DRONE_MODULE_PARAM_TYPE);
-          if (oldType->paramTypeLength != newType->paramTypeLength ||
-              memcmp(oldType->data.c, newType->data.c, (oldType->paramTypeLength & 15) + 1))
+          if (!previous->canRetireLive()) return HotLoadResult::InvalidConfiguration;
+          if (!sameModuleType(*previous, *candidates[section.id]))
             return HotLoadResult::RestartRequired;
         }
         if (active.type == HotType::Servo && !active.valid) return HotLoadResult::RestartRequired;
@@ -399,6 +404,8 @@ HotLoadResult DroneExecutionManager::applyHotLoad(const char* path) {
     if (proposedIds[section.id]) continue;
     if (section.type == HotType::StartupOnly) return HotLoadResult::RestartRequired;
     auto* module = _dmm->getModuleById(section.id);
+    if (section.type == HotType::Logic && !module->canRetireLive())
+      return HotLoadResult::InvalidConfiguration;
     if (_dlm->hasLocalConsumer(section.id, module)) return HotLoadResult::InvalidConfiguration;
     if (section.type == HotType::Servo && !section.valid) return HotLoadResult::RestartRequired;
     if (section.type == HotType::NMEA &&

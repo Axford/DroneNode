@@ -927,6 +927,7 @@ void DroneModule::setup() {
     disable();
   }
   _setupDone = true;
+  if (_liveLogic) _updateNeeded = true;
 }
 
 boolean DroneModule::updateIfNeeded() {

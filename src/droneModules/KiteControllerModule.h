@@ -153,7 +153,11 @@ protected:
 
 public:
 
-  KiteControllerModule(uint8_t id, DroneSystem* ds);
+  KiteControllerModule(uint8_t id, DroneSystem* ds, Registration registration = Registration::Managed);
+  bool hotLoadReady();
+  bool validateLiveConfiguration() const override;
+  bool canRetireLive() const override;
+  bool liveObservationOnly() const override { return true; }
 
   void selectWaypoint(uint8_t n);
   void nextWaypoint();

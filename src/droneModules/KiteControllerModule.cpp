@@ -9,9 +9,10 @@
 
 // @type KiteController
 
-KiteControllerModule::KiteControllerModule(uint8_t id, DroneSystem* ds):
-  DroneModule ( id, ds )
+KiteControllerModule::KiteControllerModule(uint8_t id, DroneSystem* ds, Registration registration):
+  DroneModule(id, ds, registration)
 {
+  if (!_mgmtParams) return;
   // set type
   setTypeName(FPSTR(KITE_CONTROLLER_STR_KITE_CONTROLLER));
 
@@ -48,6 +49,7 @@ KiteControllerModule::KiteControllerModule(uint8_t id, DroneSystem* ds):
 
   // subs
   initSubs(KITE_CONTROLLER_SUBS);
+  if (!_subs) return;
 
   DRONE_PARAM_SUB *sub;
 
@@ -70,6 +72,7 @@ KiteControllerModule::KiteControllerModule(uint8_t id, DroneSystem* ds):
 
   // pubs
   initParams(KITE_CONTROLLER_PARAM_ENTRIES);
+  if (!_params) return;
 
   DRONE_PARAM_ENTRY *param;
 
@@ -144,6 +147,24 @@ KiteControllerModule::KiteControllerModule(uint8_t id, DroneSystem* ds):
   param->data.f[0] = 50;
   param->data.f[1] = 20;
   param->data.f[2] = 5;
+}
+
+
+bool KiteControllerModule::hotLoadReady() {
+  return _mgmtParams && _subs && _params && _waypoints.size() == 4;
+}
+
+bool KiteControllerModule::validateLiveConfiguration() const {
+  const auto& turn = _subs[KITE_CONTROLLER_SUB_TURN_RATE_E];
+  return _params[KITE_CONTROLLER_PARAM_MODE_E].data.uint8[0] == KITE_CONTROLLER_MODE_MANUAL &&
+         _params[KITE_CONTROLLER_PARAM_DISTANCE_E].data.f[0] == 0 &&
+         (turn.addr.node || turn.received);
+}
+
+bool KiteControllerModule::canRetireLive() const {
+  return _liveLogic || !_enabled || (_params[KITE_CONTROLLER_PARAM_MODE_E].data.uint8[0] == KITE_CONTROLLER_MODE_MANUAL &&
+         _payout == 0 && _params[KITE_CONTROLLER_PARAM_LEFT_E].data.f[0] == 0 &&
+         _params[KITE_CONTROLLER_PARAM_RIGHT_E].data.f[0] == 0);
 }
 
 void KiteControllerModule::selectWaypoint(uint8_t n) {

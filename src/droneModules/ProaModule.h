@@ -127,7 +127,11 @@ protected:
 
 public:
 
-  ProaModule(uint8_t id, DroneSystem* ds);
+  ProaModule(uint8_t id, DroneSystem* ds, Registration registration = Registration::Managed);
+  bool hotLoadReady() const;
+  bool validateLiveConfiguration() const override;
+  bool canRetireLive() const override;
+  bool liveObservationOnly() const override { return true; }
 
   uint8_t polarIndexForAngle(float ang);
   uint8_t polarForAngle(float ang);

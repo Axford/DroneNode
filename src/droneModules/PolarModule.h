@@ -152,7 +152,11 @@ protected:
   uint8_t  _region;
 public:
 
-  PolarModule(uint8_t id, DroneSystem* ds);
+  PolarModule(uint8_t id, DroneSystem* ds, Registration registration = Registration::Managed);
+  bool hotLoadReady() const;
+  bool validateLiveConfiguration() const override;
+  bool canRetireLive() const override;
+  bool liveObservationOnly() const override { return true; }
 
   uint8_t polarIndexForAngle(float ang);
 
