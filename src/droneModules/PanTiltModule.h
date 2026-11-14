@@ -63,14 +63,13 @@ static const char PAN_TILT_STR_PAN_TILT[] PROGMEM = "PanTilt";
 
 class PanTiltModule:  public DroneModule {
 protected:
-  unsigned long _lastUpdate;
   float _lastTarget;
-  float _iError;
-  float _dError;
-  float _lastError;
 public:
 
-  PanTiltModule(uint8_t id, DroneSystem* ds);
+  PanTiltModule(uint8_t id, DroneSystem* ds, Registration registration = Registration::Managed);
+  bool hotLoadReady() const { return _mgmtParams && _subs && _params; }
+  bool validateLiveConfiguration() const override;
+  bool liveObservationOnly() const override { return true; }
   
   //shortestSignedDistanceBetweenCircularValues
   static float getRotationDistance(float origin, float target);

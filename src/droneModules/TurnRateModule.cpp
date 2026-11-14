@@ -5,9 +5,10 @@
 
 // @type TurnRate
 
-TurnRateModule::TurnRateModule(uint8_t id, DroneSystem* ds):
-  DroneModule ( id, ds )
+TurnRateModule::TurnRateModule(uint8_t id, DroneSystem* ds, Registration registration):
+  DroneModule(id, ds, registration)
  {
+  if (!_mgmtParams) return;
    setTypeName(FPSTR(TURN_RATE_STR_TURN_RATE));
 
    _lastUpdate = 0;
@@ -23,6 +24,7 @@ TurnRateModule::TurnRateModule(uint8_t id, DroneSystem* ds):
 
    // subs
    initSubs(TURN_RATE_SUBS);
+   if (!_subs) return;
 
    _subs[TURN_RATE_SUB_TARGET_E].addrParam = TURN_RATE_SUB_TARGET_ADDR;
    _subs[TURN_RATE_SUB_TARGET_E].param.paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, TURN_RATE_SUB_TARGET);
@@ -43,6 +45,7 @@ TurnRateModule::TurnRateModule(uint8_t id, DroneSystem* ds):
 
    // pubs
    initParams(TURN_RATE_PARAM_ENTRIES);
+   if (!_params) return;
 
    _params[TURN_RATE_PARAM_TURN_RATE_E].paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_CRITICAL, TURN_RATE_PARAM_TURN_RATE);
    _params[TURN_RATE_PARAM_TURN_RATE_E].name = FPSTR(STRING_TURN_RATE);
@@ -92,11 +95,25 @@ float TurnRateModule::getRotationDistance(float origin, float target){
 }
 
 
+bool TurnRateModule::validateLiveConfiguration() const {
+  for (uint8_t i = 0; i < TURN_RATE_SUBS; ++i)
+    if (!_subs[i].addr.node && !_subs[i].received) return false;
+  return _params[TURN_RATE_PARAM_MODE_E].data.uint8[0] == TURN_RATE_MODE_NORMAL;
+}
+
 void TurnRateModule::loop() {
   DroneModule::loop();
   if (!_setupDone) return;
 
   unsigned long updateTime = millis();
+  if (_liveLogic && !_lastUpdate) {
+    const float heading = _subs[TURN_RATE_SUB_HEADING_E].param.data.f[0];
+    const float target = _subs[TURN_RATE_SUB_TARGET_E].param.data.f[0];
+    _lastUpdate = updateTime;
+    _lastHeading = heading;
+    _lastError = constrain(getRotationDistance(heading, target), -90.0f, 90.0f);
+    return;
+  }
   float dt = (updateTime - _lastUpdate) / 1000.0;
 
   // don't bother updating if dt too small

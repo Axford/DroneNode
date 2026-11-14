@@ -5,13 +5,15 @@
 
 // @type SpeedControl
 
-SpeedControlModule::SpeedControlModule(uint8_t id, DroneSystem* ds):
-  DroneModule ( id, ds )
+SpeedControlModule::SpeedControlModule(uint8_t id, DroneSystem* ds, Registration registration):
+  DroneModule(id, ds, registration)
  {
+  if (!_mgmtParams) return;
    setTypeName(FPSTR(SPEED_CONTROL_STR_SPEED_CONTROL));
 
    // subs
    initSubs(SPEED_CONTROL_SUBS);
+   if (!_subs) return;
 
    _subs[SPEED_CONTROL_SUB_DISTANCE_E].addrParam = SPEED_CONTROL_SUB_DISTANCE_ADDR;
    _subs[SPEED_CONTROL_SUB_DISTANCE_E].param.paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, SPEED_CONTROL_SUB_DISTANCE);
@@ -20,6 +22,7 @@ SpeedControlModule::SpeedControlModule(uint8_t id, DroneSystem* ds):
 
    // pubs
    initParams(SPEED_CONTROL_PARAM_ENTRIES);
+   if (!_params) return;
 
    _params[SPEED_CONTROL_PARAM_LIMITS_E].paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, SPEED_CONTROL_PARAM_LIMITS);
    _params[SPEED_CONTROL_PARAM_LIMITS_E].name = FPSTR(STRING_LIMITS);
@@ -42,6 +45,12 @@ SpeedControlModule::SpeedControlModule(uint8_t id, DroneSystem* ds):
    _params[SPEED_CONTROL_PARAM_SPEED_E].paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 4);
 }
 
+
+bool SpeedControlModule::validateLiveConfiguration() const {
+  const auto& distance = _subs[SPEED_CONTROL_SUB_DISTANCE_E];
+  return (distance.addr.node || distance.received) &&
+         _params[SPEED_CONTROL_PARAM_THRESHOLD_E].data.f[0] > 0;
+}
 
 void SpeedControlModule::update() {
   if (!_setupDone) return;

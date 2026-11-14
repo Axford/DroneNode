@@ -98,7 +98,11 @@ protected:
 
 public:
 
-  TankSteerModule(uint8_t id, DroneSystem* ds);
+  TankSteerModule(uint8_t id, DroneSystem* ds, Registration registration = Registration::Managed);
+  bool hotLoadReady() const { return _mgmtParams && _subs && _params; }
+  bool validateLiveConfiguration() const override;
+  bool liveObservationOnly() const override { return true; }
+  void setup() override;
   
   void loop();
 };

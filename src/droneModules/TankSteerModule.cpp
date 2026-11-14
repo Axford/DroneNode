@@ -6,9 +6,10 @@
 
 // @type TankSteer
 
-TankSteerModule::TankSteerModule(uint8_t id, DroneSystem* ds):
-  DroneModule ( id, ds )
+TankSteerModule::TankSteerModule(uint8_t id, DroneSystem* ds, Registration registration):
+  DroneModule(id, ds, registration)
 {
+  if (!_mgmtParams) return;
   // set type
   setTypeName(FPSTR(TANK_STEER_STR_TANK_STEER));
 
@@ -21,6 +22,7 @@ TankSteerModule::TankSteerModule(uint8_t id, DroneSystem* ds):
 
   // subs
   initSubs(TANK_STEER_SUBS);
+  if (!_subs) return;
 
   DRONE_PARAM_SUB *sub;
 
@@ -47,6 +49,7 @@ TankSteerModule::TankSteerModule(uint8_t id, DroneSystem* ds):
 
   // pubs
   initParams(TANK_STEER_PARAM_ENTRIES);
+  if (!_params) return;
 
   DRONE_PARAM_ENTRY *param;
 
@@ -97,6 +100,29 @@ TankSteerModule::TankSteerModule(uint8_t id, DroneSystem* ds):
 
 
 
+bool TankSteerModule::validateLiveConfiguration() const {
+  const auto mode = _params[TANK_STEER_PARAM_MODE_E].data.uint8[0];
+  if (mode > TANK_STEER_MODE_AUTOMATIC || _params[TANK_STEER_PARAM_THRESHOLD_E].data.f[0] <= 0)
+    return false;
+  for (uint8_t i = 0; i < TANK_STEER_SUBS; ++i) {
+    const auto& input = _subs[i];
+    if (mode == TANK_STEER_MODE_MANUAL && i != TANK_STEER_SUB_HEADING_E) {
+      if (input.addr.node || !input.received) return false;
+    } else if (!input.addr.node && !input.received) {
+      return false;
+    }
+  }
+  return true;
+}
+
+void TankSteerModule::setup() {
+  if (_liveLogic && _params[TANK_STEER_PARAM_MODE_E].data.uint8[0] == TANK_STEER_MODE_AUTOMATIC) {
+    _subs[TANK_STEER_SUB_TARGET_E].enabled = true;
+    _subs[TANK_STEER_SUB_DISTANCE_E].enabled = true;
+  }
+  DroneModule::setup();
+}
+
 void TankSteerModule::loop() {
   DroneModule::loop();
   if (!_setupDone) return;
@@ -133,6 +159,7 @@ void TankSteerModule::loop() {
     TURNRATE
   */
   unsigned long updateTime = millis();
+  const bool firstLiveUpdate = _liveLogic && !_lastUpdate;
   float dt = (updateTime - _lastUpdate) / 1000.0;
 
   // don't bother updating if dt too small
@@ -179,6 +206,11 @@ void TankSteerModule::loop() {
   // limit to 90 for ease
   if (err > 90) err = 90;
   if (err < -90) err = -90;
+  if (firstLiveUpdate) {
+    _lastError = err;
+    _lastHeading = h;
+    return;
+  }
 
   // update I and D terms
   _iError += err * dt;
