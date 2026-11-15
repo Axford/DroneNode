@@ -138,6 +138,14 @@ Use the existing PlatformIO environment (activate its Python environment so the 
 
 Run `python3 -m unittest discover -s tests -p 'test_release*.py'`. The frozen original catalog records all 51 entries. The parser skips source fragments without a catalog `@type`, as the original generator did; unfinished Proa/Nunchuck sources do not acquire new catalog entries. Reviewed annotation-only corrections align PanSerial/PanTilt heading names, ADS1015 max, ODrive state address, TankSteer addresses and LSM9DS1 inheritance with existing source definitions. No runtime constants or module registration changed. Historical build/runbook evidence above predates removal of the sibling-write hook.
 
+## ESP32 flash voltage and Serial 1
+
+On the classic ESP32, Serial 1 uses GPIO12 (MTDI), which also selects the internal flash voltage at reset until an eFuse override is provisioned. GPIO12 high selects 1.8 V. A Zbit flash with JEDEC ID `5E 40 16` uses a 3.3 V supply. If the ROM repeatedly reports `invalid header: 0xffffffff`, capture the boot code over USB and check whether GPIO12 was high. The application must start before it can emit a configuration diagnostic.
+
+On startup, firmware reads the flash ID and the three voltage eFuse bits. For `5E 40 16`, it reports a `[config]` error over the startup console if the fixed 3.3 V configuration is missing. An ID read failure is reported separately. Startup continues and the check only reads hardware state.
+
+Provision through the [Espressif USB service command](https://docs.espressif.com/projects/esptool/en/release-v4/esp32/espefuse/set-flash-voltage-cmd.html) after matching the physical ESP32 and flash to the qualified configuration and checking the current fuse settings. An all-ones flash ID is inconclusive. If necessary, retry after a full power cycle and manual BOOT entry. Fixed 3.3 V is permanent. Read back `XPD_SDIO_FORCE`, `XPD_SDIO_REG` and `XPD_SDIO_TIEH`; all three must be set. Then fully remove and reapply power, and confirm fresh Wi-Fi discovery in Workbench.
+
 ## SEP-07 bench preservation checkpoint — 2026-11-06
 
 The user confirmed the existing connected bench node for [SEP-07](../../DroneLinkDatastore/docs/planning/sep-07-bench-preservation.md). Initial receive-only console observation on the same CP2102 connection found 71 `invalid header: 0xffffffff` messages and ten RTC-watchdog resets in five seconds, with no application startup markers. This is ROM boot failure evidence, not a diagnosed firmware regression or proof of erased flash. The USB connection is the console; earlier binary mesh telemetry was observed over UDP, not this console port.

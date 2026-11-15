@@ -3,13 +3,32 @@
 #include "FirmwareMeasurements.h"
 namespace telemetry {void mountMeasurements(AsyncWebServer &server);}
 #include "DroneLogger.h"
+#include "esp_flash.h"
 #include "esp_pm.h"
+#include "soc/efuse_reg.h"
 
 static esp_pm_config_esp32_t pm_config = {
   .max_freq_mhz =240,// CONFIG_EXAMPLE_MAX_CPU_FREQ_MHZ,
   .min_freq_mhz = 10,//CONFIG_EXAMPLE_MIN_CPU_FREQ_MHZ,
   .light_sleep_enable = true
 };
+
+static void checkFlashVoltageConfiguration() {
+  constexpr uint32_t zbit3vFlashId = 0x5e4016;
+  uint32_t flashId = 0;
+  const esp_err_t result = esp_flash_read_id(nullptr, &flashId);
+  if (result != ESP_OK) {
+    Log.errorln(F("[config] Could not read flash ID to check the flash voltage configuration: %s"),
+                esp_err_to_name(result));
+    return;
+  }
+  if (flashId != zbit3vFlashId) return;
+
+  constexpr uint32_t fixed3v3 = EFUSE_RD_SDIO_FORCE | EFUSE_RD_XPD_SDIO_REG | EFUSE_RD_SDIO_TIEH;
+  if ((REG_READ(EFUSE_BLK0_RDATA4_REG) & fixed3v3) != fixed3v3) {
+    Log.errorln(F("[config] 3.3 V flash voltage override is unset or incorrect. Check USB provisioning before using Serial 1."));
+  }
+}
 
 // ----------------------------------------------------------------------------
 // protected
@@ -519,6 +538,7 @@ void DroneSystem::setup() {
   delay(2500); // to allow serial to reconnect after programming
 
   Log.noticeln(F("[] Starting..."));
+  checkFlashVoltageConfiguration();
 
   // Init DroneWire
   Log.noticeln(F("[] Init DroneWire..."));
