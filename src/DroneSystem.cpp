@@ -394,6 +394,13 @@ void DroneSystem::setupWebServer() {
     dem->serveSupportedModules(request);
   });
 
+  _server.on("/motherboard", HTTP_GET, [&](AsyncWebServerRequest* request) {
+    AsyncResponseStream* response = request->beginResponseStream("application/json");
+    response->addHeader("Cache-Control", "no-store");
+    response->printf("{\"schemaVersion\":1,\"node\":%u,\"version\":%u}", dlm->node(), motherboardVersion());
+    request->send(response);
+  });
+
   // modules
   _server.on("/modules", HTTP_GET, [&](AsyncWebServerRequest *request){
     _doLoop = false;

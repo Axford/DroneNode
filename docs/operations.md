@@ -499,3 +499,8 @@ Run the host bus simulation with `c++ -std=c++11 -Isrc tests/i2c-diagnostic.cpp 
 ### Network snapshot
 
 `GET /networkSnapshot` reports the node's own mesh interface state, route table and transmit queue counters. Workbench reads this endpoint through the selected direct Wi-Fi route. See the [shared contract](../../DroneLinkDatastore/docs/contracts/workbench.md#selected-node-network-snapshot).
+
+
+### Motherboard version report
+
+`GET /motherboard` reports the firmware's boot-time motherboard version and node address. A read does not scan I²C or change the node. The version is 0 when the boot probe found no multiplexer. The [Workbench contract](../../DroneLinkDatastore/docs/contracts/workbench.md#motherboard-version) defines the remaining values and gateway route.
