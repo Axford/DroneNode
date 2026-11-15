@@ -90,6 +90,12 @@ WaypointModule::WaypointModule(uint8_t id, DroneSystem* ds, Registration registr
    setParamName(F("routeDigest"), &digest);
    digest.paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_UINT8_T, 16);
    memset(digest.data.c, 0, 16);
+
+   auto &loops = _params[WAYPOINT_PARAM_LOOPS_E];
+   loops.paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_HIGH, WAYPOINT_PARAM_LOOPS);
+   setParamName(F("loops"), &loops);
+   loops.paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_UINT32_T, 4);
+   loops.data.uint32[0] = 0;
 }
 
 
@@ -97,6 +103,9 @@ WaypointModule::WaypointModule(uint8_t id, DroneSystem* ds, Registration registr
 bool WaypointModule::loadWaypoints(bool strict) {
   // empty current list of waypoints
   _waypoints.clear();
+  _finalArrivalCounted = false;
+  uint32_t loops = 0;
+  updateAndPublishParam(&_params[WAYPOINT_PARAM_LOOPS_E], reinterpret_cast<uint8_t *>(&loops), sizeof(loops));
 
   uint8_t waypoints = 0;
   uint8_t digest[32] = {};
@@ -317,6 +326,12 @@ void WaypointModule::onParamWrite(DRONE_PARAM_ENTRY *param) {
   if (id == WAYPOINT_PARAM_MODE || id == WAYPOINT_PARAM_WAYPOINT) _activeWaypoint = -1;
 }
 
+void WaypointModule::handleLinkMessage(DroneLinkMsg *msg) {
+  if (msg->node() == _dlm->node() && msg->channel() == _id && msg->param() == WAYPOINT_PARAM_LOOPS &&
+      msg->type() == DRONE_LINK_MSG_TYPE_UINT32_T && msg->length() != sizeof(uint32_t)) return;
+  DroneModule::handleLinkMessage(msg);
+}
+
 uint32_t WaypointModule::activeVisit(const float *target) {
   if (_liveLogic || !_setupDone || !_enabled || _activeWaypoint < 0 ||
       _params[WAYPOINT_PARAM_MODE_E].data.uint8[0] != WAYPOINT_MODE_NORMAL ||
@@ -348,6 +363,7 @@ void WaypointModule::loop() {
   uint8_t waypoints = _params[WAYPOINT_PARAM_WAYPOINTS_E].data.uint8[0];
 
   bool beginVisit = _activeWaypoint != waypoint;
+  if (waypoints == 0 || waypoint != waypoints - 1) _finalArrivalCounted = false;
   float newSpeed = _params[WAYPOINT_PARAM_SPEED_E].data.f[0];
 
   if (m == WAYPOINT_MODE_RELOAD) {
@@ -386,10 +402,19 @@ void WaypointModule::loop() {
       float distances[3] = { _distanceToNext, _distanceRemaining, _totalDistance };
       updateAndPublishParam(&_params[WAYPOINT_PARAM_DISTANCE_E], (uint8_t*)&distances, sizeof(distances));
 
-      if (d < _params[WAYPOINT_PARAM_TARGET_E].data.f[2]) {
+      const float radius = _params[WAYPOINT_PARAM_TARGET_E].data.f[2];
+      if (waypoints == 1 && d >= radius) _finalArrivalCounted = false;
+      if (d < radius) {
         // select next waypoint
         if (waypoints > 0) {
           if (waypoint == waypoints-1) {
+            if (!_finalArrivalCounted) {
+              _finalArrivalCounted = true;
+              auto &parameter = _params[WAYPOINT_PARAM_LOOPS_E];
+              uint32_t loops = parameter.data.uint32[0];
+              if (loops < UINT32_MAX) ++loops;
+              updateAndPublishParam(&parameter, reinterpret_cast<uint8_t *>(&loops), sizeof(loops));
+            }
             // we've reached the last waypoint
             // should we loop?
             if (_params[WAYPOINT_PARAM_LOOP_E].data.uint8[0] == 1) {

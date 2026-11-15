@@ -504,3 +504,7 @@ Run the host bus simulation with `c++ -std=c++11 -Isrc tests/i2c-diagnostic.cpp 
 ### Motherboard version report
 
 `GET /motherboard` reports the firmware's boot-time motherboard version and node address. A read does not scan I²C or change the node. The version is 0 when the boot probe found no multiplexer. The [Workbench contract](../../DroneLinkDatastore/docs/contracts/workbench.md#motherboard-version) defines the remaining values and gateway route.
+
+## Waypoint loop count
+
+Enable `loops` in a Waypoint module's publication list to observe arrivals at the final waypoint. The writable unsigned 32-bit count starts at zero when the route loads. A write sets the count for subsequent arrivals. The module counts each final waypoint visit once, including a non-looping route. On a one-waypoint route it must leave and re-enter the waypoint radius to count again. The count saturates at its maximum until it is amended or reset. Dreamer uses this standard publication for bench evidence.
