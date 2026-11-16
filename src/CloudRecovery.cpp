@@ -31,6 +31,8 @@ struct Worker : telemetry::HttpIo {
   std::atomic<Mode> mode{Mode::Starting};
   std::atomic<bool> retry{false};
   WiFiClientSecure client;
+  telemetry::Cycle report;
+  telemetry::CommandBatch batch;
 
   uint32_t now() override { return millis(); }
   bool running() override { return WiFi.status() == WL_CONNECTED; }
@@ -48,7 +50,6 @@ struct Worker : telemetry::HttpIo {
     client.setHandshakeTimeout(5);
     client.setTimeout(5);
     telemetry::PackedHttp http(*this);
-    telemetry::Cycle report;
     auto& packet = report.entries[0].packet;
     report.count = 1;
     packet.size = 19;
@@ -78,7 +79,6 @@ struct Worker : telemetry::HttpIo {
           lastReport = millis();
         }
         if (!retryRequested && (current == Mode::Quarantined || current == Mode::CommsOnly)) {
-          telemetry::CommandBatch batch;
           const auto result = http.poll(settings, node, 1, batch, telemetry::PollPeers(), bootId);
           if (result.complete && batch.count == 1) {
             const auto& action = batch.packets[0];
