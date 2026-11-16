@@ -18,6 +18,14 @@ Startup behaviour is configured per DroneNode, as confirmed by the user on 2026-
 
 The startup module registry also serves the device's `GET /supportedModules` capability list. It enumerates the compiled type names without creating modules or taking the runtime module lock. `GET /modules` describes the instances already loaded. See the [supported module types contract](../../DroneLinkDatastore/docs/contracts/workbench.md#supported-module-types).
 
+## Foreground task watchdog
+
+The ESP32 task watchdog subscribes the Arduino task before [application setup](../src/main.cpp). The nominal timeout is 30 seconds of awake execution during setup or between completed loop passes. A module callback or a driver or mutex wait that holds the task past that deadline triggers the ESP-IDF panic and reboot path. The interrupt watchdog still monitors scheduler ticks. The module manager's I²C health sweep still runs within the Arduino task.
+
+[Arduino OTA](../src/OTAManager.cpp) runs on that task. A progress callback feeds the same watchdog after the transferred byte count increases. ESP32 light sleep gates the watchdog's APB clock. The existing sleep and wake path is part of the bench acceptance.
+
+The feed establishes only that the foreground calls returned. Detecting skipped control work, stale data, wedged background tasks and repeated runtime reset loops requires separate supervision. See the [acceptance plan](../../DroneLinkDatastore/docs/planning/drone-node-watchdog.md).
+
 ## Temporary Digital input trial
 
 [DroneModuleManager](../src/DroneModuleManager.cpp) owns one optional Digital input trial, advanced by the normal module loop and discarded on shutdown. It uses the same Digital sampling code and pin registry as a startup-configured input. It has no mesh channel, subscriptions, interface or asynchronous callbacks. Its lifetime stays outside the startup module list, which also keeps it out of discovery, the module HTTP view and legacy Save Live Config. The pin HTTP view reports the trial's GPIO as occupied with no public module ID.

@@ -22,6 +22,7 @@ Steps to setup a new device:
 // arduino core
 #include <functional>
 #include <Arduino.h>
+#include <esp_task_wdt.h>
 
 #include <ArduinoLog.h>
 
@@ -68,11 +69,12 @@ void handleDLMEvent( DroneLinkManagerEvent event, float progress) {
 
 
 void setup() {
-
+  // Watch the Arduino task from setup through the end of each loop pass.
+  constexpr uint32_t watchdogTimeoutSeconds = 30;
   disableCore0WDT();
-  disableCore1WDT();
-  disableLoopWDT();
-  
+  ESP_ERROR_CHECK(esp_task_wdt_init(watchdogTimeoutSeconds, true));
+  ESP_ERROR_CHECK(esp_task_wdt_add(nullptr));
+
   ds.setup();
 
   OTAMgr.init(ds.dmm->hostname());
@@ -103,4 +105,6 @@ void loop() {
 
     debugTimer = loopTime;
   }
+
+  ESP_ERROR_CHECK(esp_task_wdt_reset());
 }

@@ -30,18 +30,10 @@ void OTAManager::init(String hostname) {
     LITTLEFS.end();
 
     isUpdating = true;
-
-    // backoff watchdog
-    esp_task_wdt_init(60,0);
-    
-
-    // clear interrupts
-    //cli();
-
+    _lastTransferredBytes = 0;
   });
   ArduinoOTA.onEnd([&]() {
     Log.noticeln(F("[OTA] End"));
-    esp_task_wdt_init(5,0);
     isUpdating = false;
     if (onEvent) { onEvent(end, 1.0f); }
   });
@@ -66,7 +58,13 @@ void OTAManager::init(String hostname) {
 
       Log.noticeln(p);
     }
-    //Serial.println(p);
+
+    // ArduinoOTA.handle() runs on the watched task. Only actual transfer
+    // progress can extend the deadline while it owns this task.
+    if (prog > _lastTransferredBytes) {
+      _lastTransferredBytes = prog;
+      ESP_ERROR_CHECK(esp_task_wdt_reset());
+    }
   });
   ArduinoOTA.onError([&](ota_error_t error) {
     

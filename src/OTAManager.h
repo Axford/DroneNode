@@ -24,6 +24,7 @@ class OTAManager {
 
     //void execOTA();
   private:
+    unsigned int _lastTransferredBytes = 0;
     //String _firmwareUrl;
 };
 
