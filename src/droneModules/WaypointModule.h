@@ -22,7 +22,7 @@ lon,lat,radius
 [Waypoint=4]
   name=Waypoint
   $location=@>50.9
-  publish =mode, waypoint, waypoints, target, location
+  publish =mode, waypoint, waypoints, target, location, loops
 <<<
 
 */
@@ -74,7 +74,11 @@ lon,lat,radius
 #define WAYPOINT_PARAM_ROUTE_DIGEST   17
 #define WAYPOINT_PARAM_ROUTE_DIGEST_E 7
 
-#define WAYPOINT_PARAM_ENTRIES        8
+// @pub 18;u32;1;w;loops;Number of arrivals at the final waypoint since route load, adjustable by the operator
+#define WAYPOINT_PARAM_LOOPS          18
+#define WAYPOINT_PARAM_LOOPS_E        8
+
+#define WAYPOINT_PARAM_ENTRIES        9
 
 #define WAYPOINT_MODE_NORMAL          0
 #define WAYPOINT_MODE_RELOAD          1
@@ -101,6 +105,7 @@ protected:
     uint32_t _visit = 0;
     bool _liveRouteResumed = false;
     int _activeWaypoint = -1;
+    bool _finalArrivalCounted = false;
     void publishTarget(uint8_t waypoint);
 
     float _totalDistance;
@@ -128,6 +133,7 @@ public:
   void loop();
   void doReset() override { _activeWaypoint = -1; }
   void onParamWrite(DRONE_PARAM_ENTRY *param) override;
+  void handleLinkMessage(DroneLinkMsg *msg) override;
 
   uint32_t activeVisit(const float *target);
   bool moveActiveWaypoint(uint32_t visit, float longitude, float latitude);

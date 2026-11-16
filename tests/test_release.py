@@ -36,6 +36,10 @@ class ReleaseTests(unittest.TestCase):
                 entry['address'] = {'mode': 10, 'trim': 11, 'limits': 13, 'threshold': 14}[entry['name']]
         expected['Waypoint']['pub'].append(dict(address=17, type='u8', numValues=16, writeable=False,
             name='routeDigest', description='SHA-256 prefix of the loaded waypoint CSV, zero when unavailable'))
+        expected['Waypoint']['pub'].append(dict(address=18, type='u32', numValues=1, writeable=True,
+            name='loops', description='Number of arrivals at the final waypoint since route load, adjustable by the operator'))
+        expected['Waypoint']['config'] = [text.replace('waypoints, target, location', 'waypoints, target, location, loops')
+            for text in expected['Waypoint']['config']]
         expected['Nav']['pub'].append(dict(address=27, type='u32', numValues=3, writeable=True,
             name='moveTarget', description='Guarded active target drag. See the shared packet contract.'))
         expected['Management']['pub'].extend([
