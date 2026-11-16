@@ -18,7 +18,7 @@ public:
   modules.push_back(m);return m;
  }
  void addToAddressQueue(DroneModule* module,char*,char* value){module->legacyLength=strlen(value);}
- void loadConfiguration(const char* filename);
+ void loadConfiguration(const char* filename, uint8_t skipped = 0);
 };
 #define DEM_PARSER_VALUE_BUFFER_SIZE 200
 #include "actual_loader.inc"

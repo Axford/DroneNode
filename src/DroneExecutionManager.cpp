@@ -263,7 +263,7 @@ void DroneExecutionManager::startRecovery() {
   memcpy(udp->getParamEntryById(UDP_TELEMETRY_PARAM_SERVER)->data.uint8, profile.server, 4);
 }
 
-void DroneExecutionManager::loadConfiguration(const char* filename) {
+void DroneExecutionManager::loadConfiguration(const char* filename, uint8_t skipped) {
   File file=LITTLEFS.open(filename,FILE_READ);
   if(!file) { Log.errorln("[DEM] Unable to open configuration"); return; }
   DroneModule* module=nullptr;bool inSection=false;
@@ -285,7 +285,7 @@ void DroneExecutionManager::loadConfiguration(const char* filename) {
       if(!telemetry::decimal(line.value,254,id)) {
         Log.errorln("[DEM] Invalid module address at line %u",lineNumber);module=nullptr;return;
       }
-      module=instanceModule(line.name,id);
+      module = id == skipped ? nullptr : instanceModule(line.name, id);
       return;
     }
     if(!module) {
@@ -325,13 +325,17 @@ void DroneExecutionManager::loadConfiguration(const char* filename) {
 
 
 void DroneExecutionManager::saveConfiguration() {
-  if (bootRecovery::active()) return;
+  if (bootRecovery::active() || bootRecovery::quarantinedModule()) return;
 
   File f = LITTLEFS.open("/config.ini", "w");
   if (f) {
     // save node id
     f.print("node = ");
     f.println(_dmm->node());
+    if (bootRecovery::optionalStatus()) {
+      f.print("optionalStatus = ");
+      f.println(bootRecovery::optionalStatus());
+    }
 
     f.println("");
 

@@ -1,5 +1,9 @@
 #include "BootRecovery.h"
 #include "ConfigurationLine.h"
+#include "QuarantineConfiguration.h"
+#include <mbedtls/sha256.h>
+#include <memory>
+#include <new>
 
 #include <Arduino.h>
 #include <atomic>
@@ -8,7 +12,7 @@
 #include <esp_system.h>
 
 namespace {
-constexpr uint32_t RecordVersion = 0x44524e01;
+constexpr uint32_t RecordVersion = 0x44524e02;
 constexpr uint32_t HealthyTimeMs = 10000;
 constexpr uint32_t RetryTimeMs = 60000;
 struct RetainedBoot {
@@ -74,7 +78,7 @@ void begin() {
   }
   const bool interrupted = reason == ESP_RST_TASK_WDT || reason == ESP_RST_INT_WDT ||
                            reason == ESP_RST_WDT || reason == ESP_RST_PANIC;
-  retained.record.begin(interrupted, reason == ESP_RST_SW, reason);
+  retained.record.begin(interrupted, reason == ESP_RST_SW, reason, reason == ESP_RST_TASK_WDT);
   failureAtBoot = retained.record.failure;
   reasonAtBoot = retained.record.failureReason;
   retain();
@@ -87,6 +91,30 @@ void begin() {
 }
 
 bool active() { return retained.record.recovering; }
+uint8_t quarantinedModule() { return retained.record.quarantined; }
+uint8_t optionalStatus() { return retained.record.config.optionalStatus; }
+
+void inspectConfig(fs::FS& fs) {
+  if (active() && !retained.record.quarantinePending) return;
+  recovery::ConfigIdentity config;
+  File file = fs.open("/config.ini");
+  if (file && !file.isDirectory()) {
+    const size_t size = file.size();
+    if (size && size <= 8192) {
+      std::unique_ptr<char[]> text(new (std::nothrow) char[size + 1]);
+      if (text && file.read(reinterpret_cast<uint8_t*>(text.get()), size) == size &&
+          !memchr(text.get(), 0, size)) {
+        text[size] = 0;
+        config.optionalStatus = recovery::approvedStatus(text.get());
+        if (config.optionalStatus &&
+            mbedtls_sha256_ret(reinterpret_cast<const uint8_t*>(text.get()), size, config.hash, 0))
+          config.optionalStatus = 0;
+      }
+    }
+  }
+  retained.record.inspectConfig(config);
+  retain();
+}
 const RecoveryProfile& profile() { return saved; }
 const recovery::Breadcrumb& failure() { return failureAtBoot; }
 uint8_t failureReason() { return reasonAtBoot; }
@@ -107,6 +135,7 @@ void requestRestart() {
 void forceRecovery() {
   retained.record.recovering = true;
   retained.record.failures = 2;
+  retained.record.quarantined = 0;
   retain();
 }
 
@@ -164,7 +193,7 @@ void completedPass(uint32_t now) {
   }
   const uint32_t elapsed = now - firstPass;
   if (!healthy && elapsed >= HealthyTimeMs) {
-    if (!active()) saveCandidate();
+    if (!active() && !quarantinedModule()) saveCandidate();
     retained.record.ready();
     retain();
     healthy = true;

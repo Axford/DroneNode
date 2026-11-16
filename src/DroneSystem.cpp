@@ -379,9 +379,9 @@ void DroneSystem::setupWebServer() {
     if (!response) { request->send(503); return; }
     const auto& failure = bootRecovery::failure();
     response->addHeader("Cache-Control", "no-store");
-    response->printf("{\"active\":%s,\"node\":%u,\"resetReason\":%u,\"phase\":%u,\"module\":%u,\"type\":\"%s\"}",
+    response->printf("{\"active\":%s,\"node\":%u,\"resetReason\":%u,\"phase\":%u,\"module\":%u,\"type\":\"%s\",\"quarantinedModule\":%u}",
                      bootRecovery::active() ? "true" : "false", dlm->node(),
-                     bootRecovery::failureReason(), static_cast<unsigned>(failure.phase), failure.module, failure.type);
+                     bootRecovery::failureReason(), static_cast<unsigned>(failure.phase), failure.module, failure.type, bootRecovery::quarantinedModule());
     request->send(response);
   });
 
@@ -466,8 +466,10 @@ void DroneSystem::setupWebServer() {
 
 void DroneSystem::start() {
   Log.warningln(F("[] Prep NORMAL start..."));
-  dem->loadConfiguration("/config.ini");
-  dem->rememberBootConfiguration("/config.ini");
+  const auto skipped = bootRecovery::quarantinedModule();
+  if (skipped) Log.warningln("[] Quarantined Status channel %u", skipped);
+  dem->loadConfiguration("/config.ini", skipped);
+  if (!skipped) dem->rememberBootConfiguration("/config.ini");
 }
 
 
@@ -521,7 +523,8 @@ void DroneSystem::setup() {
       bootRecovery::readCandidate(LITTLEFS);
     }
   }
-  if (!filesystemReady) bootRecovery::forceRecovery();
+  if (filesystemReady) bootRecovery::inspectConfig(LITTLEFS);
+  else bootRecovery::forceRecovery();
 
   bootRecovery::enter(recovery::Phase::Hardware);
   if (!bootRecovery::active()) {

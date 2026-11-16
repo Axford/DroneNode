@@ -1,7 +1,7 @@
 #pragma once
 
-#include "BootRecoveryPolicy.h"
 #include <FS.h>
+#include "BootRecoveryPolicy.h"
 
 struct RecoveryProfile {
   uint16_t port = 8007;
@@ -15,6 +15,9 @@ struct RecoveryProfile {
 namespace bootRecovery {
 void begin();
 bool active();
+uint8_t quarantinedModule();
+uint8_t optionalStatus();
+void inspectConfig(fs::FS& fs);
 void enter(recovery::Phase phase, uint8_t module = 0, const char* type = "");
 void requestRestart();
 void forceRecovery();

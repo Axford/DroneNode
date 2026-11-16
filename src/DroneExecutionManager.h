@@ -108,7 +108,7 @@ public:
     void addToAddressQueue(DroneModule* newMod, char* subName, char* address);
     void processAddressQueue();
 
-    void loadConfiguration(const char* filename);
+    void loadConfiguration(const char* filename, uint8_t skipped = 0);
     void saveConfiguration();
     void rememberBootConfiguration(const char* filename);
     void requestHotLoad(ManagementModule* requester, const char* name, size_t length);
