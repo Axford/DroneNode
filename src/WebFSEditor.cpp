@@ -1,5 +1,6 @@
 
 #include "WebFSEditor.h"
+#include "BootRecovery.h"
 #include <Arduino.h>
 #include <ArduinoLog.h>
 
@@ -133,6 +134,7 @@ void WebFSEditor::configureWebServer(AsyncWebServer &server) {
       logmessage += " Auth: Success";
       //Log.noticeln(logmessage);
       //shouldReboot = true;
+      bootRecovery::requestRestart();
       ESP.restart();
     } else {
       logmessage += " Auth: Failed";

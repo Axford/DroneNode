@@ -257,23 +257,20 @@ DroneFS::DroneFS(DroneSystem* ds): _ds(ds) {
 }
 
 
-void DroneFS::setup() {
+bool DroneFS::setup(bool formatOnFail) {
   Log.noticeln(F("DroneFS setup..."));
 
   Log.noticeln(F("[] Mount filesystem..."));
-  // passing true to .begin triggers a format if required
-  if(!LITTLEFS.begin(true)){
+  if (!LITTLEFS.begin(formatOnFail)) {
     Log.errorln("[] LITTLEFS Mount Failed");
-    _ds->dled->setState(DRONE_LED_STATE_ERROR);
-    delay(3000);
-    // Should be formatted and working after a reboot
-    ESP.restart();
+    return false;
   }
 
   _root->enumerate(); // will not recurse
 
   Log.noticeln(F("  totalBytes %d"), LITTLEFS.totalBytes());
   Log.noticeln(F("  usedBytes %d"), LITTLEFS.usedBytes());
+  return true;
 }
 
 uint8_t DroneFS::getNextId() {

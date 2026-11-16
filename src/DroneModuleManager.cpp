@@ -1,4 +1,5 @@
 #include <Arduino.h>
+#include "BootRecovery.h"
 #include "SPIFFS.h"
 #include <functional>
 #include <new>
@@ -177,6 +178,7 @@ void DroneModuleManager::shutdown() {
 }
 
 void DroneModuleManager::restart() {
+  bootRecovery::requestRestart();
   shutdown();
   ESP.restart();
 }
@@ -206,6 +208,10 @@ void DroneModuleManager::setupModules() {
   for(int i = 0; i < _modules.size(); i++) {
     m = _modules.get(i);
     Log.noticeln(F("[DMM.sM] Setup: %s"), m->getName());
+    char type[17] = {};
+    const auto* entry = m->getParamEntryById(DRONE_MODULE_PARAM_TYPE);
+    if (entry) memcpy(type, entry->data.c, 16);
+    bootRecovery::enter(recovery::Phase::ModuleSetup, m->id(), type);
     m->setup();
     yield();
   }

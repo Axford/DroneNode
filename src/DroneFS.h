@@ -96,7 +96,7 @@ protected:
 public:
   DroneFS(DroneSystem* ds);
 
-  void setup();
+  bool setup(bool formatOnFail);
 
   uint8_t getNextId();
   DroneFSEntry* getEntryByPath(char* path);

@@ -28,6 +28,7 @@ Steps to setup a new device:
 
 // drone core
 #include "DroneSystem.h"
+#include "BootRecovery.h"
 #include "FirmwareMeasurements.h"
 
 // networking
@@ -79,6 +80,7 @@ void setup() {
 
   OTAMgr.init(ds.dmm->hostname());
   OTAMgr.onEvent = handleOTAEVent;
+  bootRecovery::enter(recovery::Phase::Probation);
 }
 
 

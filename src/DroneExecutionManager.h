@@ -25,8 +25,6 @@ class ManagementModule;
 #define DEM_EEPROM_SIZE              1
 #define DEM_EEPROM_SUCCESSFUL_BOOT   0
 
-#define DEM_BOOT_FAIL     0  // didnt make it to module setup
-#define DEM_BOOT_SUCCESS  1  // made it to module setup
 
 #define DEM_DATATYPE_NONE 255 // dummy dataType for no parameters
 
@@ -39,7 +37,6 @@ struct DEM_ADDRESS {
   char paramAddress[20];
 };
 
-static const char DEM_BOOT_FILENAME[] PROGMEM = "/boot.dat";
 
 
 #define DEM_PARSER_GENERAL 0
@@ -88,7 +85,6 @@ protected:
   // queue of addresses that need to be resolved
   IvanLinkedList::LinkedList<DEM_ADDRESS> _addressQueue;
 
-  boolean _safeMode;
 
   DroneSystem* _ds;
   DroneLinkManager *_dlm;
@@ -108,9 +104,6 @@ public:
     bool resumeLiveRoute(const char* channel);
     DroneExecutionManager(DroneSystem* ds, File &logFile);
 
-    uint8_t getBootStatus();
-    void setBootStatus(uint8_t v);
-    boolean safeMode();  // get safeMode status
 
     void addToAddressQueue(DroneModule* newMod, char* subName, char* address);
     void processAddressQueue();
@@ -123,6 +116,7 @@ public:
     void runServoConsole(const char* command, Print &output);
 
     void completeSetup();
+    void startRecovery();
 
     DroneModule* instanceModule(char* typeName, uint8_t id);
     void serveSupportedModules(AsyncWebServerRequest* request) const;

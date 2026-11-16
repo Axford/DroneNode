@@ -1,4 +1,5 @@
 #include "ManagementModule.h"
+#include "../BootRecovery.h"
 #include "../DroneLinkMsg.h"
 #include "../DroneLinkManager.h"
 #include "../DroneModuleManager.h"
@@ -144,6 +145,7 @@ void ManagementModule::reportHotLoad(configuration::HotLoadResult result) {
 }
 
 void ManagementModule::onParamWrite(DRONE_PARAM_ENTRY *param) {
+  if (bootRecovery::active() && getDroneLinkMsgParam(param->paramPriority) != MANAGEMENT_PARAM_RESET) return;
   DroneModule::onParamWrite(param);
 
   if (getDroneLinkMsgParam(param->paramPriority) == MANAGEMENT_PARAM_RESET) {

@@ -184,15 +184,9 @@ public:
 
   void createDefaultConfig();
 
-  // see if safeMode.txt exists, if not create it
-  void createSafeModeScript();
-
   void servePinInfo(AsyncWebServerRequest *request);
   
   void setupWebServer();
-
-  // startup using safeMode.txt
-  void startInSafeMode();
 
   // normal startup from config.txt
   void start();

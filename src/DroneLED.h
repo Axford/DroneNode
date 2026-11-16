@@ -20,6 +20,7 @@ Export an interface for other modules to set neopixel colours
 
 #define DRONE_LED_HW_BUILTIN    0
 #define DRONE_LED_HW_NEOPIXEL   1
+#define DRONE_LED_HW_DISABLED   2
 
 
 /*
@@ -62,7 +63,7 @@ protected:
 public:
   NeoPixelBrightnessBus<NeoGrbFeature, Neo800KbpsMethod> *_strip;
 
-  DroneLED(DroneSystem* ds);
+  DroneLED(DroneSystem* ds, bool enabled = true);
 
   boolean isNeopixel();
 

@@ -1,0 +1,172 @@
+#include "BootRecovery.h"
+#include "ConfigurationLine.h"
+
+#include <Arduino.h>
+#include <Preferences.h>
+#include <esp_attr.h>
+#include <esp_system.h>
+
+namespace {
+constexpr uint32_t RecordVersion = 0x44524e01;
+constexpr uint32_t HealthyTimeMs = 10000;
+constexpr uint32_t RetryTimeMs = 60000;
+struct RetainedBoot {
+  uint32_t version;
+  recovery::BootRecord record;
+};
+static_assert(__is_trivially_copyable(RetainedBoot), "RTC record must be directly copyable");
+RTC_NOINIT_ATTR uint8_t retainedBytes[sizeof(RetainedBoot)];
+RetainedBoot retained;
+RecoveryProfile saved, candidate;
+recovery::Breadcrumb failureAtBoot;
+uint8_t reasonAtBoot;
+uint32_t firstPass;
+bool observedPass = false;
+bool healthy = false;
+
+void retain() {
+  memcpy(retainedBytes, &retained, sizeof retained);
+}
+
+bool number(const char* text, unsigned limit, unsigned& value) {
+  if (!*text) return false;
+  value = 0;
+  for (; *text; ++text) {
+    if (*text < '0' || *text > '9') return false;
+    value = value * 10 + (*text - '0');
+    if (value > limit) return false;
+  }
+  return true;
+}
+
+bool address(const char* text, uint8_t (&ip)[4]) {
+  for (unsigned i = 0; i < 4; ++i) {
+    unsigned value = 0, digits = 0;
+    while (*text >= '0' && *text <= '9') {
+      value = value * 10 + (*text++ - '0');
+      if (++digits > 3 || value > 255) return false;
+    }
+    if (!digits || (i == 3 ? *text != 0 : *text++ != ',')) return false;
+    ip[i] = value;
+  }
+  return true;
+}
+
+void saveCandidate() {
+  if (!candidate.valid() || memcmp(&saved, &candidate, sizeof saved) == 0) return;
+  Preferences prefs;
+  if (prefs.begin("boot-recovery", false) &&
+      prefs.putBytes("wifi-v1", &candidate, sizeof candidate) == sizeof candidate) {
+    saved = candidate;
+  }
+}
+}
+
+namespace bootRecovery {
+void begin() {
+  const auto reason = esp_reset_reason();
+  memcpy(&retained, retainedBytes, sizeof retained);
+  if (retained.version != RecordVersion || reason == ESP_RST_POWERON || reason == ESP_RST_BROWNOUT) {
+    retained = RetainedBoot{};
+    retained.version = RecordVersion;
+  }
+  const bool interrupted = reason == ESP_RST_TASK_WDT || reason == ESP_RST_INT_WDT ||
+                           reason == ESP_RST_WDT || reason == ESP_RST_PANIC;
+  retained.record.begin(interrupted, reason == ESP_RST_SW, reason);
+  failureAtBoot = retained.record.failure;
+  reasonAtBoot = retained.record.failureReason;
+  retain();
+
+  Preferences prefs;
+  if (prefs.begin("boot-recovery", true) &&
+      prefs.getBytesLength("wifi-v1") == sizeof saved) {
+    prefs.getBytes("wifi-v1", &saved, sizeof saved);
+  }
+}
+
+bool active() { return retained.record.recovering; }
+const RecoveryProfile& profile() { return saved; }
+const recovery::Breadcrumb& failure() { return failureAtBoot; }
+uint8_t failureReason() { return reasonAtBoot; }
+
+void enter(recovery::Phase phase, uint8_t module, const char* type) {
+  auto& point = retained.record.current;
+  point.phase = phase;
+  point.module = module;
+  strlcpy(point.type, type, sizeof point.type);
+  retain();
+}
+
+void requestRestart() {
+  retained.record.requestRetry(true);
+  retain();
+}
+
+void forceRecovery() {
+  retained.record.recovering = true;
+  retained.record.failures = 2;
+  retain();
+}
+
+void readCandidate(fs::FS& fs) {
+  File file = fs.open("/config.ini");
+  if (!file) return;
+
+  RecoveryProfile parsed;
+  bool inSection = false, udp = false, foundUdp = false;
+  char raw[2049];
+  while (file.available()) {
+    const size_t length = file.readBytesUntil('\n', raw, sizeof raw - 1);
+    if (length == sizeof raw - 1) return;
+    raw[length] = 0;
+    configuration::Line line;
+    if (!line.parse(raw, true)) {
+      if (!inSection || udp) return;
+      continue;
+    }
+    if (line.empty) continue;
+    unsigned value;
+    if (line.section) {
+      inSection = true;
+      udp = !foundUdp && !strcmp(line.name, "UDPTelemetry");
+      if (udp) {
+        if (!number(line.value, 254, value) || !value) return;
+        parsed.channel = value == 1 ? 2 : value;
+        foundUdp = true;
+      }
+    } else if (!inSection && !strcmp(line.name, "node")) {
+      if (parsed.node || !number(line.value, 254, value) || !value) return;
+      parsed.node = value;
+    } else if (udp && !strcmp(line.name, "port")) {
+      if (!number(line.value, 65535, value) || !value) return;
+      parsed.port = value;
+    } else if (udp && !strcmp(line.name, "broadcast")) {
+      if (!address(line.value, parsed.broadcast)) return;
+    } else if (udp && !strcmp(line.name, "server")) {
+      if (!address(line.value, parsed.server)) return;
+    }
+  }
+  if (!parsed.valid()) return;
+  candidate = parsed;
+  if (!saved.valid()) saveCandidate();
+}
+
+void completedPass(uint32_t now) {
+  if (!observedPass) {
+    observedPass = true;
+    firstPass = now;
+  }
+  const uint32_t elapsed = now - firstPass;
+  if (!healthy && elapsed >= HealthyTimeMs) {
+    if (!active()) saveCandidate();
+    retained.record.ready();
+    retain();
+    healthy = true;
+  }
+  if (elapsed >= RetryTimeMs && retained.record.mayRetry()) {
+    retained.record.requestRetry(false);
+    retain();
+    ESP.restart();
+  }
+}
+}

@@ -1,3 +1,4 @@
+#include "BootRecovery.h"
 #include "DroneConsole.h"
 #include "ConfigurationLine.h"
 #include "droneModules/CloudTelemetryModule.h"
@@ -77,52 +78,12 @@ DroneExecutionManager::DroneExecutionManager(DroneSystem* ds, File &logFile):
   _dmm = _ds->dmm;
   _dlm = _ds->dlm;
 
-  // read last boot status from EEPROM
-  //_safeMode
-  _safeMode = (getBootStatus() != DEM_BOOT_SUCCESS);
-  // disable safeMode - cos its a pain in the ass!
-  //_safeMode = false;
-
-  Log.noticeln("[DEM.DEM] SafeMode %u", (_safeMode ? 1: 0));
-
-  // now clear the _safeMode value ready for this boot attempt
-  setBootStatus(DEM_BOOT_FAIL);
-
-  //_safeMode = false;
-
   _channelContext = 0;
   _nodeContext = 0;
   _multiLineComment = false;
 
   _maxExecutionTime = 0;
   _slowestInstruction = "?";
-}
-
-
-uint8_t DroneExecutionManager::getBootStatus() {
-  uint8_t v = DEM_BOOT_FAIL;
-  if(_fs.exists(DEM_BOOT_FILENAME)) {
-    File f = _fs.open(DEM_BOOT_FILENAME, FILE_READ);
-    if (f && f.available()) {
-      v = f.read();
-      Log.noticeln(F("[DEM.gBS] boot flag: %u"), v);
-    }
-    f.close();
-  } else {
-    Log.errorln(F("[DEM.gBS] boot.dat does not exist"));
-  }
-  return v;
-}
-
-
-void DroneExecutionManager::setBootStatus(uint8_t v) {
-  File f = _fs.open(DEM_BOOT_FILENAME, FILE_WRITE);
-  f.write(v);
-  f.close();
-}
-
-boolean DroneExecutionManager::safeMode() {
-  return _safeMode;
 }
 
 
@@ -286,6 +247,22 @@ void DroneExecutionManager::processAddressQueue() {
 }
 
 
+void DroneExecutionManager::startRecovery() {
+  const auto& profile = bootRecovery::profile();
+  if (!profile.valid()) return;
+  _dmm->node(profile.node);
+  _dlm->node(profile.node);
+
+  auto* management = new ManagementModule(1, _ds);
+  char publications[] = "hostname,IP,uptime";
+  management->publishParamsFromList(publications);
+
+  auto* udp = new UDPTelemetryModule(profile.channel, _ds);
+  udp->getParamEntryById(UDP_PARAM_PORT)->data.uint32[0] = profile.port;
+  memcpy(udp->getParamEntryById(UDP_PARAM_BROADCAST)->data.uint8, profile.broadcast, 4);
+  memcpy(udp->getParamEntryById(UDP_TELEMETRY_PARAM_SERVER)->data.uint8, profile.server, 4);
+}
+
 void DroneExecutionManager::loadConfiguration(const char* filename) {
   File file=LITTLEFS.open(filename,FILE_READ);
   if(!file) { Log.errorln("[DEM] Unable to open configuration"); return; }
@@ -348,6 +325,7 @@ void DroneExecutionManager::loadConfiguration(const char* filename) {
 
 
 void DroneExecutionManager::saveConfiguration() {
+  if (bootRecovery::active()) return;
 
   File f = LITTLEFS.open("/config.ini", "w");
   if (f) {
@@ -378,9 +356,6 @@ void DroneExecutionManager::saveConfiguration() {
 void DroneExecutionManager::completeSetup() {
   Log.noticeln(F("[.s] Completing module setup"));
   _dmm->setupModules();
-
-  // if we made it to here, can assume no crashes on startup
-  setBootStatus(DEM_BOOT_SUCCESS);
 
   Log.noticeln(F("[.s] Setup complete"));
 
@@ -500,7 +475,12 @@ DroneModule* DroneExecutionManager::instanceModule(char* typeName, uint8_t id) {
   }
 
   for (const auto& type : moduleTypes) {
-    if (strcmp_P(typeName, type.name) == 0) return type.create(id, _ds);
+    if (strcmp_P(typeName, type.name) == 0) {
+      bootRecovery::enter(recovery::Phase::ModuleConstruction, id, type.name);
+      auto* module = type.create(id, _ds);
+      bootRecovery::enter(recovery::Phase::Configuration, id, type.name);
+      return module;
+    }
   }
   Log.errorln(F("[.c] Unknown type"));
   return nullptr;

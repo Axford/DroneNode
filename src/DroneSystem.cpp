@@ -1,3 +1,4 @@
+#include "BootRecovery.h"
 #include "DroneConsole.h"
 #include "DroneSystem.h"
 #include "FirmwareMeasurements.h"
@@ -303,27 +304,6 @@ void DroneSystem::createDefaultConfig() {
 }
 
 
-void DroneSystem::createSafeModeScript() {
-  // TODO - adapt to use FS class for file handle
-  // see if safeMode.ini exists, if not create it
-  if (!LITTLEFS.exists("/safeMode.ini")) {
-    File file = LITTLEFS.open("/safeMode.ini", FILE_WRITE);
-    if(!file){
-        Log.errorln("[] Failed to open config.ini for writing");
-        return;
-    }
-    file.println("node= 1");
-    file.println("[Management = 1]");
-    file.println("  name =safeMode");
-    file.println("  publish =hostname, IP");
-
-    file.println("[UDPTelemetry = 2]");
-
-    file.close();
-  }
-}
-
-
 void DroneSystem::servePinInfo(AsyncWebServerRequest *request) {
   AsyncResponseStream *response = request->beginResponseStream("application/json");
   response->addHeader("Server","ESP Async Web Server");
@@ -394,6 +374,17 @@ void DroneSystem::setupWebServer() {
     dem->serveSupportedModules(request);
   });
 
+  _server.on("/recovery", HTTP_GET, [&](AsyncWebServerRequest *request) {
+    auto* response = request->beginResponseStream("application/json");
+    if (!response) { request->send(503); return; }
+    const auto& failure = bootRecovery::failure();
+    response->addHeader("Cache-Control", "no-store");
+    response->printf("{\"active\":%s,\"node\":%u,\"resetReason\":%u,\"phase\":%u,\"module\":%u,\"type\":\"%s\"}",
+                     bootRecovery::active() ? "true" : "false", dlm->node(),
+                     bootRecovery::failureReason(), static_cast<unsigned>(failure.phase), failure.module, failure.type);
+    request->send(response);
+  });
+
   _server.on("/motherboard", HTTP_GET, [&](AsyncWebServerRequest* request) {
     AsyncResponseStream* response = request->beginResponseStream("application/json");
     response->addHeader("Cache-Control", "no-store");
@@ -419,11 +410,11 @@ void DroneSystem::setupWebServer() {
     _doLoop = true;
   });
 
-  DroneWire::mountDiagnostic(_server, dlm->node());
+  if (!bootRecovery::active()) DroneWire::mountDiagnostic(_server, dlm->node());
 
   // I2C scan info
   _server.on("/i2c", HTTP_GET, [&](AsyncWebServerRequest *request) {
-    if (xSemaphoreTake(_i2cLoopMutex, pdMS_TO_TICKS(50)) != pdTRUE) { request->send(503); return; }
+    if (bootRecovery::active() || xSemaphoreTake(_i2cLoopMutex, pdMS_TO_TICKS(50)) != pdTRUE) { request->send(503); return; }
     DroneWire::serveScanAllInfo(request);
     xSemaphoreGive(_i2cLoopMutex);
   });
@@ -473,12 +464,6 @@ void DroneSystem::setupWebServer() {
 }
 
 
-void DroneSystem::startInSafeMode() {
-  Log.warningln(F("[] Prep SAFE start..."));
-  dem->loadConfiguration("/safeMode.ini");
-}
-
-
 void DroneSystem::start() {
   Log.warningln(F("[] Prep NORMAL start..."));
   dem->loadConfiguration("/config.ini");
@@ -512,26 +497,7 @@ void printDirectory(File dir, int numTabs) {
 
 
 void DroneSystem::setup() {
-  /*
-
-  Startup process
-
-  - Start serial and init log
-  - Init DroneWire
-  - Detect motherboard version (using I2C scans)
-  - Setup status LED (on or white)
-  - Determine and setup filesystem
-  - Create startup.log
-  - Create safeMode script
-  - Init wifi
-  - Create core objects
-  - Allocate PWM timers
-  - start (or startInSafeMode)
-  - Flush startup log
-  - Switch loggig to serial
-  - Update status LED (on or blue)
-
-  */
+  bootRecovery::begin();
 
   // Start serial
   requestSerialPort(0, NULL);
@@ -545,22 +511,30 @@ void DroneSystem::setup() {
   delay(2500); // to allow serial to reconnect after programming
 
   Log.noticeln(F("[] Starting..."));
-  checkFlashVoltageConfiguration();
+  const bool provisioned = bootRecovery::profile().valid();
+  const bool filesystemReady = dfs.setup(!provisioned && !bootRecovery::active());
+  if (filesystemReady && !bootRecovery::active()) {
+    if (provisioned && !LITTLEFS.exists("/config.ini")) {
+      bootRecovery::forceRecovery();
+    } else {
+      createDefaultConfig();
+      bootRecovery::readCandidate(LITTLEFS);
+    }
+  }
+  if (!filesystemReady) bootRecovery::forceRecovery();
 
-  // Init DroneWire
-  Log.noticeln(F("[] Init DroneWire..."));
-  DroneWire::setup();
+  bootRecovery::enter(recovery::Phase::Hardware);
+  if (!bootRecovery::active()) {
+    checkFlashVoltageConfiguration();
 
-  // I2C scan
-  //Log.noticeln(F("[] I2C bus scan..."));
-  //DroneWire::scanAll();
-
-  // Detect motherboard version
-  detectMotherboardVersion();
-  Log.noticeln(F("[] Motherboard v%u"), _motherboardVersion);
+    Log.noticeln(F("[] Init DroneWire..."));
+    DroneWire::setup();
+    detectMotherboardVersion();
+    Log.noticeln(F("[] Motherboard v%u"), _motherboardVersion);
+  }
 
   // Setup status LED
-  dled = new DroneLED(this);
+  dled = new DroneLED(this, !bootRecovery::active());
 
   // init DroneLogger
   if (_motherboardVersion >= 4) {
@@ -577,7 +551,9 @@ void DroneSystem::setup() {
 
   Log.noticeln("[] Initializing SD card...");
 
-  if (!SD.begin(4)) {
+  if (bootRecovery::active()) {
+    Log.noticeln("[] Recovery skips SD initialization");
+  } else if (!SD.begin(4)) {
     DroneConsole.println("  initialization failed!");
   } else {
     _SDAvailable = true;
@@ -611,13 +587,7 @@ void DroneSystem::setup() {
   }
   
 
-  // Determine and setup filesystem
-  Log.noticeln(F("[] Init DroneFS..."));
-  dfs.setup();
-
-  createDefaultConfig();
-  createSafeModeScript();
-
+  bootRecovery::enter(recovery::Phase::WiFi);
   // load WIFI Configuration and enable during startup
   // TODO - refactor to use FS class
   Log.noticeln(F("[] Init WiFiManager..."));
@@ -634,32 +604,20 @@ void DroneSystem::setup() {
   // TODO - refactor to use FS class
   dem = new DroneExecutionManager(this, _logFile);
 
-  // allocate PWM timers
-  //ESP32PWM::allocateTimer(0);
-	//ESP32PWM::allocateTimer(1);
-	ESP32PWM::allocateTimer(2);
-	ESP32PWM::allocateTimer(3);
-
-  // TODO refactor FS class
-  // switch to logging to startup.log file on flash if not in safeMode
-  if (!dem->safeMode() && false) {
-    Log.noticeln(F("[] Opening startup.log..."));
-    _logFile = LITTLEFS.open("/startup.log", FILE_WRITE);
-
-    Log.noticeln(F("[] Sending log to startup.log..."));
-    Log.begin(LOG_LEVEL_VERBOSE, &_logFile);
-  }
-
-  // prep the startup scripts (will not execute until loop begins)
-  if (dem->safeMode()) {
-    startInSafeMode();
+  bootRecovery::enter(recovery::Phase::Configuration);
+  if (bootRecovery::active()) {
+    Log.warningln("[] Wi-Fi recovery");
+    dem->startRecovery();
   } else {
+    ESP32PWM::allocateTimer(2);
+    ESP32PWM::allocateTimer(3);
     start();
   }
 
   dem->completeSetup();
 
   Log.noticeln(F("[] Init web server..."));
+  bootRecovery::enter(recovery::Phase::Web);
   setupWebServer();
 
   // attempt VPN
@@ -715,7 +673,6 @@ void DroneSystem::loop() {
         // clear boot flag and restart
         if (strcmp(_serialCommand, "reset")==0) {
           DroneConsole.println("restarting");
-          dem->setBootStatus(DEM_BOOT_SUCCESS);
           dmm->restart();
         }
 
@@ -732,8 +689,8 @@ void DroneSystem::loop() {
           dlm->enableWiFi();
         }
 
-        if (strcmp(_serialCommand, "trial") == 0 ||
-            strncmp(_serialCommand, "trial ", 6) == 0) {
+        if (!bootRecovery::active() && (strcmp(_serialCommand, "trial") == 0 ||
+            strncmp(_serialCommand, "trial ", 6) == 0)) {
           dmm->runDigitalTrialCommand(_serialCommand, DroneConsole, this);
         }
 
@@ -786,9 +743,9 @@ void DroneSystem::loop() {
 
     dem->processAddressQueue();
     dem->processHotLoad();
-    DroneWire::serviceDiagnostic();
+    if (!bootRecovery::active()) DroneWire::serviceDiagnostic();
     xSemaphoreGive(_i2cLoopMutex);
-
+    bootRecovery::completedPass(millis());
 
     //if (logFile) logFile.flush();
   } else {

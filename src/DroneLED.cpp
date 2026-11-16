@@ -1,12 +1,17 @@
 #include "DroneLED.h"
 #include "DroneSystem.h"
 
-DroneLED::DroneLED(DroneSystem* ds) {
+DroneLED::DroneLED(DroneSystem* ds, bool enabled) {
   _ds = ds;
   _state = DRONE_LED_STATE_STARTUP;
   _strip = NULL;
   _animationTimer = 0;
   _animationState = 0;
+
+  if (!enabled) {
+    _hw = DRONE_LED_HW_DISABLED;
+    return;
+  }
 
   if (ds->motherboardVersion() >= 4) {
     _hw = DRONE_LED_HW_NEOPIXEL;
@@ -52,6 +57,7 @@ bool DroneLED::setBenchCue(const char* phase) {
 }
 
 void DroneLED::setState(uint8_t newState) {
+  if (_hw == DRONE_LED_HW_DISABLED) return;
   if (newState == DRONE_LED_STATE_RUNNING_NO_WIFI || newState == DRONE_LED_STATE_RUNNING_WIFI) {
     if (_cueActive && millis() - _cueStarted < 60000) {
       _strip->SetPixelColor(0, _cueColor);
@@ -142,5 +148,6 @@ void DroneLED::update() {
 
 
 void DroneLED::loop() {
+  if (_hw == DRONE_LED_HW_DISABLED) return;
   update();
 }
