@@ -672,6 +672,7 @@ void DroneSystem::loop() {
       if (c == '\n' || c == '\r') {
         // null terminate
         _serialCommand[_serialCommandLen] = 0;
+        cloudRecovery::usbCommand(_serialCommand, dlm->node());
         DroneConsole.print("Executing: ");
         DroneConsole.println(_serialCommand);
 

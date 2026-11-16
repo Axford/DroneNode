@@ -4,7 +4,6 @@
 #include <Arduino.h>
 #include "FS.h"
 #include <ESPAsyncWebServer.h>
-#include "WebFSEditorPages.h"
 
 class WebFSEditor {
 protected:
@@ -22,8 +21,6 @@ public:
   String listFiles(bool ishtml);
 
   String humanReadableSize(const size_t bytes);
-
-  static String processor(const String& var);
 
   void configureWebServer(AsyncWebServer &server);
 

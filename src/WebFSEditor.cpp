@@ -1,5 +1,6 @@
 
 #include "WebFSEditor.h"
+#include "WebFSEditorCompressed.h"
 #include "BootRecovery.h"
 #include <Arduino.h>
 #include <ArduinoLog.h>
@@ -62,27 +63,12 @@ String WebFSEditor::humanReadableSize(const size_t bytes) {
 }
 
 
-// parses and processes webpages
-// if the webpage has %SOMETHING% or %SOMETHINGELSE% it will replace those strings with the ones defined
-String WebFSEditor::processor(const String& var) {
-  /*
-  if (var == "FIRMWARE") {
-    return FIRMWARE_VERSION;
-  }
-
-  if (var == "FREE_FS") {
-    return humanReadableSize((_fs.totalBytes() - _fs.usedBytes()));
-  }
-
-  if (var == "USED_FS") {
-    return humanReadableSize(_fs.usedBytes());
-  }
-
-  if (var == "TOTAL_FS") {
-    return humanReadableSize(_fs.totalBytes());
-  }
-  */
-  return "";
+namespace {
+void sendEditorPage(AsyncWebServerRequest* request, int status, const uint8_t* data, size_t size) {
+  auto* response = request->beginResponse_P(status, "text/html", data, size);
+  response->addHeader("Content-Encoding", "gzip");
+  request->send(response);
+}
 }
 
 void WebFSEditor::configureWebServer(AsyncWebServer &server) {
@@ -108,7 +94,7 @@ void WebFSEditor::configureWebServer(AsyncWebServer &server) {
   server.on("/logged-out", HTTP_GET, [](AsyncWebServerRequest * request) {
     String logmessage = "Client:" + request->client()->remoteIP().toString() + " " + request->url();
     ////Log.noticeln(logmessage);
-    request->send_P(401, "text/html", logout_html, processor);
+    sendEditorPage(request, 401, logout_html, sizeof logout_html);
   });
 
   server.on("/", HTTP_GET, [&](AsyncWebServerRequest * request) {
@@ -117,7 +103,7 @@ void WebFSEditor::configureWebServer(AsyncWebServer &server) {
     if (checkUserWebAuth(request)) {
       logmessage += " Auth: Success";
       //Log.noticeln(logmessage);
-      request->send_P(200, "text/html", index_html, processor);
+      sendEditorPage(request, 200, index_html, sizeof index_html);
     } else {
       logmessage += " Auth: Failed";
       //Log.noticeln(logmessage);
@@ -130,7 +116,7 @@ void WebFSEditor::configureWebServer(AsyncWebServer &server) {
     String logmessage = "Client:" + request->client()->remoteIP().toString() + " " + request->url();
 
     if (checkUserWebAuth(request)) {
-      request->send(200, "text/html", reboot_html);
+      sendEditorPage(request, 200, reboot_html, sizeof reboot_html);
       logmessage += " Auth: Success";
       //Log.noticeln(logmessage);
       //shouldReboot = true;

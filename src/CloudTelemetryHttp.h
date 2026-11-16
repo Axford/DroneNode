@@ -190,6 +190,23 @@ class PackedHttp {
   }
 public:
   explicit PackedHttp(HttpIo &client):io(client) {}
+  bool postJson(const HttpSettings &cfg, const char* path, const char* body, const char* token,
+                char* response, size_t capacity, int& status) {
+    started=io.now();headerBytes=0;status=0;
+    bool complete=false;
+    if(live()&&io.connect(cfg.host,cfg.port)&&live()) {
+      char header[512];
+      const size_t size=strlen(body);
+      const int length=snprintf(header,sizeof header,
+        "POST %s HTTP/1.1\r\nHost: %s:%u\r\nContent-Type: application/json\r\nContent-Length: %u\r\n%s%s%sConnection: close\r\n\r\n",
+        path,cfg.host,cfg.port,unsigned(size),token?"Authorization: Bearer ":"",token?token:"",token?"\r\n":"");
+      bool closeConnection=false;
+      complete=length>0&&size_t(length)<sizeof header&&send(reinterpret_cast<const uint8_t*>(header),length)&&
+          send(reinterpret_cast<const uint8_t*>(body),size)&&readResponse(response,capacity,status,closeConnection)&&live();
+    }
+    io.close();
+    return complete;
+  }
   Admission poll(const HttpSettings &cfg,uint8_t id,size_t limit,CommandBatch& batch,const PollPeers& peers = PollPeers(), const uint8_t* recoveryBoot = nullptr) {
     Admission result;
     batch.count=0;started=io.now();headerBytes=0;

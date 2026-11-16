@@ -510,3 +510,15 @@ Run the host bus simulation with `c++ -std=c++11 -Isrc tests/i2c-diagnostic.cpp 
 The recovery worker starts only when the `cloud-recovery` NVS namespace contains the `https-v1` blob. Provision it through a trusted development fixture as UTF-8 JSON with `endpoint` (HTTPS origin), `domain`, `apiKey` and `ca` (PEM trust anchor). Remove the key when the test ends. No profile is shipped, and the worker does not write the profile, boot identity or retry state to flash. It uses the configured Wi-Fi connection independently of mission modules. The worker verifies the server against its configured anchor and hostname. The current ESP32 SDK does not check certificate dates, so use a dedicated bench CA. Keep field activation gated on node identity and the field TLS policy.
 
 See the [shared HTTPS recovery contract](../../DroneLinkDatastore/docs/contracts/http.md#https-boot-recovery-bench-contract).
+
+### USB node enrollment for HTTPS recovery
+
+The Owner or Platform Admin creates a short-lived claim for the existing cloud node. Connect the board's USB console and ensure its Wi-Fi is connected for key generation. Use the validation Python environment with pyserial and run:
+
+```sh
+python tools/enroll_node.py --serial /dev/cu.example --endpoint https://bench.example --domain DOMAIN_ID --node 3 --ca /path/to/ca.pem
+```
+
+Paste the claim at the prompt. The tool checks the node address over USB, redeems the claim using the board's public key, installs the trust profile, and requests restart. The private key stays in the device's dedicated NVS namespace. Session tokens stay in RAM and renew over verified HTTPS on reconnect as needed. An interrupted pairing can repeat with the same unused or already redeemed claim during its lifetime. To dispose of a bench identity, revoke it in the backend first. The physical console can then run `enroll clear` and `reset`.
+
+The web editor's embedded HTML is compressed to fit the existing OTA slot. Regenerate it with `python3 tools/pack_web_editor.py` if its source pages change.
