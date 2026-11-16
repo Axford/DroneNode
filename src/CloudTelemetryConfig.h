@@ -28,7 +28,29 @@ inline bool printable(const char* value,size_t max) {
 }
 struct HttpSettings {
   char endpoint[257]={},host[254]={},domain[201]={},apiKey[513]={};
+
   uint16_t port=443;
+
+  bool parseEndpoint(const char* value) {
+    if(!printable(value,256)||strncmp(value,"https://",8)!=0) return false;
+    const char* authority=value+8; const char* colon=strchr(authority,':');
+    const size_t length=colon ? size_t(colon-authority):strlen(authority);
+    if(!length||length>253) return false;
+    for(size_t i=0;i<length;++i) {
+      char c=authority[i];if(!((c>='a'&&c<='z')||(c>='A'&&c<='Z')||(c>='0'&&c<='9')||c=='.'||c=='-')) return false;
+    }
+    unsigned candidate=443;
+    if(colon&&!decimal(colon+1,65535,candidate)) return false;
+    memcpy(host,authority,length);host[length]=0;port=candidate;strcpy(endpoint,value);return true;
+  }
+  bool setDomain(const char* value) {
+    if(!printable(value,200)||strchr(value,'/')||(strlen(value)>=4&&!strncmp(value,"__",2)&&!strcmp(value+strlen(value)-2,"__"))||!strcmp(value,".")||!strcmp(value,"..")) return false;
+    strcpy(domain,value);return true;
+  }
+  bool setApiKey(const char* value) {
+    if(!printable(value,512)) return false;
+    strcpy(apiKey,value);return true;
+  }
 };
 class Config:public HttpSettings {
   size_t selectionBytes=0;
@@ -62,31 +84,14 @@ class Config:public HttpSettings {
     if(!wildcard && entry.param[0]>='0'&&entry.param[0]<='9'&&!numericParam) return false;
     return local || (numericChannel && (wildcard||numericParam));
   }
-  bool parseEndpoint(const char* value) {
-    if(!printable(value,256)||strncmp(value,"https://",8)!=0) return false;
-    const char* authority=value+8; const char* colon=strchr(authority,':');
-    const size_t length=colon ? size_t(colon-authority):strlen(authority);
-    if(!length||length>253) return false;
-    for(size_t i=0;i<length;++i) {
-      char c=authority[i];if(!((c>='a'&&c<='z')||(c>='A'&&c<='Z')||(c>='0'&&c<='9')||c=='.'||c=='-')) return false;
-    }
-    unsigned candidate=443;
-    if(colon&&!decimal(colon+1,65535,candidate)) return false;
-    memcpy(host,authority,length);host[length]=0;port=candidate;strcpy(endpoint,value);return true;
-  }
+
 public:
   Selection selections[64];size_t count=0;
   const char* error=nullptr;
   Setting apply(const char* name,const char* value) {
     if(!strcmp(name,"endpoint")) return parseEndpoint(value) ? Setting::Handled:fail("invalid endpoint");
-    if(!strcmp(name,"domain")) {
-      if(!printable(value,200)||strchr(value,'/')||(strlen(value)>=4&&!strncmp(value,"__",2)&&!strcmp(value+strlen(value)-2,"__"))||!strcmp(value,".")||!strcmp(value,"..")) return fail("invalid domain");
-      strcpy(domain,value);return Setting::Handled;
-    }
-    if(!strcmp(name,"apiKey")) {
-      if(!printable(value,512)) return fail("invalid apiKey");
-      strcpy(apiKey,value);return Setting::Handled;
-    }
+    if(!strcmp(name,"domain")) return setDomain(value) ? Setting::Handled:fail("invalid domain");
+    if(!strcmp(name,"apiKey")) return setApiKey(value) ? Setting::Handled:fail("invalid apiKey");
     if(strcmp(name,"subscriptions")) return Setting::Unhandled;
     if(!value || !*value || strlen(value)>768) return fail("invalid subscriptions");
     const char* begin=value;

@@ -15,6 +15,7 @@ struct RecoveryProfile {
 namespace bootRecovery {
 void begin();
 bool active();
+bool healthy();
 uint8_t quarantinedModule();
 uint8_t optionalStatus();
 void inspectConfig(fs::FS& fs);

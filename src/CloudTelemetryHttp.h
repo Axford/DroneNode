@@ -190,7 +190,7 @@ class PackedHttp {
   }
 public:
   explicit PackedHttp(HttpIo &client):io(client) {}
-  Admission poll(const HttpSettings &cfg,uint8_t id,size_t limit,CommandBatch& batch,const PollPeers& peers = PollPeers()) {
+  Admission poll(const HttpSettings &cfg,uint8_t id,size_t limit,CommandBatch& batch,const PollPeers& peers = PollPeers(), const uint8_t* recoveryBoot = nullptr) {
     Admission result;
     batch.count=0;started=io.now();headerBytes=0;
     if(!id||id>=255||!limit||limit>BatchLimit||peers.count>PeerPollLimit||!live()) return result;
@@ -204,6 +204,12 @@ public:
     escape(cfg.domain,domain);escape(cfg.apiKey,key);
     int length=snprintf(body,sizeof body,"{\"domain\":\"%s\",\"id\":%u,\"apiKey\":\"%s\",\"limit\":%u",domain,id,key,unsigned(limit));
     if(length<0||size_t(length)+12+4*peers.count>=sizeof body) {io.close();return result;}
+    if(recoveryBoot) {
+      if(peers.count || size_t(length)+36>=sizeof body) {io.close();return result;}
+      length+=snprintf(body+length,sizeof body-length,",\"recoveryBoot\":\"");
+      for(size_t i=0;i<8;++i) length+=snprintf(body+length,sizeof body-length,"%02x",unsigned(recoveryBoot[i]));
+      body[length++]='"';
+    }
     if(peers.count) {
       length+=snprintf(body+length,sizeof body-length,",\"peers\":[");
       for(size_t i=0;i<peers.count;++i) length+=snprintf(body+length,sizeof body-length,"%s%u",i?",":"",peers.nodes[i]);

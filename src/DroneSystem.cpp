@@ -1,4 +1,5 @@
 #include "BootRecovery.h"
+#include "CloudRecovery.h"
 #include "DroneConsole.h"
 #include "DroneSystem.h"
 #include "FirmwareMeasurements.h"
@@ -618,6 +619,7 @@ void DroneSystem::setup() {
   }
 
   dem->completeSetup();
+  cloudRecovery::start(dlm->node());
 
   Log.noticeln(F("[] Init web server..."));
   bootRecovery::enter(recovery::Phase::Web);
@@ -748,6 +750,7 @@ void DroneSystem::loop() {
     dem->processHotLoad();
     if (!bootRecovery::active()) DroneWire::serviceDiagnostic();
     xSemaphoreGive(_i2cLoopMutex);
+    cloudRecovery::service();
     bootRecovery::completedPass(millis());
 
     //if (logFile) logFile.flush();

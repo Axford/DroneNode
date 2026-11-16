@@ -504,3 +504,9 @@ Run the host bus simulation with `c++ -std=c++11 -Isrc tests/i2c-diagnostic.cpp 
 ### Motherboard version report
 
 `GET /motherboard` reports the firmware's boot-time motherboard version and node address. A read does not scan I²C or change the node. The version is 0 when the boot probe found no multiplexer. The [Workbench contract](../../DroneLinkDatastore/docs/contracts/workbench.md#motherboard-version) defines the remaining values and gateway route.
+
+## HTTPS recovery bench provisioning
+
+The recovery worker starts only when the `cloud-recovery` NVS namespace contains the `https-v1` blob. Provision it through a trusted development fixture as UTF-8 JSON with `endpoint` (HTTPS origin), `domain`, `apiKey` and `ca` (PEM trust anchor). Remove the key when the test ends. No profile is shipped, and the worker does not write the profile, boot identity or retry state to flash. It uses the configured Wi-Fi connection independently of mission modules. The worker verifies the server against its configured anchor and hostname. The current ESP32 SDK does not check certificate dates, so use a dedicated bench CA. Keep field activation gated on node identity and the field TLS policy.
+
+See the [shared HTTPS recovery contract](../../DroneLinkDatastore/docs/contracts/http.md#https-boot-recovery-bench-contract).

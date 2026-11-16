@@ -27,7 +27,7 @@ recovery::Breadcrumb failureAtBoot;
 uint8_t reasonAtBoot;
 uint32_t firstPass;
 bool observedPass = false;
-bool healthy = false;
+bool startupHealthy = false;
 std::atomic<bool> automaticRetryDeferred{false};
 
 void retain() {
@@ -91,6 +91,7 @@ void begin() {
 }
 
 bool active() { return retained.record.recovering; }
+bool healthy() { return startupHealthy; }
 uint8_t quarantinedModule() { return retained.record.quarantined; }
 uint8_t optionalStatus() { return retained.record.config.optionalStatus; }
 
@@ -192,11 +193,11 @@ void completedPass(uint32_t now) {
     firstPass = now;
   }
   const uint32_t elapsed = now - firstPass;
-  if (!healthy && elapsed >= HealthyTimeMs) {
+  if (!startupHealthy && elapsed >= HealthyTimeMs) {
     if (!active() && !quarantinedModule()) saveCandidate();
     retained.record.ready();
     retain();
-    healthy = true;
+    startupHealthy = true;
   }
   if (elapsed >= RetryTimeMs && retained.record.mayRetry() && !automaticRetryDeferred.load()) {
     retained.record.requestRetry(false);
