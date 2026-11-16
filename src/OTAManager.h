@@ -13,17 +13,18 @@ typedef void (*OTAManagerCallback) (const OTAManagerEvent event, const float pro
 
 class OTAManager {
   public:
+    uint8_t _lastProg;
     OTAManagerCallback onEvent;
 
     boolean isUpdating;
-    OTAManager(AsyncEventSource * events);
+    OTAManager();
 
     void init(String hostname);
     void loop();
 
     //void execOTA();
   private:
-    AsyncEventSource *_events;
+    unsigned int _lastTransferredBytes = 0;
     //String _firmwareUrl;
 };
 

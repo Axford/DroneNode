@@ -4,16 +4,19 @@
 #include "strings.h"
 #include "../navMath.h"
 
-StatusModule::StatusModule(uint8_t id, DroneSystem* ds):
-  DroneModule ( id, ds )
+StatusModule::StatusModule(uint8_t id, DroneSystem* ds, Registration registration):
+  DroneModule(id, ds, registration)
  {
+   if (!_mgmtParams) return;
    setTypeName(FPSTR(STATUS_STR_STATUS));
 
    // set default interval to 1000
+   // @default interval = 1000
    _mgmtParams[DRONE_MODULE_PARAM_INTERVAL_E].data.uint32[0] = 1000;
 
    // subs
    initSubs(STATUS_SUBS);
+   if (!_subs) return;
 
    DRONE_PARAM_SUB *sub;
 
@@ -40,6 +43,7 @@ StatusModule::StatusModule(uint8_t id, DroneSystem* ds):
 
    // pubs
    initParams(STATUS_PARAM_ENTRIES);
+   if (!_params) return;
 
    DRONE_PARAM_ENTRY *param;
 
@@ -93,36 +97,14 @@ StatusModule::StatusModule(uint8_t id, DroneSystem* ds):
    _params[STATUS_PARAM_VALUE4_E].data.f[0] = 0.5;
 }
 
-DEM_NAMESPACE* StatusModule::registerNamespace(DroneExecutionManager *dem) {
-  // namespace for module type
-  return dem->createNamespace(STATUS_STR_STATUS,0,true);
+
+
+bool StatusModule::acceptsLiveInjection(uint8_t parameter) const {
+  if (!_liveLogic || parameter != STATUS_PARAM_VALUE1 || _params[STATUS_PARAM_SCENE_E].publish) return false;
+  for (uint8_t index = 0; index < STATUS_SUBS; ++index)
+    if (_subs[index].addr.node) return false;
+  return true;
 }
-
-void StatusModule::registerParams(DEM_NAMESPACE* ns, DroneExecutionManager *dem) {
-  using std::placeholders::_1;
-  using std::placeholders::_2;
-  using std::placeholders::_3;
-  using std::placeholders::_4;
-
-  // writable mgmt params
-  DEMCommandHandler ph = std::bind(&DroneExecutionManager::mod_param, dem, _1, _2, _3, _4);
-  DEMCommandHandler pha = std::bind(&DroneExecutionManager::mod_subAddr, dem, _1, _2, _3, _4);
-  dem->registerCommand(ns, STRING_SUB1, DRONE_LINK_MSG_TYPE_FLOAT, ph);
-  dem->registerCommand(ns, PSTR("$sub1"), DRONE_LINK_MSG_TYPE_FLOAT, pha);
-  dem->registerCommand(ns, STRING_SUB2, DRONE_LINK_MSG_TYPE_FLOAT, ph);
-  dem->registerCommand(ns, PSTR("$sub2"), DRONE_LINK_MSG_TYPE_FLOAT, pha);
-  dem->registerCommand(ns, STRING_SUB3, DRONE_LINK_MSG_TYPE_FLOAT, ph);
-  dem->registerCommand(ns, PSTR("$sub3"), DRONE_LINK_MSG_TYPE_FLOAT, pha);
-  dem->registerCommand(ns, STRING_SUB4, DRONE_LINK_MSG_TYPE_FLOAT, ph);
-  dem->registerCommand(ns, PSTR("$sub4"), DRONE_LINK_MSG_TYPE_FLOAT, pha);
-
-  dem->registerCommand(ns, STRING_SCENE, DRONE_LINK_MSG_TYPE_UINT8_T, ph);
-  dem->registerCommand(ns, STRING_VALUE1, DRONE_LINK_MSG_TYPE_FLOAT, ph);
-  dem->registerCommand(ns, STRING_VALUE2, DRONE_LINK_MSG_TYPE_FLOAT, ph);
-  dem->registerCommand(ns, STRING_VALUE3, DRONE_LINK_MSG_TYPE_FLOAT, ph);
-  dem->registerCommand(ns, STRING_VALUE4, DRONE_LINK_MSG_TYPE_FLOAT, ph);
-}
-
 
 void StatusModule::setup() {
   DroneModule::setup();
@@ -151,6 +133,10 @@ uint8_t StatusModule::checkThreshold(uint8_t index) {
 
 void StatusModule::loop() {
   DroneModule::loop();
+
+  for (uint8_t i = 0; i < STATUS_SUBS; ++i) {
+    if (_subs[i].addr.node && !_subs[i].received) return;
+  }
 
   uint8_t newScene[16];
   for (uint8_t i=0; i<16; i++) {

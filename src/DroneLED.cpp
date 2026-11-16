@@ -1,10 +1,17 @@
 #include "DroneLED.h"
 #include "DroneSystem.h"
 
-DroneLED::DroneLED(DroneSystem* ds) {
+DroneLED::DroneLED(DroneSystem* ds, bool enabled) {
   _ds = ds;
   _state = DRONE_LED_STATE_STARTUP;
   _strip = NULL;
+  _animationTimer = 0;
+  _animationState = 0;
+
+  if (!enabled) {
+    _hw = DRONE_LED_HW_DISABLED;
+    return;
+  }
 
   if (ds->motherboardVersion() >= 4) {
     _hw = DRONE_LED_HW_NEOPIXEL;
@@ -18,12 +25,10 @@ DroneLED::DroneLED(DroneSystem* ds) {
     pinMode(DRONE_LED_PIN, OUTPUT);
   } else {
     // init NeoPixel strip
-    _strip = new NeoPixelBrightnessBus<NeoGrbFeature, Neo800KbpsMethod>(DRONE_LED_MAX_PIXELS, DRONE_LED_PIN);
 
-    _strip->Begin();
-    _strip->Show();
-    // default brightness is very low to save battery
-    _strip->SetBrightness(15);
+    //_strip = new NeoPixelBrightnessBus<NeoGrbFeature, Neo800KbpsMethod>(DRONE_LED_MAX_PIXELS, DRONE_LED_PIN);
+    _strip = _ds->requestStrip(DRONE_LED_PIN, DRONE_LED_MAX_PIXELS, NULL);
+    _ds->setStripFirstPixel(DRONE_LED_PIN, 1);
   }
 
   // set initial state
@@ -36,11 +41,36 @@ boolean DroneLED::isNeopixel() {
 }
 
 
+bool DroneLED::setBenchCue(const char* phase) {
+  if (!_strip) return false;
+  if (!strcmp(phase, "off")) {
+    _cueActive = false;
+    return true;
+  }
+  if (!strcmp(phase, "hold")) _cueColor = RgbColor(255, 140, 0);
+  else if (!strcmp(phase, "move")) _cueColor = RgbColor(0, 255, 255);
+  else if (!strcmp(phase, "reload")) _cueColor = RgbColor(255, 0, 255);
+  else return false;
+  _cueStarted = millis();
+  _cueActive = true;
+  return true;
+}
+
 void DroneLED::setState(uint8_t newState) {
+  if (_hw == DRONE_LED_HW_DISABLED) return;
+  if (newState == DRONE_LED_STATE_RUNNING_NO_WIFI || newState == DRONE_LED_STATE_RUNNING_WIFI) {
+    if (_cueActive && millis() - _cueStarted < 60000) {
+      _strip->SetPixelColor(0, _cueColor);
+      return;
+    }
+  }
+  _cueActive = false;
+  _state = newState;
   switch (newState) {
     case DRONE_LED_STATE_STARTUP:
       if (_hw == DRONE_LED_HW_NEOPIXEL) {
-        _strip->SetPixelColor(0, RgbColor(255, 255, 255));
+        _strip->ClearTo(RgbColor(255, 255, 255));
+        //_strip->SetPixelColor(0, RgbColor(255, 255, 255));
       } else {
         digitalWrite(DRONE_LED_PIN, HIGH);
       }
@@ -65,7 +95,23 @@ void DroneLED::setState(uint8_t newState) {
 
     case DRONE_LED_STATE_RUNNING_WIFI:
       if (_hw == DRONE_LED_HW_NEOPIXEL) {
-        _strip->SetPixelColor(0, RgbColor(0, 255, 0));
+        _strip->SetPixelColor(0, RgbColor(0, 50, 0));
+      } else {
+        digitalWrite(DRONE_LED_PIN, LOW);
+      }
+      break;
+
+    case DRONE_LED_STATE_UPDATING:
+      if (_hw == DRONE_LED_HW_NEOPIXEL) {
+        _strip->ClearTo(RgbColor(0, 255, 255));
+      } else {
+        digitalWrite(DRONE_LED_PIN, LOW);
+      }
+      break;
+
+    case DRONE_LED_STATE_RESTART:
+      if (_hw == DRONE_LED_HW_NEOPIXEL) {
+        _strip->ClearTo(RgbColor(20, 0, 0));
       } else {
         digitalWrite(DRONE_LED_PIN, LOW);
       }
@@ -78,11 +124,30 @@ void DroneLED::setState(uint8_t newState) {
 
 void DroneLED::update() {
   if (_hw == DRONE_LED_HW_NEOPIXEL) {
-    _strip->Show();
+
+    uint32_t loopTime = millis();
+
+    if (_state == DRONE_LED_STATE_UPDATING) {
+      // animate to show update in progress
+      if (loopTime > _animationTimer + 200) {
+        if (_animationState == 0) {
+          _animationState = 1;
+          _strip->ClearTo(RgbColor(120, 50, 255));
+        } else {
+          _animationState = 0;
+          _strip->ClearTo(RgbColor(50, 0, 100));
+        }
+
+        _strip->Show();
+        
+        _animationTimer = loopTime;
+      }
+    }
   }
 }
 
 
 void DroneLED::loop() {
+  if (_hw == DRONE_LED_HW_DISABLED) return;
   update();
 }

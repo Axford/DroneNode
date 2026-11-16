@@ -1,4 +1,5 @@
 #include "ManagementModule.h"
+#include "../BootRecovery.h"
 #include "../DroneLinkMsg.h"
 #include "../DroneLinkManager.h"
 #include "../DroneModuleManager.h"
@@ -6,12 +7,22 @@
 #include "../OTAManager.h"
 #include "strings.h"
 #include "OLEDTomThumbFont.h"
+#include <rom/rtc.h>
+
+// @type Management
+
+int get_reset_reason(int icore) { 
+   return (int) rtc_get_reset_reason( (RESET_REASON) icore);  
+}
+
+
 
 ManagementModule::ManagementModule(uint8_t id, DroneSystem* ds):
   DroneModule ( id, ds )
  {
    setTypeName(FPSTR(MANAGEMENT_STR_MANAGEMENT));
 
+  // @default interval = 30000
    _mgmtParams[DRONE_MODULE_PARAM_INTERVAL_E].data.uint32[0] = 30000;  // 30 sec
    _lastRate = 0;
 
@@ -38,7 +49,9 @@ ManagementModule::ManagementModule(uint8_t id, DroneSystem* ds):
    _params[MANAGEMENT_PARAM_RESET_E].paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, MANAGEMENT_PARAM_RESET);
    _params[MANAGEMENT_PARAM_RESET_E].name = FPSTR(STRING_RESET);
    _params[MANAGEMENT_PARAM_RESET_E].nameLen = sizeof(STRING_RESET);
-   _params[MANAGEMENT_PARAM_RESET_E].paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_UINT8_T, 1);
+   _params[MANAGEMENT_PARAM_RESET_E].paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_UINT8_T, 3);
+   _params[MANAGEMENT_PARAM_RESET_E].data.uint8[1] = get_reset_reason(0);
+   _params[MANAGEMENT_PARAM_RESET_E].data.uint8[2] = get_reset_reason(1);
 
    _params[MANAGEMENT_PARAM_HEAP_E].paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, MANAGEMENT_PARAM_HEAP);
    _params[MANAGEMENT_PARAM_HEAP_E].name = FPSTR(STRING_HEAP);
@@ -74,13 +87,14 @@ ManagementModule::ManagementModule(uint8_t id, DroneSystem* ds):
    _params[MANAGEMENT_PARAM_DISCOVERY_E].name = FPSTR(STRING_DISCOVERY);
    _params[MANAGEMENT_PARAM_DISCOVERY_E].nameLen = sizeof(STRING_DISCOVERY);
    _params[MANAGEMENT_PARAM_DISCOVERY_E].paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_UINT8_T, 1);
+   // @default discovery=1
    _params[MANAGEMENT_PARAM_DISCOVERY_E].data.uint8[0] = _dmm->discovery() ? 1 : 0;
 
-   _params[MANAGEMENT_PARAM_MACRO_E].paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, MANAGEMENT_PARAM_MACRO);
-   _params[MANAGEMENT_PARAM_MACRO_E].name = FPSTR(STRING_MACRO);
-   _params[MANAGEMENT_PARAM_MACRO_E].nameLen = sizeof(STRING_MACRO);
-   _params[MANAGEMENT_PARAM_MACRO_E].paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_CHAR, 1);
-   _params[MANAGEMENT_PARAM_MACRO_E].data.c[0] = 0;
+   _params[MANAGEMENT_PARAM_SAVE_E].paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, MANAGEMENT_PARAM_SAVE);
+   _params[MANAGEMENT_PARAM_SAVE_E].name = FPSTR(STRING_SAVE);
+   _params[MANAGEMENT_PARAM_SAVE_E].nameLen = sizeof(STRING_SAVE);
+   _params[MANAGEMENT_PARAM_SAVE_E].paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_UINT8_T, 1);
+   _params[MANAGEMENT_PARAM_SAVE_E].data.uint8[0] = 0;
 
    _params[MANAGEMENT_PARAM_SLEEP_E].paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, MANAGEMENT_PARAM_SLEEP);
    _params[MANAGEMENT_PARAM_SLEEP_E].name = FPSTR(STRING_SLEEP);
@@ -92,38 +106,46 @@ ManagementModule::ManagementModule(uint8_t id, DroneSystem* ds):
    _params[MANAGEMENT_PARAM_WIFI_E].name = FPSTR(STRING_WIFI);
    _params[MANAGEMENT_PARAM_WIFI_E].nameLen = sizeof(STRING_WIFI);
    _params[MANAGEMENT_PARAM_WIFI_E].paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_UINT8_T, 1);
+   // @default wifi=1
    _params[MANAGEMENT_PARAM_WIFI_E].data.uint8[0] = 1; // 1 = enabled
 
    _params[MANAGEMENT_PARAM_CPU_E].paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, MANAGEMENT_PARAM_CPU);
    _params[MANAGEMENT_PARAM_CPU_E].name = FPSTR(STRING_CPU);
    _params[MANAGEMENT_PARAM_CPU_E].nameLen = sizeof(STRING_CPU);
    _params[MANAGEMENT_PARAM_CPU_E].paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_UINT8_T, 1);
+   // @default CPU=240
    _params[MANAGEMENT_PARAM_CPU_E].data.uint8[0] = 240; // default high speed
+
+   auto &hotLoad = _params[MANAGEMENT_PARAM_HOT_LOAD_E];
+   hotLoad.paramPriority = MANAGEMENT_PARAM_HOT_LOAD;
+   hotLoad.paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_CHAR, 1);
+   setParamName(F("hotLoad"), &hotLoad);
+   hotLoad.data.c[0] = '-';
+   auto &result = _params[MANAGEMENT_PARAM_HOT_RESULT_E];
+   result.paramPriority = MANAGEMENT_PARAM_HOT_RESULT;
+   result.paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_UINT8_T, 1);
+   setParamName(F("hotLoadResult"), &result);
 }
 
-DEM_NAMESPACE* ManagementModule::registerNamespace(DroneExecutionManager *dem) {
-  // namespace for module type
-  return dem->createNamespace(MANAGEMENT_STR_MANAGEMENT,0,true);
+
+boolean ManagementModule::handleManagementMessage(DroneLinkMsg* msg) {
+  if (msg->param() == MANAGEMENT_PARAM_HOT_LOAD && msg->type() == DRONE_LINK_MSG_TYPE_CHAR) {
+    if (!msg->writable() && _enabled && _setupDone && !_dlm->dispatchingCloudRequest()) {
+      _dem->requestHotLoad(this, msg->_msg.payload.c, msg->length());
+    }
+    return true;
+  }
+  return DroneModule::handleManagementMessage(msg);
 }
 
-void ManagementModule::registerParams(DEM_NAMESPACE* ns, DroneExecutionManager *dem) {
-  using std::placeholders::_1;
-  using std::placeholders::_2;
-  using std::placeholders::_3;
-  using std::placeholders::_4;
-
-  // writable mgmt params
-  DEMCommandHandler ph = std::bind(&DroneExecutionManager::mod_param, dem, _1, _2, _3, _4);
-
-  dem->registerCommand(ns, STRING_RESET, DRONE_LINK_MSG_TYPE_UINT8_T, ph);
-  dem->registerCommand(ns, STRING_DISCOVERY, DRONE_LINK_MSG_TYPE_UINT8_T, ph);
-  dem->registerCommand(ns, STRING_HOSTNAME, DRONE_LINK_MSG_TYPE_CHAR, ph);
-  dem->registerCommand(ns, STRING_WIFI, DRONE_LINK_MSG_TYPE_UINT8_T, ph);
-  dem->registerCommand(ns, STRING_SLEEP, DRONE_LINK_MSG_TYPE_UINT32_T, ph);
-  dem->registerCommand(ns, STRING_CPU, DRONE_LINK_MSG_TYPE_UINT8_T, ph);
+void ManagementModule::reportHotLoad(configuration::HotLoadResult result) {
+  auto &entry = _params[MANAGEMENT_PARAM_HOT_RESULT_E];
+  entry.data.uint8[0] = static_cast<uint8_t>(result);
+  publishParamEntry(&entry);
 }
 
 void ManagementModule::onParamWrite(DRONE_PARAM_ENTRY *param) {
+  if (bootRecovery::active() && getDroneLinkMsgParam(param->paramPriority) != MANAGEMENT_PARAM_RESET) return;
   DroneModule::onParamWrite(param);
 
   if (getDroneLinkMsgParam(param->paramPriority) == MANAGEMENT_PARAM_RESET) {
@@ -140,13 +162,17 @@ void ManagementModule::onParamWrite(DRONE_PARAM_ENTRY *param) {
     _dmm->discovery( _params[MANAGEMENT_PARAM_DISCOVERY_E].data.uint8[0] > 0 );
   }
 
-  if (getDroneLinkMsgParam(param->paramPriority) == MANAGEMENT_PARAM_MACRO) {
-    // attempt to execute the macro requested
-    // null terminate to be safe
-    uint8_t len = min(DRONE_LINK_MSG_MAX_PAYLOAD-1, (_params[MANAGEMENT_PARAM_MACRO_E].paramTypeLength & 0xF) + 1   );
-    _params[MANAGEMENT_PARAM_MACRO_E].data.c[len] = 0;
-    Log.noticeln(F("[MM.oPW] macro... "));
-    _dem->runMacro(_params[MANAGEMENT_PARAM_MACRO_E].data.c, false);
+  if (getDroneLinkMsgParam(param->paramPriority) == MANAGEMENT_PARAM_SAVE) {
+    if (_params[MANAGEMENT_PARAM_SAVE_E].data.uint8[0] == 1) {
+
+      // write param back to 0
+      _params[MANAGEMENT_PARAM_SAVE_E].data.uint8[0] = 0;
+      // clear changed flag
+      _params[MANAGEMENT_PARAM_SAVE_E].changed = false;
+
+      // save live config
+      _dem->saveConfiguration();
+    }
   }
 
   if (getDroneLinkMsgParam(param->paramPriority) == MANAGEMENT_PARAM_HOSTNAME) {

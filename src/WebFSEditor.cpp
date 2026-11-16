@@ -1,5 +1,8 @@
 
 #include "WebFSEditor.h"
+#include "WebFSEditorCompressed.h"
+#include "BootRecovery.h"
+#include "ConfigTrialRuntime.h"
 #include <Arduino.h>
 #include <ArduinoLog.h>
 
@@ -7,14 +10,14 @@ WebFSEditor::WebFSEditor(fs::FS &fs, boolean &doLoop):
   _fs(fs),
   _doLoop(doLoop) {
 
-
+  useSemaphore = true;
 }
 
 
 // list all of the files, if ishtml=true, return html else json
 String WebFSEditor::listFiles(bool ishtml) {
   _doLoop = false;
-  xSemaphoreTake( xSPISemaphore, portMAX_DELAY );
+  if (useSemaphore) xSemaphoreTake( xSPISemaphore, portMAX_DELAY );
   String returnText = "";
   Log.noticeln("Listing files stored on _fs");
   File root = _fs.open("/");
@@ -61,27 +64,12 @@ String WebFSEditor::humanReadableSize(const size_t bytes) {
 }
 
 
-// parses and processes webpages
-// if the webpage has %SOMETHING% or %SOMETHINGELSE% it will replace those strings with the ones defined
-String WebFSEditor::processor(const String& var) {
-  /*
-  if (var == "FIRMWARE") {
-    return FIRMWARE_VERSION;
-  }
-
-  if (var == "FREE_FS") {
-    return humanReadableSize((_fs.totalBytes() - _fs.usedBytes()));
-  }
-
-  if (var == "USED_FS") {
-    return humanReadableSize(_fs.usedBytes());
-  }
-
-  if (var == "TOTAL_FS") {
-    return humanReadableSize(_fs.totalBytes());
-  }
-  */
-  return "";
+namespace {
+void sendEditorPage(AsyncWebServerRequest* request, int status, const uint8_t* data, size_t size) {
+  auto* response = request->beginResponse_P(status, "text/html", data, size);
+  response->addHeader("Content-Encoding", "gzip");
+  request->send(response);
+}
 }
 
 void WebFSEditor::configureWebServer(AsyncWebServer &server) {
@@ -105,88 +93,72 @@ void WebFSEditor::configureWebServer(AsyncWebServer &server) {
 
   // presents a "you are now logged out webpage
   server.on("/logged-out", HTTP_GET, [](AsyncWebServerRequest * request) {
-    String logmessage = "Client:" + request->client()->remoteIP().toString() + " " + request->url();
-    ////Log.noticeln(logmessage);
-    request->send_P(401, "text/html", logout_html, processor);
+    sendEditorPage(request, 401, logout_html, sizeof logout_html);
   });
 
   server.on("/", HTTP_GET, [&](AsyncWebServerRequest * request) {
-    String logmessage = "Client:" + request->client()->remoteIP().toString() + + " " + request->url();
-
     if (checkUserWebAuth(request)) {
-      logmessage += " Auth: Success";
-      //Log.noticeln(logmessage);
-      request->send_P(200, "text/html", index_html, processor);
+      sendEditorPage(request, 200, index_html, sizeof index_html);
     } else {
-      logmessage += " Auth: Failed";
-      //Log.noticeln(logmessage);
       return request->requestAuthentication();
     }
 
   });
 
   server.on("/reboot", HTTP_GET, [&](AsyncWebServerRequest * request) {
-    String logmessage = "Client:" + request->client()->remoteIP().toString() + " " + request->url();
-
     if (checkUserWebAuth(request)) {
-      request->send(200, "text/html", reboot_html);
-      logmessage += " Auth: Success";
-      //Log.noticeln(logmessage);
+      sendEditorPage(request, 200, reboot_html, sizeof reboot_html);
       //shouldReboot = true;
+      bootRecovery::requestRestart();
       ESP.restart();
     } else {
-      logmessage += " Auth: Failed";
-      //Log.noticeln(logmessage);
       return request->requestAuthentication();
     }
   });
 
   server.on("/listfiles", HTTP_GET, [&](AsyncWebServerRequest * request)
   {
-    String logmessage = "Client:" + request->client()->remoteIP().toString() + " " + request->url();
     if (checkUserWebAuth(request)) {
-      logmessage += " Auth: Success";
-      //Log.noticeln(logmessage);
       boolean doHTML = !request->hasParam("json");
       request->send(200, doHTML ? "text/plain" : "application/json", listFiles(doHTML) );
     } else {
-      logmessage += " Auth: Failed";
-      //Log.noticeln(logmessage);
       return request->requestAuthentication();
     }
   });
 
   server.on("/file", HTTP_GET, [&](AsyncWebServerRequest * request) {
-    String logmessage = "Client:" + request->client()->remoteIP().toString() + " " + request->url();
     if (checkUserWebAuth(request)) {
       _doLoop = false;
-      xSemaphoreTake( xSPISemaphore, portMAX_DELAY );
-      logmessage += " Auth: Success";
-      //Log.noticeln(logmessage);
+      if (useSemaphore) xSemaphoreTake( xSPISemaphore, portMAX_DELAY );
 
       if (request->hasParam("name") && request->hasParam("action")) {
         const char *fileName = request->getParam("name")->value().c_str();
         const char *fileAction = request->getParam("action")->value().c_str();
 
-        logmessage = "Client:" + request->client()->remoteIP().toString() + " " + request->url() + "?name=" + String(fileName) + "&action=" + String(fileAction);
+        String path;
+        if (path.reserve(strlen(fileName) + 1)) {
+          path = '/';
+          path += fileName;
+        }
 
-        if (!_fs.exists(fileName)) {
-          //Log.noticeln(logmessage + " ERROR: file does not exist");
+        if (path.isEmpty()) {
+          request->send(503, "text/plain", "ERROR: unable to allocate file path");
+        } else if (!_fs.exists(path)) {
           request->send(400, "text/plain", "ERROR: file does not exist");
         } else {
-          //Log.noticeln(logmessage + " file exists");
           if (strcmp(fileAction, "download") == 0) {
-            logmessage += " downloaded";
-            request->send(_fs, fileName, "text/plain");
+            request->send(_fs, path, "text/plain");
           } else if (strcmp(fileAction, "delete") == 0) {
-            logmessage += " deleted";
-            _fs.remove(fileName);
-            request->send(200, "text/plain", "Deleted File: " + String(fileName));
+            if (!configTrial::writable(path.c_str())) {
+              request->send(409, "text/plain", "Configuration trial file is protected");
+            } else {
+              if (bootRecovery::active()) bootRecovery::deferAutomaticRetry();
+              _fs.remove(path);
+              request->send(200, "text/plain", "Deleted File: " + String(fileName));
+            }
           } else {
-            logmessage += " ERROR: invalid action param supplied";
             request->send(400, "text/plain", "ERROR: invalid action param supplied");
           }
-          //Log.noticeln(logmessage);
         }
       } else {
         request->send(400, "text/plain", "ERROR: name and action params required");
@@ -194,16 +166,12 @@ void WebFSEditor::configureWebServer(AsyncWebServer &server) {
       _doLoop = true;
       //xSemaphoreGive( xSPISemaphore );
     } else {
-      logmessage += " Auth: Failed";
-      //Log.noticeln(logmessage);
       return request->requestAuthentication();
     }
   });
 }
 
 void WebFSEditor::notFound(AsyncWebServerRequest *request) {
-  String logmessage = "Client:" + request->client()->remoteIP().toString() + " " + request->url();
-  //Log.noticeln(logmessage);
   request->send(404, "text/plain", "Not found");
 }
 
@@ -224,32 +192,30 @@ bool WebFSEditor::checkUserWebAuth(AsyncWebServerRequest * request) {
 void WebFSEditor::handleUpload(AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final) {
   // make sure authenticated before allowing upload
   if (checkUserWebAuth(request)) {
+    const String path = "/" + filename;
+    if (!configTrial::writable(path.c_str())) {
+      if (final) request->send(409, "text/plain", "Configuration trial file is protected");
+      return;
+    }
     _doLoop = false;
     //Serial.println("take 2");
-    xSemaphoreTake( xSPISemaphore, portMAX_DELAY );
+    if (useSemaphore) xSemaphoreTake( xSPISemaphore, portMAX_DELAY );
     //Serial.println("taken 2");
-    String logmessage = "Client:" + request->client()->remoteIP().toString() + " " + request->url();
-    //Log.noticeln(logmessage);
 
     if (!index) {
-      logmessage = "Upload Start: " + String(filename);
+      if (bootRecovery::active()) bootRecovery::deferAutomaticRetry();
       // open the file on first call and store the file handle in the request object
-      request->_tempFile = _fs.open("/" + filename, "w");
-      //Log.noticeln(logmessage);
+      request->_tempFile = _fs.open(path, "w");
     }
 
     if (len) {
       // stream the incoming chunk to the opened file
       request->_tempFile.write(data, len);
-      logmessage = "Writing file: " + String(filename) + " index=" + String(index) + " len=" + String(len);
-      //Log.noticeln(logmessage);
     }
 
     if (final) {
-      logmessage = "Upload Complete: " + String(filename) + ",size: " + String(index + len);
       // close the file handle as the upload is now done
       request->_tempFile.close();
-      //Log.noticeln(logmessage);
       request->redirect("/");
     }
 

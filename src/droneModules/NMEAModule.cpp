@@ -7,21 +7,32 @@
 #include "OLEDTomThumbFont.h"
 #include "DroneSystem.h"
 
+// @type NMEA
+
 NMEAModule::NMEAModule(uint8_t id, DroneSystem* ds):
-  DroneModule ( id, ds )
- {
+  NMEAModule(id, ds, Registration::Managed) {}
+
+NMEAModule::NMEAModule(uint8_t id, DroneSystem* ds, Registration registration)
+    : DroneModule(id, ds, registration), _port(nullptr), _port2(nullptr),
+      _nmea(nullptr), _nmea2(nullptr) {
+   if (!_mgmtParams) return;
    setTypeName(FPSTR(NMEA_STR_NMEA));
 
    _port = NULL;
+   _port2 = NULL;
+   // @default interval = 1000
    _mgmtParams[DRONE_MODULE_PARAM_INTERVAL_E].data.uint32[0] = 1000;
 
-   _nmea = new MicroNMEA(_buffer, sizeof(_buffer));
+   _nmea = new (std::nothrow) MicroNMEA(_buffer, sizeof(_buffer));
+   _nmea2 = new (std::nothrow) MicroNMEA(_buffer2, sizeof(_buffer2));
    //nmea.setUnknownSentenceHandler(printUnknownSentence);
 
    _historyCount = 0;
+   _dualGPS = false;
 
    // subs
    initSubs(NMEA_SUBS);
+   if (!_subs) return;
 
    DRONE_PARAM_SUB *sub;
 
@@ -37,6 +48,7 @@ NMEAModule::NMEAModule(uint8_t id, DroneSystem* ds):
 
    // pubs
    initParams(NMEA_PARAM_ENTRIES);
+   if (!_params) return;
 
    DRONE_PARAM_ENTRY *param;
 
@@ -55,7 +67,7 @@ NMEAModule::NMEAModule(uint8_t id, DroneSystem* ds):
    _params[NMEA_PARAM_SATELLITES_E].data.f[0] = 0;
 
    param = &_params[NMEA_PARAM_HEADING_E];
-   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, NMEA_PARAM_HEADING);
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_CRITICAL, NMEA_PARAM_HEADING);
    setParamName(FPSTR(STRING_HEADING), param);
    _params[NMEA_PARAM_HEADING_E].paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 4);
    _params[NMEA_PARAM_HEADING_E].data.f[0] = 0;
@@ -75,14 +87,17 @@ NMEAModule::NMEAModule(uint8_t id, DroneSystem* ds):
    param = &_params[NMEA_PARAM_PORT_E];
    param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, NMEA_PARAM_PORT);
    setParamName(FPSTR(STRING_PORT), param);
-   _params[NMEA_PARAM_PORT_E].paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_UINT8_T, 1);
+   _params[NMEA_PARAM_PORT_E].paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_UINT8_T, 2);
+   // @default port=1, 255
    _params[NMEA_PARAM_PORT_E].data.uint8[0] = 1;
+   _params[NMEA_PARAM_PORT_E].data.uint8[1] = 255; // secondary port
 
    param = &_params[NMEA_PARAM_BAUD_E];
    param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, NMEA_PARAM_BAUD);
    setParamName(FPSTR(STRING_BAUD), param);
    _params[NMEA_PARAM_BAUD_E].paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_UINT32_T, 4);
-   _params[NMEA_PARAM_BAUD_E].data.uint32[0] = 38400;
+   // @default baud=9600
+   _params[NMEA_PARAM_BAUD_E].data.uint32[0] = 9600;
 
    param = &_params[NMEA_PARAM_FIX_E];
    param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, NMEA_PARAM_FIX);
@@ -96,65 +111,116 @@ NMEAModule::NMEAModule(uint8_t id, DroneSystem* ds):
    param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_CRITICAL, NMEA_PARAM_FOLLOWME);
    setParamName(FPSTR(STRING_FOLLOWME), param);
    _params[NMEA_PARAM_FOLLOWME_E].paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_FLOAT, 12);
+   // @default followMe=0,0,5
    _params[NMEA_PARAM_FOLLOWME_E].data.f[0] = 0;
    _params[NMEA_PARAM_FOLLOWME_E].data.f[1] = 0;
    _params[NMEA_PARAM_FOLLOWME_E].data.f[2] = 5;
+
+   param = &_params[NMEA_PARAM_PACKETS_E];
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, NMEA_PARAM_PACKETS);
+   setParamName(FPSTR(STRING_PACKETS), param);
+   _params[NMEA_PARAM_PACKETS_E].paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_UINT32_T, 12);
+   _params[NMEA_PARAM_PACKETS_E].data.uint32[0] = 0;  // valid
+   _params[NMEA_PARAM_PACKETS_E].data.uint32[1] = 0;  // invalid
+   _params[NMEA_PARAM_PACKETS_E].data.uint32[2] = 0;  // unknown
+
+   param = &_params[NMEA_PARAM_LOCATION2_E];
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_CRITICAL, NMEA_PARAM_LOCATION2);
+   setParamName(FPSTR(STRING_LOCATION2), param);
+   _params[NMEA_PARAM_LOCATION2_E].paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 12);
+   _params[NMEA_PARAM_LOCATION2_E].data.f[0] = 0;
+   _params[NMEA_PARAM_LOCATION2_E].data.f[1] = 0;
+   _params[NMEA_PARAM_LOCATION2_E].data.f[2] = 0;
 }
 
 
-DEM_NAMESPACE* NMEAModule::registerNamespace(DroneExecutionManager *dem) {
-  // namespace for module type
-  return dem->createNamespace(NMEA_STR_NMEA,0,true);
+NMEAModule::~NMEAModule() {
+  releasePrimary();
+  delete _nmea;
+  delete _nmea2;
 }
 
-void NMEAModule::registerParams(DEM_NAMESPACE* ns, DroneExecutionManager *dem) {
-  using std::placeholders::_1;
-  using std::placeholders::_2;
-  using std::placeholders::_3;
-  using std::placeholders::_4;
+bool NMEAModule::hotLoadEligible() const {
+  return hotLoadReady() && _bootSingleSecondary &&
+         _subs[NMEA_SUB_CORRECTION_E].addr.node == 0;
+}
 
-  // writable mgmt params
-  DEMCommandHandler ph = std::bind(&DroneExecutionManager::mod_param, dem, _1, _2, _3, _4);
-  DEMCommandHandler pha = std::bind(&DroneExecutionManager::mod_subAddr, dem, _1, _2, _3, _4);
+bool NMEAModule::startPrimary(uint8_t port, uint32_t baud) {
+  if ((port != 1 && port != 2) || !_ds->requestSerialPort(port, this)) return false;
+  auto &serial = port == 1 ? Serial1 : Serial2;
+  serial.begin(baud, SERIAL_8N1, port == 1 ? PIN_SERIAL1_RX : PIN_SERIAL2_RX,
+               port == 1 ? PIN_SERIAL1_TX : PIN_SERIAL2_TX);
+  if (!serial) {
+    serial.end();
+    _ds->releaseSecondarySerialPort(port, this);
+    return false;
+  }
+  _port = &serial;
+  _activePort = port;
+  _activeBaud = baud;
+  return true;
+}
 
-  dem->registerCommand(ns, STRING_CORRECTION, DRONE_LINK_MSG_TYPE_FLOAT, ph);
-  dem->registerCommand(ns, PSTR("$correction"), DRONE_LINK_MSG_TYPE_FLOAT, pha);
-
-  dem->registerCommand(ns, STRING_PORT, DRONE_LINK_MSG_TYPE_UINT8_T, ph);
-  dem->registerCommand(ns, STRING_BAUD, DRONE_LINK_MSG_TYPE_UINT32_T, ph);
-  dem->registerCommand(ns, STRING_FIX, DRONE_LINK_MSG_TYPE_FLOAT, ph);
-  dem->registerCommand(ns, STRING_FOLLOWME, DRONE_LINK_MSG_TYPE_FLOAT, ph);
-
+void NMEAModule::releasePrimary() {
+  if (_activePort == 255) return;
+  auto &serial = _activePort == 1 ? Serial1 : Serial2;
+  serial.end();
+  _ds->releaseSecondarySerialPort(_activePort, this);
+  _activePort = 255;
+  _port = nullptr;
 }
 
 void NMEAModule::setup() {
   DroneModule::setup();
-
-  // request the serial port
-  if (!_ds->requestSerialPort(_params[NMEA_PARAM_PORT_E].data.uint8[0], this)) {
-    _port = NULL;
-    Log.errorln(F("[NMEA.s] Unable to access serial port: %u"), _params[NMEA_PARAM_PORT_E].data.uint8[0]);
+  if (!hotLoadReady()) {
     setError(1);
     return;
   }
 
-  switch(_params[NMEA_PARAM_PORT_E].data.uint8[0]) {
-    //case 0: Serial.begin(_baud, SERIAL_8N1, PIN_SERIAL2_RX, PIN_SERIAL2_TX); break;
-    case 1:
-      Log.noticeln(F("[NMEA.s] Serial 1 at %u"), _params[NMEA_PARAM_BAUD_E].data.uint32[0]);
-      Serial1.begin(_params[NMEA_PARAM_BAUD_E].data.uint32[0], SERIAL_8N1, PIN_SERIAL1_RX, PIN_SERIAL1_TX);
-      setPort(&Serial1);
-      break;
-    case 2:
-      Log.noticeln(F("[NMEA.s] Serial 2 at %u"), _params[NMEA_PARAM_BAUD_E].data.uint32[0]);
-      Serial2.begin(_params[NMEA_PARAM_BAUD_E].data.uint32[0], SERIAL_8N1, PIN_SERIAL2_RX, PIN_SERIAL2_TX);
-      setPort(&Serial2);
-      break;
-    default:
-      _port = NULL;
-      Log.errorln(F("[NMEA.s] invalid port: %u"), _params[NMEA_PARAM_PORT_E].data.uint8[0]);
-      setError(1);
+  const auto port = _params[NMEA_PARAM_PORT_E].data.uint8[0];
+  _bootSingleSecondary = (port == 1 || port == 2) &&
+                         _params[NMEA_PARAM_PORT_E].data.uint8[1] == 255;
+  if (!startPrimary(port, _params[NMEA_PARAM_BAUD_E].data.uint32[0])) {
+    Log.errorln(F("[NMEA.s] Unable to start serial port: %u"), port);
+    setError(1);
+    return;
   }
+
+  // check for and request secondary serial port if specified
+  if (_params[NMEA_PARAM_PORT_E].data.uint8[1] < 255) {
+
+    if (!_ds->requestSerialPort(_params[NMEA_PARAM_PORT_E].data.uint8[1], this)) {
+      _port2 = NULL;
+      _dualGPS = false; 
+      Log.errorln(F("[NMEA.s] Unable to access secondary serial port: %u"), _params[NMEA_PARAM_PORT_E].data.uint8[1]);
+      setError(1);
+      //return;
+    } else {
+      _dualGPS = true;
+
+      switch(_params[NMEA_PARAM_PORT_E].data.uint8[1]) {
+        //case 0: Serial.begin(_baud, SERIAL_8N1, PIN_SERIAL2_RX, PIN_SERIAL2_TX); break;
+        case 1:
+          Log.noticeln(F("[NMEA.s] Secondary Serial 1 at %u"), _params[NMEA_PARAM_BAUD_E].data.uint32[0]);
+          Serial1.begin(_params[NMEA_PARAM_BAUD_E].data.uint32[0], SERIAL_8N1, PIN_SERIAL1_RX, PIN_SERIAL1_TX);
+          setPort2(&Serial1);
+          break;
+        case 2:
+          Log.noticeln(F("[NMEA.s] Secondary Serial 2 at %u"), _params[NMEA_PARAM_BAUD_E].data.uint32[0]);
+          Serial2.begin(_params[NMEA_PARAM_BAUD_E].data.uint32[0], SERIAL_8N1, PIN_SERIAL2_RX, PIN_SERIAL2_TX);
+          setPort2(&Serial2);
+          break;
+        default:
+          _port = NULL;
+          Log.errorln(F("[NMEA.s] invalid secondary port: %u"), _params[NMEA_PARAM_PORT_E].data.uint8[1]);
+          setError(1);
+      }
+    }
+  }
+
+
+  // start in waiting state
+   waiting();
 }
 
 
@@ -168,6 +234,9 @@ void NMEAModule::loop() {
     return;
   }
 
+  /*
+  GPS 1
+  */
   //Log.noticeln(F("[NMEA.l] b"));
   //uint8_t cc = 0;  // to limit max chars read
   while (_port->available()) {
@@ -184,10 +253,12 @@ void NMEAModule::loop() {
         //Log.noticeln(_nmea->getSentence());
         //getSentence
 
+        _params[NMEA_PARAM_PACKETS_E].data.uint32[2]++;
+
         // TODO:
       } else {
         if (_nmea->isValid()) {
-          Log.noticeln(F("Fresh GPS"));
+          //Log.noticeln(F("Fresh GPS"));
 
           float tempf[3];
           tempf[1] = _nmea->getLatitude() / 1000000.;
@@ -245,6 +316,7 @@ void NMEAModule::loop() {
               _historyCount++;
             } else {
               // calc and publish speed/heading
+              // compare current location to oldest location in the history buffer
               float t = (_history[NMEA_HISTORY_DEPTH-1][2] - _history[0][2])/1000;
               float d = calculateDistanceBetweenCoordinates(
                 _history[NMEA_HISTORY_DEPTH-1][0],
@@ -252,7 +324,7 @@ void NMEAModule::loop() {
                 _history[0][0],
                 _history[0][1]
               );
-              float speed = d / t;
+              float speed = (d / t) * 1.94384;  // in knots
               updateAndPublishParam(&_params[NMEA_PARAM_SPEED_E], (uint8_t*)&speed, 4);
             }
 
@@ -266,6 +338,12 @@ void NMEAModule::loop() {
 
           float n =  _nmea->getNumSatellites();
           updateAndPublishParam(&_params[NMEA_PARAM_SATELLITES_E], (uint8_t*)&n, sizeof(n));
+
+          if (n < 9) {
+            waiting();
+          } else {
+            enable();
+          }
 
           /*
           float v = _nmea->getSpeed() / 1000.0;
@@ -282,11 +360,75 @@ void NMEAModule::loop() {
 
           uint8_t temp8 = _nmea->getHDOP();
           updateAndPublishParam(&_params[NMEA_PARAM_HDOP_E], (uint8_t*)&temp8, sizeof(temp8));
+
+          _params[NMEA_PARAM_PACKETS_E].data.uint32[0]++;
         } else {
           //Log.errorln(F("Invalid NMEA sentence"));
+          _params[NMEA_PARAM_PACKETS_E].data.uint32[1]++;
         }
+        
       }
 
+      publishParamEntry(&_params[NMEA_PARAM_PACKETS_E]);
+
+    }
+  }
+
+  /*
+  GPS 2
+  */
+
+  while (_dualGPS && _port2->available()) {
+    char c = _port2->read();
+    //cc++;
+
+    //Serial.print(c);
+    if (_nmea2->process( c )) {
+      //Log.noticeln(F("[NMEA.l] c"));
+
+      if (_nmea2->isUnknown()) {
+        // ignore
+      } else {
+        if (_nmea2->isValid()) {
+          Log.noticeln(F("Fresh GPS 2"));
+
+          float tempf[3];
+          tempf[1] = _nmea2->getLatitude() / 1000000.;
+          tempf[0] = _nmea2->getLongitude() / 1000000.;
+          long alt = 0;
+          _nmea2->getAltitude(alt);
+          tempf[2] = alt/1000.0;
+
+
+          if (tempf[0] != 0 && tempf[1] != 0) {
+
+            updateAndPublishParam(&_params[NMEA_PARAM_LOCATION2_E], (uint8_t*)&tempf, sizeof(tempf));
+
+            // calculate effective heading between location and location2 and publish
+            if (_params[NMEA_PARAM_LOCATION_E].data.f[0] != 0) {
+              float h = calculateInitialBearingBetweenCoordinates(
+                  _params[NMEA_PARAM_LOCATION_E].data.f[0], 
+                  _params[NMEA_PARAM_LOCATION_E].data.f[1], 
+                  _params[NMEA_PARAM_LOCATION2_E].data.f[0],
+                  _params[NMEA_PARAM_LOCATION2_E].data.f[1]
+              );
+              //calculateInitialBearingBetweenCoordinates(float lon1, float lat1, float lon2, float lat2);
+              updateAndPublishParam(&_params[NMEA_PARAM_HEADING_E], (uint8_t*)&h, 4);
+              
+            }
+
+          }
+
+          float n =  _nmea2->getNumSatellites();
+          Log.noticeln("  GPS 2 Sats: %F", n);
+
+          
+        } else {
+          //Log.errorln(F("Invalid NMEA sentence"));
+          
+        }
+        
+      }
     }
   }
   //Log.noticeln(F("[NMEA.l] end"));
@@ -294,6 +436,10 @@ void NMEAModule::loop() {
 
 void NMEAModule::setPort(Stream *port) {
   _port = port;
+}
+
+void NMEAModule::setPort2(Stream *port) {
+  _port2 = port;
 }
 
 

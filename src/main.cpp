@@ -22,31 +22,40 @@ Steps to setup a new device:
 // arduino core
 #include <functional>
 #include <Arduino.h>
+#include <esp_task_wdt.h>
+
+#include <ArduinoLog.h>
 
 // drone core
 #include "DroneSystem.h"
+#include "BootRecovery.h"
+#include "FirmwareMeasurements.h"
 
 // networking
 #include <AsyncTCP.h>
 #include <ESPmDNS.h>
 
-//#include "OTAManager.h"
+#include "OTAManager.h"
 
 
 DroneSystem ds;
+OTAManager OTAMgr;
 
-/*
-void handleOTAEVent(OTAManagerEvent event, float progress) {
+
+void handleOTAEVent(OTAManagerEvent event, float p) {
   if (event == start) {
-    // TODO
-    //dmm->shutdown();
+    ds.dmm->shutdown();
+    ds.dled->setState(DRONE_LED_STATE_UPDATING);
   } else if (event == progress) {
-    Log.noticeln(F("OTA progress: %f"), progress*100);
-    // TODO
-    //dmm->onOTAProgress(progress);
+    //Log.noticeln(F("OTA progress: %f"), p*100);
+    ds.dmm->onOTAProgress(p);
+    ds.dled->loop();
+  } else  {
+    // end
+    ds.dled->setState(DRONE_LED_STATE_RESTART);
   }
 }
-*/
+
 
 void handleDLMEvent( DroneLinkManagerEvent event, float progress) {
   if (event == DRONE_LINK_MANAGER_FIRMWARE_UPDATE_START) {
@@ -59,11 +68,45 @@ void handleDLMEvent( DroneLinkManagerEvent event, float progress) {
 }
 
 
+
 void setup() {
+  // Watch the Arduino task from setup through the end of each loop pass.
+  constexpr uint32_t watchdogTimeoutSeconds = 30;
+  disableCore0WDT();
+  ESP_ERROR_CHECK(esp_task_wdt_init(watchdogTimeoutSeconds, true));
+  ESP_ERROR_CHECK(esp_task_wdt_add(nullptr));
+
   ds.setup();
+
+  OTAMgr.init(ds.dmm->hostname());
+  OTAMgr.onEvent = handleOTAEVent;
+  bootRecovery::enter(recovery::Phase::Probation);
 }
 
 
+unsigned long debugTimer = 0;
+
 void loop() {
-  ds.loop();
+  unsigned long loopTime = millis();
+  telemetry::measureMainLoop(loopTime);
+  
+  if (!OTAMgr.isUpdating) {
+
+    ds.loop();
+  } else {
+    ds.dled->loop();
+  }
+
+  OTAMgr.loop();
+
+  // ANALOG DEBUGGING on pin 35
+  if (loopTime > debugTimer + 1000) {
+
+    //uint16_t a1 = analogRead(35);
+    //Log.noticeln("a = %u", a1);
+
+    debugTimer = loopTime;
+  }
+
+  ESP_ERROR_CHECK(esp_task_wdt_reset());
 }

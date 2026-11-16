@@ -1,0 +1,7 @@
+{
+  "serverRevision": "8c1fbfdb910f524aaed1ddbd0187d9039cdcf0ee",
+  "firmwareRevision": "6a0dcbbe93cd89f74afd7adef68027b034d4e1f1",
+  "legacyParserSha256": "3fc69a2e3305298f6283f33d61a33a0f77745abb5f079f93ea0875d5eddb787c",
+  "capture": "Original parseModules.js executed under a VM with captured writes; no public assets replaced. Compact JSON preserves all values.",
+  "fixtureSha256": "2607ef38dcfa062cc566665009f596972a305e1ee750c8908a4acf963784efec"
+}

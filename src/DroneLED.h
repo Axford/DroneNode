@@ -20,6 +20,7 @@ Export an interface for other modules to set neopixel colours
 
 #define DRONE_LED_HW_BUILTIN    0
 #define DRONE_LED_HW_NEOPIXEL   1
+#define DRONE_LED_HW_DISABLED   2
 
 
 /*
@@ -37,6 +38,8 @@ green = running, wifi
 #define DRONE_LED_STATE_ERROR             1
 #define DRONE_LED_STATE_RUNNING_NO_WIFI   2
 #define DRONE_LED_STATE_RUNNING_WIFI      3
+#define DRONE_LED_STATE_UPDATING          4
+#define DRONE_LED_STATE_RESTART           5
 
 
 // forward decl
@@ -48,18 +51,24 @@ class DroneSystem;
 //--------------------------------------------------------
 class DroneLED {
 protected:
+  uint32_t _animationTimer;
+  uint8_t _animationState;
   DroneSystem* _ds;
   uint8_t _hw;
   uint8_t _state;
-
-  NeoPixelBrightnessBus<NeoGrbFeature, Neo800KbpsMethod> *_strip;
+  uint32_t _cueStarted = 0;
+  RgbColor _cueColor = RgbColor(0);
+  bool _cueActive = false;
 
 public:
-  DroneLED(DroneSystem* ds);
+  NeoPixelBrightnessBus<NeoGrbFeature, Neo800KbpsMethod> *_strip;
+
+  DroneLED(DroneSystem* ds, bool enabled = true);
 
   boolean isNeopixel();
 
   void setState(uint8_t newState);
+  bool setBenchCue(const char* phase);
 
   void update();
 

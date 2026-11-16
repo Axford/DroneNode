@@ -1,0 +1,116 @@
+#include "DigitalModule.h"
+#include "../DroneLinkMsg.h"
+#include "../DroneLinkManager.h"
+#include "strings.h"
+#include "../navMath.h"
+#include "DroneSystem.h"
+
+DigitalModule::DigitalModule(uint8_t id, DroneSystem* ds):
+  DigitalModule(id, ds, Registration::Managed) {}
+
+DigitalModule::DigitalModule(uint8_t id, DroneSystem* ds, Registration registration):
+  DroneModule(id, ds, registration)
+ {
+   if (!_mgmtParams) return;
+   setTypeName(FPSTR(DIGITAL_STR_DIGITAL));
+
+   // set default interval to 100
+   // @default interval = 100
+   _mgmtParams[DRONE_MODULE_PARAM_INTERVAL_E].data.uint32[0] = 100;
+
+   // Digital has no input subscriptions.
+   initParams(DIGITAL_PARAM_ENTRIES);
+   if (!_params) return;
+
+   DRONE_PARAM_ENTRY *param;
+
+   param = &_params[DIGITAL_PARAM_PINS_E];
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, DIGITAL_PARAM_PINS);
+   setParamName(FPSTR(STRING_PINS), param);
+   param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_UINT8_T, 1);
+   _params[DIGITAL_PARAM_PINS_E].data.uint8[0] = 0;
+
+
+   param = &_params[DIGITAL_PARAM_LIMITS_E];
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_LOW, DIGITAL_PARAM_LIMITS);
+   setParamName(FPSTR(STRING_LIMITS), param);
+   param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_FLOAT, 8);
+      // @default limits=0,1
+   _params[DIGITAL_PARAM_LIMITS_E].data.f[0] = 0;
+   _params[DIGITAL_PARAM_LIMITS_E].data.f[1] = 1;
+
+   param = &_params[DIGITAL_PARAM_INPUT_E];
+   param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_HIGH, DIGITAL_PARAM_INPUT);
+   setParamName(FPSTR(STRING_INPUT), param);
+   param->paramTypeLength = _mgmtMsg.packParamLength(false, DRONE_LINK_MSG_TYPE_FLOAT, 4);
+   _params[DIGITAL_PARAM_INPUT_E].data.f[0] = 0;
+}
+
+
+DigitalModule::~DigitalModule() {
+  // Only a successfully started detached input owns a trial pin.
+  if (_id == 0 && _setupDone) _ds->releaseTrialPin(trialPin());
+  releaseHotLoadPin();
+  releaseHotLoadPin();
+}
+
+DigitalModule::TrialStart DigitalModule::startTrial(uint8_t pin) {
+  if (!_mgmtParams || !_params) return TrialStart::OutOfMemory;
+  if (!_ds->claimTrialPin(pin)) return TrialStart::PinUnavailable;
+
+  _params[DIGITAL_PARAM_PINS_E].data.uint8[0] = pin;
+  DroneModule::setup();
+  loop();
+  return TrialStart::Started;
+}
+
+uint8_t DigitalModule::trialPin() const {
+  return _params[DIGITAL_PARAM_PINS_E].data.uint8[0];
+}
+
+bool DigitalModule::trialHigh() const {
+  return _params[DIGITAL_PARAM_INPUT_E].data.f[0] != 0;
+}
+
+void DigitalModule::releaseHotLoadPin() {
+  if (_ownedPin == 255) return;
+  _ds->releasePin(_ownedPin, this);
+  _ownedPin = 255;
+}
+
+bool DigitalModule::restoreHotLoadPin(uint8_t pin) {
+  if (!_ds->requestPin(pin, DRONE_SYSTEM_PIN_CAP_INPUT, this)) return false;
+  _ownedPin = pin;
+  pinMode(pin, INPUT_PULLUP);
+  return true;
+}
+
+void DigitalModule::setup() {
+  DroneModule::setup();
+  if (!_params) {
+    setError(1);
+    disable();
+    return;
+  }
+
+  if (!restoreHotLoadPin(_params[DIGITAL_PARAM_PINS_E].data.uint8[0])) {
+    Log.errorln(F("[AM.s] Digital pin unavailable %u"), _id);
+    setError(1);
+    disable();
+  }
+}
+
+
+void DigitalModule::loop() {
+  DroneModule::loop();
+
+  const uint8_t pin = _id == 0 ? trialPin() : _ownedPin;
+  if (pin == 255) return;
+  boolean raw = digitalRead(pin);
+
+  // map using limits
+  float f = raw ? _params[DIGITAL_PARAM_LIMITS_E].data.f[1] : _params[DIGITAL_PARAM_LIMITS_E].data.f[0];
+
+  // publish new values
+  updateAndPublishParam(&_params[DIGITAL_PARAM_INPUT_E], (uint8_t*)&f, sizeof(f));
+}

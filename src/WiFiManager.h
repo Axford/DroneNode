@@ -5,7 +5,7 @@
 #include "LinkedList.h"
 #include <ArduinoJson.h>
 #include <ArduinoLog.h>
-#include "DroneModuleManager.h"
+#include "DnsOverride.h"
 #include "FS.h"
 
 #define WIFI_TIMEOUT_MS       10000
@@ -41,6 +41,10 @@ protected:
   TaskHandle_t _Task1;
   unsigned long _connectionCounter;
   boolean _APMode;
+
+  DnsOverride _dnsOverride;
+  bool _dnsEventRegistered=false;
+  void applyConfiguredDns();
 
   static void keepWiFiAlive(void *pvParameters);
 };

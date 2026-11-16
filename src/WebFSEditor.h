@@ -4,7 +4,6 @@
 #include <Arduino.h>
 #include "FS.h"
 #include <ESPAsyncWebServer.h>
-#include "WebFSEditorPages.h"
 
 class WebFSEditor {
 protected:
@@ -15,14 +14,13 @@ public:
   String httpuser;           // username to access web admin
   String httppassword;       // password to access web admin
   SemaphoreHandle_t xSPISemaphore;
+  boolean useSemaphore;
 
   WebFSEditor(fs::FS &fs, boolean &doLoop);
 
   String listFiles(bool ishtml);
 
   String humanReadableSize(const size_t bytes);
-
-  static String processor(const String& var);
 
   void configureWebServer(AsyncWebServer &server);
 

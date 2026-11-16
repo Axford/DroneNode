@@ -13,6 +13,7 @@
 
 #define DRONE_LINK_CHANNEL_SUB_PENDING_RETRY_INTERVAL  1000
 #define DRONE_LINK_CHANNEL_SUB_REQUESTED_RETRY_INTERVAL  5000
+#define DRONE_LINK_CHANNEL_SUB_REDO_INTERVAL 60000
 
 
 // subs are either internal modules or external (via the mesh)
@@ -22,6 +23,7 @@ struct DroneLinkChannelSubscription {
   uint8_t param; // target param or ALL
   uint8_t state; // for external subscriptions
   uint32_t timer; // for external sub retries, etc
+  uint64_t after;
 };
 
 // external subscription states
@@ -33,6 +35,14 @@ struct DroneLinkChannelSubscription {
 class DroneLinkManager;
 
 
+enum class CloudRequestResult { Missing, Busy, Queued };
+
+struct DroneLinkQueueEntry {
+  DroneLinkMsg message;
+  bool cloudRequest;
+  uint64_t sequence;
+};
+
 class DroneLinkChannel
 {
 protected:
@@ -40,9 +50,14 @@ protected:
   uint8_t _node; // which node is associated with this channel
   uint8_t _id;  // channel id
   uint32_t _choked;
+  uint8_t _maxSize;
   IvanLinkedList::LinkedList<DroneLinkChannelSubscription*> _subs;
-  IvanLinkedList::LinkedList<DroneLinkMsg*> _queue;
+  IvanLinkedList::LinkedList<DroneLinkQueueEntry*> _queue;
+  uint8_t _cloudRequests = 0;
+  uint8_t _cloudWaitTurns = 0;
+  bool _reserveCloudSlot = false;
   uint8_t _peakSize;
+  uint64_t _sequence = 0;
 
 public:
     DroneLinkChannel(DroneLinkManager* dlm, uint8_t node, uint8_t id);
@@ -57,17 +72,27 @@ public:
 
     uint8_t peakSize();
 
-    boolean publish(DroneLinkMsg &msg);
+    boolean publish(DroneLinkMsg &msg, bool cloudRequest = false);
+    bool hasLocalTarget();
+    void discardCloudRequests();
+    bool hasLocalCloudRequest();
 
     void processQueue();
 
-    void subscribe(uint8_t extNode, DroneModule* subscriber, uint8_t param);
+    bool subscribe(uint8_t extNode, DroneModule* subscriber, uint8_t param, bool fresh = false);
+    void unsubscribe(DroneModule* subscriber);
+    bool hasConsumerOtherThan(DroneModule* owner);
+    bool hasExternalConsumer();
+    void discardChannelMessages(uint8_t channel);
+    bool empty() { return !_subs.size() && !_queue.size(); }
 
+    void resetExternalSubscriptions(uint8_t extNode);
     void processExternalSubscriptions();
     void confirmExternalSubscription(uint8_t param);
     void removeExternalSubscriptions(uint8_t node);
 
     void serveChannelInfo(AsyncResponseStream *response);
+    void serveQueueInfo(AsyncResponseStream *response);
 };
 
 #endif

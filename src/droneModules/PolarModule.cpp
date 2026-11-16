@@ -1,12 +1,16 @@
+#include "../DroneConsole.h"
 #include "PolarModule.h"
 #include "../DroneLinkMsg.h"
 #include "../DroneLinkManager.h"
 #include "strings.h"
 #include "../navMath.h"
 
-PolarModule::PolarModule(uint8_t id, DroneSystem* ds):
-  DroneModule ( id, ds )
+// @type Polar
+
+PolarModule::PolarModule(uint8_t id, DroneSystem* ds, Registration registration):
+  DroneModule(id, ds, registration)
  {
+  if (!_mgmtParams) return;
    setTypeName(FPSTR(POLAR_STR_POLAR));
 
    // init polarVals
@@ -18,10 +22,12 @@ PolarModule::PolarModule(uint8_t id, DroneSystem* ds):
    _region = POLAR_REGION_OUT;
 
    // set default interval to 1000
+   // @default interval = 1000
    _mgmtParams[DRONE_MODULE_PARAM_INTERVAL_E].data.uint32[0] = 1000;
 
    // subs
    initSubs(POLAR_SUBS);
+  if (!_subs) return;
 
    DRONE_PARAM_SUB *sub;
 
@@ -56,6 +62,7 @@ PolarModule::PolarModule(uint8_t id, DroneSystem* ds):
 
    // pubs
    initParams(POLAR_PARAM_ENTRIES);
+  if (!_params) return;
 
    DRONE_PARAM_ENTRY *param;
 
@@ -76,6 +83,7 @@ PolarModule::PolarModule(uint8_t id, DroneSystem* ds):
    param->paramPriority = setDroneLinkMsgPriorityParam(DRONE_LINK_MSG_PRIORITY_MEDIUM, POLAR_PARAM_THRESHOLD);
    setParamName(FPSTR(STRING_THRESHOLD), param);
    param->paramTypeLength = _mgmtMsg.packParamLength(true, DRONE_LINK_MSG_TYPE_FLOAT, 8);
+   // @default threshold=1,10
    param->data.f[0] = 1;  // min SOG
    param->data.f[1] = 10;  // acceptable heading deviation
 
@@ -106,35 +114,19 @@ PolarModule::PolarModule(uint8_t id, DroneSystem* ds):
 
 }
 
-DEM_NAMESPACE* PolarModule::registerNamespace(DroneExecutionManager *dem) {
-  // namespace for module type
-  return dem->createNamespace(POLAR_STR_POLAR,0,true);
+
+bool PolarModule::hotLoadReady() const {
+  return _mgmtParams && _subs && _params;
 }
 
-void PolarModule::registerParams(DEM_NAMESPACE* ns, DroneExecutionManager *dem) {
-  using std::placeholders::_1;
-  using std::placeholders::_2;
-  using std::placeholders::_3;
-  using std::placeholders::_4;
+bool PolarModule::validateLiveConfiguration() const {
+  const auto& heading = _subs[POLAR_SUB_HEADING_E];
+  return _params[POLAR_PARAM_MODE_E].data.uint8[0] == POLAR_MODE_PASSTHROUGH &&
+         (heading.addr.node || heading.received);
+}
 
-  // writable mgmt params
-  DEMCommandHandler ph = std::bind(&DroneExecutionManager::mod_param, dem, _1, _2, _3, _4);
-  DEMCommandHandler pha = std::bind(&DroneExecutionManager::mod_subAddr, dem, _1, _2, _3, _4);
-  dem->registerCommand(ns, STRING_LOCATION, DRONE_LINK_MSG_TYPE_FLOAT, ph);
-  dem->registerCommand(ns, PSTR("$location"), DRONE_LINK_MSG_TYPE_FLOAT, pha);
-  dem->registerCommand(ns, STRING_SOG, DRONE_LINK_MSG_TYPE_FLOAT, ph);
-  dem->registerCommand(ns, PSTR("$SOG"), DRONE_LINK_MSG_TYPE_FLOAT, pha);
-  dem->registerCommand(ns, STRING_WIND, DRONE_LINK_MSG_TYPE_FLOAT, ph);
-  dem->registerCommand(ns, PSTR("$wind"), DRONE_LINK_MSG_TYPE_FLOAT, pha);
-  dem->registerCommand(ns, STRING_WIND_SPEED, DRONE_LINK_MSG_TYPE_FLOAT, ph);
-  dem->registerCommand(ns, PSTR("$windSpeed"), DRONE_LINK_MSG_TYPE_FLOAT, pha);
-  dem->registerCommand(ns, STRING_HEADING, DRONE_LINK_MSG_TYPE_FLOAT, ph);
-  dem->registerCommand(ns, PSTR("$heading"), DRONE_LINK_MSG_TYPE_FLOAT, pha);
-
-  dem->registerCommand(ns, STRING_MODE, DRONE_LINK_MSG_TYPE_UINT8_T, ph);
-  dem->registerCommand(ns, STRING_TARGET, DRONE_LINK_MSG_TYPE_FLOAT, ph);
-  dem->registerCommand(ns, STRING_THRESHOLD, DRONE_LINK_MSG_TYPE_FLOAT, ph);
-  dem->registerCommand(ns, STRING_RADIUS, DRONE_LINK_MSG_TYPE_FLOAT, ph);
+bool PolarModule::canRetireLive() const {
+  return _params[POLAR_PARAM_MODE_E].data.uint8[0] == POLAR_MODE_PASSTHROUGH;
 }
 
 
@@ -158,10 +150,10 @@ void PolarModule::updatePolar() {
   // calc averages per bin and find peak value
   float avgs[16];
   float peakVal = 0;
-  Serial.print("pv: ");
+  DroneConsole.print("pv: ");
   for (uint8_t i=0; i<16; i++) {
-    Serial.print(_polarVals[i]);
-    Serial.print(" ");
+    DroneConsole.print(_polarVals[i]);
+    DroneConsole.print(" ");
     if ( _params[POLAR_PARAM_SAMPLES_E].data.uint8[i] > 0 ) {
       avgs[i] = _polarVals[i] / _params[POLAR_PARAM_SAMPLES_E].data.uint8[i];
     } else {
@@ -170,7 +162,7 @@ void PolarModule::updatePolar() {
 
     if (avgs[i] > peakVal) peakVal = avgs[i];
   }
-  Serial.println("");
+  DroneConsole.println("");
 
   // update polar
   if (peakVal  > 0) {
@@ -228,16 +220,15 @@ void PolarModule::loopActive() {
   }
 
   // see if we drifted outside our target area
-  if (newRegion == POLAR_REGION_OUT) {
+  if (newRegion != _region && newRegion == POLAR_REGION_OUT) {
     //Serial.println("[PM.lA] out");
     // switch to passthrough
-    /*
+    
     uint8_t newMode = POLAR_MODE_PASSTHROUGH;
     updateAndPublishParam(&_params[POLAR_PARAM_MODE_E], (uint8_t*)&newMode, sizeof(newMode));
 
     _region = newRegion;
     return;
-    */
   }
 
   // if in the mid region...
@@ -245,7 +236,7 @@ void PolarModule::loopActive() {
 
     // did we just cross into mid from in?  i.e. end of run
     if (_region == POLAR_REGION_IN) {
-      Serial.println("[PM.lA] end of run");
+      DroneConsole.println("[PM.lA] end of run");
       /*
       calculate effective heading and if close enough to target heading, then record the end location and time, compute the average speed and add to polar info.
       */
@@ -264,8 +255,8 @@ void PolarModule::loopActive() {
       // and thus average speed
       float avgSpeed = distTravelled / timeTaken;
 
-      Serial.print("[PM.lA] avgSpeed ");
-      Serial.println(avgSpeed);
+      DroneConsole.print("[PM.lA] avgSpeed ");
+      DroneConsole.println(avgSpeed);
 
       // and on what effective heading
       float effectiveHeading = calculateInitialBearingBetweenCoordinates(
@@ -275,17 +266,19 @@ void PolarModule::loopActive() {
         _subs[POLAR_SUB_LOCATION_E].param.data.f[1]
       );
 
-      Serial.print("[PM.lA] effectiveHeading ");
-      Serial.println(effectiveHeading);
+      DroneConsole.print("[PM.lA] effectiveHeading ");
+      DroneConsole.println(effectiveHeading);
 
       // calc leeway
       float leeway = fabs(shortestSignedDistanceBetweenCircularValues(effectiveHeading, _params[POLAR_PARAM_ADJ_HEADING_E].data.f[0]));
 
-      Serial.print("[PM.lA] leeway ");
-      Serial.println(leeway);
+      DroneConsole.print("[PM.lA] leeway ");
+      DroneConsole.println(leeway);
 
       // if leeway less than threshold
-      if (leeway < _params[POLAR_PARAM_THRESHOLD_E].data.f[1]) {
+      // and we've travelled at least the target radius in distance
+      if (leeway < _params[POLAR_PARAM_THRESHOLD_E].data.f[1] &&
+         distTravelled > _params[POLAR_PARAM_RADIUS_E].data.f[0]) {
 
         // scale speed relative to wind speed
         float speedRatio = avgSpeed / _subs[POLAR_SUB_WIND_SPEED_E].param.data.f[0];
@@ -306,6 +299,9 @@ void PolarModule::loopActive() {
 
         // TODO - store leeway
 
+      } else {
+        // invalid run
+
       }
     }
 
@@ -314,7 +310,7 @@ void PolarModule::loopActive() {
     */
     if (_subs[POLAR_SUB_SOG_E].param.data.f[0] < _params[POLAR_PARAM_THRESHOLD_E].data.f[0]) {
       // SOG too slow... so try to keep on orbiting clockwise along mid-radius
-      Serial.println("[PM.lA] SOG too slow, orbit ");
+      DroneConsole.println("[PM.lA] SOG too slow, orbit ");
 
       // chase a point 10 degrees clockwise of where we are now
       GeographicPoint target;
@@ -328,15 +324,15 @@ void PolarModule::loopActive() {
       );
       bearing += 10;
 
-      Serial.print("[PM.lA] bearing ");
-      Serial.println(bearing);
+      DroneConsole.print("[PM.lA] bearing ");
+      DroneConsole.println(bearing);
 
       GeographicPoint targetPoint = calculateDestinationFromDistanceAndBearing(target, _params[POLAR_PARAM_RADIUS_E].data.f[1], bearing);
 
-      Serial.print("[PM.lA] destination ");
-      Serial.print(targetPoint.lon);
-      Serial.print(" ");
-      Serial.println(targetPoint.lat);
+      DroneConsole.print("[PM.lA] destination ");
+      DroneConsole.print(targetPoint.lon);
+      DroneConsole.print(" ");
+      DroneConsole.println(targetPoint.lat);
 
       // now calculate heading from current location to targetPoint
       float heading = calculateInitialBearingBetweenCoordinates(
@@ -346,8 +342,8 @@ void PolarModule::loopActive() {
         targetPoint.lat
       );
 
-      Serial.print("[PM.lA] heading ");
-      Serial.println(heading);
+      DroneConsole.print("[PM.lA] heading ");
+      DroneConsole.println(heading);
 
       // and publish the new heading
       updateAndPublishParam(&_params[POLAR_PARAM_ADJ_HEADING_E], (uint8_t*)&heading, sizeof(heading));
@@ -364,6 +360,35 @@ void PolarModule::loopActive() {
         _params[POLAR_PARAM_TARGET_E].data.f[0],
         _params[POLAR_PARAM_TARGET_E].data.f[1]
       );
+
+      // add a few degrees to the heading so the boat travels in a pointed star pattern
+      //newHeading += 15;
+      //newHeading = fmod(newHeading,360);
+
+      // search the polar bins around the tentative new heading and see if there's an empty bin close by
+      float relHeading = newHeading - _subs[POLAR_SUB_WIND_E].param.data.f[0];
+      relHeading = fmod(relHeading,360);
+      if (relHeading < 0) relHeading += 360;
+      
+      uint8_t pi = polarIndexForAngle(relHeading);
+      int i1 = pi-2;
+      if (i1 < 3) i1=3;
+      int i2 = pi+2;
+      if (i2 > 15) i2 = 15;
+
+      for (uint8_t i=i1; i<i2+1; i++) {
+        if (_params[POLAR_PARAM_SAMPLES_E].data.uint8[i] < _params[POLAR_PARAM_SAMPLES_E].data.uint8[pi]) {
+          // update pi
+          pi = i;
+        }
+      }
+
+      // calculate newHeading based on pi
+      relHeading = (relHeading > 180) ? 360 - pi * 11.25 : pi * 11.25;
+      newHeading = relHeading + _subs[POLAR_SUB_WIND_E].param.data.f[0];
+      newHeading = fmod(newHeading,360);
+      if (newHeading < 0) newHeading += 360;
+
 
       //Serial.print("[PM.lA] newHeading ");
       //Serial.println(newHeading);
@@ -384,8 +409,8 @@ void PolarModule::loopActive() {
       _startPos[0] = _subs[POLAR_SUB_LOCATION_E].param.data.f[0];
       _startPos[1] = _subs[POLAR_SUB_LOCATION_E].param.data.f[1];
 
-      Serial.print("[PM.lA] start of run ");
-      Serial.println(_startTime);
+      DroneConsole.print("[PM.lA] start of run ");
+      DroneConsole.println(_startTime);
     }
   }
 

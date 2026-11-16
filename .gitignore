@@ -115,3 +115,7 @@ data/testBoard.json
 .vscode/c_cpp_properties.json
 .vscode/extensions.json
 .vscode/launch.json
+
+# Local Python validation caches
+__pycache__/
+*.pyc

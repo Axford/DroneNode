@@ -2,23 +2,20 @@
 
 @type           Servo
 @inherits       Drone
+@category       Output
 @description    Manages a PWM servo channel
 
 @config >>>
-Servo.new 13
-  position 0
-  pins OUT0_1
-  status 1
-  name "Rudder"
-  map 30 70 110 150
-  centre 8
-  $position [@>11.16]
-  interval 100
-  .publish "map"
-  .publish "centre"
-  .publish "position"
-  .publish "output"
-.done
+[Servo= 13]
+  position= 0
+  pins= 4
+  status= 1
+  name= "Rudder"
+  map= 50, 80, 100, 130
+  centre= 8
+  $position= @>11.16 
+  interval= 100
+  publish= map, centre, position, output
 <<<
 
 
@@ -30,23 +27,24 @@ Servo.new 13
 #include <ESP32Servo.h>
 
 // params
-// @sub 10;u8;1;pins;Servo output pin, see <a href="pins.html">Pin Mappings</a>
+// @ui pins;pins;output
+// @pub 10;u8;1;w;pins;Servo output pin, see <a href="pins.html">Pin Mappings</a>
 #define SERVO_PARAM_PINS         10
 #define SERVO_PARAM_PINS_E       0
 
-// @sub 11;f;1;limits;Movement rate limit in degrees/second
+// @pub 11;f;1;w;limits;Movement rate limit in degrees/second (default: 90)
 #define SERVO_PARAM_LIMITS       11
 #define SERVO_PARAM_LIMITS_E     1
 
-// @sub 12;f;4;map;Bezier curve control points to map input (-1..1) to output (0..180)
+// @pub 12;f;4;w;map;Bezier curve control points to map input (-1..1) to output (0..180)
 #define SERVO_PARAM_MAP          12
 #define SERVO_PARAM_MAP_E        2
 
-// @sub 13;f;1;centre;Centre adjustment, applied after map
+// @pub 13;f;1;w;centre;Centre adjustment, applied after map
 #define SERVO_PARAM_CENTRE       13
 #define SERVO_PARAM_CENTRE_E     3
 
-// @sub 14;f;1;output;The raw angle sent to the Servo PWM controller (0..180)
+// @pub 14;f;1;r;output;The raw angle sent to the Servo PWM controller (0..180)
 #define SERVO_PARAM_OUTPUT       14
 #define SERVO_PARAM_OUTPUT_E     4
 
@@ -65,6 +63,17 @@ Servo.new 13
 static const char SERVO_STR_SERVO[] PROGMEM = "Servo";
 
 class ServoModule:  public DroneModule {
+  friend class DroneExecutionManager;
+  ServoModule(uint8_t id, DroneSystem* ds, Registration registration);
+  bool hotLoadReady() const { return _mgmtParams && _params && _subs; }
+  bool reserveOutput(uint8_t pin);
+  void releaseOutput();
+  void stopPwm();
+  bool attachOutput();
+  uint8_t _ownedPin = 255;
+  bool _localControl = false;
+  bool _armed = false;
+
 protected:
   //uint8_t _pins[1];
   float _targetPos;
@@ -76,11 +85,14 @@ protected:
 public:
 
   ServoModule(uint8_t id, DroneSystem* ds);
-
-  static DEM_NAMESPACE* registerNamespace(DroneExecutionManager *dem);
-  static void registerParams(DEM_NAMESPACE* ns, DroneExecutionManager *dem);
-
-  void setup();
+  
+  ~ServoModule() override;
+  configuration::Setting configure(const char* name, const char* value) override;
+  void setup() override;
+  void disable() override;
+  void doShutdown() override;
+  void handleLinkMessage(DroneLinkMsg* msg) override;
+  void consoleControl(const char* action, Print &output);
   void loop();
 
   void update();

@@ -1,14 +1,14 @@
 /*
 
 @type RFM69Telemetry
+@inherits Drone
+@category      Networking
 @description Manages DroneLink telemetry using an RFM69HW radio module
 
 @config >>>
-RFM69Telemetry.new 3
-  name "RFM69"
-  status 1  // enable
-  .publish "RSSI"
-.done
+[RFM69Telemetry=3]
+  name= RFM69
+  publish= RSSI,packets,speed,power
 <<<
 
 Publishes received messages
@@ -39,23 +39,32 @@ byte    = value
 [0...n] = DroneLinkMsg raw data
 */
 
-// @pub 8;f;1;RSSI;RSSI of received packets
+// @pub 8;f;1;r;RSSI;RSSI of received packets
 #define RFM69_TELEMETRY_PARAM_RSSI           8
 #define RFM69_TELEMETRY_PARAM_RSSI_E         0
 
-// @pub 9;u32;3;packets;Packet counters for sent, received and rejected
+// @pub 9;u32;3;r;packets;Packet counters for sent, received and rejected
 #define RFM69_TELEMETRY_PARAM_PACKETS        9
 #define RFM69_TELEMETRY_PARAM_PACKETS_E      1
 
-// @pub 10;f;3;speed;Packet rates per second for sent, received and rejected
+// @pub 10;f;3;r;speed;Packet rates per second for sent, received and rejected
 #define RFM69_TELEMETRY_PARAM_SPEED          10
 #define RFM69_TELEMETRY_PARAM_SPEED_E        2
 
-// @pub 11;f;1;power;Radio transmit power (-14..20), default 20
+// @pub 11;f;1;w;power;Radio transmit power (-14..20), default 20
 #define RFM69_TELEMETRY_PARAM_POWER          11
 #define RFM69_TELEMETRY_PARAM_POWER_E        3
 
-#define RFM69_TELEMETRY_PARAM_ENTRIES        4
+// @pub 12;u32;1;w;frequency;Operating frequency, default 915 Mhz
+#define RFM69_TELEMETRY_PARAM_FREQUENCY      12
+#define RFM69_TELEMETRY_PARAM_FREQUENCY_E    4
+
+// @pub 13;u8;1;w;threshold;Priority threshold, only packets with this or higher priority will be transmitted (default: 0, i.e. all priorities are transmitted)
+#define RFM69_TELEMETRY_PARAM_THRESHOLD      13
+#define RFM69_TELEMETRY_PARAM_THRESHOLD_E    5
+
+
+#define RFM69_TELEMETRY_PARAM_ENTRIES        6
 
 
 #define RFM69_TELEMETRY_NETWORKID     66  //the same on all nodes that talk to each other
@@ -81,9 +90,6 @@ public:
 
   RFM69TelemetryModule(uint8_t id, DroneSystem* ds);
 
-  static DEM_NAMESPACE* registerNamespace(DroneExecutionManager *dem);
-  static void registerParams(DEM_NAMESPACE* ns, DroneExecutionManager *dem);
-
   void onParamWrite(DRONE_PARAM_ENTRY *param);
 
   uint8_t getInterfaceType();
@@ -92,7 +98,7 @@ public:
   virtual void loop();
 
   // network interface methods
-  boolean sendPacket(uint8_t *buffer);
+  boolean sendPacket(uint8_t *buffer, DRONE_LINK_TRANSPORT_ADDRESS transportAddress);
 };
 
 #endif
