@@ -46,6 +46,22 @@ Boot select() {
 
 bool running() { return inTrial.load(); }
 
+Report report() {
+  Report value;
+  value.hasInstalled = store.digest(InstalledPath, value.installed);
+  value.hasStaged = store.digest(CandidatePath, value.staged);
+  if (running()) value.phase = ready ? "ready" : "trial";
+  else {
+    Record record;
+    if (store.load(record) == Read::Found && record.version == Record::Version) {
+      if (record.phase == Phase::Rejected) value.phase = "rejected";
+      if (record.phase == Phase::Committed && value.hasInstalled && value.installed == record.candidate)
+        value.phase = "committed";
+    }
+  }
+  return value;
+}
+
 bool writable(const char* path) {
   // Local file endpoints permit root and nested paths. Reject ambiguous path
   // spellings so reserved names cannot be reached through aliases.

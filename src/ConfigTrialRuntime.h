@@ -3,6 +3,14 @@
 #include "ConfigTrial.h"
 
 namespace configTrial {
+struct Report {
+  const char* phase = "idle";
+  bool hasInstalled = false;
+  bool hasStaged = false;
+  Digest installed;
+  Digest staged;
+};
+Report report();
 Boot select();
 bool running();
 bool writable(const char* path);

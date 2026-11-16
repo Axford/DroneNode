@@ -683,6 +683,14 @@ void DroneSystem::loop() {
         cloudRecovery::usbCommand(_serialCommand, dlm->node());
 #ifdef CONFIG_TRIAL_BENCH
         configTrial::benchCommand(_serialCommand);
+        if (strcmp(_serialCommand, "bench offline") == 0) {
+          _wifiManager.disable();
+          DroneConsole.println("bench offline ok");
+        }
+        if (strcmp(_serialCommand, "bench online") == 0) {
+          _wifiManager.enable();
+          DroneConsole.println("bench online ok");
+        }
 #endif
         DroneConsole.print("Executing: ");
         DroneConsole.println(_serialCommand);

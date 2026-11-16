@@ -108,11 +108,11 @@ class PackedHttp {
   static bool equal(const char* a,const char* b) {
     while(*a&&*b) {char x=*a++,y=*b++;if(x>='A'&&x<='Z') x+=32;if(y>='A'&&y<='Z') y+=32;if(x!=y) return false;}return !*a&&!*b;
   }
-  static bool number(const char* text,size_t &value,unsigned base=10) {
+  static bool number(const char* text,size_t &value,unsigned base=10,size_t limit=8192) {
     if(!*text) return false;value=0;
     for(;*text;++text) {unsigned n=unsigned(*text-'0');if(base==16&&*text>='a'&&*text<='f') n=*text-'a'+10;
       if(base==16&&*text>='A'&&*text<='F') n=*text-'A'+10;
-      if(n>=base||value>8192/base) return false;value=value*base+n;if(value>8192) return false;}
+      if(n>=base||value>limit/base) return false;value=value*base+n;if(value>limit) return false;}
     return true;
   }
   static void space(const char* &p) {while(*p==' '||*p=='\r'||*p=='\n'||*p=='\t') ++p;}
@@ -157,7 +157,7 @@ class PackedHttp {
       if(!line(input,sizeof input)) return false;if(!input[0]) break;
       char* colon=strchr(input,':');if(!colon) return false;*colon++=0;while(*colon==' '||*colon=='\t') ++colon;
       char* end=colon+strlen(colon);while(end>colon&&(end[-1]==' '||end[-1]=='\t')) *--end=0;
-      if(equal(input,"Content-Length")) {if(hasLength||!number(colon,bodyLength)||bodyLength>=capacity) return false;hasLength=true;}
+      if(equal(input,"Content-Length")) {if(hasLength||!number(colon,bodyLength,10,capacity-1)||bodyLength>=capacity) return false;hasLength=true;}
       if(equal(input,"Transfer-Encoding")) {if(chunked||!equal(colon,"chunked")) return false;chunked=true;}
       if(equal(input,"Connection")&&equal(colon,"close")) closeConnection=true;
       if(equal(input,"Content-Encoding")&&!equal(colon,"identity")) return false;
@@ -168,7 +168,7 @@ class PackedHttp {
       size_t part=bodyLength;
       if(chunked) {
         if(!line(input,sizeof input)) return false;
-        if(!number(input,part,16)||part>=capacity-used) return false;
+        if(!number(input,part,16,capacity-used-1)||part>=capacity-used) return false;
         if(!part) { // bounded trailers
           do {if(!line(input,sizeof input)) return false;} while(input[0]);
           break;

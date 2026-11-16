@@ -2,6 +2,7 @@
 
 #include "BootRecovery.h"
 #include "CloudTelemetryHttp.h"
+#include "ConfigTrialRuntime.h"
 #include "DroneConsole.h"
 #include <ArduinoJson.h>
 #include <Preferences.h>
@@ -110,6 +111,85 @@ struct NodeRecoveryProfile {
   }
 };
 
+struct RepairExchange {
+  enum class Step : uint8_t { Idle, ReadFiles, Report, Action };
+  std::atomic<Step> step{Step::Idle};
+  configTrial::Report report;
+  std::unique_ptr<char[]> response;
+  bool disabled = false;
+#ifdef CONFIG_TRIAL_BENCH
+  std::atomic<bool> dropConfirmation{false};
+#endif
+  static constexpr size_t Header = 129;
+  static constexpr size_t Capacity = Header + configTrial::MaxConfigBytes + 1;
+
+  static bool decode(const char* text, configTrial::Digest& value) {
+    for (size_t i = 0; i < sizeof value.bytes; ++i) {
+      const auto digit = [](char c) -> int {
+        if (c >= '0' && c <= '9') return c - '0';
+        if (c >= 'a' && c <= 'f') return c - 'a' + 10;
+        return -1;
+      };
+      const int first = digit(text[2 * i]), second = digit(text[2 * i + 1]);
+      if (first < 0 || second < 0) return false;
+      value.bytes[i] = (first << 4) | second;
+    }
+    return true;
+  }
+
+  void poll(telemetry::PackedHttp& http, const NodeRecoveryProfile& profile, const char* boot, Mode mode, char* token) {
+    if (disabled || !token[0]) return;
+    if (!response) response.reset(new (std::nothrow) char[Capacity]);
+    if (!response) return;
+    if (step.load() == Step::Idle) {
+      step.store(Step::ReadFiles);
+      for (unsigned tick = 0; tick < 30 && step.load() == Step::ReadFiles; ++tick) delay(5);
+    }
+    if (step.load() != Step::Report) return;
+    char installed[65] = {}, staged[65] = {}, request[455];
+    if (report.hasInstalled) encodeHex(report.installed.bytes, 32, installed);
+    if (report.hasStaged) encodeHex(report.staged.bytes, 32, staged);
+    snprintf(request, sizeof request,
+        "{\"domain\":\"%s\",\"id\":%u,\"boot\":\"%s\",\"mode\":%u,\"phase\":\"%s\",\"installed\":\"%s\",\"staged\":\"%s\"}",
+        profile.http.domain, profile.node, boot, unsigned(mode), report.phase, installed, staged);
+    int status;
+    const bool ok = http.postJson(profile.http, "/node-auth/repair", request, token, response.get(), Capacity, status);
+    if (status == 404) { disabled = true; response.reset(); }
+    if (status == 401) token[0] = 0;
+    if (ok && status == 200 && strlen(response.get()) >= Header) {
+#ifdef CONFIG_TRIAL_BENCH
+      if (response[0] == 'c' && dropConfirmation.load()) {
+        DroneConsole.println("bench confirmation dropped");
+        step.store(Step::Idle);
+        return;
+      }
+#endif
+      step.store(Step::Action);
+    } else step.store(Step::Idle);
+  }
+
+  void service(Mode mode) {
+    const Step current = step.load();
+    if (current == Step::ReadFiles) {
+      report = configTrial::report();
+      step.store(Step::Report);
+      return;
+    }
+    if (current != Step::Action) return;
+    configTrial::Digest installed, candidate;
+    const size_t size = strlen(response.get());
+    if (decode(response.get() + 1, installed) && decode(response.get() + 65, candidate)) {
+      const char operation = response[0];
+      if (operation == 's' && mode == Mode::CommsOnly && size > Header)
+        configTrial::stage(reinterpret_cast<const uint8_t*>(response.get() + Header), size - Header, installed, candidate);
+      if (operation == 'a' && mode == Mode::CommsOnly && size == Header && configTrial::arm(installed, candidate))
+        ESP.restart();
+      if (operation == 'c' && size == Header) configTrial::confirm(candidate);
+    }
+    step.store(Step::Idle);
+  }
+};
+
 struct Worker : telemetry::HttpIo {
   NodeRecoveryProfile profile;
   DeviceKey key;
@@ -120,6 +200,7 @@ struct Worker : telemetry::HttpIo {
   std::atomic<bool> retry{false};
   WiFiClientSecure client;
   telemetry::CommandBatch batch;
+  RepairExchange repair;
 
   uint32_t now() override { return millis(); }
   bool running() override { return WiFi.status() == WL_CONNECTED; }
@@ -211,6 +292,7 @@ struct Worker : telemetry::HttpIo {
           }
           if (status == 401) token[0] = 0;
         }
+        repair.poll(http, profile, bootHex, current, token);
       }
       delay(PollMs);
     }
@@ -225,6 +307,12 @@ constexpr size_t ProfileLimit = 4096;
 
 namespace cloudRecovery {
 void usbCommand(const char* command, uint8_t node) {
+#ifdef CONFIG_TRIAL_BENCH
+  if (worker && strcmp(command, "bench drop") == 0) {
+    worker->repair.dropConfirmation.store(true);
+    DroneConsole.println("bench drop ok");
+  }
+#endif
   if (strncmp(command, "enroll ", 7)) return;
   command += 7;
   Preferences prefs;
@@ -296,6 +384,7 @@ void service() {
   if (!worker) return;
   const Mode mode = currentMode();
   worker->mode.store(mode);
+  worker->repair.service(mode);
   if (worker->retry.exchange(false) && (mode == Mode::Quarantined || mode == Mode::CommsOnly)) {
     bootRecovery::requestRestart();
     ESP.restart();
