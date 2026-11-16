@@ -1,4 +1,5 @@
 #include "DroneSystem.h"
+#include "ConfigTrialRuntime.h"
 #include "droneModules/DigitalModule.h"
 #include "droneModules/ManagementModule.h"
 #include "droneModules/ProbeModule.h"
@@ -288,6 +289,10 @@ void DroneExecutionManager::rememberBootConfiguration(const char* filename) {
 
 void DroneExecutionManager::requestHotLoad(ManagementModule* requester, const char* name, size_t length) {
   if (_hotLoadRequester) return;
+  if (configTrial::running()) {
+    requester->reportHotLoad(HotLoadResult::RestartRequired);
+    return;
+  }
   if (!configuration::hotLoadPath(name, length, _hotLoadPath)) {
     requester->reportHotLoad(HotLoadResult::InvalidFilename);
     return;

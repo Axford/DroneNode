@@ -105,10 +105,10 @@ public:
     DroneExecutionManager(DroneSystem* ds, File &logFile);
 
 
-    void addToAddressQueue(DroneModule* newMod, char* subName, char* address);
+    bool addToAddressQueue(DroneModule* newMod, char* subName, char* address);
     void processAddressQueue();
 
-    void loadConfiguration(const char* filename, uint8_t skipped = 0);
+    bool loadConfiguration(const char* filename, uint8_t skipped = 0, uint8_t trialNode = 0);
     void saveConfiguration();
     void rememberBootConfiguration(const char* filename);
     void requestHotLoad(ManagementModule* requester, const char* name, size_t length);

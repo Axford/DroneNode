@@ -10,7 +10,8 @@ from pathlib import Path
 
 Import("env")
 env.ProcessUnFlags("-fno-lto")
-env.AppendUnique(LINKFLAGS=["-flto"])
+# A single LTO partition keeps the serialized ESP32 binary within its slot.
+env.AppendUnique(LINKFLAGS=["-flto", "-flto-partition=one"])
 # GCC's plugin-aware archiver preserves LTO symbol indexes in static libraries.
 env.Replace(AR="xtensa-esp32-elf-gcc-ar", RANLIB="xtensa-esp32-elf-gcc-ranlib")
 # Dependency builders cloned the platform environment before this post hook.

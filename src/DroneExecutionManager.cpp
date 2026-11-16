@@ -1,4 +1,5 @@
 #include "BootRecovery.h"
+#include "ConfigTrialRuntime.h"
 #include "DroneConsole.h"
 #include "ConfigurationLine.h"
 #include "droneModules/CloudTelemetryModule.h"
@@ -87,7 +88,7 @@ DroneExecutionManager::DroneExecutionManager(DroneSystem* ds, File &logFile):
 }
 
 
-void DroneExecutionManager::addToAddressQueue(DroneModule* newMod, char* subName, char* address) {
+bool DroneExecutionManager::addToAddressQueue(DroneModule* newMod, char* subName, char* address) {
   // add to address parsing queue
   DEM_ADDRESS addr{};
   DRONE_PARAM_SUB* ps = newMod->getSubByName(subName);
@@ -95,7 +96,7 @@ void DroneExecutionManager::addToAddressQueue(DroneModule* newMod, char* subName
 
   if (ps == NULL) {
     Log.errorln(F("[DEM.lC] unknown sub name %s"), subName);
-    return;
+    return false;
   }
     
   addr.inputId = ps->addrParam;
@@ -145,7 +146,7 @@ void DroneExecutionManager::addToAddressQueue(DroneModule* newMod, char* subName
   } while (c > 0);
 
   Log.noticeln("[DEM.aTAQ] Adding addr to queue: %s,%s,%s", addr.nodeAddress, addr.moduleAddress, addr.paramAddress);
-  _addressQueue.add(addr);
+  return _addressQueue.add(addr);
 }
 
 
@@ -263,10 +264,12 @@ void DroneExecutionManager::startRecovery() {
   memcpy(udp->getParamEntryById(UDP_TELEMETRY_PARAM_SERVER)->data.uint8, profile.server, 4);
 }
 
-void DroneExecutionManager::loadConfiguration(const char* filename, uint8_t skipped) {
+bool DroneExecutionManager::loadConfiguration(const char* filename, uint8_t skipped, uint8_t trialNode) {
   File file=LITTLEFS.open(filename,FILE_READ);
-  if(!file) { Log.errorln("[DEM] Unable to open configuration"); return; }
+  if(!file) { Log.errorln("[DEM] Unable to open configuration"); return false; }
   DroneModule* module=nullptr;bool inSection=false;
+  bool validTrial=true, seenNode=false, management=false;
+  bool seen[255] = {};
   char raw[2049]; size_t used=0; bool overflow=false; uint32_t lineNumber=0;
   auto applyLine=[&]() {
     ++lineNumber; raw[used]=0;
@@ -276,56 +279,70 @@ void DroneExecutionManager::loadConfiguration(const char* filename, uint8_t skip
     if(overflow||!valid) {
       Log.errorln("[DEM] Invalid configuration at line %u",lineNumber);
       if(module) module->configurationError();
+      validTrial=false;
       return;
     }
     if(line.empty) return;
     if(line.section) {
       inSection=true;
       unsigned id=0;
-      if(!telemetry::decimal(line.value,254,id)) {
-        Log.errorln("[DEM] Invalid module address at line %u",lineNumber);module=nullptr;return;
+      if(!telemetry::decimal(line.value,254,id) ||
+          (trialNode && (!seenNode || !id || seen[id] || !strchr(raw, ']')))) {
+        Log.errorln("[DEM] Invalid module address at line %u",lineNumber);
+        validTrial=false;module=nullptr;return;
       }
       module = id == skipped ? nullptr : instanceModule(line.name, id);
+      validTrial = validTrial && module;
+      if (trialNode) {
+        seen[id] = true;
+        if (id == 1) management = module && !strcmp(line.name, "Management");
+      }
       return;
     }
     if(!module) {
       if(!inSection&&!strcmp(line.name,"node")) {
         unsigned id=0;
-        if(telemetry::decimal(line.value,254,id)) { _dmm->node(id);_dlm->node(id); }
-        else Log.errorln("[DEM] Invalid node address at line %u",lineNumber);
+        if(telemetry::decimal(line.value,254,id) && (!trialNode || (!seenNode && id == trialNode))) {
+          _dmm->node(id);_dlm->node(id);seenNode=true;
+        } else {
+          Log.errorln("[DEM] Invalid node address at line %u",lineNumber);validTrial=false;
+        }
+      } else if (trialNode && (inSection || strcmp(line.name, "optionalStatus"))) {
+        validTrial=false;
       }
       return;
     }
     // Legacy token scanners use uint8_t indexes; only dedicated string hooks accept long values.
     if(!module->isConfigurationString(line.name) && strlen(line.value)>=DEM_PARSER_VALUE_BUFFER_SIZE) {
-      Log.errorln("[DEM] Legacy setting too long at line %u",lineNumber);module->configurationError();return;
+      Log.errorln("[DEM] Legacy setting too long at line %u",lineNumber);module->configurationError();validTrial=false;return;
     }
     if(!strcmp(line.name,"publish")) module->publishParamsFromList(line.value);
-    else if(line.name[0]=='$') addToAddressQueue(module,line.name+1,line.value);
+    else if(line.name[0]=='$') validTrial = addToAddressQueue(module,line.name+1,line.value) && validTrial;
     else {
       auto result=module->configure(line.name,line.value);
       if(result==telemetry::Setting::Invalid) {
-        Log.errorln("[DEM] Invalid module configuration at line %u",lineNumber);module->configurationError();
+        Log.errorln("[DEM] Invalid module configuration at line %u",lineNumber);module->configurationError();validTrial=false;
       } else if(result==telemetry::Setting::Unhandled) {
         auto param=module->getParamEntryByName(line.name);
         if(param) module->setParamFromList(param,line.value);
-        else Log.errorln("[DEM] Unknown setting at line %u",lineNumber);
+        else { Log.errorln("[DEM] Unknown setting at line %u",lineNumber);validTrial=false; }
       }
     }
   };
-  while(file.available()) {
+  while(file.available() && (!trialNode || validTrial)) {
     char c=file.read();
     if(c=='\n') {applyLine();used=0;overflow=false;yield();}
     else if(used<sizeof(raw)-1) raw[used++]=c;
     else overflow=true;
   }
-  if(used||overflow) applyLine();
+  if((used||overflow) && (!trialNode || validTrial)) applyLine();
   file.close();
+  return !trialNode || (validTrial && seenNode && management);
 }
 
 
 void DroneExecutionManager::saveConfiguration() {
-  if (bootRecovery::active() || bootRecovery::quarantinedModule()) return;
+  if (bootRecovery::active() || bootRecovery::quarantinedModule() || configTrial::running()) return;
 
   File f = LITTLEFS.open("/config.ini", "w");
   if (f) {

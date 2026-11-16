@@ -1,4 +1,5 @@
 #include <Arduino.h>
+#include "ConfigTrialRuntime.h"
 #include "BootRecovery.h"
 #include "SPIFFS.h"
 #include <functional>
@@ -213,6 +214,10 @@ void DroneModuleManager::setupModules() {
     if (entry) memcpy(type, entry->data.c, 16);
     bootRecovery::enter(recovery::Phase::ModuleSetup, m->id(), type);
     m->setup();
+    if (configTrial::running() && m->isEnabled()) {
+      const auto* error = m->getParamEntryById(DRONE_MODULE_PARAM_ERROR);
+      if (error && error->data.uint8[0]) configTrial::fail();
+    }
     yield();
   }
 }

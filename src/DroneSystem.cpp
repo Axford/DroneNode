@@ -1,5 +1,6 @@
 #include "BootRecovery.h"
 #include "CloudRecovery.h"
+#include "ConfigTrialRuntime.h"
 #include "DroneConsole.h"
 #include "DroneSystem.h"
 #include "FirmwareMeasurements.h"
@@ -469,8 +470,12 @@ void DroneSystem::start() {
   Log.warningln(F("[] Prep NORMAL start..."));
   const auto skipped = bootRecovery::quarantinedModule();
   if (skipped) Log.warningln("[] Quarantined Status channel %u", skipped);
-  dem->loadConfiguration("/config.ini", skipped);
-  if (!skipped) dem->rememberBootConfiguration("/config.ini");
+  if (configTrial::running()) {
+    if (!dem->loadConfiguration(configTrial::CandidatePath, 0, bootRecovery::profile().node)) configTrial::fail();
+  } else {
+    dem->loadConfiguration(configTrial::InstalledPath, skipped);
+    if (!skipped) dem->rememberBootConfiguration(configTrial::InstalledPath);
+  }
 }
 
 
@@ -516,7 +521,10 @@ void DroneSystem::setup() {
   Log.noticeln(F("[] Starting..."));
   const bool provisioned = bootRecovery::profile().valid();
   const bool filesystemReady = dfs.setup(!provisioned && !bootRecovery::active());
-  if (filesystemReady && !bootRecovery::active()) {
+  const auto selection = filesystemReady ? configTrial::select() : configTrial::Boot::Recovery;
+  if (selection == configTrial::Boot::Candidate) bootRecovery::startTrial();
+  else if (selection == configTrial::Boot::Recovery) bootRecovery::forceRecovery();
+  if (selection == configTrial::Boot::Installed && !bootRecovery::active()) {
     if (provisioned && !LITTLEFS.exists("/config.ini")) {
       bootRecovery::forceRecovery();
     } else {
@@ -524,8 +532,7 @@ void DroneSystem::setup() {
       bootRecovery::readCandidate(LITTLEFS);
     }
   }
-  if (filesystemReady) bootRecovery::inspectConfig(LITTLEFS);
-  else bootRecovery::forceRecovery();
+  if (selection == configTrial::Boot::Installed) bootRecovery::inspectConfig(LITTLEFS);
 
   bootRecovery::enter(recovery::Phase::Hardware);
   if (!bootRecovery::active()) {
@@ -648,6 +655,7 @@ void DroneSystem::setup() {
 
 
 void DroneSystem::loop() {
+  configTrial::checkDeadline(millis());
   DroneConsole.service();
   //long loopTime;
 
@@ -673,6 +681,9 @@ void DroneSystem::loop() {
         // null terminate
         _serialCommand[_serialCommandLen] = 0;
         cloudRecovery::usbCommand(_serialCommand, dlm->node());
+#ifdef CONFIG_TRIAL_BENCH
+        configTrial::benchCommand(_serialCommand);
+#endif
         DroneConsole.print("Executing: ");
         DroneConsole.println(_serialCommand);
 
@@ -683,7 +694,7 @@ void DroneSystem::loop() {
         }
 
         // format filesystem
-        if (strcmp(_serialCommand, "format")==0) {
+        if (strcmp(_serialCommand, "format")==0 && !configTrial::running()) {
           DroneConsole.println("Formatting");
           LITTLEFS.format();
           dmm->restart();
@@ -748,11 +759,17 @@ void DroneSystem::loop() {
     yield();
 
     dem->processAddressQueue();
-    dem->processHotLoad();
+    if (!configTrial::running()) dem->processHotLoad();
     if (!bootRecovery::active()) DroneWire::serviceDiagnostic();
     xSemaphoreGive(_i2cLoopMutex);
     cloudRecovery::service();
-    bootRecovery::completedPass(millis());
+    const auto now = millis();
+    if (configTrial::running() && configTrial::completedPass(now)) {
+      dem->rememberBootConfiguration(configTrial::InstalledPath);
+      bootRecovery::inspectConfig(LITTLEFS);
+      bootRecovery::readCandidate(LITTLEFS);
+    }
+    if (!configTrial::running()) bootRecovery::completedPass(now);
 
     //if (logFile) logFile.flush();
   } else {

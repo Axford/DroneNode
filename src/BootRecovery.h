@@ -22,6 +22,7 @@ void inspectConfig(fs::FS& fs);
 void enter(recovery::Phase phase, uint8_t module = 0, const char* type = "");
 void requestRestart();
 void forceRecovery();
+void startTrial();
 void deferAutomaticRetry();
 void readCandidate(fs::FS& fs);
 const RecoveryProfile& profile();

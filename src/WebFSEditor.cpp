@@ -2,6 +2,7 @@
 #include "WebFSEditor.h"
 #include "WebFSEditorCompressed.h"
 #include "BootRecovery.h"
+#include "ConfigTrialRuntime.h"
 #include <Arduino.h>
 #include <ArduinoLog.h>
 
@@ -175,10 +176,14 @@ void WebFSEditor::configureWebServer(AsyncWebServer &server) {
             logmessage += " downloaded";
             request->send(_fs, path, "text/plain");
           } else if (strcmp(fileAction, "delete") == 0) {
-            logmessage += " deleted";
-            if (bootRecovery::active()) bootRecovery::deferAutomaticRetry();
-            _fs.remove(path);
-            request->send(200, "text/plain", "Deleted File: " + String(fileName));
+            if (!configTrial::writable(path.c_str())) {
+              request->send(409, "text/plain", "Configuration trial file is protected");
+            } else {
+              logmessage += " deleted";
+              if (bootRecovery::active()) bootRecovery::deferAutomaticRetry();
+              _fs.remove(path);
+              request->send(200, "text/plain", "Deleted File: " + String(fileName));
+            }
           } else {
             logmessage += " ERROR: invalid action param supplied";
             request->send(400, "text/plain", "ERROR: invalid action param supplied");
@@ -221,6 +226,11 @@ bool WebFSEditor::checkUserWebAuth(AsyncWebServerRequest * request) {
 void WebFSEditor::handleUpload(AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final) {
   // make sure authenticated before allowing upload
   if (checkUserWebAuth(request)) {
+    const String path = "/" + filename;
+    if (!configTrial::writable(path.c_str())) {
+      if (final) request->send(409, "text/plain", "Configuration trial file is protected");
+      return;
+    }
     _doLoop = false;
     //Serial.println("take 2");
     if (useSemaphore) xSemaphoreTake( xSPISemaphore, portMAX_DELAY );
@@ -232,7 +242,7 @@ void WebFSEditor::handleUpload(AsyncWebServerRequest *request, String filename, 
       if (bootRecovery::active()) bootRecovery::deferAutomaticRetry();
       logmessage = "Upload Start: " + String(filename);
       // open the file on first call and store the file handle in the request object
-      request->_tempFile = _fs.open("/" + filename, "w");
+      request->_tempFile = _fs.open(path, "w");
       //Log.noticeln(logmessage);
     }
 

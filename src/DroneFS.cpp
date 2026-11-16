@@ -1,6 +1,7 @@
 
 #include "DroneFS.h"
 #include "BootRecovery.h"
+#include "ConfigTrialRuntime.h"
 #include "DroneSystem.h"
 #include <ArduinoLog.h>
 
@@ -299,6 +300,7 @@ DroneFSEntry* DroneFS::getEntryById(uint8_t id) {
 
 
 boolean DroneFS::deleteEntryByPath(char* path) {
+  if (!configTrial::writable(path)) return false;
   DroneFSEntry* f = _root->getEntryByPath(path);
   if (f) {
     f->close();
@@ -318,7 +320,7 @@ boolean DroneFS::deleteEntryByPath(char* path) {
 
 
 boolean DroneFS::startUpload(char* path, uint32_t size) {
-  if (_uploadState > DRONE_FS_UPLOAD_STATE_NONE) return false;
+  if (_uploadState > DRONE_FS_UPLOAD_STATE_NONE || !configTrial::writable(path)) return false;
 
   // alloc memory
   _uploadBuffer = (uint8_t*) malloc(size);

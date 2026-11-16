@@ -13,12 +13,12 @@ public:
  DroneExecutionManager(DroneModuleManager* dmm,DroneLinkManager* dlm):_dmm(dmm),_dlm(dlm),system{dlm,dmm}{}
  ~DroneExecutionManager(){for(auto module:modules)delete module;}
  DroneModule* instanceModule(char* type,unsigned id){
-  if(strcmp(type,"CloudTelemetry")&&strcmp(type,"Other"))return nullptr;
+  if(strcmp(type,"CloudTelemetry")&&strcmp(type,"Other")&&strcmp(type,"Management"))return nullptr;
   DroneModule* m=!strcmp(type,"CloudTelemetry")?static_cast<DroneModule*>(new CloudTelemetryModule(id,&system)):new DroneModule(id,&system);
   modules.push_back(m);return m;
  }
- void addToAddressQueue(DroneModule* module,char*,char* value){module->legacyLength=strlen(value);}
- void loadConfiguration(const char* filename, uint8_t skipped = 0);
+ bool addToAddressQueue(DroneModule* module,char*,char* value){module->legacyLength=strlen(value);return true;}
+ bool loadConfiguration(const char* filename, uint8_t skipped = 0, uint8_t trialNode = 0);
 };
 #define DEM_PARSER_VALUE_BUFFER_SIZE 200
 #include "actual_loader.inc"
@@ -95,5 +95,17 @@ int main(){
   DroneExecutionManager loader(&dmm,&dlm);
   configText="[Other=1]\nname=\\literal\npublish=status, name\n";
   loader.loadConfiguration("/config.ini");assert(loader.modules[0]->legacyLength==11);
+ }
+ for (const char* invalid : {"node=12\n[Management=1]\n", "node=11\n[Other=1]\n",
+                            "node=11\n[Management=1]\n[Other=1]\n",
+                            "node=11\n[Management=1]\n[Unknown=2]\n",
+                            "node=11\n[Management=1]\nunknown=3\n"}) {
+  DroneExecutionManager loader(&dmm,&dlm);
+  configText=invalid;assert(!loader.loadConfiguration("/trial.ini", 0, 11));
+ }
+ {
+  DroneExecutionManager loader(&dmm,&dlm);
+  configText="node=11\n[Management=1]\n[Other=2]\n";
+  assert(loader.loadConfiguration("/trial.ini", 0, 11));
  }
 }

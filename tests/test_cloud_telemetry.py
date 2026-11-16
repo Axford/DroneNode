@@ -30,7 +30,7 @@ class CloudTelemetryTests(unittest.TestCase):
             subprocess.run([os.environ.get('CXX','c++'),'-std=c++11','-Wall','-Wextra','-fsanitize=address,undefined','-I',str(tree),str(tree/'droneModules/CloudTelemetryModule.cpp'),str(ROOT/'tests/cloud_module.cpp'),'-o',executable],check=True)
             subprocess.run([executable],check=True)
             source=(ROOT/'src/DroneExecutionManager.cpp').read_text()
-            start=source.index('void DroneExecutionManager::loadConfiguration(')
+            start=source.index('bool DroneExecutionManager::loadConfiguration(')
             end=source.index('void DroneExecutionManager::saveConfiguration()',start)
             (tree/'actual_loader.inc').write_text(source[start:end])
             channel=(ROOT/'src/DroneLinkChannel.cpp').read_text()

@@ -64,7 +64,7 @@ public:
  }
  size_t legacyLength=0;
  void publishParamsFromList(char* p){legacyLength=strlen(p);if(strstr(p,"reportInterval"))_params[0].publish=true;}
- DRONE_PARAM_ENTRY* getParamEntryByName(const char*){return &_params[0];}
+ DRONE_PARAM_ENTRY* getParamEntryByName(const char* name){return strcmp(name,"unknown") ? &_params[0] : nullptr;}
  void setParamFromList(DRONE_PARAM_ENTRY*,char* p){legacyLength=strlen(p);}
  void saveConfiguration(File* f);
  void setError(unsigned value){_error=value;}void publishParamEntry(DRONE_PARAM_ENTRY*){}

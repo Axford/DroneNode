@@ -1,4 +1,5 @@
 #include "BootRecovery.h"
+#include "ConfigTrialRuntime.h"
 #include "ConfigurationLine.h"
 #include "QuarantineConfiguration.h"
 #include <mbedtls/sha256.h>
@@ -129,6 +130,7 @@ void enter(recovery::Phase phase, uint8_t module, const char* type) {
 }
 
 void requestRestart() {
+  if (active()) configTrial::retryInstalled();
   retained.record.requestRetry(true);
   retain();
 }
@@ -137,6 +139,16 @@ void forceRecovery() {
   retained.record.recovering = true;
   retained.record.failures = 2;
   retained.record.quarantined = 0;
+  retained.record.quarantinePending = false;
+  retain();
+}
+
+void startTrial() {
+  retained.record.recovering = false;
+  retained.record.failures = 0;
+  retained.record.quarantined = 0;
+  retained.record.quarantinePending = false;
+  retained.record.config = {};
   retain();
 }
 
