@@ -190,6 +190,7 @@ void WebFSEditor::configureWebServer(AsyncWebServer &server) {
             request->send(_fs, path, "text/plain");
           } else if (strcmp(fileAction, "delete") == 0) {
             logmessage += " deleted";
+            if (bootRecovery::active()) bootRecovery::deferAutomaticRetry();
             _fs.remove(path);
             request->send(200, "text/plain", "Deleted File: " + String(fileName));
           } else {
@@ -242,6 +243,7 @@ void WebFSEditor::handleUpload(AsyncWebServerRequest *request, String filename, 
     //Log.noticeln(logmessage);
 
     if (!index) {
+      if (bootRecovery::active()) bootRecovery::deferAutomaticRetry();
       logmessage = "Upload Start: " + String(filename);
       // open the file on first call and store the file handle in the request object
       request->_tempFile = _fs.open("/" + filename, "w");

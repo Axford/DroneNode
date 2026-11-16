@@ -18,6 +18,7 @@ bool active();
 void enter(recovery::Phase phase, uint8_t module = 0, const char* type = "");
 void requestRestart();
 void forceRecovery();
+void deferAutomaticRetry();
 void readCandidate(fs::FS& fs);
 const RecoveryProfile& profile();
 void completedPass(uint32_t now);

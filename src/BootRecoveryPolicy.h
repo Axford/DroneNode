@@ -28,6 +28,7 @@ struct BootRecord {
       if (recovering) failures = 2;
       else if (failures < 2) ++failures;
     }
+    if (recovering && softwareRestart && !retry) failures = 2;
     recovering = failures && !(softwareRestart && retry);
     retry = false;
     current = Breadcrumb{};

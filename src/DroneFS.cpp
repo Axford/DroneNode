@@ -1,5 +1,6 @@
 
 #include "DroneFS.h"
+#include "BootRecovery.h"
 #include "DroneSystem.h"
 #include <ArduinoLog.h>
 
@@ -325,6 +326,7 @@ boolean DroneFS::startUpload(char* path, uint32_t size) {
   // check malloc succeeded
   if (_uploadBuffer == NULL) return false;
 
+  if (bootRecovery::active()) bootRecovery::deferAutomaticRetry();
   _uploadState = DRONE_FS_UPLOAD_STATE_WIP;
   _uploadSize = size;
   strcpy(_uploadPath, path);

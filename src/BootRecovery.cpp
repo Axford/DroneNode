@@ -2,6 +2,7 @@
 #include "ConfigurationLine.h"
 
 #include <Arduino.h>
+#include <atomic>
 #include <Preferences.h>
 #include <esp_attr.h>
 #include <esp_system.h>
@@ -23,6 +24,7 @@ uint8_t reasonAtBoot;
 uint32_t firstPass;
 bool observedPass = false;
 bool healthy = false;
+std::atomic<bool> automaticRetryDeferred{false};
 
 void retain() {
   memcpy(retainedBytes, &retained, sizeof retained);
@@ -108,6 +110,10 @@ void forceRecovery() {
   retain();
 }
 
+void deferAutomaticRetry() {
+  automaticRetryDeferred.store(true);
+}
+
 void readCandidate(fs::FS& fs) {
   File file = fs.open("/config.ini");
   if (!file) return;
@@ -163,7 +169,7 @@ void completedPass(uint32_t now) {
     retain();
     healthy = true;
   }
-  if (elapsed >= RetryTimeMs && retained.record.mayRetry()) {
+  if (elapsed >= RetryTimeMs && retained.record.mayRetry() && !automaticRetryDeferred.load()) {
     retained.record.requestRetry(false);
     retain();
     ESP.restart();
