@@ -522,3 +522,9 @@ python tools/enroll_node.py --serial /dev/cu.example --endpoint https://bench.ex
 Paste the claim at the prompt. The tool checks the node address over USB, redeems the claim using the board's public key, installs the trust profile, and requests restart. The private key stays in the device's dedicated NVS namespace. Session tokens stay in RAM and renew over verified HTTPS on reconnect as needed. An interrupted pairing can repeat with the same unused or already redeemed claim during its lifetime. To dispose of a bench identity, revoke it in the backend first. The physical console can then run `enroll clear` and `reset`.
 
 The web editor's embedded HTML is compressed to fit the existing OTA slot. Regenerate it with `python3 tools/pack_web_editor.py` if its source pages change.
+
+## Configuration trial storage
+
+The configuration trial transaction stages exact bytes in `/trial.ini` and checks both the staged and installed SHA-256 before arming. The transaction returns the startup file decision. It advances the LittleFS journal in `/.repair` before allowing a trial boot. An interrupted trial selects communications recovery. An approved promotion retains the previous bytes in `/.repair/previous.ini`. If the candidate rename already succeeded when power was lost, the next startup can finish recording the approved commit without another trial.
+
+Run `python3 -m unittest discover -s tests -p test_config_trial.py -v` for the host state and storage-failure checks. The ESP32 build compiles the LittleFS adapter. This slice does not connect the transaction to startup or the HTTPS worker. Physical filesystem power-cut validation belongs to the [remote repair plan](../../DroneLinkDatastore/docs/planning/drone-node-watchdog.md#remote-configuration-repair).
